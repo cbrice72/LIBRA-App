@@ -43,7 +43,7 @@ Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
 
 ### Code Formatting
 
-This project uses Visual Studio's [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to format header and source files based on the parameters in the `.editorconfig` file in this directory.
+This project uses Visual Studio's built-in [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to format header and source files based on the parameters in the `.clang-format` file in this directory.
 
 If you installed the optional extension "Format Document on Save", formatting will be automatically applied whenever you save a file.
 

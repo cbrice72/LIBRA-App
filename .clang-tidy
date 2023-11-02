@@ -1,0 +1,60 @@
+---
+# Configure linting options for this project.
+# (disable linting by setting the `FormatStyle` option to `none`)
+
+# Specify the style for formatting code
+# - file: Use this .clang-format file
+# - none: Disable formatting
+FormatStyle: file
+
+# Disabled checks
+# - bugprone-narrowing-conversions: not necessary in single-platform project
+# - cppcoreguidelines-avoid-magic-numbers: alias (readability)
+# - cppcoreguidelines-narrowing-conversions: alias (bugprone)
+# - cppcoreguidelines-non-private-member-variables-in-classes: alias (misc)
+# - cppcoreguidelines-special-member-functions: not necessary in such a small project
+# - google-readability-todo: not necessary in single-user project
+# - hicpp-special-member-functions: alias (cppcoreguidelines)
+# - misc-non-private-member-variables-in-classes: too strict
+# - modernize-use-trailing-return-type: preference
+# - readability-redundant-access-specifiers: allow split between user and VS-generated access specifiers
+
+# List the checks we will run
+Checks: -*,
+    bugprone-*,
+    cppcoreguidelines-*,
+    google-*,
+    hicpp-*,
+    misc-*,
+    modernize-*,
+    performance-*,
+    readability-*,
+    -bugprone-narrowing-conversions,
+    -cppcoreguidelines-avoid-magic-numbers,
+    -cppcoreguidelines-narrowing-conversions,
+    -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-special-member-functions,
+    -google-readability-todo,
+    -hicpp-special-member-functions,
+    -misc-non-private-member-variables-in-classes,
+    -modernize-use-trailing-return-type,
+    -readability-redundant-access-specifiers
+
+# Turn all the warnings from the above checks into errors
+# (this forces you to resolve them before the project can be built)
+WarningsAsErrors: '*'
+
+# Specific options for the aforementioned checks
+CheckOptions:
+  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,   value: true       }
+  - { key: readability-identifier-length.IgnoredVariableNames,   value: x|y        }
+  - { key: readability-identifier-naming.NamespaceCase,          value: lower_case }
+  - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
+  - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
+  - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }
+  - { key: readability-identifier-naming.FunctionCase,           value: CamelCase  }
+  - { key: readability-identifier-naming.VariableCase,           value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,    value: _          }
+  - { key: readability-identifier-naming.ProtectedMemberSuffix,  value: _          }
+  - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
+  - { key: readability-magic-numbers.IgnoredIntegerValues,       value: 1; 2000    }
