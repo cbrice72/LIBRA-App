@@ -1,17 +1,21 @@
 #pragma once
 
-#include "OnClickListener.h"
 #include "Button.h"
 #include "InputBox.h"
-#include "Serial.h"
 #include "LIBRA_HEBI.h"
+#include "OnClickListener.h"
+#include "Serial.h"
 #include <Eigen/Sparse>
-#include <hebi.h>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
+#include <hebi.h>
 
 class AppMgr : public OnClickListener {
-private:
+  public:
+    void Main();
+    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  private:
     Button* StopButton;
     Button* StartButton;
     Button* ConvertButton;
@@ -44,25 +48,21 @@ private:
 
     volatile bool EndFlag = 0;
     volatile bool ThreadEndFlag = 0;
-    double input[5];
-    double value[5][3] = { 0 };
-    double camera_pos[3] = {0};
-    double camera_setpos[3] = { 0 };
-    int camera_dir[3] = { 0 };
+    double input [5];
+    double value [5][3] = {0};
+    double camera_pos [3] = {0};
+    double camera_setpos [3] = {0};
+    int camera_dir [3] = {0};
     int mode = 0;
     bool enable = true;
 
     const int WindowW = 1920 * 2;
     const int WindowH = 1080 * 2;
 
-    void OnClick(View* view)override;
+    void OnClick(View* view) override;
     static DWORD WINAPI MainThread_dmy(LPVOID);
     void MainThread();
     void SetupIncludeDxlibInit();
     std::string GetDateTimeString();
     int printComList();
-    
-public:
-    void Main();
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };

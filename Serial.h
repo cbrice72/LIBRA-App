@@ -1,14 +1,14 @@
 #pragma once
-#include <Windows.h>
+
 #include <string>
+#include <Windows.h>
 
-class Serial  {
-
-public:
-    int open(const char *port);
+class Serial {
+  public:
+    int open(const char* port);
     int write(BYTE data);
     int writestring(std::string str);
-    
-public:
+
+  public:
     HANDLE mhandle;
 };

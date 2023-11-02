@@ -1,20 +1,20 @@
 #pragma once
 
-#include <Hebi.h>
-#include <lookup.hpp>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
-#include <windows.h>
+#include <Hebi.h>
+#include <lookup.hpp>
 #include <trajectory.hpp>
+#include <windows.h>
 
 class LIBRA_HEBI {
-public:
+  public:
     LIBRA_HEBI();
     int connect();
-    void move(double roll,double pitch,double j1,double j2,double j3);
+    void move(double roll, double pitch, double j1, double j2, double j3);
     void stop();
 
-    enum{
+    enum {
         ROLL,
         PITCH,
         J1,
@@ -28,14 +28,15 @@ public:
     double getFeedbackEffortMA();
     double getFeedbackEffortMB();
 
-private:
-    static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2);
+  private:
+    static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
+                                  DWORD dw2);
     void loop();
 
-    hebi::GroupCommand *command;
-    hebi::GroupFeedback *feedback;
+    hebi::GroupCommand* command;
+    hebi::GroupFeedback* feedback;
     std::shared_ptr<hebi::Group> group = nullptr;
-    std::shared_ptr<hebi::trajectory::Trajectory>trajectory = nullptr;
+    std::shared_ptr<hebi::trajectory::Trajectory> trajectory = nullptr;
     DWORD start_time = timeGetTime();
 
     enum {

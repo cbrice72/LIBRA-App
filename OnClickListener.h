@@ -3,7 +3,8 @@
 #include "View.h"
 
 class OnClickListener {
-public:
-    virtual ~OnClickListener(){}
-    virtual void OnClick(View* view){}
+  public:
+    virtual ~OnClickListener() {}
+
+    virtual void OnClick(View* view) {}
 };
