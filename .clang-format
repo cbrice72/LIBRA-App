@@ -127,6 +127,9 @@ BreakBeforeConceptDeclarations:                 true
 
 # ---------- VARIABLES AND OPERATORS ---------- #
 
+# General
+SpaceBeforeSquareBrackets:                      false
+
 # Pointers, References, and Qualifiers
 DerivePointerAlignment:                         false
 PointerAlignment:                               Left
@@ -165,7 +168,6 @@ BinPackParameters:                              true
 AllowShortBlocksOnASingleLine:                  Empty
 AllowShortLoopsOnASingleLine:                   false
 SpaceBeforeRangeBasedForLoopColon:              true
-SpaceBeforeSquareBrackets:                      true
 
 # Conditionals
 AllowShortIfStatementsOnASingleLine:            Never
