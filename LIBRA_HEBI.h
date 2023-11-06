@@ -1,8 +1,8 @@
 #pragma once
 
+#include <Hebi.h>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
-#include <Hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
 #include <windows.h>

@@ -23,8 +23,8 @@ class Mouse : public Singleton<Mouse> {
 
   private:
     const static int BUTTON_NUM = 8;
-    int mKeyPressingCount [BUTTON_NUM];  // 押されカウンタ - Pressed counter
-    int mKeyReleasingCount [BUTTON_NUM];  // 離されカウンタ - Released counter
+    int mKeyPressingCount[BUTTON_NUM];  // 押されカウンタ - Pressed counter
+    int mKeyReleasingCount[BUTTON_NUM];  // 離されカウンタ - Released counter
     int mX, mY;
 
     bool IsAvailableCode(int keyCode);  // keyCodeが有効なキー番号か問う -

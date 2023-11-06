@@ -1,11 +1,11 @@
 #include "LIBRA_HEBI.h"
+#include "mmsystem.h"
 #include <Hebi.h>
-#include <lookup.hpp>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
-#include <trajectory.hpp>
-#include "mmsystem.h"
+#include <lookup.hpp>
 #include <stdexcept>
+#include <trajectory.hpp>
 
 #pragma comment(lib, "winmm.lib")
 
@@ -15,7 +15,8 @@ LIBRA_HEBI::LIBRA_HEBI() {
 
     // タイマ割り込み開始 10ms毎に割り込み処理をする
     // Timer interrupt: start interrupt processing every 10ms
-    timeSetEvent(10, 0, callback, reinterpret_cast<DWORD>(this), TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
+    timeSetEvent(10, 0, callback, reinterpret_cast<DWORD>(this),
+                 TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
 }
 
 int LIBRA_HEBI::connect() {
@@ -23,14 +24,15 @@ int LIBRA_HEBI::connect() {
     hebi::Lookup lookup;
 
     // HEBIライブラリを改造して追加実装したavailable関数を使用。内部の_lookupがnullptrでないときに使用可能。
-    // Use the 'available' function, which is additionally implemented by modifying the HEBI library.
-    // (available when internal_lookup is not nullptr)
+    // Use the 'available' function, which is additionally implemented by
+    // modifying the HEBI library. (available when internal_lookup is not
+    // nullptr)
     if (!lookup.available()) {
         printf("[HEBI]Lookupを使用できません（LAN未接続）。\n\n");
         return -1;
     }
 
-    group = lookup.getGroupFromNames({ "X8-16" }, { "MA","MB","J1","J2","J3" });
+    group = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group == nullptr) {
         printf("[HEBI]アクチュエータが接続されていません。\n");
         command->setPosition(Eigen::VectorXd::Zero(5));
@@ -55,7 +57,8 @@ int LIBRA_HEBI::connect() {
     return 0;
 }
 
-void CALLBACK LIBRA_HEBI::callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2) {
+void CALLBACK LIBRA_HEBI::callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
+                                   DWORD dw2) {
     (reinterpret_cast<LIBRA_HEBI*>(dwUser))->loop();
 }
 
@@ -77,10 +80,10 @@ void LIBRA_HEBI::loop() {
         group->sendCommand(*command);
         group->getNextFeedback(*feedback);
     }
-
 }
 
-void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2, double j3) {
+void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
+                      double j3) {
     Eigen::MatrixXd positions(5, 2);
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
     Eigen::MatrixXd accelerations = Eigen::MatrixXd::Zero(5, 2);
@@ -104,7 +107,8 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2, double j3
     time << 0, max_diff_rad * 30 / M_PI;
 
     start_time = timeGetTime();
-    trajectory = hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions, &velocities, &accelerations);
+    trajectory = hebi::trajectory::Trajectory::createUnconstrainedQp(
+        time, positions, &velocities, &accelerations);
 }
 
 void LIBRA_HEBI::stop() {
@@ -113,33 +117,71 @@ void LIBRA_HEBI::stop() {
 
 double LIBRA_HEBI::getCommandPosition(int joint) {
     double ret = 0;
-    if (joint == ROLL) ret = (-command->getPosition()[HEBI_MA] - command->getPosition()[HEBI_MB]) / 2;
-    if (joint == PITCH)ret = (-command->getPosition()[HEBI_MA] + command->getPosition()[HEBI_MB]) / 2;
-    if (joint == J1)   ret = command->getPosition()[HEBI_J1];
-    if (joint == J2)   ret = -command->getPosition()[HEBI_J2];
-    if (joint == J3)   ret = command->getPosition()[HEBI_J3];
+    if (joint == ROLL) {
+        ret =
+            (-command->getPosition()[HEBI_MA] - command->getPosition()[HEBI_MB])
+            / 2;
+    }
+    if (joint == PITCH) {
+        ret =
+            (-command->getPosition()[HEBI_MA] + command->getPosition()[HEBI_MB])
+            / 2;
+    }
+    if (joint == J1) {
+        ret = command->getPosition()[HEBI_J1];
+    }
+    if (joint == J2) {
+        ret = -command->getPosition()[HEBI_J2];
+    }
+    if (joint == J3) {
+        ret = command->getPosition()[HEBI_J3];
+    }
     ret *= 180 / M_PI;
     return ret;
 }
 
 double LIBRA_HEBI::getFeedbackPosition(int joint) {
     double ret = 0;
-    if (joint == ROLL) ret = (-feedback->getPosition()[HEBI_MA] - feedback->getPosition()[HEBI_MB]) / 2;
-    if (joint == PITCH)ret = (-feedback->getPosition()[HEBI_MA] + feedback->getPosition()[HEBI_MB]) / 2;
-    if (joint == J1)   ret = feedback->getPosition()[HEBI_J1];
-    if (joint == J2)   ret = -feedback->getPosition()[HEBI_J2];
-    if (joint == J3)   ret = feedback->getPosition()[HEBI_J3];
+    if (joint == ROLL) {
+        ret = (-feedback->getPosition()[HEBI_MA]
+               - feedback->getPosition()[HEBI_MB])
+            / 2;
+    }
+    if (joint == PITCH) {
+        ret = (-feedback->getPosition()[HEBI_MA]
+               + feedback->getPosition()[HEBI_MB])
+            / 2;
+    }
+    if (joint == J1) {
+        ret = feedback->getPosition()[HEBI_J1];
+    }
+    if (joint == J2) {
+        ret = -feedback->getPosition()[HEBI_J2];
+    }
+    if (joint == J3) {
+        ret = feedback->getPosition()[HEBI_J3];
+    }
     ret *= 180 / M_PI;
     return ret;
 }
 
 double LIBRA_HEBI::getFeedbackEffort(int joint) {
     double ret = 0;
-    if (joint == ROLL) ret = -feedback->getEffort()[HEBI_MA] - feedback->getEffort()[HEBI_MB];
-    if (joint == PITCH)ret = -feedback->getEffort()[HEBI_MA] + feedback->getEffort()[HEBI_MB];
-    if (joint == J1)   ret = feedback->getEffort()[HEBI_J1];
-    if (joint == J2)   ret = -feedback->getEffort()[HEBI_J2];
-    if (joint == J3)   ret = feedback->getEffort()[HEBI_J3];
+    if (joint == ROLL) {
+        ret = -feedback->getEffort()[HEBI_MA] - feedback->getEffort()[HEBI_MB];
+    }
+    if (joint == PITCH) {
+        ret = -feedback->getEffort()[HEBI_MA] + feedback->getEffort()[HEBI_MB];
+    }
+    if (joint == J1) {
+        ret = feedback->getEffort()[HEBI_J1];
+    }
+    if (joint == J2) {
+        ret = -feedback->getEffort()[HEBI_J2];
+    }
+    if (joint == J3) {
+        ret = feedback->getEffort()[HEBI_J3];
+    }
     return ret;
 }
 

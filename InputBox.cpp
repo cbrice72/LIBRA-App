@@ -1,16 +1,16 @@
-#include <DxLib.h>
 #include "InputBox.h"
 #include "Mouse.h"
+#include <DxLib.h>
 
-InputBox::InputBox(int x, int y) :
-    IsPressed(false), IsMouseover(false)
-{
+InputBox::InputBox(int x, int y) : IsPressed(false), IsMouseover(false) {
     mX = x;
     mY = y;
     mW = 220;
     mH = 100;
     font = CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING);
-    InputHandle = MakeKeyInput(7, FALSE, TRUE, TRUE);  // キー入力ハンドルを作る - Create key input handle
+    InputHandle =
+        MakeKeyInput(7, FALSE, TRUE, TRUE);  // キー入力ハンドルを作る
+                                             // - Create key input handle
     maincolor = GetColor(50, 50, 50);
 }
 
@@ -25,12 +25,12 @@ void InputBox::Update() {
         }
         if (Mouse::Instance()->GetPressingCount(Mouse::LEFT) == 1) {
             IsPressed = true;
-            // 作成したキー入力ハンドルをアクティブにする - Activate the created key input handle
+            // 作成したキー入力ハンドルをアクティブにする
+            // - Activate the created key input handle
             SetActiveKeyInput(InputHandle);
             count = 0;
         }
-    }
-    else {
+    } else {
         IsMouseover = false;
         IsPressed = false;
     }
@@ -41,21 +41,30 @@ void InputBox::Draw() {
     GetFontStateToHandle(NULL, &fontsize, NULL, font);
 
     // 四角形を描画 - Draw rectangle
-    DrawBoxAA(mX, mY, mX + mW, mY + mH, maincolor, FALSE, (IsMouseover || GetActiveKeyInput() == InputHandle) ? 5.5 : 2.5);
+    DrawBoxAA(mX, mY, mX + mW, mY + mH, maincolor, FALSE,
+              (IsMouseover || GetActiveKeyInput() == InputHandle) ? 5.5 : 2.5);
 
-    // 入力途中の文字列を描画 - Draw string in middle of input (?)
+    // 入力途中の文字列を描画 - Draw string in middle of input
+    // (?)
     char string[20];
     GetKeyInputString(string, InputHandle);
-    int strX = mX + mW - GetDrawStringWidthToHandle(string, strlen(string), font) - 20;
+    int strX =
+        mX + mW - GetDrawStringWidthToHandle(string, strlen(string), font) - 20;
     int strY = mY + mH / 2 - fontsize / 2;
     DrawFormatStringToHandle(strX, strY, maincolor, font, string);
 
     // カーソルを描画 - Draw cursor
     if (GetActiveKeyInput() == InputHandle) {
-        int cursorX = strX + GetDrawStringWidthToHandle(string, GetKeyInputCursorPosition(InputHandle), font);
-        if (count < 30)DrawLineAA(cursorX, strY + 7, cursorX, strY + 50, maincolor, 3.5);
+        int cursorX = strX
+                    + GetDrawStringWidthToHandle(
+                          string, GetKeyInputCursorPosition(InputHandle), font);
+        if (count < 30) {
+            DrawLineAA(cursorX, strY + 7, cursorX, strY + 50, maincolor, 3.5);
+        }
         count++;
-        if (count >= 60)count = 0;
+        if (count >= 60) {
+            count = 0;
+        }
     }
 }
 

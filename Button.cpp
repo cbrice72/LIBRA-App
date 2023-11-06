@@ -1,11 +1,10 @@
-#include <DxLib.h>
 #include "Button.h"
 #include "Mouse.h"
+#include <DxLib.h>
 
-Button::Button(int x, int y, int w, int h, const char* str, OnClickListener* listener) :
-    mListener(NULL)
-    , IsPressed(false), IsMouseover(false)
-{
+Button::Button(int x, int y, int w, int h, const char* str,
+               OnClickListener* listener) :
+    mListener(NULL), IsPressed(false), IsMouseover(false) {
     mX = x;
     mY = y;
     mW = w;
@@ -28,8 +27,7 @@ void Button::Update() {
             mListener->OnClick(this);
             IsPressed = true;
         }
-    }
-    else {
+    } else {
         IsMouseover = false;
         IsPressed = false;
     }
@@ -43,15 +41,15 @@ void Button::Draw() {
     }
     if (IsMouseover) {
         color = GetColor(100, 100, 100);
-    }
-    else {
+    } else {
         color = GetColor(50, 50, 50);
     }
     int strW = GetDrawStringWidthToHandle(mStr, strlen(mStr), font);
     int fontsize;
     GetFontStateToHandle(NULL, &fontsize, NULL, font);
 
-    DrawRoundRectAA(mX + sub, mY + sub, mX + mW - sub, mY + mH - sub, 20, 20, 20, color, TRUE);
+    DrawRoundRectAA(mX + sub, mY + sub, mX + mW - sub, mY + mH - sub, 20, 20,
+                    20, color, TRUE);
     int strX = mX + mW / 2 - strW / 2;
     int strY = mY + mH / 2 - fontsize / 2;
     DrawStringToHandle(strX, strY, mStr, GetColor(255, 255, 255), font);

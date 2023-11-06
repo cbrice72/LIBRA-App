@@ -48,11 +48,11 @@ class AppMgr : public OnClickListener {
 
     volatile bool EndFlag = 0;
     volatile bool ThreadEndFlag = 0;
-    double input [5];
-    double value [5][3] = {0};
-    double camera_pos [3] = {0};
-    double camera_setpos [3] = {0};
-    int camera_dir [3] = {0};
+    double input[5];
+    double value[5][3] = {0};
+    double camera_pos[3] = {0};
+    double camera_setpos[3] = {0};
+    int camera_dir[3] = {0};
     int mode = 0;
     bool enable = true;
 
