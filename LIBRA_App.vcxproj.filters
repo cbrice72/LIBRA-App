@@ -65,9 +65,17 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include=".clang-format" />
+    <None Include=".clang-tidy" />
+    <None Include=".gitignore" />
+    <None Include="FILES.md" />
+    <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="safety.xml" />
     <Xml Include="gain.xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="LICENSE.txt" />
   </ItemGroup>
 </Project>
