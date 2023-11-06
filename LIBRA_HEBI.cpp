@@ -1,8 +1,8 @@
 #include "LIBRA_HEBI.h"
 #include "mmsystem.h"
-#include <Hebi.h>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
+#include <hebi.h>
 #include <lookup.hpp>
 #include <stdexcept>
 #include <trajectory.hpp>
@@ -24,13 +24,27 @@ int LIBRA_HEBI::connect() {
     hebi::Lookup lookup;
 
     // HEBIライブラリを改造して追加実装したavailable関数を使用。内部の_lookupがnullptrでないときに使用可能。
-    // Use the 'available' function, which is additionally implemented by
-    // modifying the HEBI library. (available when internal_lookup is not
-    // nullptr)
+    /* The HEBI library must be modified to implement the `available()`
+     * function. This function returns `true` when the Lookup object's internal
+     * `lookup_` data member is not nullptr. It can be implemented by making the
+     * following additions to Lookup.hpp/.cpp:
+     * - Declare the following in the `public` field of the `Lookup` class.
+     *     ```
+     *     bool available();
+     *     ```
+     * - Define the `available()` function as follows:
+     *     ```
+     *     bool Lookup::available() {
+     *         return lookup_ != nullptr;
+     *     }
+     *     ```
+     */
+    /*
     if (!lookup.available()) {
         printf("[HEBI]Lookupを使用できません（LAN未接続）。\n\n");
         return -1;
     }
+    */
 
     group = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group == nullptr) {
@@ -38,12 +52,12 @@ int LIBRA_HEBI::connect() {
         command->setPosition(Eigen::VectorXd::Zero(5));
         return -1;
     }
-    if (!command->readSafetyParameters("safety.xml")) {
+    if (!command->readSafetyParameters("params/safety.xml")) {
         printf("[HEBI]安全パラメータファイルを読み込めません\n");
         system("pause");
         return -1;
     }
-    if (!command->readGains("gain.xml")) {
+    if (!command->readGains("params/gain.xml")) {
         printf("[HEBI]ゲインパラメータファイルを読み込めません\n");
         system("pause");
         return -1;
