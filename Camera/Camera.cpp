@@ -1,8 +1,32 @@
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   ???
+ ******************************************************************************/
+
+// Related Header
 #include "Camera.h"
-#include <DxLib.h>
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   COM Library
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "OleAut32.lib ")
+//   DirectX Wrapper
+#include <DxLib.h>
+//   Easy Web Camera LIBrary
 #include "ewclib.h"
+
+// Project Headers
+//   (none)
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
 
 Camera::Camera(int height, int width, int num) {
     camera_num = num;

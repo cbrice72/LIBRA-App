@@ -1,8 +1,28 @@
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/7/5
+ ******************************************************************************/
+
+// Related Header
 #include "Serial.h"
+// C++ Standard Library Headers
+#include <cstdio>
+#include <cstdlib>
+// POSIX/Windows Library Headers
 #include <Windows.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <tchar.h>
+
+// Other Libraries' Headers
+//   (none)
+// Project Headers
+//   (none)
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
 
 int Serial::open(const char* port) {
     DWORD dwErrorMask;

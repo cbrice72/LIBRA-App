@@ -1,5 +1,20 @@
+/******************************************************************************
+ * @file   .h
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/1/13
+ ******************************************************************************/
+
 #pragma once
 
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   (none)
+// Project Headers
 #include "Singleton.h"
 
 class Mouse : public Singleton<Mouse> {
@@ -8,25 +23,27 @@ class Mouse : public Singleton<Mouse> {
 
     friend Singleton<Mouse>;
 
-    bool Update();  // 更新 - Update
-    int GetPressingCount(
-        int keyCode);  // keyCodeのキーが押されているフレーム数を取得
-                       // Gets the number of frames which 'keyCode' is pressed
-    int GetReleasingCount(
-        int keyCode);  // keyCodeのキーが離されているフレーム数を取得
-                       // Gets the number of frames which 'keyCode' is released
+    bool Update();
+    // keyCodeのキーが押されているフレーム数を取得
+    // Gets the number of frames in which the keyCode key is pressed
+    int GetPressingCount(int keyCode);
+    // keyCodeのキーが離されているフレーム数を取得
+    // Gets the number of frames in which the keyCode key is depressed
+    int GetReleasingCount(int keyCode);
     int GetX();
     int GetY();
+
     const static int LEFT = 0;
     const static int RIGHT = 1;
     const static int MIDDLE = 2;
 
   private:
-    const static int BUTTON_NUM = 8;
-    int mKeyPressingCount[BUTTON_NUM];  // 押されカウンタ - Pressed counter
-    int mKeyReleasingCount[BUTTON_NUM];  // 離されカウンタ - Released counter
-    int mX, mY;
+    // keyCodeが有効なキー番号か問う
+    // Checks if keyCode is valid
+    bool IsAvailableCode(int keyCode);
 
-    bool IsAvailableCode(int keyCode);  // keyCodeが有効なキー番号か問う -
-                                        // Queries if 'keyCode' is valid
+    const static int BUTTON_NUM = 8;
+    int mKeyPressingCount[BUTTON_NUM];
+    int mKeyReleasingCount[BUTTON_NUM];
+    int mX, mY;
 };

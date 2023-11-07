@@ -1,11 +1,30 @@
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   ???
+ ******************************************************************************/
+
+// Related Header
 #include "LIBRA_HEBI.h"
+// C++ Standard Library Headers
+#include <stdexcept>
+// POSIX/Windows Library Headers
 #include "mmsystem.h"
+// Other Libraries' Headers
+//   HEBI Actuators
 #include <group_command.hpp>
 #include <group_feedback.hpp>
 #include <hebi.h>
 #include <lookup.hpp>
-#include <stdexcept>
 #include <trajectory.hpp>
+// Project Headers
+//   (none)
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
 
 #pragma comment(lib, "winmm.lib")
 

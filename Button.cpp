@@ -1,18 +1,38 @@
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/7/5
+ ******************************************************************************/
+
+// Related Header
 #include "Button.h"
-#include "Mouse.h"
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   DirectX Wrapper
 #include <DxLib.h>
+// Project Headers
+#include "Mouse.h"
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
 
 Button::Button(int x, int y, int w, int h, const char* str,
                OnClickListener* listener) :
-    mListener(NULL), IsPressed(false), IsMouseover(false) {
-    mX = x;
-    mY = y;
-    mW = w;
-    mH = h;
-    mStr = str;
-    font = CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING);
-    mListener = listener;
-}
+    mX(x),
+    mY(y),
+    mW(w),
+    mH(h),
+    mStr(str),
+    mListener(listener),
+    IsPressed(false),
+    IsMouseover(false),
+    font(CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING)) {}
 
 void Button::Update() {
     int x = Mouse::Instance()->GetX();

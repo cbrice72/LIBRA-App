@@ -1,5 +1,27 @@
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/1/13
+ ******************************************************************************/
+
+// Related Header
 #include "Mouse.h"
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   DirectX Wrapper
 #include <DxLib.h>
+
+// Project Headers
+//   (none)
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
 
 Mouse::Mouse() : mX(0), mY(0) {
     memset(mKeyPressingCount, 0, sizeof(mKeyPressingCount));

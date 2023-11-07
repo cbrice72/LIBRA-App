@@ -1,4 +1,21 @@
+/******************************************************************************
+ * @file   .h
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/1/13
+ ******************************************************************************/
+
 #pragma once
+
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   (none)
+// Project Headers
+//   (none)
 
 template<typename _T>
 class Singleton {
@@ -9,11 +26,10 @@ class Singleton {
     };
 
   protected:
-    Singleton() {}
+    Singleton() {};
+    virtual ~Singleton() {};
 
-    virtual ~Singleton() {}
-
-    Singleton(const Singleton& r) {}
-
-    Singleton& operator=(const Singleton& r) {}
+    // Copy constructor + assignment operator
+    Singleton(const Singleton& r) {};
+    Singleton& operator=(const Singleton& r) {};
 };

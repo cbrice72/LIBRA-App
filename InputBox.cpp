@@ -1,18 +1,39 @@
-#include "InputBox.h"
-#include "Mouse.h"
-#include <DxLib.h>
+/******************************************************************************
+ * @file   .cpp
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   2022/7/5
+ ******************************************************************************/
 
-InputBox::InputBox(int x, int y) : IsPressed(false), IsMouseover(false) {
-    mX = x;
-    mY = y;
-    mW = 220;
-    mH = 100;
-    font = CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING);
-    InputHandle =
-        MakeKeyInput(7, FALSE, TRUE, TRUE);  // キー入力ハンドルを作る
-                                             // - Create key input handle
-    maincolor = GetColor(50, 50, 50);
-}
+// Related Header
+#include "InputBox.h"
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+//   (none)
+// Other Libraries' Headers
+//   DirectX Wrapper
+#include <DxLib.h>
+// Project Headers
+#include "Mouse.h"
+
+/* --- TABLE OF CONTENTS ---
+ * !...
+ */
+
+InputBox::InputBox(int x, int y) :
+    mX(x),
+    mY(y),
+    mW(220),
+    mH(100),
+    IsPressed(false),
+    IsMouseover(false),
+    font(CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING)),
+    InputHandle(
+        MakeKeyInput(7, FALSE, TRUE, TRUE)),  // キー入力ハンドルを作る
+                                              // - Create key input handle
+    maincolor(GetColor(50, 50, 50)) {}
 
 void InputBox::Update() {
     int x = Mouse::Instance()->GetX();

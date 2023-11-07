@@ -1,27 +1,46 @@
+/******************************************************************************
+ * @file   .h
+ * @brief  TODO
+ *
+ * @author Yuto Goto
+ * @date   ???
+ ******************************************************************************/
+
 #pragma once
 
+// C++ Standard Library Headers
+//   (none)
+// POSIX/Windows Library Headers
+#include <windows.h>
+// Other Libraries' Headers
+//   HEBI Actuators
+#include <Hebi.h>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
-#include <hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
-#include <windows.h>
+
+// Project Headers
+//   (none)
 
 class LIBRA_HEBI {
   public:
     LIBRA_HEBI();
-    int connect();
-    void move(double roll, double pitch, double j1, double j2, double j3);
-    void stop();
 
     enum {
         ROLL,
         PITCH,
         J1,
         J2,
-        J3,
+        J3
     };
 
+    // --- Motor Commands ---
+    int connect();
+    void move(double roll, double pitch, double j1, double j2, double j3);
+    void stop();
+
+    // --- Getters & Setters ---
     double getCommandPosition(int joint);
     double getFeedbackPosition(int joint);
     double getFeedbackEffort(int joint);
@@ -29,16 +48,6 @@ class LIBRA_HEBI {
     double getFeedbackEffortMB();
 
   private:
-    static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
-                                  DWORD dw2);
-    void loop();
-
-    hebi::GroupCommand* command;
-    hebi::GroupFeedback* feedback;
-    std::shared_ptr<hebi::Group> group = nullptr;
-    std::shared_ptr<hebi::trajectory::Trajectory> trajectory = nullptr;
-    DWORD start_time = timeGetTime();
-
     enum {
         HEBI_MA,
         HEBI_MB,
@@ -46,4 +55,15 @@ class LIBRA_HEBI {
         HEBI_J2,
         HEBI_J3
     };
+
+    static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
+                                  DWORD dw2);
+    void loop();
+
+    // --- Data Members ---
+    hebi::GroupCommand* command;
+    hebi::GroupFeedback* feedback;
+    std::shared_ptr<hebi::Group> group = nullptr;
+    std::shared_ptr<hebi::trajectory::Trajectory> trajectory = nullptr;
+    DWORD start_time = timeGetTime();
 };
