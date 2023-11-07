@@ -38,56 +38,62 @@
 /**
  * @brief TODO.
  */
-void AppMgr::SetupIncludeDxlibInit() {
-    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹• - Start in windowed mode
+const void AppMgr::SetupIncludeDxlibInit() {
+    // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
+
+    // ƒEƒCƒ“ƒhƒEƒ‚[ƒh‚Å‹N“® - Start in windowed mode
     ChangeWindowMode(TRUE);
 
-    // æœ€å¤§åŒ–ãƒœã‚¿ãƒ³ãŒå­˜åœ¨ã™ã‚‹ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã«å¤‰æ›´ - Set to windowed mode with
-    // maximize button present
+    // Å‘å‰»ƒ{ƒ^ƒ“‚ª‘¶İ‚·‚éƒEƒCƒ“ƒhƒEƒ‚[ƒh‚É•ÏX
+    // Set to windowed mode with maximize button present
     SetWindowStyleMode(7);
 
-    // ç”»é¢ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify screen size
+    // ‰æ–ÊƒTƒCƒY‚ğw’è - Specify screen size
     SetGraphMode(WindowW, WindowH, 32);
 
-    // ã‚µã‚¤ã‚ºå¤‰æ›´ã‚’å¯èƒ½ã«ã™ã‚‹ - Allow resizing
+    // ƒTƒCƒY•ÏX‚ğ‰Â”\‚É‚·‚é - Allow resizing
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
-    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify window size
-    int DesktopW, DesktopH;
-    GetDefaultState(&DesktopW, &DesktopH, NULL);
+    // ƒEƒCƒ“ƒhƒEƒTƒCƒY‚ğw’è - Specify window size
+    int DesktopW {0};
+    int DesktopH {0};
+    GetDefaultState(&DesktopW, &DesktopH, nullptr);
 
-    // æ¨ªé•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Landscape display
-    if ((float)DesktopW / DesktopH > (float)WindowW / WindowH) {
+    // ‰¡’·ƒfƒBƒXƒvƒŒƒC - Landscape display
+    if (static_cast<float>(DesktopW) / DesktopH
+        > static_cast<float>(WindowW) / WindowH) {
         SetWindowSize(0.8 * DesktopH * (WindowW / WindowH), 0.8 * DesktopH);
     }
-    // ç¸¦é•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Portrait display
+    // c’·ƒfƒBƒXƒvƒŒƒC - Portrait display
     else {
         SetWindowSize(0.8 * DesktopW, 0.8 * DesktopW * (WindowH / WindowW));
     }
 
-    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒãƒãƒ³ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã§ã‚‚å®Ÿè¡Œ - Execute even if window is inactive
+    // ƒEƒBƒ“ƒhƒE‚ªƒmƒ“ƒAƒNƒeƒBƒu‚Å‚àÀs - Execute even if window is inactive
     SetAlwaysRunFlag(TRUE);
 
-    // ãƒãƒ«ãƒã‚¹ãƒ¬ãƒƒãƒ‰ã«é©ã—ãŸãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹•ã™ã‚‹ - Start in mode suitable for
+    // ƒ}ƒ‹ƒ`ƒXƒŒƒbƒh‚É“K‚µ‚½ƒ‚[ƒh‚Å‹N“®‚·‚é - Start in mode suitable for
     // multi-threading
     SetMultiThreadFlag(TRUE);
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã§WM_PAINTã®å‡¦ç†ã‚’ã—ãªã„ - Do not process WM_PAINT in the DX
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÅWM_PAINT‚Ìˆ—‚ğ‚µ‚È‚¢ - Do not process WM_PAINT in the DX
     // library
     SetUseDxLibWM_PAINTProcess(FALSE);
 
-    // Windowã®ã‚¿ã‚¤ãƒˆãƒ«ã‚’è¨­å®š - Set the window title
+    // Window‚Ìƒ^ƒCƒgƒ‹‚ğİ’è - Set the window title
     SetWindowText("LIBRA App");
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®åˆæœŸåŒ– - Initialize DX library
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‚Ì‰Šú‰» - Initialize DX library
     DxLib_Init();
 
-    // æç”»å…ˆã‚’è£ç”»é¢ã«ã™ã‚‹ - Draw the back screen (?)
+    // •`‰ææ‚ğ— ‰æ–Ê‚É‚·‚é - Draw the back screen (?)
     SetDrawScreen(DX_SCREEN_BACK);
 
-    // ã‚¢ãƒ³ãƒã‚¨ã‚¤ãƒªã‚¢ã‚¹ä»˜ãå›³å½¢æç”»ã®æº–å‚™ã‚’è¡Œã† - Prepare for drawing
+    // ƒAƒ“ƒ`ƒGƒCƒŠƒAƒX•t‚«}Œ`•`‰æ‚Ì€”õ‚ğs‚¤ - Prepare for drawing
     // anti-aliased shapes
     BeginAADraw();
+
+    // NOLINTEND(readability-magic-numbers): Positions of UI elements
 }
 
 /**
@@ -99,24 +105,24 @@ int AppMgr::printComList(void) {
     SP_DEVINFO_DATA Data = {sizeof(SP_DEVINFO_DATA)};
 
     int max = 0;
-    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’å–å¾— - Get device information set
+    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğæ“¾ - Get device information set
     hDevInfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr, nullptr,
                                    DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (!hDevInfo) {  // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆãŒå–å¾—ã§ããªã‹ã£ãŸå ´åˆ - If the
-                      // device information set could not be obtained
+    if (!hDevInfo) {
+        // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ªæ“¾‚Å‚«‚È‚©‚Á‚½ê‡
+        // If the device information set could not be obtained
         return 0;
     }
 
     Data.cbSize = sizeof(Data);
 
-    while (SetupDiEnumDeviceInfo(
-        hDevInfo, max,
-        &Data)) {  // ãƒ‡ãƒã‚¤ã‚¹ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹ã®å–å¾— - Get device interface
+    // ƒfƒoƒCƒXƒCƒ“ƒ^[ƒtƒFƒCƒX‚Ìæ“¾ - Get device interface
+    while (SetupDiEnumDeviceInfo(hDevInfo, max, &Data)) {
         DWORD dataT;
         DWORD size;
         LPTSTR buf;
 
-        // COMãƒãƒ¼ãƒˆåã®å–å¾— - Obtain COM port name
+        // COMƒ|[ƒg–¼‚Ìæ“¾ - Obtain COM port name
         HKEY key = SetupDiOpenDevRegKey(hDevInfo, &Data, DICS_FLAG_GLOBAL, 0,
                                         DIREG_DEV, KEY_QUERY_VALUE);
         if (key) {
@@ -128,7 +134,7 @@ int AppMgr::printComList(void) {
             _tprintf(_TEXT("%s"), name);
         }
 
-        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å–å¾— - Get device description
+        // ƒfƒoƒCƒX‚Ìà–¾‚ğæ“¾ - Get device description
         size = 0;
         buf = nullptr;
         while (!SetupDiGetDeviceRegistryProperty(hDevInfo, &Data,
@@ -152,7 +158,7 @@ int AppMgr::printComList(void) {
     }
 
     SetupDiDestroyDeviceInfoList(
-        hDevInfo);  // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’è§£æ”¾ - Release device information set
+        hDevInfo);  // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğ‰ğ•ú - Release device information set
     return max;
 }
 
@@ -177,66 +183,69 @@ std::string AppMgr::GetDateTimeString() {
  * @brief TODO.
  */
 void AppMgr::Main() {
-    // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚’ç”¨æ„ - Prepare console
+    // ƒRƒ“ƒ\[ƒ‹‚ğ—pˆÓ - Prepare console
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
     (void)freopen("CONIN$", "r", stdin);
-    printf("\n==== LIBRA App Start ====\n\n");
+    std::cout << "\n===== LIBRA App Start =====\n" << std::endl;
 
-    // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿æ¥ç¶š - HEBI actuator connection
+    // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^Ú‘± - HEBI actuator connection
     ARM = new LIBRA_HEBI();
     int hebi_error = ARM->connect();
 
-    // COMãƒãƒ¼ãƒˆæ¥ç¶š - COM port connection
+    // COMƒ|[ƒgÚ‘± - COM port connection
     SerialWater = new Serial();
     SerialServo = new Serial();
-    if (!hebi_error) {  // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã¨æ¥ç¶šã•ã‚Œã¦ã„ã‚‹ã¨ãã®ã¿ - Only
+    if (!hebi_error) {  // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ÆÚ‘±‚³‚ê‚Ä‚¢‚é‚Æ‚«‚Ì‚İ - Only
                         // when connected to HEBI actuator
-        int com;
-        char comtext[10];
         std::string answer;
         do {
-            printf("\n\n---- COMãƒãƒ¼ãƒˆä¸€è¦§ ----\n");
+            std::cout << "----- COM Port List -----\n";
             int port = printComList();
-            printf("\n%då€‹ã®ãƒãƒ¼ãƒˆãŒæ¤œå‡ºã•ã‚Œã¾ã—ãŸã€‚\n", port);
-            std::cout << "å†æ¤œå‡ºã—ã¾ã™ã‹ï¼Ÿ[y/n]:";
+            std::cout << "Detected " << port << " ports\n";
+            std::cout << "Would you like to scan again? [y/n]:" << std::flush;
             std::cin >> answer;
         } while (answer != "n");
 
-        printf("\nSerialWaterã®COMãƒãƒ¼ãƒˆç•ªå·ã‚’å…¥åŠ› : COM");
-        (void)scanf("%d", &com);
-        sprintf(comtext, "COM%d", com);
-        if (SerialWater->open(comtext)) {
-            printf("%sãŒé–‹ãã¾ã›ã‚“ã€‚\n", comtext);
+        std::string com;
+        std::string comtext;
+
+        std::cout << "Specify the port to be used by SerialWater: "
+                  << std::flush;
+        std::cin >> com;
+        comtext = "COM" + com;
+        if (SerialWater->open(comtext.c_str()) != 0) {
+            std::cout << "  Cannot open " << comtext << std::endl;
         }
 
-        printf("SerialServoã®COMãƒãƒ¼ãƒˆç•ªå·ã‚’å…¥åŠ› : COM");
-        (void)scanf("%d", &com);
-        sprintf(comtext, "COM%d", com);
-        if (SerialServo->open(comtext)) {
-            printf("%sãŒé–‹ãã¾ã›ã‚“ã€‚\n", comtext);
+        std::cout << "Specify the port to be used by SerialServo: "
+                  << std::flush;
+        std::cin >> com;
+        comtext = "COM" + com;
+        if (SerialServo->open(comtext.c_str()) != 0) {
+            std::cout << "  Cannot open " << comtext << std::endl;
         }
     }
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªåˆæœŸåŒ–ã‚’å«ã‚€è¨­å®š - Setup, including DX library initialization
-    printf("\nDxlibã‚’èµ·å‹•ã—ã¾ã™...");
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‰Šú‰»‚ğŠÜ‚Şİ’è - Setup, including DX library initialization
+    std::cout << "Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
-    // ProcessMessageä»¥å¤–ã®å‡¦ç†ã‚’è¡Œã†ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆ - Create threads for
+    // ProcessMessageˆÈŠO‚Ìˆ—‚ğs‚¤ƒXƒŒƒbƒh‚ğì¬ - Create threads for
     // processing (other than 'ProcessMessage')
     CreateThread(NULL, 0, MainThread_dmy, this, 0, NULL);
 
-    // ProcessMessageãƒ«ãƒ¼ãƒ— - 'ProcessMessage' loop
+    // ProcessMessageƒ‹[ƒv - 'ProcessMessage' loop
     while (!ProcessMessage() && !ThreadEndFlag) {
-        // å°‘ã—CPUã‚’ä¼‘ã‚ã‚‹ - Wait for the thread to finish
+        // ­‚µCPU‚ğ‹x‚ß‚é - Wait for the thread to finish
         Sleep(6);
     }
 
-    // ãƒ—ãƒ­ã‚°ãƒ©ãƒ ãŒçµ‚äº†ã—ãŸã“ã¨ã‚’ç¤ºã™ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹ - Flag to indicate that the
+    // ƒvƒƒOƒ‰ƒ€‚ªI—¹‚µ‚½‚±‚Æ‚ğ¦‚·ƒtƒ‰ƒO‚ğ—§‚Ä‚é - Flag to indicate that the
     // program has finished
     EndFlag = 1;
 
-    // ã‚¹ãƒ¬ãƒƒãƒ‰çµ‚äº†ãƒ•ãƒ©ã‚°ãŒç«‹ã¤ã¾ã§å¾…ã¤ - Wait until the thread is flagged as
+    // ƒXƒŒƒbƒhI—¹ƒtƒ‰ƒO‚ª—§‚Â‚Ü‚Å‘Ò‚Â - Wait until the thread is flagged as
     // closed
     while (!ThreadEndFlag) {
         Sleep(10);
@@ -252,7 +261,7 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
     AppMgr* p = (AppMgr*)pv;
     p->MainThread();
     p->ThreadEndFlag =
-        1;  // ã‚¹ãƒ¬ãƒƒãƒ‰çµ‚äº†ãƒ•ãƒ©ã‚°ã‚’ï¼‘ã«ã™ã‚‹ - Set thread end flag to 1
+        1;  // ƒXƒŒƒbƒhI—¹ƒtƒ‰ƒO‚ğ‚P‚É‚·‚é - Set thread end flag to 1
     return 0;
 }
 
@@ -305,8 +314,8 @@ void AppMgr::MainThread() {
                             "STOP", this);
     UpButton = new Button(320, 800, 120, 120, "R+", this);
     DownButton = new Button(320, 1200, 120, 120, "R-", this);
-    LeftButton = new Button(120, 1000, 120, 120, "Î¸+", this);
-    RightButton = new Button(520, 1000, 120, 120, "Î¸-", this);
+    LeftButton = new Button(120, 1000, 120, 120, "ƒÆ+", this);
+    RightButton = new Button(520, 1000, 120, 120, "ƒÆ-", this);
     EnableButton = new Button(2200, 150, 340, 100, "ENABLE", this);
     DisableButton = new Button(2200, 300, 340, 100, "DISABLE", this);
     ShotButton =
@@ -317,18 +326,18 @@ void AppMgr::MainThread() {
     int count = 0;
     BYTE d = 0;
 
-    // ãƒ­ã‚° - Log
+    // ƒƒO - Log
 
     SYSTEMTIME st;
     char datetime_char[100];
     std::string datetime_str;
     GetLocalTime(&st);
-    sprintf(datetime_char, "%04då¹´%02dæœˆ%02dæ—¥_%02dæ™‚%02dåˆ†%02dç§’", st.wYear,
+    sprintf(datetime_char, "%04d”N%02dŒ%02d“ú_%02d%02d•ª%02d•b", st.wYear,
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     datetime_str = datetime_char;
 
     if (_mkdir("./Log/") == 0) {
-        printf("ãƒ­ã‚°ãƒ•ã‚©ãƒ«ãƒ€ã‚’ä½œæˆã—ã¾ã—ãŸã€‚\n");
+        std::cout << "Created Log directory.\n";
     }
 
     continuous_log =
@@ -356,41 +365,41 @@ void AppMgr::MainThread() {
 
     //-----------------------------
 
-    while (!EndFlag && !ScreenFlip() && !ClearDrawScreen()) {
+    while (!EndFlag && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
         Mouse::Instance()->Update();
 
+        InputBox_Voltage->UpdateDraw();
+        InputBox_Current->UpdateDraw();
         InputBox_Roll->UpdateDraw();
         InputBox_Pitch->UpdateDraw();
         InputBox_J1->UpdateDraw();
         InputBox_J2->UpdateDraw();
         InputBox_J3->UpdateDraw();
+        InputBox_Increment->UpdateDraw();
         InputBox_R->UpdateDraw();
         InputBox_Theta->UpdateDraw();
-        InputBox_Increment->UpdateDraw();
-        InputBox_Voltage->UpdateDraw();
-        InputBox_Current->UpdateDraw();
         InputBox_CamPan->UpdateDraw();
         InputBox_CamTilt->UpdateDraw();
 
+        EnableButton->UpdateDraw();
+        DisableButton->UpdateDraw();
+        ShotButton->UpdateDraw();
+        ConvertButton->UpdateDraw();
         StartButton->UpdateDraw();
         StopButton->UpdateDraw();
-        ConvertButton->UpdateDraw();
         UpButton->UpdateDraw();
         DownButton->UpdateDraw();
         LeftButton->UpdateDraw();
         RightButton->UpdateDraw();
-        EnableButton->UpdateDraw();
-        DisableButton->UpdateDraw();
-        ShotButton->UpdateDraw();
         ServoSlowButton->UpdateDraw();
         ServoFastButton->UpdateDraw();
 
         // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-        // æ“ä½œç›¤ã®å››è§’ - Operation panel square
+        // ‘€ì”Õ‚ÌlŠp - Operation panel square
         DrawBoxAA(60, 550, 1300, WindowH - 100, maincolor, FALSE, 2.5);
 
-        // ã‚¿ã‚¤ãƒˆãƒ« - Title
+        // ƒ^ƒCƒgƒ‹ - Title
         DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont,
                                  "LIBRA-I");
         DrawFormatStringToHandle(120, 824 - 200, maincolor, titlefont,
@@ -407,7 +416,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(1400, 200, maincolor, titlefont, "A_OUT");
         DrawFormatStringToHandle(1700, 200, maincolor, titlefont, "B_OUT");
 
-        // å„é …ç›® - Iterate over each item
+        // Še€–Ú - Iterate over each item
         for (int i = 0; i < 5; i++) {
             value[i][0] = ARM->getCommandPosition(i);
             value[i][1] = ARM->getFeedbackPosition(i);
@@ -433,12 +442,14 @@ void AppMgr::MainThread() {
 
         DrawFormatStringToHandle(120, 824 + 200 * 3, maincolor, mainfont, "R");
         DrawFormatStringToHandle(530, 824 + 200 * 3, maincolor, mainfont, "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "Î¸");
+        DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "ƒÆ");
         DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont,
                                  "deg");
 
-        // ã‚°ãƒ©ãƒ•è¡¨ç¤º - Graph display
-        const int cX = 3100, cY = WindowH / 2 + 350;
+        // ƒOƒ‰ƒt•\¦ - Graph display
+        const int cX = 3100;
+        const int cY = WindowH / 2 + 350;
+
         DrawLineAA(cX + 40 * 0, cY - 40 * 10, cX + 40 * (-10), cY - 40 * 0,
                    maincolor, 2.5);
         DrawLineAA(cX + 40 * -10, cY - 40 * 0, cX + 40 * (0), cY - 40 * -10,
@@ -482,7 +493,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(cX - 100, cY - 550 - 25, maincolor, mainfont,
                                  "Pitch[Nm]");
 
-        // é›»åœ§é›»æµ - Voltage and current
+        // “dˆ³“d—¬ - Voltage and current
         DrawFormatStringToHandle(1400, 1800, maincolor, titlefont, "Voltage");
         DrawFormatStringToHandle(1400 + 400, 1800, maincolor, titlefont,
                                  "Current");
@@ -490,7 +501,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(1400 + 400 + 260, 1924, maincolor, mainfont,
                                  "A");
 
-        // ã‚«ãƒ¡ãƒ© - Camera
+        // ƒJƒƒ‰ - Camera
         DrawFormatStringToHandle(2800, 150, maincolor, titlefont,
                                  "Camera Pos.");
         DrawFormatStringToHandle(2800, 300 + 24, maincolor, mainfont, "Base");
@@ -512,7 +523,7 @@ void AppMgr::MainThread() {
         }
 
         // ???
-        if (camera_dir[1]) {
+        if (camera_dir[1] != 0) {
             camera_pos[1] += camera_dir[1] * 90.0 / (60.0 * 60.0);
             if ((camera_pos[1] > camera_setpos[1]) == (camera_dir[1] == 1)) {
                 camera_pos[1] = camera_setpos[1];
@@ -521,7 +532,7 @@ void AppMgr::MainThread() {
         }
 
         // ???
-        if (camera_dir[2]) {
+        if (camera_dir[2] != 0) {
             camera_pos[2] += camera_dir[2] * 90.0 / (60.0 * 60.0);
             if ((camera_pos[2] > camera_setpos[2]) == (camera_dir[2] == 1)) {
                 camera_pos[2] = camera_setpos[2];
@@ -532,8 +543,8 @@ void AppMgr::MainThread() {
         // ???
         for (int i = 0; i < 3; i++) {
             char str[20] = "";
-            int strW;
             sprintf(str, "%8.2f deg", camera_pos[i]);
+            auto strW = GetDrawStringWidthToHandle(str, strlen(str), mainfont);
             // NOLINTNEXTLINE(readability-magic-numbers): Position of UI element
             DrawFormatStringToHandle(3670 - strW, 300 + 24 + 150 * i, maincolor,
                                      mainfont, str);
@@ -546,9 +557,9 @@ void AppMgr::MainThread() {
 
         // ???
         switch (mode) {
-            case 0:  // é€šå¸¸é‹è»¢ - Normal operation
+            case 0:  // ’Êí‰^“] - Normal operation
                 d = 0;
-                // ãƒˆãƒ«ã‚¯è¶…é - Excess torque
+                // ƒgƒ‹ƒN’´‰ß - Excess torque
                 if ((abs(ARM->getFeedbackEffortMA()) > 5
                      || abs(ARM->getFeedbackEffortMB()) > 5)
                     && enable) {
@@ -557,8 +568,8 @@ void AppMgr::MainThread() {
                 }
                 break;
 
-            case 1:  // èª¿æ•´ - Adjustment
-                // é€šå¸¸å‹•ä½œ - Usual action
+            case 1:  // ’²® - Adjustment
+                // ’Êí“®ì - Usual action
                 if ((abs(ARM->getFeedbackEffortMA()) >= 2.5
                      || abs(ARM->getFeedbackEffortMB()) >= 2.5)
                     && enable) {
@@ -567,7 +578,7 @@ void AppMgr::MainThread() {
                             atan2(ARM->getFeedbackEffort(LIBRA_HEBI::PITCH),
                                   ARM->getFeedbackEffort(LIBRA_HEBI::ROLL));
 
-                        // Aå…¥ | Bå…¥ | Aå‡º | Bå‡º - A in | B in | A out | B out
+                        // A“ü | B“ü | Ao | Bo - A in | B in | A out | B out
                         if (theta > M_PI * 7 / 8 || -M_PI * 7 / 8 >= theta) {
                             d = 0b1001;
                         } else if (theta > M_PI * 5 / 8) {
@@ -588,7 +599,7 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // ãƒˆãƒ«ã‚¯ãŒæˆ»ã£ãŸ - Torque is reset
+                // ƒgƒ‹ƒN‚ª–ß‚Á‚½ - Torque is reset
                 else if (count == 0) {
                     ARM->move(input[0], input[1], input[2], input[3], input[4]);
                     mode = 0;
@@ -617,7 +628,7 @@ void AppMgr::MainThread() {
             // NOLINTEND(readability-magic-numbers): Position of UI element
         }
 
-        // ãƒ­ã‚° - Log
+        // ƒƒO - Log
 
         if (count == 0) {
             /*
@@ -737,8 +748,8 @@ void AppMgr::OnClick(View* view) {
         shot_log << "PT_Roll[Nm],PT_Pitch[Nm],PT_J1[Nm],PT_J2[Nm],PT_J3[Nm],,";
         shot_log << "Voltage[V],Current[A]";
         */
-        std::string gtds = GetDateTimeString();
-        *shot_log << gtds + ",,";
+        std::string dts = GetDateTimeString();
+        *shot_log << dts + ",,";
         for (int j = 0; j < 3; j++) {
             for (int i = 0; i < 5; i++) {
                 *shot_log << value[i][j];
@@ -750,9 +761,10 @@ void AppMgr::OnClick(View* view) {
         *shot_log << ",";
         *shot_log << InputBox_Current->GetNum();
         *shot_log << std::endl;
-        printf("** LOG SHOT **  %s  Voltage: %lf V  Current: %lf A\n",
-               gtds.c_str(), InputBox_Voltage->GetNum(),
-               InputBox_Current->GetNum());
+        std::cout << "[SNAPSHOT]  " << dts << " | Voltage: "
+                  << std::to_string(InputBox_Voltage->GetNum())
+                  << " V | Current: "
+                  << std::to_string(InputBox_Current->GetNum()) << " A\n";
     }
 
     if (view == ServoFastButton) {
