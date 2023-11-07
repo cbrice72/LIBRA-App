@@ -40,9 +40,10 @@ Checks: -*,
     -modernize-use-trailing-return-type,
     -readability-redundant-access-specifiers
 
-# Turn all the warnings from the above checks into errors
-# (this forces you to resolve them before the project can be built)
-WarningsAsErrors: '*'
+# Don't turn all the warnings from the above checks into errors
+# (since this project was inherited filled with outdated/legacy code practices,
+# forcing you to resolve them before it can be built would be a waste of time)
+WarningsAsErrors: ''
 
 # Specific options for the aforementioned checks
 CheckOptions:
@@ -57,4 +58,4 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberSuffix,    value: _          }
   - { key: readability-identifier-naming.ProtectedMemberSuffix,  value: _          }
   - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
-  - { key: readability-magic-numbers.IgnoredIntegerValues,       value: 1; 2000    }
+  - { key: readability-magic-numbers.IgnoredIntegerValues,       value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 2000}

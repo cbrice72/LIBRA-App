@@ -106,7 +106,6 @@ EmptyLineAfterAccessModifier:                   Leave
 EmptyLineBeforeAccessModifier:                  Leave
 IndentAccessModifiers:                          false
 #   Constructors
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
 ConstructorInitializerIndentWidth:              4
 SpaceBeforeCtorInitializerColon:                true
 BreakConstructorInitializers:                   AfterColon
@@ -159,7 +158,6 @@ IndentWrappedFunctionNames:                     false
 SpaceInEmptyParentheses:                        false
 #   Args/Params
 AllowAllArgumentsOnNextLine:                    false
-AllowAllConstructorInitializersOnNextLine:      true
 AllowAllParametersOfDeclarationOnNextLine:      false
 BinPackArguments:                               true
 BinPackParameters:                              true
@@ -195,4 +193,4 @@ SpacesBeforeTrailingComments:                   2
 SpacesInLineCommentPrefix:
   Minimum:                                      1
   Maximum:                                      -1
-AlignTrailingComments:                          false
+AlignTrailingComments:                          true
