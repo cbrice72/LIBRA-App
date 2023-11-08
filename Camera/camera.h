@@ -13,7 +13,9 @@
 // POSIX/Windows Library Headers
 //   (none)
 // Other Libraries' Headers
-//   (none)
+//   DirectX Wrapper
+#include <DxLib.h>
+
 // Project Headers
 //   (none)
 

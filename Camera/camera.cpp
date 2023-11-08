@@ -16,8 +16,6 @@
 //   COM Library
 #pragma comment(lib, "ole32.lib")
 #pragma comment(lib, "OleAut32.lib ")
-//   DirectX Wrapper
-#include <DxLib.h>
 //   Easy Web Camera LIBrary
 #include "ewclib.h"
 
