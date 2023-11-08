@@ -55,7 +55,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>./DxLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);./DxLib;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <ExceptionHandling>Sync</ExceptionHandling>
     </ClCompile>
@@ -89,24 +89,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Button.cpp" />
-    <ClCompile Include="AppMgr.cpp" />
-    <ClCompile Include="LIBRA_HEBI.cpp" />
-    <ClCompile Include="InputBox.cpp" />
+    <ClCompile Include="button.cpp" />
+    <ClCompile Include="app_mgr.cpp" />
+    <ClCompile Include="Camera\camera.cpp" />
+    <ClCompile Include="libra_hebi.cpp" />
+    <ClCompile Include="input_box.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="Mouse.cpp" />
-    <ClCompile Include="Serial.cpp" />
+    <ClCompile Include="mouse.cpp" />
+    <ClCompile Include="serial.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Button.h" />
-    <ClInclude Include="AppMgr.h" />
-    <ClInclude Include="LIBRA_HEBI.h" />
-    <ClInclude Include="InputBox.h" />
-    <ClInclude Include="Mouse.h" />
-    <ClInclude Include="OnClickListener.h" />
-    <ClInclude Include="Serial.h" />
-    <ClInclude Include="Singleton.h" />
-    <ClInclude Include="View.h" />
+    <ClInclude Include="button.h" />
+    <ClInclude Include="app_mgr.h" />
+    <ClInclude Include="Camera\camera.h" />
+    <ClInclude Include="libra_hebi.h" />
+    <ClInclude Include="input_box.h" />
+    <ClInclude Include="mouse.h" />
+    <ClInclude Include="onclick_listener.h" />
+    <ClInclude Include="qedit.h" />
+    <ClInclude Include="serial.h" />
+    <ClInclude Include="singleton.h" />
+    <ClInclude Include="view.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include=".clang-format" />
