@@ -23,9 +23,9 @@
  */
 class Serial {
   public:
-    int open(const char* port);
-    int write(BYTE data);
-    int writestring(std::string str);
+    int Open(const char* port);
+    int Write(BYTE data);
+    int WriteStr(std::string str);
 
-    HANDLE mhandle;
+    HANDLE handle_;
 };

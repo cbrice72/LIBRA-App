@@ -29,8 +29,9 @@ class Camera {
     void Draw(int x1, int y1, int x2, int y2);
 
   private:
-    int camera_num;
-    unsigned char* buffer;
-    BASEIMAGE BaseImage;
-    int GrHandle;
+    // --- Data Members ---
+    int camera_num_;
+    unsigned char* buffer_;
+    BASEIMAGE base_image_;
+    int gfx_handle_;
 };

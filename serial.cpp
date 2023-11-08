@@ -20,17 +20,25 @@
 // Project Headers
 //   (none)
 
+/* --- TABLE OF CONTENTS ---
+ * !General Functions
+ */
+
+//------------------------------------------------------------------------------
+// !General Functions
+//------------------------------------------------------------------------------
+
 /**
  * @brief TODO.
  *
  * @param port TODO
  * @return int TODO
  */
-int Serial::open(const char* port) {
+int Serial::Open(const char* port) {
     DWORD dwErrorMask;
     COMSTAT comStat;
     DWORD dwCount;
-    bool Ret = 0;
+    BOOL retval = 0;
     char str[30];
     char msstr[100];
 
@@ -38,10 +46,10 @@ int Serial::open(const char* port) {
 
     // 1. ポートをオープン - Open port
     sprintf(str, "\\\\.\\%s", port);
-    mhandle = CreateFile(_T(str), GENERIC_WRITE | GENERIC_READ, 0, NULL,
+    handle_ = CreateFile(_T(str), GENERIC_WRITE | GENERIC_READ, 0, NULL,
                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 
-    if (mhandle == INVALID_HANDLE_VALUE) {
+    if (handle_ == INVALID_HANDLE_VALUE) {
         sprintf(msstr,
                 "ポートを開けませんでした。\nArduino(%s)を接続してください。",
                 port);
@@ -51,26 +59,26 @@ int Serial::open(const char* port) {
     }
 
     // 2. 送受信バッファ初期化 - Transmit/receive buffer initialization
-    Ret = SetupComm(mhandle, 1024, 1024);
-    if (!Ret) {
+    retval = SetupComm(handle_, 1024, 1024);
+    if (!retval) {
         MessageBox(NULL, TEXT("セットアップに失敗しました。"),
                    TEXT("HEBI App：通信エラー"), MB_OK | MB_ICONERROR);
-        CloseHandle(mhandle);
+        CloseHandle(handle_);
         return -1;
     }
 
-    Ret = PurgeComm(mhandle, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR
-                                 | PURGE_RXCLEAR);
-    if (!Ret) {
+    retval = PurgeComm(handle_, PURGE_TXABORT | PURGE_RXABORT | PURGE_TXCLEAR
+                                    | PURGE_RXCLEAR);
+    if (!retval) {
         MessageBox(NULL, TEXT("初期化に失敗しました。"),
                    TEXT("HEBI App：通信エラー"), MB_OK | MB_ICONERROR);
-        CloseHandle(mhandle);
+        CloseHandle(handle_);
         return -1;
     }
 
     // 3. 基本通信条件の設定 - Setting basic communication conditions
     DCB dcb;
-    GetCommState(mhandle, &dcb);
+    GetCommState(handle_, &dcb);
     dcb.DCBlength = sizeof(DCB);
     dcb.BaudRate = 115200;
     dcb.fBinary = TRUE;
@@ -78,16 +86,16 @@ int Serial::open(const char* port) {
     dcb.fParity = NOPARITY;
     dcb.StopBits = ONESTOPBIT;
 
-    Ret = SetCommState(mhandle, &dcb);
-    if (!Ret) {
+    retval = SetCommState(handle_, &dcb);
+    if (!retval) {
         MessageBox(NULL, TEXT("基本通信条件の設定に失敗しました。"),
                    TEXT("HEBI App：通信エラー"), MB_OK | MB_ICONERROR);
-        CloseHandle(mhandle);
+        CloseHandle(handle_);
         return -1;
     }
 
     // 4. 受信 - Reception
-    ClearCommError(mhandle, &dwErrorMask, &comStat);
+    ClearCommError(handle_, &dwErrorMask, &comStat);
     dwCount = comStat.cbInQue;
 
     return 0;
@@ -99,11 +107,12 @@ int Serial::open(const char* port) {
  * @param data TODO
  * @return int TODO
  */
-int Serial::write(BYTE data) {
+int Serial::Write(BYTE data) {
     DWORD dwSendSize;
-    if (WriteFile(mhandle, &data, sizeof(data), &dwSendSize, NULL) == 0) {
+    if (WriteFile(handle_, &data, sizeof(data), &dwSendSize, NULL) == 0) {
         return -1;
     }
+
     return 0;
 }
 
@@ -113,9 +122,9 @@ int Serial::write(BYTE data) {
  * @param str TODO
  * @return int TODO
  */
-int Serial::writestring(std::string str) {
+int Serial::WriteStr(std::string str) {
     for (int i = 0; i < (int)str.size(); i++) {
-        if (write(str[i])) {
+        if (Write(str[i])) {
             return -1;
         }
     }

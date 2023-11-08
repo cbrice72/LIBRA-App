@@ -20,15 +20,21 @@
 //   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !...
+ * !General Functions
+ * !Getters & Setters
+ * !Helper Functions
  */
+
+//------------------------------------------------------------------------------
+// !General Functions
+//------------------------------------------------------------------------------
 
 /**
  * @brief Constructs a new Mouse object.
  */
-Mouse::Mouse() : mX(0), mY(0) {
-    memset(mKeyPressingCount, 0, sizeof(mKeyPressingCount));
-    memset(mKeyReleasingCount, 0, sizeof(mKeyReleasingCount));
+Mouse::Mouse() : m_X_(0), m_Y_(0) {
+    memset(key_press_count_, 0, sizeof(key_press_count_));
+    memset(key_release_count_, 0, sizeof(key_release_count_));
 }
 
 /**
@@ -38,29 +44,52 @@ Mouse::Mouse() : mX(0), mY(0) {
  * @return false TODO
  */
 bool Mouse::Update() {
-    int nowInput = GetMouseInput();  // 今のキーの入力状態を取得 - Get the input
-                                     // state of the current key
-    for (int i = 0; i < BUTTON_NUM; i++) {
-        if ((nowInput >> i)
-            & 0x01) {  // i番のキーが押されていたら - If key 'i' is pressed...
-            if (mKeyReleasingCount[i]
-                > 0) {  // 離されカウンタが0より大きければ - If the release
-                        // count is > 0...
-                mKeyReleasingCount[i] = 0;  // 0に戻す - Reset back to 0
+    int nowInput = GetMouseInput();  // 今のキーの入力状態を取得
+                                     // Get the input_ state of the current key
+
+    for (int i = 0; i < kButtonNum; i++) {
+        // i番のキーが押されていたら - If "i" key is pressed
+        if ((nowInput >> i) & 0x01) {
+            // 離されカウンタが0より大きければ - If the "released" count is > 0
+            if (key_release_count_[i] > 0) {
+                key_release_count_[i] = 0;  // 0に戻す - Reset to 0
             }
-            mKeyPressingCount[i]++;  // 押されカウンタを増やす - Increase pushed
-                                     // counter
-        } else {  // i番のキーが離されていたら - If key 'i' is released...
-            if (mKeyPressingCount[i] > 0) {  // 押されカウンタが0より大きければ
-                                             // - If the push count is > 0...
-                mKeyPressingCount[i] = 0;  // 0に戻す - Reset back to 0
+            key_press_count_[i]++;  // 押されカウンタを増やす
+                                    // Increase "pressed" counter
+        } else {  // i番のキーが離されていたら - If "i" key is released
+            // 押されカウンタが0より大きければ - If the "pressed" count is > 0
+            if (key_press_count_[i] > 0) {
+                key_press_count_[i] = 0;  // 0に戻す - Reset to 0
             }
-            mKeyReleasingCount[i]++;  // 離されカウンタを増やす - Increase
-                                      // released counter
+            key_release_count_[i]++;  // 離されカウンタを増やす
+                                      // Increase "released" counter
         }
     }
-    GetMousePoint(&mX, &mY);
+
+    GetMousePoint(&m_X_, &m_Y_);
     return true;
+}
+
+//------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
+int Mouse::GetX() {
+    return m_X_;
+}
+
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
+int Mouse::GetY() {
+    return m_Y_;
 }
 
 /**
@@ -71,11 +100,11 @@ bool Mouse::Update() {
  *
  * @note `keyCode`のキーが押されているフレーム数を返す。
  */
-int Mouse::GetPressingCount(int keyCode) {
-    if (!Mouse::IsAvailableCode(keyCode)) {
+int Mouse::GetKeyPressCount(int keyCode) {
+    if (!Mouse::IsValidCode(keyCode)) {
         return -1;
     }
-    return mKeyPressingCount[keyCode];
+    return key_press_count_[keyCode];
 }
 
 /**
@@ -86,12 +115,16 @@ int Mouse::GetPressingCount(int keyCode) {
  *
  * @note `keyCode`のキーが離されているフレーム数を返す。
  */
-int Mouse::GetReleasingCount(int keyCode) {
-    if (!Mouse::IsAvailableCode(keyCode)) {
+int Mouse::GetKeyReleaseCount(int keyCode) {
+    if (!Mouse::IsValidCode(keyCode)) {
         return -1;
     }
-    return mKeyReleasingCount[keyCode];
+    return key_release_count_[keyCode];
 }
+
+//------------------------------------------------------------------------------
+// !Helper Functions
+//------------------------------------------------------------------------------
 
 /**
  * @brief Checks if `keyCode` is a valid key.
@@ -102,27 +135,6 @@ int Mouse::GetReleasingCount(int keyCode) {
  *
  * @note `keyCode`が有効な値かチェックする。
  */
-bool Mouse::IsAvailableCode(int keyCode) {
-    if (0 <= keyCode && keyCode < BUTTON_NUM) {
-        return true;
-    }
-    return false;
-}
-
-/**
- * @brief TODO.
- *
- * @return int TODO
- */
-int Mouse::GetX() {
-    return mX;
-}
-
-/**
- * @brief TODO.
- *
- * @return int TODO
- */
-int Mouse::GetY() {
-    return mY;
+bool Mouse::IsValidCode(int keyCode) {
+    return (keyCode >= 0 && keyCode < kButtonNum);
 }

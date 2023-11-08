@@ -44,69 +44,66 @@ class AppMgr : public OnClickListener {
 
     // --- Helper Functions ---
 
-    const void SetupIncludeDxlibInit();
+    void SetupIncludeDxlibInit();
     static int printComList();
     static std::string GetDateTimeString();
 
     // --- UI: General ---
 
-    Button* EnableButton;
-    Button* DisableButton;
+    Button* btn_enable_;
+    Button* btn_disable_;
 
-    Button* ShotButton;
+    Button* btn_shot_;
 
-    InputBox* InputBox_Voltage;
-    InputBox* InputBox_Current;
+    InputBox* ibox_voltage_;
+    InputBox* ibox_current_;
 
     // --- UI: Goal Position ---
 
-    Button* ConvertButton;
-    Button* StartButton;
-    Button* StopButton;
+    Button* btn_convert_;
+    Button* btn_start_;
+    Button* btn_stop_;
 
-    Button* UpButton;     // R+
-    Button* DownButton;   // R-
-    Button* LeftButton;   // Theta+
-    Button* RightButton;  // Theta-
+    Button* btn_up_;     // R+
+    Button* btn_down_;   // R-
+    Button* btn_left_;   // Theta+
+    Button* btn_right_;  // Theta-
 
-    InputBox* InputBox_Roll;
-    InputBox* InputBox_Pitch;
-    InputBox* InputBox_J1;
-    InputBox* InputBox_J2;
-    InputBox* InputBox_J3;
+    InputBox* ibox_roll_;
+    InputBox* ibox_pitch_;
+    InputBox* ibox_j1_;
+    InputBox* ibox_j2_;
+    InputBox* ibox_j3_;
 
-    InputBox* InputBox_Increment;
-    InputBox* InputBox_R;
-    InputBox* InputBox_Theta;
+    InputBox* ibox_increment_;
+    InputBox* ibox_r_;
+    InputBox* ibox_theta_;
 
     // --- UI: Camera Position ---
 
-    Button* ServoSlowButton;
-    Button* ServoFastButton;
+    Button* btn_servo_slow_;
+    Button* btn_servo_fast_;
 
-    InputBox* InputBox_CamPan;
-    InputBox* InputBox_CamTilt;
+    InputBox* ibox_camera_pan_;
+    InputBox* ibox_camera_tilt_;
 
     // --- Data Members ---
 
-    Serial* SerialWater;
-    Serial* SerialServo;
-    LIBRA_HEBI* ARM;
+    Serial* ser_water_;
+    Serial* ser_servo_;
+    LIBRA_HEBI* libra_arm_;
 
-    std::ofstream* continuous_log;
-    std::ofstream* shot_log;
+    std::ofstream* continuous_log_;
+    std::ofstream* shot_log_;
 
-    bool enable {true};
-    int mode {0};
-    volatile bool EndFlag {0};
-    volatile bool ThreadEndFlag {0};
+    bool enabled_ {true};
+    int mode_ {0};
+    volatile bool flag_end_ {0};
+    volatile bool flag_thread_end_ {0};
 
-    double input[5];
-    double value[5][3] = {0};
-    double camera_pos[3] = {0};
-    double camera_setpos[3] = {0};
-    int camera_dir[3] = {0};
-
-    const int WindowW = 1920 * 2;
-    const int WindowH = 1080 * 2;
+    double input_[5];
+    double value_[5][3] = {0};
+    double camera_pos_[3] = {0};
+    double camera_setpos_[3] = {0};
+    int camera_dir_[3] = {0};
 };

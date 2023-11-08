@@ -19,8 +19,12 @@
 #include "mouse.h"
 
 /* --- TABLE OF CONTENTS ---
- * !...
+ * !General Functions
  */
+
+//------------------------------------------------------------------------------
+// !General Functions
+//------------------------------------------------------------------------------
 
 /**
  * @brief Constructs a new Button object.
@@ -34,10 +38,11 @@
  */
 Button::Button(int x, int y, int w, int h, const char* str,
                OnClickListener* listener) :
-    mX(x),
-    mY(y), mW(w), mH(h), mStr(str), mListener(listener), IsPressed(false),
-    IsMouseover(false),
-    font(CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING)) {}
+    m_X_(x),
+    m_Y_(y), m_W_(w), m_H_(h), m_str_(str), m_listener_(listener),
+    is_pressed_(false), is_mouseover_(false),
+    font_(CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING)) {
+}
 
 /**
  * @brief TODO.
@@ -46,18 +51,18 @@ void Button::Update() {
     int x = Mouse::Instance()->GetX();
     int y = Mouse::Instance()->GetY();
 
-    if (mX <= x && x <= mX + mW && mY <= y && y <= mY + mH) {
-        IsMouseover = true;
-        if (Mouse::Instance()->GetPressingCount(Mouse::LEFT) == 0) {
-            IsPressed = false;
+    if (m_X_ <= x && x <= m_X_ + m_W_ && m_Y_ <= y && y <= m_Y_ + m_H_) {
+        is_mouseover_ = true;
+        if (Mouse::Instance()->GetKeyPressCount(Mouse::LEFT) == 0) {
+            is_pressed_ = false;
         }
-        if (Mouse::Instance()->GetPressingCount(Mouse::LEFT) == 1) {
-            mListener->OnClick(this);
-            IsPressed = true;
+        if (Mouse::Instance()->GetKeyPressCount(Mouse::LEFT) == 1) {
+            m_listener_->OnClick(this);
+            is_pressed_ = true;
         }
     } else {
-        IsMouseover = false;
-        IsPressed = false;
+        is_mouseover_ = false;
+        is_pressed_ = false;
     }
 }
 
@@ -67,23 +72,23 @@ void Button::Update() {
 void Button::Draw() {
     int sub = 0;
     unsigned int color;
-    if (IsPressed) {
+    if (is_pressed_) {
         sub = 1;
     }
-    if (IsMouseover) {
+    if (is_mouseover_) {
         color = GetColor(100, 100, 100);
     } else {
         color = GetColor(50, 50, 50);
     }
-    int strW = GetDrawStringWidthToHandle(mStr, strlen(mStr), font);
+    int strW = GetDrawStringWidthToHandle(m_str_, strlen(m_str_), font_);
     int fontsize;
-    GetFontStateToHandle(NULL, &fontsize, NULL, font);
+    GetFontStateToHandle(NULL, &fontsize, NULL, font_);
 
-    DrawRoundRectAA(mX + sub, mY + sub, mX + mW - sub, mY + mH - sub, 20, 20,
-                    20, color, TRUE);
-    int strX = mX + mW / 2 - strW / 2;
-    int strY = mY + mH / 2 - fontsize / 2;
-    DrawStringToHandle(strX, strY, mStr, GetColor(255, 255, 255), font);
+    DrawRoundRectAA(m_X_ + sub, m_Y_ + sub, m_X_ + m_W_ - sub,
+                    m_Y_ + m_H_ - sub, 20, 20, 20, color, TRUE);
+    int strX = m_X_ + m_W_ / 2 - strW / 2;
+    int strY = m_Y_ + m_H_ / 2 - fontsize / 2;
+    DrawStringToHandle(strX, strY, m_str_, GetColor(255, 255, 255), font_);
 }
 
 /**

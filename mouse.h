@@ -27,20 +27,30 @@ class Mouse : public Singleton<Mouse> {
     friend Singleton<Mouse>;
 
     bool Update();
-    int GetPressingCount(int keyCode);
-    int GetReleasingCount(int keyCode);
+
+    // --- Getters & Setters ---
+
     int GetX();
     int GetY();
+    int GetKeyPressCount(int keyCode);
+    int GetKeyReleaseCount(int keyCode);
+
+    // --- Constants ---
 
     const static int LEFT = 0;
     const static int RIGHT = 1;
     const static int MIDDLE = 2;
 
   private:
-    bool IsAvailableCode(int keyCode);
+    // --- Helper Functions ---
 
-    const static int BUTTON_NUM = 8;
-    int mKeyPressingCount[BUTTON_NUM];
-    int mKeyReleasingCount[BUTTON_NUM];
-    int mX, mY;
+    bool IsValidCode(int keyCode);
+
+    // --- Data Members ---
+
+    int m_X_, m_Y_;
+
+    const static int kButtonNum = 8;
+    int key_press_count_[kButtonNum];
+    int key_release_count_[kButtonNum];
 };

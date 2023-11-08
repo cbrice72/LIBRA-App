@@ -27,17 +27,19 @@ class Button : public View {
   public:
     Button(int x, int y, int w, int h, const char* str,
            OnClickListener* listener);
+
     void Update() override;
     void Draw() override;
     void UpdateDraw();
 
   private:
-    int mX, mY, mW, mH;
-    const char* mStr;
-    OnClickListener* mListener;
+    // --- Data Members ---
+    int m_X_, m_Y_, m_W_, m_H_;
+    const char* m_str_;
+    OnClickListener* m_listener_;
 
-    bool IsPressed;
-    bool IsMouseover;
+    bool is_pressed_;
+    bool is_mouseover_;
 
-    int font;
+    int font_;
 };

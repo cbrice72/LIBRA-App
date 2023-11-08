@@ -29,18 +29,21 @@ class InputBox : public View {
     void Draw() override;
     void UpdateDraw();
 
+    // --- Getters & Setters ---
+
     float GetNum();
     void SetNum(float num);
 
   private:
-    int mX, mY, mW, mH;
+    // --- Data Members ---
+    int m_X_, m_Y_, m_W_, m_H_;
 
-    bool IsPressed;
-    bool IsMouseover;
+    bool is_pressed_;
+    bool is_mouseover_;
 
-    int font;
-    int InputHandle;
-    int maincolor;
+    int font_;
+    int input_handle_;
+    int main_color_;
 
-    int count = 0;
+    int count_ = 0;
 };
