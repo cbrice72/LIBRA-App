@@ -1,29 +1,34 @@
 const int pin[4] = {2, 4, 7, 8};
 
 void setup() {
-  for (int i = 0; i < 4; i++) {
-    pinMode(pin[i], OUTPUT);
-    digitalWrite(pin[i], LOW);
-  }
-  pinMode(13, OUTPUT);
-  Serial.begin(115200);
+    for (int i = 0; i < 4; i++) {
+        pinMode(pin[i], OUTPUT);
+        digitalWrite(pin[i], LOW);
+    }
+    pinMode(13, OUTPUT);
+    Serial.begin(115200);
 }
 
 void loop() {
-  static unsigned long timestamp = 0;           // åŸºæº–æ™‚åˆ»ã®å¤‰æ•°
+    // Šî€‚Ì•Ï” - Time reference variable
+    static unsigned long timestamp = 0;
 
-  if ( Serial.available() ) {                   // å—ä¿¡ãƒ‡ãƒ¼ã‚¿ãŒã‚ã‚‹å ´åˆ
-    byte data = Serial.read();                  // 1ãƒã‚¤ãƒˆèª­ã¿è¾¼ã‚€
-    for (int i = 0; i < 4; i++) {        
-      digitalWrite(pin[i], bool(data & (1 << (3-i))));    // iç•ªç›®ã®ãƒ”ãƒ³ã®çŠ¶æ…‹ã‚’ã€èª­ã¿è¾¼ã‚“ã ãƒ‡ãƒ¼ã‚¿ã®ä¸Šã‹ã‚‰iç•ªç›®ã®ãƒ“ãƒƒãƒˆã®çŠ¶æ…‹ã«ã™ã‚‹
+    // óMƒf[ƒ^‚ª‚ ‚éê‡ - If there is incoming data
+    if (Serial.available()) {
+        byte data = Serial.read();  // 1ƒoƒCƒg“Ç‚İ‚Ş - Read 1 byte
+        for (int i = 0; i < 4; i++) {
+            // i”Ô–Ú‚Ìƒsƒ“‚Ìó‘Ô‚ğA“Ç‚İ‚ñ‚¾ƒf[ƒ^‚Ìã‚©‚çi”Ô–Ú‚Ìƒrƒbƒg‚Ìó‘Ô‚É‚·‚é
+            // Set state of i-th pin to state of i-th bit (from beginning of data)
+            digitalWrite(pin[i], bool(data & (1 << (3 - i))));
+        }
+        timestamp = millis();  // Œ»İ‚ğŠî€‚Æ‚·‚é - Update reference time
+        digitalWrite(13, HIGH);  // ƒ{[ƒhã‚ÌLED‚ğ“_“”‚·‚é - Turn on board LED
+    } else if ((millis() - timestamp)
+               > 5000) {  // óMƒf[ƒ^‚ª‚È‚¢ó‘Ô‚ª5000ms‘±‚¢‚½ê‡
+                          // If no data has been received for 5000 ms
+        for (int i = 0; i < 4; i++) {
+            digitalWrite(pin[i], LOW);  // ‘Sƒsƒ“‚ğLOW‚É‚·‚é - Set all pins LOW
+        }
+        digitalWrite(13, LOW);  // ƒ{[ƒhã‚ÌLED‚ğÁ“”‚·‚é - Turn off board LED
     }
-    timestamp = millis();                       // ç¾åœ¨ã‚’åŸºæº–æ™‚åˆ»ã¨ã™ã‚‹
-    digitalWrite(13, HIGH);                     // ãƒœãƒ¼ãƒ‰ä¸Šã®LEDã‚’ç‚¹ç¯ã™ã‚‹
-  }
-  else if ((millis() - timestamp) > 5000) {     // å—ä¿¡ãƒ‡ãƒ¼ã‚¿ãŒãªã„çŠ¶æ…‹ãŒ5000msç¶šã„ãŸå ´åˆ
-    for (int i = 0; i < 4; i++) {
-      digitalWrite(pin[i], LOW);                // å…¨ãƒ”ãƒ³ã‚’LOWã«ã™ã‚‹
-    }
-    digitalWrite(13, LOW);                      // ãƒœãƒ¼ãƒ‰ä¸Šã®LEDã‚’æ¶ˆç¯ã™ã‚‹
-  }
 }
