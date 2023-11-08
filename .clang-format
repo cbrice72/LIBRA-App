@@ -40,7 +40,7 @@ AlignConsecutiveBitFields:                      false
 AlignConsecutiveDeclarations:                   false
 AlignConsecutiveMacros:                         AcrossEmptyLines
 AlignEscapedNewlines:                           Right
-AlignOperands:                                  AlignAfterOperator
+AlignOperands:                                  Align
 
 # Line Breaking
 AlwaysBreakAfterReturnType:                     None
