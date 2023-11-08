@@ -46,7 +46,7 @@ void AppMgr::Main() {
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
     (void)freopen("CONIN$", "r", stdin);
-    std::cout << "\n===== LIBRA App Start =====\n" << std::endl;
+    std::cout << "\n===== LIBRA App =====\n" << std::endl;
 
     // HEBIアクチュエータ接続 - HEBI actuator connection
     libra_arm_ = new LIBRA_HEBI();
@@ -61,7 +61,7 @@ void AppMgr::Main() {
         do {
             std::cout << "----- COM Port List -----\n";
             int port = printComList();
-            std::cout << "Detected " << port << " ports\n";
+            std::cout << "[INFO] Detected " << port << " ports\n";
             std::cout << "Would you like to scan again? [y/n]:" << std::flush;
             std::cin >> answer;
         } while (answer != "n");
@@ -74,7 +74,7 @@ void AppMgr::Main() {
         std::cin >> com;
         comtext = "COM" + com;
         if (ser_water_->Open(comtext.c_str()) != 0) {
-            std::cout << "  Cannot open " << comtext << std::endl;
+            std::cout << "[ERROR] Cannot open " << comtext << std::endl;
         }
 
         std::cout << "Specify the port to be used by ser_servo_: "
@@ -82,12 +82,12 @@ void AppMgr::Main() {
         std::cin >> com;
         comtext = "COM" + com;
         if (ser_servo_->Open(comtext.c_str()) != 0) {
-            std::cout << "  Cannot open " << comtext << std::endl;
+            std::cout << "[ERROR] Cannot open " << comtext << std::endl;
         }
     }
 
     // DXライブラリ初期化を含む設定 - Setup, including DX library initialization
-    std::cout << "Initializing Dxlib...\n";
+    std::cout << "[INFO] Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
     // ProcessMessage以外の処理を行うスレッドを作成 - Create threads for
@@ -196,7 +196,7 @@ void AppMgr::MainThread() {
     datetime_str = datetime_char;
 
     if (_mkdir("./Log/") == 0) {
-        std::cout << "Created Log directory.\n";
+        std::cout << "[INFO] Created Log directory.\n";
     }
 
     continuous_log_ =
@@ -622,7 +622,7 @@ void AppMgr::OnClick(View* view) {
         *shot_log_ << ",";
         *shot_log_ << ibox_current_->GetNum();
         *shot_log_ << std::endl;
-        std::cout << "[SNAPSHOT]  " << dts
+        std::cout << "[INFO] Snapshot - " << dts
                   << " | Voltage: " << std::to_string(ibox_voltage_->GetNum())
                   << " V | Current: " << std::to_string(ibox_current_->GetNum())
                   << " A\n";

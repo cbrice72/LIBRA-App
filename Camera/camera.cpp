@@ -46,7 +46,7 @@ Camera::Camera(int height, int width, int num) {
 
     EWC_GetCameraName(ewcc, &n);
     for (int i = 0; i < n; i++) {
-        std::cout << ewcc[i].FriendlyName << "\n";
+        std::cout << "[INFO] Camera - Found " << ewcc[i].FriendlyName << "\n";
     }
     std::cout << "[INFO] Camera - Available: " << EWC_GetCamera() << "\n";
     std::cout << "[INFO] Camera - Open Error: "
