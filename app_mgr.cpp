@@ -129,12 +129,12 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
  */
 void AppMgr::MainThread() {
     int maincolor = GetColor(50, 50, 50);
-    int mainfont =
-        CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING);
-    int titlefont =
-        CreateFontToHandle("Yu Gothic UI", 50, 10, DX_FONTTYPE_ANTIALIASING);
-    int bigfont =
-        CreateFontToHandle("Yu Gothic UI", 150, 10, DX_FONTTYPE_ANTIALIASING);
+    int mainfont = CreateFontToHandle("Yu Gothic UI", 50, 5,
+                                      DX_FONTTYPE_ANTIALIASING);
+    int titlefont = CreateFontToHandle("Yu Gothic UI", 50, 10,
+                                       DX_FONTTYPE_ANTIALIASING);
+    int bigfont = CreateFontToHandle("Yu Gothic UI", 150, 10,
+                                     DX_FONTTYPE_ANTIALIASING);
     SetBackgroundColor(255, 255, 255);
 
     ibox_roll_ = new InputBox(1500 - 600, 800);
@@ -167,8 +167,8 @@ void AppMgr::MainThread() {
                             340, 100, "START", this);
     OnClick(btn_start_);
 
-    btn_convert_ =
-        new Button(60 + 60, kWindowH - 200 - 100, 340, 100, "CONVERT", this);
+    btn_convert_ = new Button(60 + 60, kWindowH - 200 - 100, 340, 100,
+                              "CONVERT", this);
     btn_stop_ = new Button(1300 - 60 - 340, kWindowH - 200 - 100, 340, 100,
                            "STOP", this);
     btn_up_ = new Button(320, 800, 120, 120, "R+", this);
@@ -177,8 +177,8 @@ void AppMgr::MainThread() {
     btn_right_ = new Button(520, 1000, 120, 120, "θ-", this);
     btn_enable_ = new Button(2200, 150, 340, 100, "ENABLE", this);
     btn_disable_ = new Button(2200, 300, 340, 100, "DISABLE", this);
-    btn_shot_ =
-        new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT", this);
+    btn_shot_ = new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT",
+                           this);
     btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
     btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
@@ -199,8 +199,8 @@ void AppMgr::MainThread() {
         std::cout << "[INFO] Created Log directory.\n";
     }
 
-    continuous_log_ =
-        new std::ofstream("./Log/" + datetime_str + "_continuous_log.csv");
+    continuous_log_ = new std::ofstream("./Log/" + datetime_str
+                                        + "_continuous_log.csv");
     *continuous_log_ << "Time,,";
     *continuous_log_
         << "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
@@ -259,8 +259,7 @@ void AppMgr::MainThread() {
         DrawBoxAA(60, 550, 1300, kWindowH - 100, maincolor, FALSE, 2.5);
 
         // タイトル - Title
-        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont,
-                                 "LIBRA-I");
+        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont, "LIBRA-I");
         DrawFormatStringToHandle(120, 824 - 200, maincolor, titlefont,
                                  "Goal Pos.");
         DrawFormatStringToHandle(1400, 824 - 200, maincolor, titlefont,
@@ -302,8 +301,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(120, 824 + 200 * 3, maincolor, mainfont, "R");
         DrawFormatStringToHandle(530, 824 + 200 * 3, maincolor, mainfont, "mm");
         DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "θ");
-        DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont,
-                                 "deg");
+        DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont, "deg");
 
         // グラフ表示 - Graph display
         const int cX = 3100;
@@ -361,8 +359,7 @@ void AppMgr::MainThread() {
                                  "A");
 
         // カメラ - Camera
-        DrawFormatStringToHandle(2800, 150, maincolor, titlefont,
-                                 "Camera Pos.");
+        DrawFormatStringToHandle(2800, 150, maincolor, titlefont, "Camera Pos.");
         DrawFormatStringToHandle(2800, 300 + 24, maincolor, mainfont, "Base");
         DrawFormatStringToHandle(2800, 450 + 24, maincolor, mainfont, "Pan");
         DrawFormatStringToHandle(2800, 600 + 24, maincolor, mainfont, "Tilt");
@@ -433,9 +430,10 @@ void AppMgr::MainThread() {
                      || abs(libra_arm_->getFeedbackEffortMB()) >= 2.5)
                     && enabled_) {
                     if (count == 0) {
-                        double theta = atan2(
-                            libra_arm_->getFeedbackEffort(LIBRA_HEBI::PITCH),
-                            libra_arm_->getFeedbackEffort(LIBRA_HEBI::ROLL));
+                        double theta = atan2(libra_arm_->getFeedbackEffort(
+                                                 LIBRA_HEBI::PITCH),
+                                             libra_arm_->getFeedbackEffort(
+                                                 LIBRA_HEBI::ROLL));
 
                         // A入 | B入 | A出 | B出 - A in | B in | A out | B out
                         if (theta > M_PI * 7 / 8 || -M_PI * 7 / 8 >= theta) {
@@ -636,10 +634,10 @@ void AppMgr::OnClick(View* view) {
     if (view == btn_servo_slow_) {
         camera_setpos_[1] = ibox_camera_pan_->GetNum();
         camera_setpos_[2] = ibox_camera_tilt_->GetNum();
-        camera_dir_[1] =
-            (ibox_camera_pan_->GetNum() >= camera_pos_[1]) ? 1 : -1;
-        camera_dir_[2] =
-            (ibox_camera_tilt_->GetNum() >= camera_pos_[2]) ? 1 : -1;
+        camera_dir_[1] = (ibox_camera_pan_->GetNum() >= camera_pos_[1]) ? 1
+                                                                        : -1;
+        camera_dir_[2] = (ibox_camera_tilt_->GetNum() >= camera_pos_[2]) ? 1
+                                                                         : -1;
     }
 }
 
@@ -667,8 +665,8 @@ void AppMgr::SetupIncludeDxlibInit() {
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
     // ウインドウサイズを指定 - Specify window size
-    int desktop_w {0};
-    int desktop_h {0};
+    int desktop_w{0};
+    int desktop_h{0};
     GetDefaultState(&desktop_w, &desktop_h, nullptr);
 
     // 横長ディスプレイ - Landscape display
@@ -718,9 +716,9 @@ int AppMgr::printComList(void) {
 
     int max = 0;
     // デバイス情報セットを取得 - Get device information set
-    h_devinfo =
-        SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr, nullptr,
-                            DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+    h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
+                                    nullptr,
+                                    DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (!h_devinfo) {
         // デバイス情報セットが取得できなかった場合
         // If the device information set could not be obtained

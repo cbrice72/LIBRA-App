@@ -34,6 +34,7 @@ class Button : public View {
 
   private:
     // --- Data Members ---
+
     int m_X_, m_Y_, m_W_, m_H_;
     const char* m_str_;
     OnClickListener* m_listener_;

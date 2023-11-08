@@ -22,7 +22,7 @@
  */
 class OnClickListener {
   public:
-    virtual ~OnClickListener() {};
+    virtual ~OnClickListener(){};
 
-    virtual void OnClick(View* view) {};
+    virtual void OnClick(View* view){};
 };

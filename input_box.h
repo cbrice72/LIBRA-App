@@ -36,6 +36,7 @@ class InputBox : public View {
 
   private:
     // --- Data Members ---
+
     int m_X_, m_Y_, m_W_, m_H_;
 
     bool is_pressed_;

@@ -31,10 +31,10 @@ class Singleton {
     };
 
   protected:
-    Singleton() {};
-    virtual ~Singleton() {};
+    Singleton(){};
+    virtual ~Singleton(){};
 
     // Copy constructor + assignment operator
-    Singleton(const Singleton& r) {};
-    Singleton& operator=(const Singleton& r) {};
+    Singleton(const Singleton& r){};
+    Singleton& operator=(const Singleton& r){};
 };

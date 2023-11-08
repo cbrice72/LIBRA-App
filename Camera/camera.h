@@ -30,6 +30,7 @@ class Camera {
 
   private:
     // --- Data Members ---
+
     int camera_num_;
     unsigned char* buffer_;
     BASEIMAGE base_image_;

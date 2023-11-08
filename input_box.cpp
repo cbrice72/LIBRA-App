@@ -33,12 +33,12 @@
  * @param x TODO
  * @param y TODO
  */
-InputBox::InputBox(int x, int y) :
-    m_X_(x), m_Y_(y), m_W_(220), m_H_(100), is_pressed_(false),
-    is_mouseover_(false),
-    font_(CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING)),
-    input_handle_(MakeKeyInput(7, FALSE, TRUE, TRUE)),
-    main_color_(GetColor(50, 50, 50)) {}
+InputBox::InputBox(int x, int y)
+    : m_X_(x), m_Y_(y), m_W_(220), m_H_(100), is_pressed_(false),
+      is_mouseover_(false),
+      font_(CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING)),
+      input_handle_(MakeKeyInput(7, FALSE, TRUE, TRUE)),
+      main_color_(GetColor(50, 50, 50)) {}
 
 void InputBox::Update() {
     int x = Mouse::Instance()->GetX();
@@ -86,10 +86,11 @@ void InputBox::Draw() {
 
     // ÉJÅ[É\ÉãÇï`âÊ - Draw cursor
     if (GetActiveKeyInput() == input_handle_) {
-        int cursorX =
-            strX
-            + GetDrawStringWidthToHandle(
-                string, GetKeyInputCursorPosition(input_handle_), font_);
+        int cursorX = strX
+                      + GetDrawStringWidthToHandle(string,
+                                                   GetKeyInputCursorPosition(
+                                                       input_handle_),
+                                                   font_);
         if (count_ < 30) {
             DrawLineAA(cursorX, strY + 7, cursorX, strY + 50, main_color_, 3.5);
         }

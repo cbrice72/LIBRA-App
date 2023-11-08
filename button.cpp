@@ -37,12 +37,11 @@
  * @param listener TODO
  */
 Button::Button(int x, int y, int w, int h, const char* str,
-               OnClickListener* listener) :
-    m_X_(x),
-    m_Y_(y), m_W_(w), m_H_(h), m_str_(str), m_listener_(listener),
-    is_pressed_(false), is_mouseover_(false),
-    font_(CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING)) {
-}
+               OnClickListener* listener)
+    : m_X_(x), m_Y_(y), m_W_(w), m_H_(h), m_str_(str), m_listener_(listener),
+      is_pressed_(false), is_mouseover_(false),
+      font_(CreateFontToHandle("Yu Gothic UI", 50, 6,
+                               DX_FONTTYPE_ANTIALIASING)) {}
 
 /**
  * @brief TODO.

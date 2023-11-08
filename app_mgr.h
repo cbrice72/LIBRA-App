@@ -96,10 +96,10 @@ class AppMgr : public OnClickListener {
     std::ofstream* continuous_log_;
     std::ofstream* shot_log_;
 
-    bool enabled_ {true};
-    int mode_ {0};
-    volatile bool flag_end_ {0};
-    volatile bool flag_thread_end_ {0};
+    bool enabled_{true};
+    int mode_{0};
+    volatile bool flag_end_{0};
+    volatile bool flag_thread_end_{0};
 
     double input_[5];
     double value_[5][3] = {0};

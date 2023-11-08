@@ -22,8 +22,8 @@
  */
 class View {
   public:
-    virtual ~View() {};
+    virtual ~View(){};
 
-    virtual void Draw() {};
-    virtual void Update() {};
+    virtual void Draw(){};
+    virtual void Update(){};
 };

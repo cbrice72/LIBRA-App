@@ -33,13 +33,7 @@ class LIBRA_HEBI {
     /**
      * @brief TODO.
      */
-    enum {
-        ROLL,
-        PITCH,
-        J1,
-        J2,
-        J3
-    };
+    enum { ROLL, PITCH, J1, J2, J3 };
 
     // --- Motor Commands ---
 
@@ -59,13 +53,7 @@ class LIBRA_HEBI {
     /**
      * @brief TODO.
      */
-    enum {
-        HEBI_MA,
-        HEBI_MB,
-        HEBI_J1,
-        HEBI_J2,
-        HEBI_J3
-    };
+    enum { HEBI_MA, HEBI_MB, HEBI_J1, HEBI_J2, HEBI_J3 };
 
     static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
                                   DWORD dw2);

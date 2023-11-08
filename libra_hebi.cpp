@@ -182,8 +182,10 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
     time << 0, max_diff_rad * 30 / M_PI;
 
     start_time = timeGetTime();
-    trajectory = hebi::trajectory::Trajectory::createUnconstrainedQp(
-        time, positions, &velocities, &accelerations);
+    trajectory =
+        hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions,
+                                                            &velocities,
+                                                            &accelerations);
 }
 
 /**
@@ -206,14 +208,14 @@ void LIBRA_HEBI::stop() {
 double LIBRA_HEBI::getCommandPosition(int joint) {
     double ret = 0;
     if (joint == ROLL) {
-        ret =
-            (-command->getPosition()[HEBI_MA] - command->getPosition()[HEBI_MB])
-            / 2;
+        ret = (-command->getPosition()[HEBI_MA]
+               - command->getPosition()[HEBI_MB])
+              / 2;
     }
     if (joint == PITCH) {
-        ret =
-            (-command->getPosition()[HEBI_MA] + command->getPosition()[HEBI_MB])
-            / 2;
+        ret = (-command->getPosition()[HEBI_MA]
+               + command->getPosition()[HEBI_MB])
+              / 2;
     }
     if (joint == J1) {
         ret = command->getPosition()[HEBI_J1];

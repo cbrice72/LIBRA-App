@@ -17,7 +17,6 @@ FormatStyle: file
 # - hicpp-special-member-functions: alias (cppcoreguidelines)
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
-# - readability-redundant-access-specifiers: allow split between user and VS-generated access specifiers
 
 # List the checks we will run
 Checks: -*,
@@ -37,8 +36,7 @@ Checks: -*,
     -google-readability-todo,
     -hicpp-special-member-functions,
     -misc-non-private-member-variables-in-classes,
-    -modernize-use-trailing-return-type,
-    -readability-redundant-access-specifiers
+    -modernize-use-trailing-return-type
 
 # Don't turn all the warnings from the above checks into errors
 # (since this project was inherited filled with outdated/legacy code practices,
@@ -47,15 +45,17 @@ WarningsAsErrors: ''
 
 # Specific options for the aforementioned checks
 CheckOptions:
-  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,   value: true       }
-  - { key: readability-identifier-length.IgnoredVariableNames,   value: x|y        }
-  - { key: readability-identifier-naming.NamespaceCase,          value: lower_case }
-  - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }
-  - { key: readability-identifier-naming.StructCase,             value: CamelCase  }
-  - { key: readability-identifier-naming.TemplateParameterCase,  value: CamelCase  }
-  - { key: readability-identifier-naming.FunctionCase,           value: CamelCase  }
-  - { key: readability-identifier-naming.VariableCase,           value: lower_case }
-  - { key: readability-identifier-naming.PrivateMemberSuffix,    value: _          }
-  - { key: readability-identifier-naming.ProtectedMemberSuffix,  value: _          }
-  - { key: readability-identifier-naming.MacroDefinitionCase,    value: UPPER_CASE }
-  - { key: readability-magic-numbers.IgnoredIntegerValues,       value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 2000}
+  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,     value: true       }
+  - { key: readability-identifier-length.IgnoredVariableNames,     value: x|y        }
+  - { key: readability-identifier-naming.NamespaceCase,            value: lower_case }
+  - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
+  - { key: readability-identifier-naming.StructCase,               value: CamelCase  }
+  - { key: readability-identifier-naming.TemplateParameterCase,    value: CamelCase  }
+  - { key: readability-identifier-naming.FunctionCase,             value: CamelCase  }
+  - { key: readability-identifier-naming.VariableCase,             value: lower_case }
+  - { key: readability-identifier-naming.ConstexprVariablePrefix,  value: k          }
+  - { key: readability-identifier-naming.ConstexprVariableCase,    value: CamelCase  }
+  - { key: readability-identifier-naming.PrivateMemberSuffix,      value: _          }
+  - { key: readability-identifier-naming.ProtectedMemberSuffix,    value: _          }
+  - { key: readability-identifier-naming.MacroDefinitionCase,      value: UPPER_CASE }
+  - { key: readability-magic-numbers.IgnoredIntegerValues,         value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 2000}
