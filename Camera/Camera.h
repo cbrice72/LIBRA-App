@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   Camera.h
+ * @brief  Camera controls header file.
  *
  * @author Yuto Goto
  * @date   ???
@@ -17,14 +17,18 @@
 // Project Headers
 //   (none)
 
+/**
+ * @brief TODO.
+ */
 class Camera {
-  private:
-    unsigned char* buffer;
-    int GrHandle;
-    BASEIMAGE BaseImage;
-    int camera_num;
-
   public:
     Camera(int height, int width, int num);
+
     void Draw(int x1, int y1, int x2, int y2);
+
+  private:
+    int camera_num;
+    unsigned char* buffer;
+    BASEIMAGE BaseImage;
+    int GrHandle;
 };

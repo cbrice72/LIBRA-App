@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   Mouse.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/1/13
@@ -23,12 +23,20 @@
  * !...
  */
 
+/**
+ * @brief Constructs a new Mouse object.
+ */
 Mouse::Mouse() : mX(0), mY(0) {
     memset(mKeyPressingCount, 0, sizeof(mKeyPressingCount));
     memset(mKeyReleasingCount, 0, sizeof(mKeyReleasingCount));
 }
 
-// 更新 - Update
+/**
+ * @brief TODO.
+ *
+ * @return true TODO
+ * @return false TODO
+ */
 bool Mouse::Update() {
     int nowInput = GetMouseInput();  // 今のキーの入力状態を取得 - Get the input
                                      // state of the current key
@@ -55,8 +63,14 @@ bool Mouse::Update() {
     return true;
 }
 
-// keyCodeのキーが押されているフレーム数を返す - Returns the number of frames in
-// which the 'keyCode' key is pressed
+/**
+ * @brief Gets the number of frames in which the `keyCode` key is pressed.
+ *
+ * @param keyCode TODO
+ * @return int TODO
+ *
+ * @note `keyCode`のキーが押されているフレーム数を返す。
+ */
 int Mouse::GetPressingCount(int keyCode) {
     if (!Mouse::IsAvailableCode(keyCode)) {
         return -1;
@@ -64,8 +78,14 @@ int Mouse::GetPressingCount(int keyCode) {
     return mKeyPressingCount[keyCode];
 }
 
-// keyCodeのキーが離されているフレーム数を返す - Returns the number of frames in
-// which the 'keyCode' key is released
+/**
+ * @brief Gets the number of frames in which the `keyCode` key is depressed.
+ *
+ * @param keyCode TODO
+ * @return int TODO
+ *
+ * @note `keyCode`のキーが離されているフレーム数を返す。
+ */
 int Mouse::GetReleasingCount(int keyCode) {
     if (!Mouse::IsAvailableCode(keyCode)) {
         return -1;
@@ -73,7 +93,15 @@ int Mouse::GetReleasingCount(int keyCode) {
     return mKeyReleasingCount[keyCode];
 }
 
-// keyCodeが有効な値かチェックする - Check if 'keyCode' is valid
+/**
+ * @brief Checks if `keyCode` is a valid key.
+ *
+ * @param keyCode TODO
+ * @return true TODO
+ * @return false TODO
+ *
+ * @note `keyCode`が有効な値かチェックする。
+ */
 bool Mouse::IsAvailableCode(int keyCode) {
     if (0 <= keyCode && keyCode < BUTTON_NUM) {
         return true;
@@ -81,10 +109,20 @@ bool Mouse::IsAvailableCode(int keyCode) {
     return false;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
 int Mouse::GetX() {
     return mX;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
 int Mouse::GetY() {
     return mY;
 }

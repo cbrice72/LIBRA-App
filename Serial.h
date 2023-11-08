@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   Serial.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -18,12 +18,14 @@
 // Project Headers
 //   (none)
 
+/**
+ * @brief TODO.
+ */
 class Serial {
   public:
     int open(const char* port);
     int write(BYTE data);
     int writestring(std::string str);
 
-  public:
     HANDLE mhandle;
 };

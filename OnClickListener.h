@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   OnClickListener.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/1/13
@@ -17,6 +17,9 @@
 // Project Headers
 #include "View.h"
 
+/**
+ * @brief TODO.
+ */
 class OnClickListener {
   public:
     virtual ~OnClickListener() {}

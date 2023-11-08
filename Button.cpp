@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   Button.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -22,18 +22,26 @@
  * !...
  */
 
+/**
+ * @brief Constructs a new Button object.
+ *
+ * @param x TODO
+ * @param y TODO
+ * @param w TODO
+ * @param h TODO
+ * @param str TODO
+ * @param listener TODO
+ */
 Button::Button(int x, int y, int w, int h, const char* str,
                OnClickListener* listener) :
     mX(x),
-    mY(y),
-    mW(w),
-    mH(h),
-    mStr(str),
-    mListener(listener),
-    IsPressed(false),
+    mY(y), mW(w), mH(h), mStr(str), mListener(listener), IsPressed(false),
     IsMouseover(false),
     font(CreateFontToHandle("Yu Gothic UI", 50, 6, DX_FONTTYPE_ANTIALIASING)) {}
 
+/**
+ * @brief TODO.
+ */
 void Button::Update() {
     int x = Mouse::Instance()->GetX();
     int y = Mouse::Instance()->GetY();
@@ -53,6 +61,9 @@ void Button::Update() {
     }
 }
 
+/**
+ * @brief TODO.
+ */
 void Button::Draw() {
     int sub = 0;
     unsigned int color;
@@ -75,6 +86,9 @@ void Button::Draw() {
     DrawStringToHandle(strX, strY, mStr, GetColor(255, 255, 255), font);
 }
 
+/**
+ * @brief TODO.
+ */
 void Button::UpdateDraw() {
     Update();
     Draw();

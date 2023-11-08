@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   View.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/1/13
@@ -17,11 +17,13 @@
 // Project Headers
 //   (none)
 
+/**
+ * @brief TODO.
+ */
 class View {
   public:
-    virtual ~View() {}
+    virtual ~View() {};
 
-    virtual void Update() {}
-
-    virtual void Draw() {}
+    virtual void Update() {};
+    virtual void Draw() {};
 };

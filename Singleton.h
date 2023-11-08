@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   Singleton.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/1/13
@@ -17,6 +17,11 @@
 // Project Headers
 //   (none)
 
+/**
+ * @brief TODO.
+ *
+ * @tparam _T TODO
+ */
 template<typename _T>
 class Singleton {
   public:

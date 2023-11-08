@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   Serial.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -20,10 +20,12 @@
 // Project Headers
 //   (none)
 
-/* --- TABLE OF CONTENTS ---
- * !...
+/**
+ * @brief TODO.
+ *
+ * @param port TODO
+ * @return int TODO
  */
-
 int Serial::open(const char* port) {
     DWORD dwErrorMask;
     COMSTAT comStat;
@@ -34,7 +36,7 @@ int Serial::open(const char* port) {
 
     // Arduinoの通信準備 - Preparing Arduino for Communication
 
-    // 1.ポートをオープン - Open port
+    // 1. ポートをオープン - Open port
     sprintf(str, "\\\\.\\%s", port);
     mhandle = CreateFile(_T(str), GENERIC_WRITE | GENERIC_READ, 0, NULL,
                          OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -48,7 +50,7 @@ int Serial::open(const char* port) {
         return -1;
     }
 
-    // 2.送受信バッファ初期化 - Transmit/receive buffer initialization
+    // 2. 送受信バッファ初期化 - Transmit/receive buffer initialization
     Ret = SetupComm(mhandle, 1024, 1024);
     if (!Ret) {
         MessageBox(NULL, TEXT("セットアップに失敗しました。"),
@@ -66,7 +68,7 @@ int Serial::open(const char* port) {
         return -1;
     }
 
-    // 3.基本通信条件の設定 - Setting basic communication conditions
+    // 3. 基本通信条件の設定 - Setting basic communication conditions
     DCB dcb;
     GetCommState(mhandle, &dcb);
     dcb.DCBlength = sizeof(DCB);
@@ -84,13 +86,19 @@ int Serial::open(const char* port) {
         return -1;
     }
 
-    // 4.受信 - Reception
+    // 4. 受信 - Reception
     ClearCommError(mhandle, &dwErrorMask, &comStat);
     dwCount = comStat.cbInQue;
 
     return 0;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param data TODO
+ * @return int TODO
+ */
 int Serial::write(BYTE data) {
     DWORD dwSendSize;
     if (WriteFile(mhandle, &data, sizeof(data), &dwSendSize, NULL) == 0) {
@@ -99,6 +107,12 @@ int Serial::write(BYTE data) {
     return 0;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param str TODO
+ * @return int TODO
+ */
 int Serial::writestring(std::string str) {
     for (int i = 0; i < (int)str.size(); i++) {
         if (write(str[i])) {

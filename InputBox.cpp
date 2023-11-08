@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   InputBox.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -22,17 +22,16 @@
  * !...
  */
 
+/**
+ * @brief Constructs a new InputBox object.
+ *
+ * @param x TODO
+ * @param y TODO
+ */
 InputBox::InputBox(int x, int y) :
-    mX(x),
-    mY(y),
-    mW(220),
-    mH(100),
-    IsPressed(false),
-    IsMouseover(false),
+    mX(x), mY(y), mW(220), mH(100), IsPressed(false), IsMouseover(false),
     font(CreateFontToHandle("Yu Gothic UI", 50, 5, DX_FONTTYPE_ANTIALIASING)),
-    InputHandle(
-        MakeKeyInput(7, FALSE, TRUE, TRUE)),  // キー入力ハンドルを作る
-                                              // - Create key input handle
+    InputHandle(MakeKeyInput(7, FALSE, TRUE, TRUE)),
     maincolor(GetColor(50, 50, 50)) {}
 
 void InputBox::Update() {
@@ -57,6 +56,9 @@ void InputBox::Update() {
     }
 }
 
+/**
+ * @brief TODO.
+ */
 void InputBox::Draw() {
     int fontsize;
     GetFontStateToHandle(NULL, &fontsize, NULL, font);
@@ -77,7 +79,7 @@ void InputBox::Draw() {
     // カーソルを描画 - Draw cursor
     if (GetActiveKeyInput() == InputHandle) {
         int cursorX = strX
-                    + GetDrawStringWidthToHandle(
+                      + GetDrawStringWidthToHandle(
                           string, GetKeyInputCursorPosition(InputHandle), font);
         if (count < 30) {
             DrawLineAA(cursorX, strY + 7, cursorX, strY + 50, maincolor, 3.5);
@@ -89,15 +91,28 @@ void InputBox::Draw() {
     }
 }
 
+/**
+ * @brief TODO.
+ */
 void InputBox::UpdateDraw() {
     Update();
     Draw();
 }
 
+/**
+ * @brief TODO.
+ *
+ * @return float TODO
+ */
 float InputBox::GetNum() {
     return GetKeyInputNumberToFloat(InputHandle);
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param num TODO
+ */
 void InputBox::SetNum(float num) {
     char str[20];
     sprintf(str, "%.2f", num);

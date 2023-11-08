@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   main.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/20
@@ -16,6 +16,11 @@
 // Project Headers
 #include "AppMgr.h"
 
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     AppMgr mgr;
     mgr.Main();

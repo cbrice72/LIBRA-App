@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   Mouse.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/1/13
@@ -17,6 +17,9 @@
 // Project Headers
 #include "Singleton.h"
 
+/**
+ * @brief TODO.
+ */
 class Mouse : public Singleton<Mouse> {
   public:
     Mouse();
@@ -24,11 +27,7 @@ class Mouse : public Singleton<Mouse> {
     friend Singleton<Mouse>;
 
     bool Update();
-    // keyCodeのキーが押されているフレーム数を取得
-    // Gets the number of frames in which the keyCode key is pressed
     int GetPressingCount(int keyCode);
-    // keyCodeのキーが離されているフレーム数を取得
-    // Gets the number of frames in which the keyCode key is depressed
     int GetReleasingCount(int keyCode);
     int GetX();
     int GetY();
@@ -38,8 +37,6 @@ class Mouse : public Singleton<Mouse> {
     const static int MIDDLE = 2;
 
   private:
-    // keyCodeが有効なキー番号か問う
-    // Checks if keyCode is valid
     bool IsAvailableCode(int keyCode);
 
     const static int BUTTON_NUM = 8;

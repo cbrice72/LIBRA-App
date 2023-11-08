@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .h
- * @brief  TODO
+ * @file   InputBox.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -18,6 +18,9 @@
 #include "OnClickListener.h"
 #include "View.h"
 
+/**
+ * @brief TODO.
+ */
 class InputBox : public View {
   public:
     InputBox(int x, int y);

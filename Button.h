@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   Button.h
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   2022/7/5
@@ -20,6 +20,9 @@
 #include "OnClickListener.h"
 #include "View.h"
 
+/**
+ * @brief TODO.
+ */
 class Button : public View {
   public:
     Button(int x, int y, int w, int h, const char* str,

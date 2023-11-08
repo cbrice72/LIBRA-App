@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   .cpp
- * @brief  TODO
+ * @file   LIBRA_HEBI.cpp
+ * @brief  TODO.
  *
  * @author Yuto Goto
  * @date   ???
@@ -12,6 +12,7 @@
 #include <stdexcept>
 // POSIX/Windows Library Headers
 #include "mmsystem.h"
+#pragma comment(lib, "winmm.lib")
 // Other Libraries' Headers
 //   HEBI Actuators
 #include <group_command.hpp>
@@ -19,6 +20,7 @@
 #include <hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
+
 // Project Headers
 //   (none)
 
@@ -26,8 +28,9 @@
  * !...
  */
 
-#pragma comment(lib, "winmm.lib")
-
+/**
+ * @brief Constructs a new LIBRA_HEBI object.
+ */
 LIBRA_HEBI::LIBRA_HEBI() {
     command = new hebi::GroupCommand(5);
     feedback = new hebi::GroupFeedback(5);
@@ -38,6 +41,11 @@ LIBRA_HEBI::LIBRA_HEBI() {
                  TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
 }
 
+/**
+ * @brief TODO.
+ *
+ * @return int TODO
+ */
 int LIBRA_HEBI::connect() {
     int rtn = 0;
     hebi::Lookup lookup;
@@ -90,11 +98,23 @@ int LIBRA_HEBI::connect() {
     return 0;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param uID TODO
+ * @param uMsg TODO
+ * @param dwUser TODO
+ * @param dw1 TODO
+ * @param dw2 TODO
+ */
 void CALLBACK LIBRA_HEBI::callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
                                    DWORD dw2) {
     (reinterpret_cast<LIBRA_HEBI*>(dwUser))->loop();
 }
 
+/**
+ * @brief TODO.
+ */
 void LIBRA_HEBI::loop() {
     command->setVelocity(Eigen::VectorXd::Zero(5));
 
@@ -115,6 +135,15 @@ void LIBRA_HEBI::loop() {
     }
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param roll TODO
+ * @param pitch TODO
+ * @param j1 TODO
+ * @param j2 TODO
+ * @param j3 TODO
+ */
 void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
                       double j3) {
     Eigen::MatrixXd positions(5, 2);
@@ -144,10 +173,19 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
         time, positions, &velocities, &accelerations);
 }
 
+/**
+ * @brief TODO.
+ */
 void LIBRA_HEBI::stop() {
     trajectory = nullptr;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param joint TODO
+ * @return double TODO
+ */
 double LIBRA_HEBI::getCommandPosition(int joint) {
     double ret = 0;
     if (joint == ROLL) {
@@ -173,17 +211,23 @@ double LIBRA_HEBI::getCommandPosition(int joint) {
     return ret;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param joint TODO
+ * @return double TODO
+ */
 double LIBRA_HEBI::getFeedbackPosition(int joint) {
     double ret = 0;
     if (joint == ROLL) {
         ret = (-feedback->getPosition()[HEBI_MA]
                - feedback->getPosition()[HEBI_MB])
-            / 2;
+              / 2;
     }
     if (joint == PITCH) {
         ret = (-feedback->getPosition()[HEBI_MA]
                + feedback->getPosition()[HEBI_MB])
-            / 2;
+              / 2;
     }
     if (joint == J1) {
         ret = feedback->getPosition()[HEBI_J1];
@@ -198,6 +242,12 @@ double LIBRA_HEBI::getFeedbackPosition(int joint) {
     return ret;
 }
 
+/**
+ * @brief TODO.
+ *
+ * @param joint TODO
+ * @return double TODO
+ */
 double LIBRA_HEBI::getFeedbackEffort(int joint) {
     double ret = 0;
     if (joint == ROLL) {
@@ -222,6 +272,11 @@ double LIBRA_HEBI::getFeedbackEffortMA() {
     return feedback->getEffort()[HEBI_MA];
 }
 
+/**
+ * @brief TODO.
+ *
+ * @return double TODO
+ */
 double LIBRA_HEBI::getFeedbackEffortMB() {
     return feedback->getEffort()[HEBI_MB];
 }
