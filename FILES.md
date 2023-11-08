@@ -1,31 +1,36 @@
 # LIBRA-I_App
 
 ## Header (.h)
-- AppMgr
-- Button
-- InputBox
-- LIBRA_HEBI
-- Mouse
-- OnClickListener
-- Serial
-- Singleton
-- View
+- app_mgr
+- button
+- input_box
+- libra_hebi
+- mouse
+- onclick_listener
+- qedit.h
+- serial
+- singleton
+- view
 
 ## Source (.cpp)
-- AppMgr
-- Button
-- InputBox
-- LIBRA_HEBI
+- app_mgr
+- button
+- input_box
+- libra_hebi
 - main
-- Mouse
-- Serial
+- mouse
+- serial
+
+## arduino
+- servo_seeeduino_xiao.ino
+- water_arduino.ino
 
 ## Camera
 ### Header (.h)
-- Camera
+- camera
 - ewclib
 ### Source
-- Camera
+- camera
 
 ## Debug
 Debug build folder.
@@ -64,13 +69,8 @@ Generated when program is run.
 
 ## packages
 - Eigen.3.3.3
-- HEBI.Cpp.3.3.0
+- HEBI.Cpp.3.7.0
 
-## Release
-Release build folder.
-
-## servo_seeeduino_xiao
-- servo_seeeduino_xiao.ino
-
-## water_arduino
-- water_arduino.ino
+## params
+- gain.xml
+- safety.xml
