@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   LIBRA_HEBI.h
+ * @file   libra_hebi.h
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   ???
  ******************************************************************************/
 
@@ -14,9 +14,9 @@
 #include <windows.h>
 // Other Libraries' Headers
 //   HEBI Actuators
-#include <Hebi.h>
 #include <group_command.hpp>
 #include <group_feedback.hpp>
+#include <hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
 

@@ -1,26 +1,21 @@
 /******************************************************************************
- * @file   LIBRA_HEBI.cpp
+ * @file   libra_hebi.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   ???
  ******************************************************************************/
 
 // Related Header
-#include "LIBRA_HEBI.h"
+#include "libra_hebi.h"
 // C++ Standard Library Headers
 #include <stdexcept>
 // POSIX/Windows Library Headers
 #include "mmsystem.h"
 #pragma comment(lib, "winmm.lib")
-// Other Libraries' Headers
-//   HEBI Actuators
-#include <group_command.hpp>
-#include <group_feedback.hpp>
-#include <hebi.h>
-#include <lookup.hpp>
-#include <trajectory.hpp>
 
+// Other Libraries' Headers
+//   (none)
 // Project Headers
 //   (none)
 

@@ -1,28 +1,31 @@
 /******************************************************************************
- * @file   OnClickListener.h
+ * @file   serial.h
  * @brief  TODO.
  *
- * @author Yuto Goto
- * @date   2022/1/13
+ * @author Yuto Goto, Christian Brice
+ * @date   2022/7/5
  ******************************************************************************/
 
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
+#include <string>
 // POSIX/Windows Library Headers
-//   (none)
+#include <Windows.h>
+
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-#include "View.h"
+//   (none)
 
 /**
  * @brief TODO.
  */
-class OnClickListener {
+class Serial {
   public:
-    virtual ~OnClickListener() {}
+    int open(const char* port);
+    int write(BYTE data);
+    int writestring(std::string str);
 
-    virtual void OnClick(View* view) {}
+    HANDLE mhandle;
 };

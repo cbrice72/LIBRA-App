@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   View.h
+ * @file   singleton.h
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/1/13
  ******************************************************************************/
 
@@ -19,11 +19,22 @@
 
 /**
  * @brief TODO.
+ *
+ * @tparam _T TODO
  */
-class View {
+template<typename _T>
+class Singleton {
   public:
-    virtual ~View() {};
+    static _T* Instance() {
+        static _T inst;
+        return &inst;
+    };
 
-    virtual void Update() {};
-    virtual void Draw() {};
+  protected:
+    Singleton() {};
+    virtual ~Singleton() {};
+
+    // Copy constructor + assignment operator
+    Singleton(const Singleton& r) {};
+    Singleton& operator=(const Singleton& r) {};
 };

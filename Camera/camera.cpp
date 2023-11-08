@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   Camera.cpp
+ * @file   camera.cpp
  * @brief  Camera controls implementation file.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   ???
  ******************************************************************************/
 
 // Related Header
-#include "Camera.h"
+#include "camera.h"
 // C++ Standard Library Headers
 //   (none)
 // POSIX/Windows Library Headers

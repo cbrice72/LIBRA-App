@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   Mouse.h
+ * @file   mouse.h
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/1/13
  ******************************************************************************/
 
@@ -15,7 +15,7 @@
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-#include "Singleton.h"
+#include "singleton.h"
 
 /**
  * @brief TODO.

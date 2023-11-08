@@ -2,7 +2,7 @@
  * @file   main.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/7/20
  ******************************************************************************/
 
@@ -14,12 +14,12 @@
 //   DirectX Wrapper
 #include <DxLib.h>
 // Project Headers
-#include "AppMgr.h"
+#include "app_mgr.h"
 
 /**
- * @brief TODO.
+ * @brief The application entry point.
  *
- * @return int TODO
+ * @return int Exit value of the function.
  */
 int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
     AppMgr mgr;

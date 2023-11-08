@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   InputBox.cpp
+ * @file   input_box.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/7/5
  ******************************************************************************/
 
 // Related Header
-#include "InputBox.h"
+#include "input_box.h"
 // C++ Standard Library Headers
 //   (none)
 // POSIX/Windows Library Headers
@@ -16,7 +16,7 @@
 //   DirectX Wrapper
 #include <DxLib.h>
 // Project Headers
-#include "Mouse.h"
+#include "mouse.h"
 
 /* --- TABLE OF CONTENTS ---
  * !...
@@ -67,7 +67,8 @@ void InputBox::Draw() {
     DrawBoxAA(mX, mY, mX + mW, mY + mH, maincolor, FALSE,
               (IsMouseover || GetActiveKeyInput() == InputHandle) ? 5.5 : 2.5);
 
-    // “ü—Í“r’†‚Ì•¶Žš—ñ‚ð•`‰æ - Draw string in middle of input
+    // “ü—Í“r’†‚Ì•¶Žš—ñ‚ð•`‰æ - Draw string in middle of
+    // input
     // (?)
     char string[20];
     GetKeyInputString(string, InputHandle);

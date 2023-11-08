@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   Mouse.cpp
+ * @file   mouse.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/1/13
  ******************************************************************************/
 
 // Related Header
-#include "Mouse.h"
+#include "mouse.h"
 // C++ Standard Library Headers
 //   (none)
 // POSIX/Windows Library Headers

@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   Button.cpp
+ * @file   button.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/7/5
  ******************************************************************************/
 
 // Related Header
-#include "Button.h"
+#include "button.h"
 // C++ Standard Library Headers
 //   (none)
 // POSIX/Windows Library Headers
@@ -16,7 +16,7 @@
 //   DirectX Wrapper
 #include <DxLib.h>
 // Project Headers
-#include "Mouse.h"
+#include "mouse.h"
 
 /* --- TABLE OF CONTENTS ---
  * !...

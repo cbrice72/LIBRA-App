@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   AppMgr.cpp
+ * @file   app_mgr.cpp
  * @brief  Application manager implementation file.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   ???
  ******************************************************************************/
 
 // Related Header
-#include "AppMgr.h"
+#include "app_mgr.h"
 // C++ Standard Library Headers
 #include <cmath>
 #include <ctime>
@@ -22,9 +22,9 @@
 //   DirectX Wrapper
 #include <DxLib.h>
 // Project Headers
-#include "Button.h"
-#include "Mouse.h"
-#include "Serial.h"
+#include "button.h"
+#include "mouse.h"
+#include "serial.h"
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions

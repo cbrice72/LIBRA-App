@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   InputBox.h
+ * @file   input_box.h
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/7/5
  ******************************************************************************/
 
@@ -15,8 +15,8 @@
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-#include "OnClickListener.h"
-#include "View.h"
+#include "onclick_listener.h"
+#include "view.h"
 
 /**
  * @brief TODO.

@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   AppMgr.h
+ * @file   app_mgr.h
  * @brief  Application manager header file.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   ???
  ******************************************************************************/
 
@@ -20,11 +20,11 @@
 #include <group_feedback.hpp>
 #include <hebi.h>
 // Project Headers
-#include "Button.h"
-#include "InputBox.h"
-#include "LIBRA_HEBI.h"
-#include "OnClickListener.h"
-#include "Serial.h"
+#include "button.h"
+#include "input_box.h"
+#include "libra_hebi.h"
+#include "onclick_listener.h"
+#include "serial.h"
 
 /**
  * @brief The .NET application manager.

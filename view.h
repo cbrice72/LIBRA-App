@@ -1,18 +1,17 @@
 /******************************************************************************
- * @file   Serial.h
+ * @file   view.h
  * @brief  TODO.
  *
- * @author Yuto Goto
- * @date   2022/7/5
+ * @author Yuto Goto, Christian Brice
+ * @date   2022/1/13
  ******************************************************************************/
 
 #pragma once
 
 // C++ Standard Library Headers
-#include <string>
+//   (none)
 // POSIX/Windows Library Headers
-#include <Windows.h>
-
+//   (none)
 // Other Libraries' Headers
 //   (none)
 // Project Headers
@@ -21,11 +20,10 @@
 /**
  * @brief TODO.
  */
-class Serial {
+class View {
   public:
-    int open(const char* port);
-    int write(BYTE data);
-    int writestring(std::string str);
+    virtual ~View() {};
 
-    HANDLE mhandle;
+    virtual void Update() {};
+    virtual void Draw() {};
 };

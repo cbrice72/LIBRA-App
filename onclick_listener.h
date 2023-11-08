@@ -1,8 +1,8 @@
 /******************************************************************************
- * @file   Singleton.h
+ * @file   onclick_listener.h
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/1/13
  ******************************************************************************/
 
@@ -15,26 +15,14 @@
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-//   (none)
+#include "view.h"
 
 /**
  * @brief TODO.
- *
- * @tparam _T TODO
  */
-template<typename _T>
-class Singleton {
+class OnClickListener {
   public:
-    static _T* Instance() {
-        static _T inst;
-        return &inst;
-    };
+    virtual ~OnClickListener() {}
 
-  protected:
-    Singleton() {};
-    virtual ~Singleton() {};
-
-    // Copy constructor + assignment operator
-    Singleton(const Singleton& r) {};
-    Singleton& operator=(const Singleton& r) {};
+    virtual void OnClick(View* view) {}
 };

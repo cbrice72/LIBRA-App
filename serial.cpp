@@ -1,13 +1,13 @@
 /******************************************************************************
- * @file   Serial.cpp
+ * @file   serial.cpp
  * @brief  TODO.
  *
- * @author Yuto Goto
+ * @author Yuto Goto, Christian Brice
  * @date   2022/7/5
  ******************************************************************************/
 
 // Related Header
-#include "Serial.h"
+#include "serial.h"
 // C++ Standard Library Headers
 #include <cstdio>
 #include <cstdlib>
