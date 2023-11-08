@@ -1,0 +1,16 @@
+{
+    "configurations": [
+        {
+            "name": "Windows",
+            "includePath": [
+                "${workspaceFolder}",
+                "${workspaceFolder}/arduino/lib/**",
+                "${workspaceFolder}/camera/",
+                "${workspaceFolder}/DxLib/",
+                "${workspaceFolder}/packages/HEBI.Cpp.3.7.0/build/native/Hebi/include/",
+                "${workspaceFolder}/packages/Eigen.3.3.3/build/native/include/"
+            ]
+        }
+    ],
+    "version": 4
+}
