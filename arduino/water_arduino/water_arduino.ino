@@ -39,7 +39,7 @@ void loop() {
                > 5000) {  // 受信データがない状態が5000ms続いた場合
                           // If no data has been received for 5000 ms...
         for (int i = 0; i < 4; i++) {
-            digitalWrite(pin[i], LOW);  // ... 全ピンをLOWにする - Set all pins LOW
+            digitalWrite(pin[i], LOW);  // ... 全ピンをLOWにする - set all pins LOW
         }
         digitalWrite(13, LOW);  // ボード上のLEDを消灯する - Turn off board LED
     }
