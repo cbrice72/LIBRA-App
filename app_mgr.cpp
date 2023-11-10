@@ -69,7 +69,7 @@ void AppMgr::Main() {
         std::string com;
         std::string comtext;
 
-        std::cout << "Specify the port to be used by ser_water_: "
+        std::cout << "Specify the port to be used by SerialWater: "
                   << std::flush;
         std::cin >> com;
         comtext = "COM" + com;
@@ -77,7 +77,7 @@ void AppMgr::Main() {
             std::cout << "[ERROR] Cannot open " << comtext << std::endl;
         }
 
-        std::cout << "Specify the port to be used by ser_servo_: "
+        std::cout << "Specify the port to be used by SerialServo: "
                   << std::flush;
         std::cin >> com;
         comtext = "COM" + com;
