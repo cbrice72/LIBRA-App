@@ -119,15 +119,17 @@ void AppMgr::Main() {
 DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
     AppMgr* p = (AppMgr*)pv;
     p->MainThread();
-    p->flag_thread_end_ =
-        1;  // スレッド終了フラグを１にする - Set thread end flag to 1
+    p->flag_thread_end_ = 1;
     return 0;
 }
 
 /**
- * @brief TODO.
+ * @brief The primary program control loop; initializes the UI and continuously
+ * receives user inputs & updates sensor readings.
  */
 void AppMgr::MainThread() {
+    // カラーとフォントの初期化
+    // Initialize colors and fonts
     int maincolor = GetColor(50, 50, 50);
     int mainfont = CreateFontToHandle("Yu Gothic UI", 50, 5,
                                       DX_FONTTYPE_ANTIALIASING);
@@ -137,6 +139,8 @@ void AppMgr::MainThread() {
                                      DX_FONTTYPE_ANTIALIASING);
     SetBackgroundColor(255, 255, 255);
 
+    // InputBoxオブジェクトの初期化
+    // Initialize InputBox objects
     ibox_roll_ = new InputBox(1500 - 600, 800);
     ibox_pitch_ = new InputBox(1500 - 600, 1000);
     ibox_j1_ = new InputBox(1500 - 600, 1200);
@@ -150,6 +154,8 @@ void AppMgr::MainThread() {
     ibox_camera_pan_ = new InputBox(2800 + 150, 450);
     ibox_camera_tilt_ = new InputBox(2800 + 150, 600);
 
+    // InputBoxのデフォルト値を設定
+    // Set InputBox default values
     ibox_roll_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::ROLL));
     ibox_pitch_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::PITCH));
     ibox_j1_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::J1));
@@ -163,9 +169,11 @@ void AppMgr::MainThread() {
     ibox_camera_pan_->SetNum(0);
     ibox_camera_tilt_->SetNum(0);
 
+    // Buttonオブジェクトの初期化
+    // Initialize Button objects
     btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
                             340, 100, "START", this);
-    OnClick(btn_start_);
+    OnClick(btn_start_);  // set Start button as default selection
 
     btn_convert_ = new Button(60 + 60, kWindowH - 200 - 100, 340, 100,
                               "CONVERT", this);
@@ -182,11 +190,13 @@ void AppMgr::MainThread() {
     btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
     btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
+    // (Japanese)
+    // TODO: needs comment
     int count = 0;
     BYTE d = 0;
 
-    // ログ - Log
-
+    // ロギングの初期化
+    // Initialize logging
     SYSTEMTIME st;
     char datetime_char[100];
     std::string datetime_str;
@@ -222,10 +232,12 @@ void AppMgr::MainThread() {
     *shot_log_ << "Voltage[V],Current[A]";
     *shot_log_ << std::endl;
 
-    //-----------------------------
-
+    // 更新ループ
+    // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
         Mouse::Instance()->Update();
+
+        /* ----- UI: InputBox OBJECTS ----- */
 
         ibox_voltage_->UpdateDraw();
         ibox_current_->UpdateDraw();
@@ -240,6 +252,8 @@ void AppMgr::MainThread() {
         ibox_camera_pan_->UpdateDraw();
         ibox_camera_tilt_->UpdateDraw();
 
+        /* ----- UI: Button OBJECTS ----- */
+
         btn_enable_->UpdateDraw();
         btn_disable_->UpdateDraw();
         btn_shot_->UpdateDraw();
@@ -253,12 +267,12 @@ void AppMgr::MainThread() {
         btn_servo_slow_->UpdateDraw();
         btn_servo_fast_->UpdateDraw();
 
+        /* ----- UI: GENERAL ----- */
+
         // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-        // 操作盤の四角 - Operation panel square
-        DrawBoxAA(60, 550, 1300, kWindowH - 100, maincolor, FALSE, 2.5);
-
-        // タイトル - Title
+        // 各セクションのタイトル
+        // Section titles
         DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont, "LIBRA-I");
         DrawFormatStringToHandle(120, 824 - 200, maincolor, titlefont,
                                  "Goal Pos.");
@@ -269,25 +283,40 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(1400 + 800, 824 - 200, maincolor, titlefont,
                                  "Present Torq.");
 
+        /* ----- UI: FLUID SYSTEM ----- */
+
+        // 流体入出力パネルのラベル
+        // Fluid I/O panel labels
         DrawFormatStringToHandle(800, 200, maincolor, titlefont, "A_IN");
         DrawFormatStringToHandle(1100, 200, maincolor, titlefont, "B_IN");
         DrawFormatStringToHandle(1400, 200, maincolor, titlefont, "A_OUT");
         DrawFormatStringToHandle(1700, 200, maincolor, titlefont, "B_OUT");
 
-        // 各項目 - Iterate over each item
+        /* ----- UI: ARM ----- */
+
+        // 操作盤の四角
+        // Control panel border
+        DrawBoxAA(60, 550, 1300, kWindowH - 100, maincolor, FALSE, 2.5);
+
+        // HEBIスマートモーターのデータを取得
+        // Retrieve HEBI smart motor data
         for (int i = 0; i < 5; i++) {
-            value_[i][0] = libra_arm_->getCommandPosition(i);
-            value_[i][1] = libra_arm_->getFeedbackPosition(i);
-            value_[i][2] = libra_arm_->getFeedbackEffort(i);
+            value_[i][0] = libra_arm_->getCommandPosition(i);   // Target Pos.
+            value_[i][1] = libra_arm_->getFeedbackPosition(i);  // Present Pos.
+            value_[i][2] = libra_arm_->getFeedbackEffort(i);    // Present Torq.
         }
 
+        // アーム制御のラベルとモーターデータ
+        // Arm control labels and motor data
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
         for (int i = 0; i < 5; i++) {
+            // Input box labels
             DrawFormatStringToHandle(750, 824 + 200 * i, maincolor, mainfont,
                                      menu[i].c_str());
             DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, maincolor,
                                      mainfont, "deg");
 
+            // Target Pos., Present Pos., Present Torq.
             for (int j = 0; j < 3; j++) {
                 char str[20];
                 int strW;
@@ -298,12 +327,15 @@ void AppMgr::MainThread() {
             }
         }
 
+        // アーム全体コントロールのラベル
+        // Whole-arm control labels
         DrawFormatStringToHandle(120, 824 + 200 * 3, maincolor, mainfont, "R");
         DrawFormatStringToHandle(530, 824 + 200 * 3, maincolor, mainfont, "mm");
         DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "θ");
         DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont, "deg");
 
-        // グラフ表示 - Graph display
+        // 重心グラフ表示
+        // Center of mass visualization
         const int cX = 3100;
         const int cY = kWindowH / 2 + 350;
 
@@ -350,7 +382,8 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(cX - 100, cY - 550 - 25, maincolor, mainfont,
                                  "Pitch[Nm]");
 
-        // 電圧電流 - Voltage and current
+        // 電圧電流のラベル
+        // Voltage and current labels
         DrawFormatStringToHandle(1400, 1800, maincolor, titlefont, "Voltage");
         DrawFormatStringToHandle(1400 + 400, 1800, maincolor, titlefont,
                                  "Current");
@@ -358,7 +391,10 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(1400 + 400 + 260, 1924, maincolor, mainfont,
                                  "A");
 
-        // カメラ - Camera
+        /* ----- UI: CAMERA ----- */
+
+        // カメラパネルのラベル
+        // Camera panel labels
         DrawFormatStringToHandle(2800, 150, maincolor, titlefont, "Camera Pos.");
         DrawFormatStringToHandle(2800, 300 + 24, maincolor, mainfont, "Base");
         DrawFormatStringToHandle(2800, 450 + 24, maincolor, mainfont, "Pan");
@@ -370,7 +406,8 @@ void AppMgr::MainThread() {
 
         // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-        // ???
+        // J3を負にするピッチ角を計算
+        // Calculate pitch angle to negate J3
         double j3_pos = libra_arm_->getCommandPosition(4);
         if (j3_pos <= 30) {
             camera_pos_[0] = (j3_pos <= 0) ? -j3_pos : 0;
@@ -378,7 +415,8 @@ void AppMgr::MainThread() {
             camera_pos_[0] = 180 - j3_pos;
         }
 
-        // ???
+        // 目的のカメラのパンアングルを取得
+        // Retrieve desired camera pan angle
         if (camera_dir_[1] != 0) {
             camera_pos_[1] += camera_dir_[1] * 90.0 / (60.0 * 60.0);
             if ((camera_pos_[1] > camera_setpos_[1]) == (camera_dir_[1] == 1)) {
@@ -387,7 +425,8 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ???
+        // 目的のカメラのチルト角度を取得
+        // Retrieve desired camera tilt angle
         if (camera_dir_[2] != 0) {
             camera_pos_[2] += camera_dir_[2] * 90.0 / (60.0 * 60.0);
             if ((camera_pos_[2] > camera_setpos_[2]) == (camera_dir_[2] == 1)) {
@@ -396,7 +435,8 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ???
+        // カメラサーボデータの更新
+        // Update camera servo data
         for (int i = 0; i < 3; i++) {
             char str[20] = "";
             sprintf(str, "%8.2f deg", camera_pos_[i]);
@@ -406,16 +446,23 @@ void AppMgr::MainThread() {
                                      mainfont, str);
         }
 
+        // SerialServoのArduinoにコマンドを送る
+        // Send commands to SerialServo Arduino
         std::stringstream servo_str;
         servo_str << camera_pos_[0] << " " << camera_pos_[1] << " "
                   << camera_pos_[2] << "\n";
         ser_servo_->WriteStr(servo_str.str());
 
-        // ???
+        /* ----- TODO: UNORGANIZED ----- */
+
+        // TODO: his switch statement needs better comments
+
+        // SerialWaterのArduinoにコマンドを送る
+        // Send commands to SerialWater Arduino
         switch (mode_) {
-            case 0:  // 通常運転 - Normal operation
+            case 0:  // 通常運転 - Normal operation?
                 d = 0;
-                // トルク超過 - Excess torque
+                // トルク超過 - Excess torque?
                 if ((abs(libra_arm_->getFeedbackEffortMA()) > 5
                      || abs(libra_arm_->getFeedbackEffortMB()) > 5)
                     && enabled_) {
@@ -424,8 +471,8 @@ void AppMgr::MainThread() {
                 }
                 break;
 
-            case 1:  // 調整 - Adjustment
-                // 通常動作 - Usual action
+            case 1:  // 調整 - Adjustment?
+                // 通常動作 - Usual action?
                 if ((abs(libra_arm_->getFeedbackEffortMA()) >= 2.5
                      || abs(libra_arm_->getFeedbackEffortMB()) >= 2.5)
                     && enabled_) {
@@ -435,7 +482,7 @@ void AppMgr::MainThread() {
                                              libra_arm_->getFeedbackEffort(
                                                  LIBRA_HEBI::ROLL));
 
-                        // A入 | B入 | A出 | B出 - A in | B in | A out | B out
+                        // A入 | B入 | A出 | B出 - A_IN | B_IN | A_OUT | B_OUT?
                         if (theta > M_PI * 7 / 8 || -M_PI * 7 / 8 >= theta) {
                             d = 0b1001;
                         } else if (theta > M_PI * 5 / 8) {
@@ -456,7 +503,7 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // トルクが戻った - Torque is reset
+                // トルクが戻った - Torque is reset?
                 else if (count == 0) {
                     libra_arm_->move(input_[0], input_[1], input_[2], input_[3],
                                      input_[4]);
@@ -467,6 +514,8 @@ void AppMgr::MainThread() {
         }
         ser_water_->Write(d);
 
+        // 流体システムの状態
+        // Status of fluid system
         for (int i = 0; i < 4; i++) {
             // NOLINTBEGIN(readability-magic-numbers): Position of UI element
 
@@ -486,8 +535,10 @@ void AppMgr::MainThread() {
             // NOLINTEND(readability-magic-numbers): Position of UI element
         }
 
-        // ログ - Log
+        /* ----- LOGGING ----- */
 
+        // 連続ログの更新
+        // Update continuous log
         if (count == 0) {
             /*
             *continuous_log_ << "Time,,";
@@ -523,8 +574,7 @@ void AppMgr::MainThread() {
             *continuous_log_ << std::endl;
         }
 
-        //--------------------
-
+        // TODO: needs comment
         count++;
         if (count == 30) {
             count = 0;
