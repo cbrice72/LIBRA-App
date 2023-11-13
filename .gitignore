@@ -6,22 +6,6 @@
 ###############################################################################
 
 ###############################################################################
-## LIBRA-II App
-###############################################################################
-
-# Doxygen-generated files
-**/docs/*
-
-# Adobe project files for graphics in res/
-adobe/
-
-# Log Files
-Log.txt
-
-# Log Folder
-Log/
-
-###############################################################################
 ## C++.gitignore
 ###############################################################################
 
@@ -196,20 +180,18 @@ __pycache__/
 # Tabs Studio
 *.tss
 
-# --- MISCELLANEOUS ---
+###############################################################################
+## LIBRA-II App
+###############################################################################
 
-# SQL Server files
-*.mdf
-*.ldf
-*.ndf
+# Adobe project files for graphics in res/ directory
+adobe/*
 
-# Others
-ClientBin/
-~$*
-*~
-*.dbmdl
-*.dbproj.schemaview
-*.jfm
-*.pfx
-*.publishsettings
-orleans.codegen.cs
+# Doxygen-generated files
+**/docs/*
+
+# Don't exclude the manually-downloaded DxLib static libraries
+!DxLib/*.lib
+
+# Log file
+Log.txt
