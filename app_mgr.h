@@ -36,9 +36,15 @@ class AppMgr : public OnClickListener {
     EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 
   private:
+    /**
+     * @brief Logical status of the fluid system.
+     */
+    enum WaterMode { kStandby = 0, kAdjust, kDrain };
+
     // --- Main Window ---
 
     static DWORD WINAPI MainThread_dmy(LPVOID);
+
     void MainThread();
     void OnClick(View* view) override;
 
@@ -52,13 +58,14 @@ class AppMgr : public OnClickListener {
 
     Button* btn_enable_;
     Button* btn_disable_;
+    Button* btn_drain_;
 
     Button* btn_shot_;
 
     InputBox* ibox_voltage_;
     InputBox* ibox_current_;
 
-    // --- UI: Goal Position ---
+    // --- UI: Arm Position ---
 
     Button* btn_convert_;
     Button* btn_start_;
@@ -89,17 +96,18 @@ class AppMgr : public OnClickListener {
 
     // --- Data Members ---
 
+    LIBRA_HEBI* libra_arm_;
     Serial* ser_water_;
     Serial* ser_servo_;
-    LIBRA_HEBI* libra_arm_;
+
+    volatile bool flag_thread_end_{0};
+    volatile bool flag_end_{0};
 
     std::ofstream* continuous_log_;
     std::ofstream* shot_log_;
 
-    bool enabled_{true};
-    int mode_{0};
-    volatile bool flag_end_{0};
-    volatile bool flag_thread_end_{0};
+    bool water_en_{true};
+    WaterMode water_mode_{kStandby};
 
     double input_[5];
     double value_[5][3] = {0};

@@ -31,11 +31,11 @@ class LIBRA_HEBI {
     LIBRA_HEBI();
 
     /**
-     * @brief TODO.
+     * @brief LIBRA joint names.
      */
-    enum { ROLL, PITCH, J1, J2, J3 };
+    enum Joint { kRoll = 0, kPitch, kJ1, kJ2, kJ3 };
 
-    // --- Motor Commands ---
+    // --- Actuator Commands ---
 
     int connect();
     void move(double roll, double pitch, double j1, double j2, double j3);
@@ -43,17 +43,17 @@ class LIBRA_HEBI {
 
     // --- Getters & Setters ---
 
-    double getCommandPosition(int joint);
-    double getFeedbackPosition(int joint);
-    double getFeedbackEffort(int joint);
+    double getCommandPosition(Joint joint);
+    double getFeedbackPosition(Joint joint);
+    double getFeedbackEffort(Joint joint);
     double getFeedbackEffortMA();
     double getFeedbackEffortMB();
 
   private:
     /**
-     * @brief TODO.
+     * @brief HEBI actuator names.
      */
-    enum { HEBI_MA, HEBI_MB, HEBI_J1, HEBI_J2, HEBI_J3 };
+    enum Act { kHebiMA = 0, kHebiMB, kHebiJ1, kHebiJ2, kHebiJ3 };
 
     static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
                                   DWORD dw2);
