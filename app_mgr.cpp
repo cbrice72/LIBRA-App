@@ -210,11 +210,11 @@ void AppMgr::MainThread() {
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     datetime_str = datetime_char;
 
-    if (_mkdir("./Log/") == 0) {
-        std::cout << "[INFO] Created Log directory.\n";
+    if (_mkdir("./log/") == 0) {
+        std::cout << "[INFO] Created log directory.\n";
     }
 
-    continuous_log_ = new std::ofstream("./Log/" + datetime_str
+    continuous_log_ = new std::ofstream("./log/" + datetime_str
                                         + "_continuous_log.csv");
     *continuous_log_ << "Time,,";
     *continuous_log_
@@ -227,7 +227,7 @@ void AppMgr::MainThread() {
     *continuous_log_ << "TP_CamBase[deg],TP_CamPan[deg],TP_CamTilt[deg]";
     *continuous_log_ << std::endl;
 
-    shot_log_ = new std::ofstream("./Log/" + datetime_str + "_shot_log.csv");
+    shot_log_ = new std::ofstream("./log/" + datetime_str + "_shot_log.csv");
     *shot_log_ << "Time,,";
     *shot_log_
         << "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
