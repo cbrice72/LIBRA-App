@@ -42,21 +42,21 @@ constexpr int kWindowH = 1080 * 2;  // app window height
  * @brief TODO.
  */
 void AppMgr::Main() {
-    // ƒRƒ“ƒ\[ƒ‹‚ğ—pˆÓ - Prepare console
+    // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚’ç”¨æ„ - Prepare console
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
     (void)freopen("CONIN$", "r", stdin);
     std::cout << "\n===== LIBRA App =====\n" << std::endl;
 
-    // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^Ú‘± - HEBI actuator connection
+    // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿æ¥ç¶š - HEBI actuator connection
     libra_arm_ = new LIBRA_HEBI();
     int hebi_error = libra_arm_->connect();
 
-    // COMƒ|[ƒgÚ‘± - COM port connection
+    // COMãƒãƒ¼ãƒˆæ¥ç¶š - COM port connection
     ser_water_ = new Serial();
     ser_servo_ = new Serial();
-    if (!hebi_error) {  // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ÆÚ‘±‚³‚ê‚Ä‚¢‚é‚Æ‚«‚Ì‚İ - Only
-                        // when connected to HEBI actuator
+    if (!hebi_error) {  // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã¨æ¥ç¶šã•ã‚Œã¦ã„ã‚‹ã¨ãã®ã¿
+                        // Only when connected to HEBI actuators
         std::string answer;
         do {
             std::cout << "----- COM Port List -----\n";
@@ -86,30 +86,33 @@ void AppMgr::Main() {
         }
     }
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‰Šú‰»‚ğŠÜ‚Şİ’è - Setup, including DX library initialization
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªåˆæœŸåŒ–ã‚’å«ã‚€è¨­å®š
+    // DX library initialization
     std::cout << "[INFO] Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
-    // ProcessMessageˆÈŠO‚Ìˆ—‚ğs‚¤ƒXƒŒƒbƒh‚ğì¬ - Create threads for
-    // processing (other than 'ProcessMessage')
+    // ProcessMessageä»¥å¤–ã®å‡¦ç†ã‚’è¡Œã†ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆ
+    // Create thread for any non-ProcessMessage processing
     CreateThread(NULL, 0, MainThread_dmy, this, 0, NULL);
 
-    // ProcessMessageƒ‹[ƒv - 'ProcessMessage' loop
+    // ProcessMessageãƒ«ãƒ¼ãƒ—
+    // ProcessMessage loop
     while (!ProcessMessage() && !flag_thread_end_) {
-        // ­‚µCPU‚ğ‹x‚ß‚é - Wait for the thread to finish
+        // å°‘ã—CPUã‚’ä¼‘ã‚ã‚‹ - Wait for the thread to finish
         Sleep(6);
     }
 
-    // ƒvƒƒOƒ‰ƒ€‚ªI—¹‚µ‚½‚±‚Æ‚ğ¦‚·ƒtƒ‰ƒO‚ğ—§‚Ä‚é - Flag to indicate that the
-    // program has finished
+    // ãƒ—ãƒ­ã‚°ãƒ©ãƒ ãŒçµ‚äº†ã—ãŸã“ã¨ã‚’ç¤ºã™ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹
+    // Flag to indicate that the program has finished
     flag_end_ = 1;
 
-    // ƒXƒŒƒbƒhI—¹ƒtƒ‰ƒO‚ª—§‚Â‚Ü‚Å‘Ò‚Â - Wait until the thread is flagged as
-    // closed
+    // ã‚¹ãƒ¬ãƒƒãƒ‰çµ‚äº†ãƒ•ãƒ©ã‚°ãŒç«‹ã¤ã¾ã§å¾…ã¤
+    // Wait until the thread is flagged as closed
     while (!flag_thread_end_) {
         Sleep(10);
     }
 
+    // Clean up DX library
     DxLib_End();
 }
 
@@ -128,7 +131,7 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
  * receives user inputs & updates sensor readings.
  */
 void AppMgr::MainThread() {
-    // ƒJƒ‰[‚ÆƒtƒHƒ“ƒg‚Ì‰Šú‰»
+    // ã‚«ãƒ©ãƒ¼ã¨ãƒ•ã‚©ãƒ³ãƒˆã®åˆæœŸåŒ–
     // Initialize colors and fonts
     int maincolor = GetColor(50, 50, 50);
     int mainfont = CreateFontToHandle("Yu Gothic UI", 50, 5,
@@ -139,7 +142,7 @@ void AppMgr::MainThread() {
                                      DX_FONTTYPE_ANTIALIASING);
     SetBackgroundColor(255, 255, 255);
 
-    // InputBoxƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
+    // InputBoxã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
     // Initialize InputBox objects
     ibox_roll_ = new InputBox(1500 - 600, 800);
     ibox_pitch_ = new InputBox(1500 - 600, 1000);
@@ -154,7 +157,7 @@ void AppMgr::MainThread() {
     ibox_camera_pan_ = new InputBox(2800 + 150, 450);
     ibox_camera_tilt_ = new InputBox(2800 + 150, 600);
 
-    // InputBox‚ÌƒfƒtƒHƒ‹ƒg’l‚ğİ’è
+    // InputBoxã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’è¨­å®š
     // Set InputBox default values
     ibox_roll_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::ROLL));
     ibox_pitch_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::PITCH));
@@ -169,7 +172,7 @@ void AppMgr::MainThread() {
     ibox_camera_pan_->SetNum(0);
     ibox_camera_tilt_->SetNum(0);
 
-    // ButtonƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
+    // Buttonã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
     // Initialize Button objects
     btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
                             340, 100, "START", this);
@@ -181,8 +184,8 @@ void AppMgr::MainThread() {
                            "STOP", this);
     btn_up_ = new Button(320, 800, 120, 120, "R+", this);
     btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
-    btn_left_ = new Button(120, 1000, 120, 120, "ƒÆ+", this);
-    btn_right_ = new Button(520, 1000, 120, 120, "ƒÆ-", this);
+    btn_left_ = new Button(120, 1000, 120, 120, "Î¸+", this);
+    btn_right_ = new Button(520, 1000, 120, 120, "Î¸-", this);
     btn_enable_ = new Button(2200, 150, 340, 100, "ENABLE", this);
     btn_disable_ = new Button(2200, 300, 340, 100, "DISABLE", this);
     btn_shot_ = new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT",
@@ -190,18 +193,18 @@ void AppMgr::MainThread() {
     btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
     btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
-    // (Japanese)
-    // TODO: needs comment
+    // æµä½“ã‚·ã‚¹ãƒ†ãƒ ãƒ©ãƒ³ã‚¿ã‚¤ãƒ å¤‰æ•°ã®åˆæœŸåŒ–
+    // Initialize fluid system runtime variables
     int count = 0;
     BYTE d = 0;
 
-    // ƒƒMƒ“ƒO‚Ì‰Šú‰»
+    // ãƒ­ã‚®ãƒ³ã‚°ã®åˆæœŸåŒ–
     // Initialize logging
     SYSTEMTIME st;
     char datetime_char[100];
     std::string datetime_str;
     GetLocalTime(&st);
-    sprintf(datetime_char, "%04d”N%02dŒ%02d“ú_%02d%02d•ª%02d•b", st.wYear,
+    sprintf(datetime_char, "%04då¹´%02dæœˆ%02dæ—¥_%02dæ™‚%02dåˆ†%02dç§’", st.wYear,
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     datetime_str = datetime_char;
 
@@ -232,7 +235,7 @@ void AppMgr::MainThread() {
     *shot_log_ << "Voltage[V],Current[A]";
     *shot_log_ << std::endl;
 
-    // XVƒ‹[ƒv
+    // æ›´æ–°ãƒ«ãƒ¼ãƒ—
     // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
         Mouse::Instance()->Update();
@@ -271,7 +274,7 @@ void AppMgr::MainThread() {
 
         // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-        // ŠeƒZƒNƒVƒ‡ƒ“‚Ìƒ^ƒCƒgƒ‹
+        // å„ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®ã‚¿ã‚¤ãƒˆãƒ«
         // Section titles
         DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont, "LIBRA-I");
         DrawFormatStringToHandle(120, 824 - 200, maincolor, titlefont,
@@ -285,7 +288,7 @@ void AppMgr::MainThread() {
 
         /* ----- UI: FLUID SYSTEM ----- */
 
-        // —¬‘Ì“üo—Íƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
+        // æµä½“å…¥å‡ºåŠ›ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Fluid I/O panel labels
         DrawFormatStringToHandle(800, 200, maincolor, titlefont, "A_IN");
         DrawFormatStringToHandle(1100, 200, maincolor, titlefont, "B_IN");
@@ -294,20 +297,20 @@ void AppMgr::MainThread() {
 
         /* ----- UI: ARM ----- */
 
-        // ‘€ì”Õ‚ÌlŠp
+        // æ“ä½œç›¤ã®å››è§’
         // Control panel border
         DrawBoxAA(60, 550, 1300, kWindowH - 100, maincolor, FALSE, 2.5);
 
-        // HEBIƒXƒ}[ƒgƒ‚[ƒ^[‚Ìƒf[ƒ^‚ğæ“¾
-        // Retrieve HEBI smart motor data
+        // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã®ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—
+        // Retrieve HEBI actuator data
         for (int i = 0; i < 5; i++) {
             value_[i][0] = libra_arm_->getCommandPosition(i);   // Target Pos.
             value_[i][1] = libra_arm_->getFeedbackPosition(i);  // Present Pos.
             value_[i][2] = libra_arm_->getFeedbackEffort(i);    // Present Torq.
         }
 
-        // ƒA[ƒ€§Œä‚Ìƒ‰ƒxƒ‹‚Æƒ‚[ƒ^[ƒf[ƒ^
-        // Arm control labels and motor data
+        // ã‚¢ãƒ¼ãƒ åˆ¶å¾¡ã®ãƒ©ãƒ™ãƒ«ã¨ã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ãƒ‡ãƒ¼ã‚¿
+        // Arm control labels and actuator data
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
         for (int i = 0; i < 5; i++) {
             // Input box labels
@@ -327,14 +330,14 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ƒA[ƒ€‘S‘ÌƒRƒ“ƒgƒ[ƒ‹‚Ìƒ‰ƒxƒ‹
+        // ã‚¢ãƒ¼ãƒ å…¨ä½“ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Whole-arm control labels
         DrawFormatStringToHandle(120, 824 + 200 * 3, maincolor, mainfont, "R");
         DrawFormatStringToHandle(530, 824 + 200 * 3, maincolor, mainfont, "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "ƒÆ");
+        DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "Î¸");
         DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont, "deg");
 
-        // dSƒOƒ‰ƒt•\¦
+        // é‡å¿ƒã‚°ãƒ©ãƒ•è¡¨ç¤º
         // Center of mass visualization
         const int cX = 3100;
         const int cY = kWindowH / 2 + 350;
@@ -382,7 +385,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(cX - 100, cY - 550 - 25, maincolor, mainfont,
                                  "Pitch[Nm]");
 
-        // “dˆ³“d—¬‚Ìƒ‰ƒxƒ‹
+        // é›»åœ§é›»æµã®ãƒ©ãƒ™ãƒ«
         // Voltage and current labels
         DrawFormatStringToHandle(1400, 1800, maincolor, titlefont, "Voltage");
         DrawFormatStringToHandle(1400 + 400, 1800, maincolor, titlefont,
@@ -393,7 +396,7 @@ void AppMgr::MainThread() {
 
         /* ----- UI: CAMERA ----- */
 
-        // ƒJƒƒ‰ƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
+        // ã‚«ãƒ¡ãƒ©ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Camera panel labels
         DrawFormatStringToHandle(2800, 150, maincolor, titlefont, "Camera Pos.");
         DrawFormatStringToHandle(2800, 300 + 24, maincolor, mainfont, "Base");
@@ -406,7 +409,7 @@ void AppMgr::MainThread() {
 
         // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-        // J3‚ğ•‰‚É‚·‚éƒsƒbƒ`Šp‚ğŒvZ
+        // J3ã‚’è² ã«ã™ã‚‹ãƒ”ãƒƒãƒè§’ã‚’è¨ˆç®—
         // Calculate pitch angle to negate J3
         double j3_pos = libra_arm_->getCommandPosition(4);
         if (j3_pos <= 30) {
@@ -415,7 +418,7 @@ void AppMgr::MainThread() {
             camera_pos_[0] = 180 - j3_pos;
         }
 
-        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒpƒ“ƒAƒ“ƒOƒ‹‚ğæ“¾
+        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒ‘ãƒ³ã‚¢ãƒ³ã‚°ãƒ«ã‚’å–å¾—
         // Retrieve desired camera pan angle
         if (camera_dir_[1] != 0) {
             camera_pos_[1] += camera_dir_[1] * 90.0 / (60.0 * 60.0);
@@ -425,7 +428,7 @@ void AppMgr::MainThread() {
             }
         }
 
-        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒ`ƒ‹ƒgŠp“x‚ğæ“¾
+        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒãƒ«ãƒˆè§’åº¦ã‚’å–å¾—
         // Retrieve desired camera tilt angle
         if (camera_dir_[2] != 0) {
             camera_pos_[2] += camera_dir_[2] * 90.0 / (60.0 * 60.0);
@@ -435,7 +438,7 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ƒJƒƒ‰ƒT[ƒ{ƒf[ƒ^‚ÌXV
+        // ã‚«ãƒ¡ãƒ©ã‚µãƒ¼ãƒœãƒ‡ãƒ¼ã‚¿ã®æ›´æ–°
         // Update camera servo data
         for (int i = 0; i < 3; i++) {
             char str[20] = "";
@@ -446,23 +449,21 @@ void AppMgr::MainThread() {
                                      mainfont, str);
         }
 
-        // SerialServo‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
+        // SerialServoã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
         // Send commands to SerialServo Arduino
         std::stringstream servo_str;
         servo_str << camera_pos_[0] << " " << camera_pos_[1] << " "
                   << camera_pos_[2] << "\n";
         ser_servo_->WriteStr(servo_str.str());
 
-        /* ----- TODO: UNORGANIZED ----- */
+        /* ----- FLUID SYSTEM ----- */
 
-        // TODO: his switch statement needs better comments
-
-        // SerialWater‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
+        // SerialWaterã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
         // Send commands to SerialWater Arduino
         switch (mode_) {
-            case 0:  // ’Êí‰^“] - Normal operation?
+            case 0:  // é€šå¸¸é‹è»¢ - Normal operation?
                 d = 0;
-                // ƒgƒ‹ƒN’´‰ß - Excess torque?
+                // ãƒˆãƒ«ã‚¯è¶…é - Excess torque?
                 if ((abs(libra_arm_->getFeedbackEffortMA()) > 5
                      || abs(libra_arm_->getFeedbackEffortMB()) > 5)
                     && enabled_) {
@@ -471,8 +472,8 @@ void AppMgr::MainThread() {
                 }
                 break;
 
-            case 1:  // ’²® - Adjustment?
-                // ’Êí“®ì - Usual action?
+            case 1:  // èª¿æ•´ - Adjustment?
+                // é€šå¸¸å‹•ä½œ - Usual action?
                 if ((abs(libra_arm_->getFeedbackEffortMA()) >= 2.5
                      || abs(libra_arm_->getFeedbackEffortMB()) >= 2.5)
                     && enabled_) {
@@ -482,7 +483,7 @@ void AppMgr::MainThread() {
                                              libra_arm_->getFeedbackEffort(
                                                  LIBRA_HEBI::ROLL));
 
-                        // A“ü | B“ü | Ao | Bo - A_IN | B_IN | A_OUT | B_OUT?
+                        // Aå…¥ | Bå…¥ | Aå‡º | Bå‡º - A_IN | B_IN | A_OUT | B_OUT?
                         if (theta > M_PI * 7 / 8 || -M_PI * 7 / 8 >= theta) {
                             d = 0b1001;
                         } else if (theta > M_PI * 5 / 8) {
@@ -503,7 +504,7 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // ƒgƒ‹ƒN‚ª–ß‚Á‚½ - Torque is reset?
+                // ãƒˆãƒ«ã‚¯ãŒæˆ»ã£ãŸ - Torque is reset?
                 else if (count == 0) {
                     libra_arm_->move(input_[0], input_[1], input_[2], input_[3],
                                      input_[4]);
@@ -514,7 +515,7 @@ void AppMgr::MainThread() {
         }
         ser_water_->Write(d);
 
-        // —¬‘ÌƒVƒXƒeƒ€‚Ìó‘Ô
+        // æµä½“ã‚·ã‚¹ãƒ†ãƒ ã®çŠ¶æ…‹
         // Status of fluid system
         for (int i = 0; i < 4; i++) {
             // NOLINTBEGIN(readability-magic-numbers): Position of UI element
@@ -537,7 +538,7 @@ void AppMgr::MainThread() {
 
         /* ----- LOGGING ----- */
 
-        // ˜A‘±ƒƒO‚ÌXV
+        // é€£ç¶šãƒ­ã‚°ã®æ›´æ–°
         // Update continuous log
         if (count == 0) {
             /*
@@ -583,7 +584,7 @@ void AppMgr::MainThread() {
 }
 
 /**
- * @brief TODO.
+ * @brief Windows callback for button click actions.
  */
 void AppMgr::OnClick(View* view) {
     if (view == btn_stop_) {
@@ -701,55 +702,55 @@ void AppMgr::OnClick(View* view) {
 void AppMgr::SetupIncludeDxlibInit() {
     // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-    // ƒEƒCƒ“ƒhƒEƒ‚[ƒh‚Å‹N“® - Start in windowed mode_
+    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹• - Start in windowed mode_
     ChangeWindowMode(TRUE);
 
-    // Å‘å‰»ƒ{ƒ^ƒ“‚ª‘¶İ‚·‚éƒEƒCƒ“ƒhƒEƒ‚[ƒh‚É•ÏX
+    // æœ€å¤§åŒ–ãƒœã‚¿ãƒ³ãŒå­˜åœ¨ã™ã‚‹ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã«å¤‰æ›´
     // Set to windowed mode_ with maximize button present
     SetWindowStyleMode(7);
 
-    // ‰æ–ÊƒTƒCƒY‚ğw’è - Specify screen size
+    // ç”»é¢ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify screen size
     SetGraphMode(kWindowW, kWindowH, 32);
 
-    // ƒTƒCƒY•ÏX‚ğ‰Â”\‚É‚·‚é - Allow resizing
+    // ã‚µã‚¤ã‚ºå¤‰æ›´ã‚’å¯èƒ½ã«ã™ã‚‹ - Allow resizing
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
-    // ƒEƒCƒ“ƒhƒEƒTƒCƒY‚ğw’è - Specify window size
+    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify window size
     int desktop_w{0};
     int desktop_h{0};
     GetDefaultState(&desktop_w, &desktop_h, nullptr);
 
-    // ‰¡’·ƒfƒBƒXƒvƒŒƒC - Landscape display
+    // æ¨ªé•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Landscape display
     if (static_cast<float>(desktop_w) / desktop_h
         > static_cast<float>(kWindowW) / kWindowH) {
         SetWindowSize(0.8 * desktop_h * (kWindowW / kWindowH), 0.8 * desktop_h);
     }
-    // c’·ƒfƒBƒXƒvƒŒƒC - Portrait display
+    // ç¸¦é•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Portrait display
     else {
         SetWindowSize(0.8 * desktop_w, 0.8 * desktop_w * (kWindowH / kWindowW));
     }
 
-    // ƒEƒBƒ“ƒhƒE‚ªƒmƒ“ƒAƒNƒeƒBƒu‚Å‚àÀs - Execute even if window is inactive
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒãƒãƒ³ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã§ã‚‚å®Ÿè¡Œ - Execute even if window is inactive
     SetAlwaysRunFlag(TRUE);
 
-    // ƒ}ƒ‹ƒ`ƒXƒŒƒbƒh‚É“K‚µ‚½ƒ‚[ƒh‚Å‹N“®‚·‚é - Start in mode_ suitable for
+    // ãƒãƒ«ãƒã‚¹ãƒ¬ãƒƒãƒ‰ã«é©ã—ãŸãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹•ã™ã‚‹ - Start in mode_ suitable for
     // multi-threading
     SetMultiThreadFlag(TRUE);
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÅWM_PAINT‚Ìˆ—‚ğ‚µ‚È‚¢ - Do not process WM_PAINT in the DX
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã§WM_PAINTã®å‡¦ç†ã‚’ã—ãªã„ - Do not process WM_PAINT in the DX
     // library
     SetUseDxLibWM_PAINTProcess(FALSE);
 
-    // Window‚Ìƒ^ƒCƒgƒ‹‚ğİ’è - Set the window title
+    // Windowã®ã‚¿ã‚¤ãƒˆãƒ«ã‚’è¨­å®š - Set the window title
     SetWindowText("LIBRA App");
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‚Ì‰Šú‰» - Initialize DX library
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®åˆæœŸåŒ– - Initialize DX library
     DxLib_Init();
 
-    // •`‰ææ‚ğ— ‰æ–Ê‚É‚·‚é - Draw the back screen (?)
+    // æç”»å…ˆã‚’è£ç”»é¢ã«ã™ã‚‹ - Draw the back screen (?)
     SetDrawScreen(DX_SCREEN_BACK);
 
-    // ƒAƒ“ƒ`ƒGƒCƒŠƒAƒX•t‚«}Œ`•`‰æ‚Ì€”õ‚ğs‚¤ - Prepare to draw anti-aliased
+    // ã‚¢ãƒ³ãƒã‚¨ã‚¤ãƒªã‚¢ã‚¹ä»˜ãå›³å½¢æç”»ã®æº–å‚™ã‚’è¡Œã† - Prepare to draw anti-aliased
     // shapes
     BeginAADraw();
 
@@ -765,25 +766,25 @@ int AppMgr::printComList(void) {
     SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
 
     int max = 0;
-    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğæ“¾ - Get device information set
+    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’å–å¾— - Get device information set
     h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
                                     nullptr,
                                     DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (!h_devinfo) {
-        // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ªæ“¾‚Å‚«‚È‚©‚Á‚½ê‡
+        // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆãŒå–å¾—ã§ããªã‹ã£ãŸå ´åˆ
         // If the device information set could not be obtained
         return 0;
     }
 
     data.cbSize = sizeof(data);
 
-    // ƒfƒoƒCƒXƒCƒ“ƒ^[ƒtƒFƒCƒX‚Ìæ“¾ - Get device interface
+    // ãƒ‡ãƒã‚¤ã‚¹ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹ã®å–å¾— - Get device interface
     while (SetupDiEnumDeviceInfo(h_devinfo, max, &data)) {
         DWORD dataT;
         DWORD size;
         LPTSTR buf;
 
-        // COMƒ|[ƒg–¼‚Ìæ“¾ - Obtain COM port name
+        // COMãƒãƒ¼ãƒˆåã®å–å¾— - Obtain COM port name
         HKEY key = SetupDiOpenDevRegKey(h_devinfo, &data, DICS_FLAG_GLOBAL, 0,
                                         DIREG_DEV, KEY_QUERY_VALUE);
         if (key) {
@@ -795,7 +796,7 @@ int AppMgr::printComList(void) {
             _tprintf(_TEXT("%s"), name);
         }
 
-        // ƒfƒoƒCƒX‚Ìà–¾‚ğæ“¾ - Get device description
+        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å–å¾— - Get device description
         size = 0;
         buf = nullptr;
         while (!SetupDiGetDeviceRegistryProperty(h_devinfo, &data,
@@ -818,7 +819,7 @@ int AppMgr::printComList(void) {
         ++max;
     }
 
-    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğ‰ğ•ú - Release device information set
+    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’è§£æ”¾ - Release device information set
     SetupDiDestroyDeviceInfoList(h_devinfo);
 
     return max;

@@ -21,7 +21,7 @@
 
 /* --- TABLE OF CONTENTS ---
  * !General Functions
- * !Motor Commands
+ * !Actuator Commands
  * !Getters & Setters
  */
 
@@ -36,7 +36,7 @@ LIBRA_HEBI::LIBRA_HEBI() {
     command = new hebi::GroupCommand(5);
     feedback = new hebi::GroupFeedback(5);
 
-    // ƒ^ƒCƒ}Š„‚è‚İŠJn 10ms–ˆ‚ÉŠ„‚è‚İˆ—‚ğ‚·‚é
+    // ã‚¿ã‚¤ãƒå‰²ã‚Šè¾¼ã¿é–‹å§‹ 10msæ¯ã«å‰²ã‚Šè¾¼ã¿å‡¦ç†ã‚’ã™ã‚‹
     // Timer interrupt: start interrupt processing every 10ms
     timeSetEvent(10, 0, callback, reinterpret_cast<DWORD>(this),
                  TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
@@ -80,7 +80,7 @@ void LIBRA_HEBI::loop() {
 }
 
 //------------------------------------------------------------------------------
-// !Motor Commands
+// !Actuator Commands
 //------------------------------------------------------------------------------
 
 /**
@@ -92,7 +92,7 @@ int LIBRA_HEBI::connect() {
     int rtn = 0;
     hebi::Lookup lookup;
 
-    // HEBIƒ‰ƒCƒuƒ‰ƒŠ‚ğ‰ü‘¢‚µ‚Ä’Ç‰ÁÀ‘•‚µ‚½availableŠÖ”‚ğg—pB“à•”‚Ì_lookup‚ªnullptr‚Å‚È‚¢‚Æ‚«‚Ég—p‰Â”\B
+    // HEBIãƒ©ã‚¤ãƒ–ãƒ©ãƒªã‚’æ”¹é€ ã—ã¦è¿½åŠ å®Ÿè£…ã—ãŸavailableé–¢æ•°ã‚’ä½¿ç”¨ã€‚å†…éƒ¨ã®_lookupãŒnullptrã§ãªã„ã¨ãã«ä½¿ç”¨å¯èƒ½ã€‚
     /* The HEBI library must be modified to implement the `available()`
      * function. This function returns `true` when the Lookup object's internal
      * `lookup_` data member is not nullptr. It can be implemented by making the
@@ -110,7 +110,7 @@ int LIBRA_HEBI::connect() {
      */
     /*
     if (!lookup.available()) {
-        //printf("[ƒGƒ‰[]Lookup‚ğg—p‚Å‚«‚Ü‚¹‚ñiLAN–¢Ú‘±j\n");
+        //printf("[ã‚¨ãƒ©ãƒ¼]Lookupã‚’ä½¿ç”¨ã§ãã¾ã›ã‚“ï¼ˆLANæœªæ¥ç¶šï¼‰\n");
         std::cout << "[ERROR] HEBI - Unable to use Lookup (LAN not connected)!"
                   << std::endl;
         return -1;
@@ -119,21 +119,21 @@ int LIBRA_HEBI::connect() {
 
     group = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group == nullptr) {
-        // printf("[ƒGƒ‰[]HEBI - ƒAƒNƒ`ƒ…ƒG[ƒ^‚ªÚ‘±‚³‚ê‚Ä‚¢‚Ü‚¹‚ñ\n");
+        // printf("[ã‚¨ãƒ©ãƒ¼]HEBI - ã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ãŒæ¥ç¶šã•ã‚Œã¦ã„ã¾ã›ã‚“\n");
         std::cout << "[ERROR] HEBI - Actuators not connected!" << std::endl;
         command->setPosition(Eigen::VectorXd::Zero(5));
         return -1;
     }
 
     if (!command->readSafetyParameters("params/safety.xml")) {
-        // printf("[ƒGƒ‰[]HEBI - ˆÀ‘Sƒpƒ‰ƒ[ƒ^ƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚ß‚Ü‚¹‚ñ\n");
+        // printf("[ã‚¨ãƒ©ãƒ¼]HEBI - å®‰å…¨ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚ã¾ã›ã‚“\n");
         std::cout << "[ERROR] HEBI - Failed to load safety parameters!"
                   << std::endl;
         system("pause");
         return -1;
     }
     if (!command->readGains("params/gain.xml")) {
-        // printf("[ƒGƒ‰[]HEBI - ƒQƒCƒ“ƒpƒ‰ƒ[ƒ^ƒtƒ@ƒCƒ‹‚ğ“Ç‚İ‚ß‚Ü‚¹‚ñ\n");
+        // printf("[ã‚¨ãƒ©ãƒ¼]HEBI - ã‚²ã‚¤ãƒ³ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ãƒ•ã‚¡ã‚¤ãƒ«ã‚’èª­ã¿è¾¼ã‚ã¾ã›ã‚“\n");
         std::cout << "[HEBI] HEBI - Failed to load gain parameters!"
                   << std::endl;
         system("pause");
@@ -151,11 +151,11 @@ int LIBRA_HEBI::connect() {
 /**
  * @brief TODO.
  *
- * @param roll TODO
- * @param pitch TODO
- * @param j1 TODO
- * @param j2 TODO
- * @param j3 TODO
+ * @param roll Desired roll angle, in degrees
+ * @param pitch Desired pitch angle, in degrees
+ * @param j1 Desired J1 (arm yaw) angle, in degrees
+ * @param j2 Desired J2 (arm yaw) angle, in degrees
+ * @param j3 Desired J3 (arm pitch) angle, in degrees
  */
 void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
                       double j3) {
@@ -163,14 +163,11 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
     Eigen::MatrixXd accelerations = Eigen::MatrixXd::Zero(5, 2);
 
+    // Populate positions vector
     positions.col(0) = command->getPosition();
-    positions(HEBI_MA, 1) = -roll - pitch;  // •ÏX! - Change!
-    positions(HEBI_MB, 1) = -roll + pitch;  // •ÏX! - Change!
-    positions(HEBI_J1, 1) = j1;
-    positions(HEBI_J2, 1) = -j2;
-    positions(HEBI_J3, 1) = j3;
-    positions.col(1) *= M_PI / 180;
+    positions.col(1) *= M_PI / 180;  // convert to rad
 
+    // TODO
     double max_diff_rad = 0;
     for (int i = 0; i < 5; i++) {
         if (abs(positions(i, 1) - positions(i, 0)) > max_diff_rad) {
@@ -178,9 +175,11 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
         }
     }
 
+    // TODO
     Eigen::VectorXd time(2);
     time << 0, max_diff_rad * 30 / M_PI;
 
+    // Log start time and send movement command
     start_time = timeGetTime();
     trajectory =
         hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions,
@@ -189,7 +188,7 @@ void LIBRA_HEBI::move(double roll, double pitch, double j1, double j2,
 }
 
 /**
- * @brief TODO.
+ * @brief Clears the active actuator movement command(s).
  */
 void LIBRA_HEBI::stop() {
     trajectory = nullptr;
@@ -200,10 +199,10 @@ void LIBRA_HEBI::stop() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO.
+ * @brief Returns the commanded position value for the specified joint.
  *
- * @param joint TODO
- * @return double TODO
+ * @param joint The LIBRA joint to query
+ * @return double The joint's commanded position value, in degrees
  */
 double LIBRA_HEBI::getCommandPosition(int joint) {
     double ret = 0;
@@ -216,25 +215,15 @@ double LIBRA_HEBI::getCommandPosition(int joint) {
         ret = (-command->getPosition()[HEBI_MA]
                + command->getPosition()[HEBI_MB])
               / 2;
-    }
-    if (joint == J1) {
-        ret = command->getPosition()[HEBI_J1];
-    }
-    if (joint == J2) {
-        ret = -command->getPosition()[HEBI_J2];
-    }
-    if (joint == J3) {
-        ret = command->getPosition()[HEBI_J3];
-    }
-    ret *= 180 / M_PI;
+    ret *= 180 / M_PI;  // convert to deg
     return ret;
 }
 
 /**
- * @brief TODO.
+ * @brief Returns the actual position value for the specified joint.
  *
- * @param joint TODO
- * @return double TODO
+ * @param joint The LIBRA joint to query
+ * @return double The joint's actual position value, in degrees
  */
 double LIBRA_HEBI::getFeedbackPosition(int joint) {
     double ret = 0;
@@ -247,25 +236,15 @@ double LIBRA_HEBI::getFeedbackPosition(int joint) {
         ret = (-feedback->getPosition()[HEBI_MA]
                + feedback->getPosition()[HEBI_MB])
               / 2;
-    }
-    if (joint == J1) {
-        ret = feedback->getPosition()[HEBI_J1];
-    }
-    if (joint == J2) {
-        ret = -feedback->getPosition()[HEBI_J2];
-    }
-    if (joint == J3) {
-        ret = feedback->getPosition()[HEBI_J3];
-    }
-    ret *= 180 / M_PI;
+    ret *= 180 / M_PI;  // convert to deg
     return ret;
 }
 
 /**
- * @brief TODO.
+ * @brief Returns the actual torque value for the specified joint.
  *
- * @param joint TODO
- * @return double TODO
+ * @param joint The LIBRA joint to query
+ * @return double The joint's actual torque value, in Newton-meters
  */
 double LIBRA_HEBI::getFeedbackEffort(int joint) {
     double ret = 0;
@@ -287,14 +266,19 @@ double LIBRA_HEBI::getFeedbackEffort(int joint) {
     return ret;
 }
 
+/**
+ * @brief Returns the actual torque value for the 2-DoF Joint's "A" actuator.
+ *
+ * @return double The actuator's actual torque value, in Newton-meters
+ */
 double LIBRA_HEBI::getFeedbackEffortMA() {
     return feedback->getEffort()[HEBI_MA];
 }
 
 /**
- * @brief TODO.
+ * @brief Returns the actual torque value for the 2-DoF Joint's "B" actuator.
  *
- * @return double TODO
+ * @return double The actuator's actual torque value, in Newton-meters
  */
 double LIBRA_HEBI::getFeedbackEffortMB() {
     return feedback->getEffort()[HEBI_MB];
