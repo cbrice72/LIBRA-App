@@ -203,18 +203,18 @@ void AppMgr::MainThread() {
     // ロギングの初期化
     // Initialize logging
     SYSTEMTIME st;
-    char datetime_char[100];
-    std::string datetime_str;
+    char dt_path_char[100];
+    std::string dt_path_str;
     GetLocalTime(&st);
-    sprintf(datetime_char, "%04d年%02d月%02d日_%02d時%02d分%02d秒", st.wYear,
+    sprintf(dt_path_char, "%04d年%02d月%02d日_%02d時%02d分%02d秒", st.wYear,
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-    datetime_str = datetime_char;
+    dt_path_str = std::string(dt_path_char);
 
     if (_mkdir("./log/") == 0) {
         std::cout << "[INFO] Created log directory.\n";
     }
 
-    continuous_log_ = new std::ofstream("./log/" + datetime_str
+    continuous_log_ = new std::ofstream("./log/" + dt_path_str
                                         + "_continuous_log.csv");
     *continuous_log_ << "Time,,";
     *continuous_log_
@@ -227,7 +227,7 @@ void AppMgr::MainThread() {
     *continuous_log_ << "TP_CamBase[deg],TP_CamPan[deg],TP_CamTilt[deg]";
     *continuous_log_ << std::endl;
 
-    shot_log_ = new std::ofstream("./log/" + datetime_str + "_shot_log.csv");
+    shot_log_ = new std::ofstream("./log/" + dt_path_str + "_shot_log.csv");
     *shot_log_ << "Time,,";
     *shot_log_
         << "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
@@ -723,10 +723,10 @@ void AppMgr::OnClick(View* view) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO.
+ * @brief Initializes the application UI (via the DX library).
  */
 void AppMgr::SetupIncludeDxlibInit() {
-    // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
+    // NOLINTBEGIN(readability-magic-numbers): UI initialization
 
     // ウインドウモードで起動 - Start in windowed mode
     ChangeWindowMode(TRUE);
@@ -780,7 +780,7 @@ void AppMgr::SetupIncludeDxlibInit() {
     // shapes
     BeginAADraw();
 
-    // NOLINTEND(readability-magic-numbers): Positions of UI elements
+    // NOLINTEND(readability-magic-numbers): UI initialization
 }
 
 /**
@@ -852,16 +852,17 @@ int AppMgr::printComList(void) {
 }
 
 /**
- * @brief TODO.
+ * @brief Provides a formatted string of the current date and time.
+ *
+ * @return std::string Formatted as "YYYY/MM/DD HH:MM:SS.SSS"
  */
 std::string AppMgr::GetDateTimeString() {
     SYSTEMTIME st;
-    char datetime_char[100];
+    char dt_char[100];
 
     GetLocalTime(&st);
-    sprintf(datetime_char, "%04d/%02d/%02d %02d:%02d:%02d.%03d", st.wYear,
-            st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond,
-            st.wMilliseconds);
+    sprintf(dt_char, "%04d/%02d/%02d %02d:%02d:%02d.%03d", st.wYear, st.wMonth,
+            st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
 
-    return (std::string)datetime_char;
+    return std::string(dt_char);
 }
