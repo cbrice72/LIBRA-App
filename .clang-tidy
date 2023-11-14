@@ -8,6 +8,7 @@
 FormatStyle: file
 
 # Disabled checks
+# - bugprone-easily-swappable-parameters: preference
 # - bugprone-narrowing-conversions: not necessary in single-platform project
 # - cppcoreguidelines-avoid-magic-numbers: alias (readability)
 # - cppcoreguidelines-narrowing-conversions: alias (bugprone)
@@ -28,6 +29,7 @@ Checks: -*,
     modernize-*,
     performance-*,
     readability-*,
+    -bugprone-easily-swappable-parameters,
     -bugprone-narrowing-conversions,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-narrowing-conversions,
