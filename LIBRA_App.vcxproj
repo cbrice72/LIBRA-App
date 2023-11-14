@@ -65,6 +65,12 @@
       <AdditionalLibraryDirectories>./DxLib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <PostBuildEvent>
+      <Command>XCOPY "$(SolutionDir)params" "$(TargetDir)params\" /S /Y</Command>
+    </PostBuildEvent>
+    <PostBuildEvent>
+      <Message>Copy HEBI actuator parameters to executable directory</Message>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
