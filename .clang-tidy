@@ -13,9 +13,11 @@ FormatStyle: file
 # - cppcoreguidelines-avoid-magic-numbers: alias (readability)
 # - cppcoreguidelines-narrowing-conversions: alias (bugprone)
 # - cppcoreguidelines-non-private-member-variables-in-classes: alias (misc)
+# - cppcoreguidelines-pro-type-vararg: alias (hicpp)
 # - cppcoreguidelines-special-member-functions: not necessary in such a small project
 # - google-readability-todo: not necessary in single-user project
 # - hicpp-special-member-functions: alias (cppcoreguidelines)
+# - hicpp-vararg: unavoidable with outdated libraries such as DxLib
 # - misc-include-cleaner: project preference
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
@@ -35,9 +37,11 @@ Checks: -*,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-narrowing-conversions,
     -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-pro-type-vararg,
     -cppcoreguidelines-special-member-functions,
     -google-readability-todo,
     -hicpp-special-member-functions,
+    -hicpp-vararg,
     -misc-include-cleaner,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-trailing-return-type
