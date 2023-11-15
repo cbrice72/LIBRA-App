@@ -33,18 +33,27 @@
 constexpr int kWindowW = 1920 * 2;  // app window width
 constexpr int kWindowH = 1080 * 2;  // app window height
 
+constexpr int kHebiNodeCount = 5;      // total number of HEBI actuators
+constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
+
+constexpr int kMaxonNodeCount = 1;  // total number of Maxon (EPOS) actuators
+
+constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
+
+constexpr int kCameraNodeCount = 3;  // total number of camera servos
+
 //------------------------------------------------------------------------------
 // !Main Window
 //------------------------------------------------------------------------------
 
 /**
- * @brief Initializes the app, spins off threads, and tears down the environment
- * on exit.
+ * @brief Initializes the app, spins off threads, and tears down the
+ * environment on exit.
  */
 void AppMgr::Main() {
     /* ----- INITIALIZATION ----- */
 
-    // ƒRƒ“ƒ\[ƒ‹‚ğ—pˆÓ
+    // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚’ç”¨æ„
     // Prepare console
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
@@ -53,20 +62,20 @@ void AppMgr::Main() {
 
     std::string answer;  // used to retrieve user input via std::cin
 
-    // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ğÚ‘±
+    // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã‚’æ¥ç¶š
     // Connect HEBI actuators
     libra_arm_ = std::make_unique<LIBRA_HEBI>();
     while (!libra_arm_->Connect()) {
         std::cout << "Try again? [y/n]: " << std::flush;
         std::cin >> answer;
         if (answer == "n") {
-            // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ÉÚ‘±‚Å‚«‚È‚¢ê‡‚ÍAƒvƒƒOƒ‰ƒ€‚ğI—¹
+            // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã«æ¥ç¶šã§ããªã„å ´åˆã¯ã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’çµ‚äº†
             // Exit app if connection to HEBI actuators can't be established
             return;
         }
     }
 
-    // —˜—p‰Â”\‚ÈCOMƒ|[ƒg‚ÌƒXƒLƒƒƒ“
+    // åˆ©ç”¨å¯èƒ½ãªCOMãƒãƒ¼ãƒˆã®ã‚¹ã‚­ãƒ£ãƒ³
     // Scan for available COM ports
     ser_water_ = std::make_unique<Serial>();
     ser_servo_ = std::make_unique<Serial>();
@@ -74,15 +83,15 @@ void AppMgr::Main() {
     answer = "";
     while (answer != "n") {
         std::cout << "----- COM Port List -----\n";
-        const int kNumPorts = printComList();  // TODO: refactor this
-        std::cout << "[INFO] Detected " << kNumPorts << " ports\n";
-        std::cout << "Would you like to scan again? [y/n]: " << std::flush;
+        const int num_ports = printComList();  // TODO: refactor this
+        std::cout << "[INFO] Detected " << num_ports << " ports\n"
+                  << "Would you like to scan again? [y/n]: " << std::flush;
         std::cin >> answer;
     }
 
     std::string comtext;  // stores COM port label
 
-    // SerialWater‚ÌCOMƒ|[ƒg‚ğƒ†[ƒU[‚ªw’è‚Å‚«‚é‚æ‚¤‚É‚·‚é
+    // SerialWaterã®COMãƒãƒ¼ãƒˆã‚’ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒæŒ‡å®šã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹
     // Allow user to specify SerialWater COM port
     std::cout << "Specify the port to be used by SerialWater: " << std::flush;
     std::cin >> answer;
@@ -91,7 +100,7 @@ void AppMgr::Main() {
         std::cout << "[ERROR] Cannot open " << comtext << "\n";
     }
 
-    // SerialServo‚ÌCOMƒ|[ƒg‚ğƒ†[ƒU[‚ªw’è‚Å‚«‚é‚æ‚¤‚É‚·‚é
+    // SerialServoã®COMãƒãƒ¼ãƒˆã‚’ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒæŒ‡å®šã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹
     // Allow user to specify SerialServo COM port
     std::cout << "Specify the port to be used by SerialServo: " << std::flush;
     std::cin >> answer;
@@ -100,42 +109,42 @@ void AppMgr::Main() {
         std::cout << "[ERROR] Cannot open " << comtext << "\n";
     }
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‰Šú‰»‚ğŠÜ‚Şİ’è
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªåˆæœŸåŒ–ã‚’å«ã‚€è¨­å®š
     // DX library initialization
     std::cout << "[INFO] Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
     /* ----- THREAD MANAGEMENT ----- */
 
-    // ProcessMessageˆÈŠO‚Ìˆ—‚ğs‚¤ƒXƒŒƒbƒh‚ğì¬
+    // ProcessMessageä»¥å¤–ã®å‡¦ç†ã‚’è¡Œã†ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆ
     // Create thread for any non-DxLib processing
     CreateThread(nullptr, 0, MainThread_dmy, this, 0, nullptr);
 
-    // ProcessMessageƒ‹[ƒv
+    // ProcessMessageãƒ«ãƒ¼ãƒ—
     // ProcessMessage loop
     while (ProcessMessage() == 0 && !flag_thread_end_) {
-        // ­‚µCPU‚ğ‹x‚ß‚é - Wait for MainThread to finish
+        // å°‘ã—CPUã‚’ä¼‘ã‚ã‚‹ - Wait for MainThread to finish
         Sleep(6);
     }
 
     /* ----- TEARDOWN ----- */
 
-    // ƒvƒƒOƒ‰ƒ€‚ªI—¹‚µ‚½‚±‚Æ‚ğ¦‚·ƒtƒ‰ƒO‚ğ—§‚Ä‚é
+    // ãƒ—ãƒ­ã‚°ãƒ©ãƒ ãŒçµ‚äº†ã—ãŸã“ã¨ã‚’ç¤ºã™ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹
     // Flag to indicate that the program has finished
     flag_end_ = true;
 
-    // ƒXƒŒƒbƒhI—¹ƒtƒ‰ƒO‚ª—§‚Â‚Ü‚Å‘Ò‚Â
+    // ã‚¹ãƒ¬ãƒƒãƒ‰çµ‚äº†ãƒ•ãƒ©ã‚°ãŒç«‹ã¤ã¾ã§å¾…ã¤
     // Wait until the thread is flagged as closed
     while (!flag_thread_end_) {
         Sleep(10);
     }
 
-    // ƒƒO‚ÌI—¹
+    // ãƒ­ã‚°ã®çµ‚äº†
     // Close the logging streams
     continuous_log_.close();
     snapshot_log_.close();
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÌƒNƒŠ[ƒ“ƒAƒbƒv
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ—
     // Clean up DX library
     DxLib_End();
 }
@@ -155,20 +164,21 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
  * receives user inputs & updates sensor readings.
  */
 void AppMgr::MainThread() {
-    // ƒJƒ‰[‚ÆƒtƒHƒ“ƒg‚Ì‰Šú‰»
+    // ã‚«ãƒ©ãƒ¼ã¨ãƒ•ã‚©ãƒ³ãƒˆã®åˆæœŸåŒ–
     // Initialize colors and fonts
-    const int kMainColor = GetColor(50, 50, 50);
-    const int kMainFont = CreateFontToHandle("Yu Gothic UI", 50, 5,
+    const int main_color = GetColor(50, 50, 50);
+    const int main_font = CreateFontToHandle("Yu Gothic UI", 50, 5,
                                              DX_FONTTYPE_ANTIALIASING);
-    const int kTitleFont = CreateFontToHandle("Yu Gothic UI", 50, 10,
+    const int title_font = CreateFontToHandle("Yu Gothic UI", 50, 10,
                                               DX_FONTTYPE_ANTIALIASING);
-    const int kBigFont = CreateFontToHandle("Yu Gothic UI", 150, 10,
+    const int big_font = CreateFontToHandle("Yu Gothic UI", 150, 10,
                                             DX_FONTTYPE_ANTIALIASING);
     SetBackgroundColor(255, 255, 255);
 
     // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
+    // NOLINTBEGIN(cppcoreguidelines-owning-memory): Creation of UI objects
 
-    // ButtonƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
+    // Buttonã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
     // Initialize Button objects
     btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
                             340, 100, "START", this);
@@ -180,8 +190,8 @@ void AppMgr::MainThread() {
                            "STOP", this);
     btn_up_ = new Button(320, 800, 120, 120, "R+", this);
     btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
-    btn_left_ = new Button(120, 1000, 120, 120, "ƒÆ+", this);
-    btn_right_ = new Button(520, 1000, 120, 120, "ƒÆ-", this);
+    btn_left_ = new Button(120, 1000, 120, 120, "Î¸+", this);
+    btn_right_ = new Button(520, 1000, 120, 120, "Î¸-", this);
     btn_enable_ = new Button(2200, 100, 340, 100, "ENABLE", this);
     btn_disable_ = new Button(2200, 250, 340, 100, "DISABLE", this);
     btn_drain_ = new Button(2200, 400, 340, 100, "DRAIN", this);
@@ -190,7 +200,7 @@ void AppMgr::MainThread() {
     btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
     btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
-    // InputBoxƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
+    // InputBoxã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
     // Initialize InputBox objects
     ibox_roll_ = new InputBox(1500 - 600, 800);
     ibox_pitch_ = new InputBox(1500 - 600, 1000);
@@ -205,7 +215,7 @@ void AppMgr::MainThread() {
     ibox_camera_pan_ = new InputBox(2800 + 150, 450);
     ibox_camera_tilt_ = new InputBox(2800 + 150, 600);
 
-    // InputBox‚ÌƒfƒtƒHƒ‹ƒg’l‚ğİ’è
+    // InputBoxã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’è¨­å®š
     // Set InputBox default values
     ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
     ibox_pitch_->SetNum(
@@ -221,20 +231,21 @@ void AppMgr::MainThread() {
     ibox_camera_pan_->SetNum(0);
     ibox_camera_tilt_->SetNum(0);
 
+    // NOLINTEND(cppcoreguidelines-owning-memory): Creation of UI objects
     // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-    // —¬‘ÌƒVƒXƒeƒ€ƒ‰ƒ“ƒ^ƒCƒ€•Ï”‚Ì‰Šú‰»
+    // æµä½“ã‚·ã‚¹ãƒ†ãƒ ãƒ©ãƒ³ã‚¿ã‚¤ãƒ å¤‰æ•°ã®åˆæœŸåŒ–
     // Initialize fluid system runtime variables
     int count = 0;
     BYTE water_cmd = 0;
 
-    // ƒƒMƒ“ƒO‚Ì‰Šú‰»
+    // ãƒ­ã‚®ãƒ³ã‚°ã®åˆæœŸåŒ–
     // Initialize logging
     SYSTEMTIME st;
     char dt_path_char[100];
     std::string dt_path_str;
     GetLocalTime(&st);
-    sprintf(dt_path_char, "%04d”N%02dŒ%02d“ú_%02d%02d•ª%02d•b", st.wYear,
+    sprintf(dt_path_char, "%04då¹´%02dæœˆ%02dæ—¥_%02dæ™‚%02dåˆ†%02dç§’", st.wYear,
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     dt_path_str = std::string(dt_path_char);
 
@@ -243,27 +254,23 @@ void AppMgr::MainThread() {
     }
 
     continuous_log_.open("./log/" + dt_path_str + "_continuous_log.csv");
-    continuous_log_ << "Time,,";
     continuous_log_
-        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,";
-    continuous_log_
-        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,";
-    continuous_log_
-        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,";
-    continuous_log_ << "A_IN,B_IN,A_OUT,B_OUT,,";
-    continuous_log_ << "TP_CamBase (deg),TP_CamPan (deg),TP_CamTilt (deg)\n";
+        << "Time,,"
+        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,"
+        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,"
+        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
+        << "A_IN,B_IN,A_OUT,B_OUT,,"
+        << "TP_CamBase (deg),TP_CamPan (deg),TP_CamTilt (deg)\n";
 
     snapshot_log_.open("./log/" + dt_path_str + "_shot_log.csv");
-    snapshot_log_ << "Time,,";
     snapshot_log_
-        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,";
-    snapshot_log_
-        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,";
-    snapshot_log_
-        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,";
-    snapshot_log_ << "Voltage (V),Current (A)\n";
+        << "Time,,"
+        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,"
+        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,"
+        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
+        << "Voltage (V),Current (A)\n";
 
-    // XVƒ‹[ƒv
+    // æ›´æ–°ãƒ«ãƒ¼ãƒ—
     // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
         Mouse::Instance()->Update();
@@ -303,208 +310,209 @@ void AppMgr::MainThread() {
 
         // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-        // ŠeƒZƒNƒVƒ‡ƒ“‚Ìƒ^ƒCƒgƒ‹
+        // å„ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®ã‚¿ã‚¤ãƒˆãƒ«
         // Section titles
-        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), kBigFont,
+        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), big_font,
                                  "LIBRA-I");
-        DrawFormatStringToHandle(120, 824 - 200, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(120, 824 - 200, main_color, title_font,
                                  "Goal Pos.");
-        DrawFormatStringToHandle(1400, 824 - 200, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(1400, 824 - 200, main_color, title_font,
                                  "Target Pos.");
-        DrawFormatStringToHandle(1400 + 400, 824 - 200, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(1400 + 400, 824 - 200, main_color, title_font,
                                  "Current Pos.");
-        DrawFormatStringToHandle(1400 + 800, 824 - 200, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(1400 + 800, 824 - 200, main_color, title_font,
                                  "Current Torque");
 
         /* ----- UI: FLUID SYSTEM ----- */
 
-        // —¬‘Ì“üo—Íƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
+        // æµä½“å…¥å‡ºåŠ›ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Fluid I/O panel labels
-        DrawFormatStringToHandle(800, 200, kMainColor, kTitleFont, "A_IN");
-        DrawFormatStringToHandle(1100, 200, kMainColor, kTitleFont, "B_IN");
-        DrawFormatStringToHandle(1400, 200, kMainColor, kTitleFont, "A_OUT");
-        DrawFormatStringToHandle(1700, 200, kMainColor, kTitleFont, "B_OUT");
+        DrawFormatStringToHandle(800, 200, main_color, title_font, "A_IN");
+        DrawFormatStringToHandle(1100, 200, main_color, title_font, "B_IN");
+        DrawFormatStringToHandle(1400, 200, main_color, title_font, "A_OUT");
+        DrawFormatStringToHandle(1700, 200, main_color, title_font, "B_OUT");
 
         /* ----- UI: ARM ----- */
 
-        // ‘€ì”Õ‚ÌlŠp
+        // æ“ä½œç›¤ã®å››è§’
         // Control panel border
-        DrawBoxAA(60, 550, 1300, kWindowH - 100, kMainColor, FALSE, 2.5);
+        DrawBoxAA(60, 550, 1300, kWindowH - 100, main_color, FALSE, 2.5);
 
-        // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚Ìƒf[ƒ^‚ğæ“¾
+        // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã®ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—
         // Retrieve HEBI actuator data
-        for (int i = 0; i < 5; i++) {
+        for (auto i = 0; i < kHebiNodeCount; i++) {
             auto joint = static_cast<LIBRA_HEBI::Joint>(i);
-            value_[i][0] = libra_arm_->GetCommandPosition(joint);
-            value_[i][1] = libra_arm_->GetFeedbackPosition(joint);
-            value_[i][2] = libra_arm_->GetFeedbackEffort(joint);
+            value_.at(i).at(0) = libra_arm_->GetCommandPosition(joint);
+            value_.at(i).at(1) = libra_arm_->GetFeedbackPosition(joint);
+            value_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
         }
 
-        // ƒA[ƒ€§Œä‚Ìƒ‰ƒxƒ‹‚ÆƒAƒNƒ`ƒ…ƒG[ƒ^ƒf[ƒ^
+        // ã‚¢ãƒ¼ãƒ åˆ¶å¾¡ã®ãƒ©ãƒ™ãƒ«ã¨ã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ãƒ‡ãƒ¼ã‚¿
         // Arm control labels and actuator data
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
-        for (int i = 0; i < 5; i++) {
+        for (auto i = 0; i < kHebiNodeCount; i++) {
             // Input box labels
-            DrawFormatStringToHandle(750, 824 + 200 * i, kMainColor, kMainFont,
+            DrawFormatStringToHandle(750, 824 + 200 * i, main_color, main_font,
                                      menu[i].c_str());
-            DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, kMainColor,
-                                     kMainFont, "deg");
+            DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, main_color,
+                                     main_font, "deg");
 
             // Target Pos., Current Pos., Current Torque
-            for (int j = 0; j < 3; j++) {
+            for (auto j = 0; j < kHebiFeedbackCount; j++) {
                 char str[20];
                 int strW;
-                sprintf(str, "%8.2f %s", value_[i][j], j != 2 ? "deg" : "Nm");
-                strW = GetDrawStringWidthToHandle(str, strlen(str), kMainFont);
+                sprintf(str, "%8.2f %s", value_.at(i).at(j),
+                        j != 2 ? "deg" : "Nm");
+                strW = GetDrawStringWidthToHandle(str, strlen(str), main_font);
                 DrawFormatStringToHandle(1750 + 400 * j - strW, 824 + 200 * i,
-                                         kMainColor, kMainFont, str);
+                                         main_color, main_font, str);
             }
         }
 
-        // ƒA[ƒ€‘S‘ÌƒRƒ“ƒgƒ[ƒ‹‚Ìƒ‰ƒxƒ‹
+        // ã‚¢ãƒ¼ãƒ å…¨ä½“ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Whole-arm control labels
-        DrawFormatStringToHandle(120, 824 + 200 * 3, kMainColor, kMainFont, "R");
-        DrawFormatStringToHandle(530, 824 + 200 * 3, kMainColor, kMainFont,
+        DrawFormatStringToHandle(120, 824 + 200 * 3, main_color, main_font, "R");
+        DrawFormatStringToHandle(530, 824 + 200 * 3, main_color, main_font,
                                  "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, kMainColor, kMainFont, "ƒÆ");
-        DrawFormatStringToHandle(530, 824 + 200 * 4, kMainColor, kMainFont,
+        DrawFormatStringToHandle(120, 824 + 200 * 4, main_color, main_font, "Î¸");
+        DrawFormatStringToHandle(530, 824 + 200 * 4, main_color, main_font,
                                  "deg");
 
-        // dSƒOƒ‰ƒt•\¦
+        // é‡å¿ƒã‚°ãƒ©ãƒ•è¡¨ç¤º
         // Center of mass visualization
-        const int kCoM_X = 3100;
-        const int kCoM_Y = kWindowH / 2 + 350;
+        const int c_x = 3100;
+        const int c_y = kWindowH / 2 + 350;
 
-        DrawLineAA(kCoM_X + 40 * 0, kCoM_Y - 40 * 10, kCoM_X + 40 * (-10),
-                   kCoM_Y - 40 * 0, kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * -10, kCoM_Y - 40 * 0, kCoM_X + 40 * (0),
-                   kCoM_Y - 40 * -10, kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * 0, kCoM_Y - 40 * -10, kCoM_X + 40 * (10),
-                   kCoM_Y - 40 * 0, kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * 10, kCoM_Y - 40 * 0, kCoM_X + 40 * (0),
-                   kCoM_Y - 40 * 10, kMainColor, 2.5);
+        DrawLineAA(c_x + 40 * 0, c_y - 40 * 10, c_x + 40 * (-10), c_y - 40 * 0,
+                   main_color, 2.5);
+        DrawLineAA(c_x + 40 * -10, c_y - 40 * 0, c_x + 40 * (0), c_y - 40 * -10,
+                   main_color, 2.5);
+        DrawLineAA(c_x + 40 * 0, c_y - 40 * -10, c_x + 40 * (10), c_y - 40 * 0,
+                   main_color, 2.5);
+        DrawLineAA(c_x + 40 * 10, c_y - 40 * 0, c_x + 40 * (0), c_y - 40 * 10,
+                   main_color, 2.5);
 
-        DrawLineAA(kCoM_X + 40 * (0), kCoM_Y - 40 * (5), kCoM_X + 40 * (-5),
-                   kCoM_Y - 40 * (0), kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * (-5), kCoM_Y - 40 * (0), kCoM_X + 40 * (0),
-                   kCoM_Y - 40 * (-5), kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * (0), kCoM_Y - 40 * (-5), kCoM_X + 40 * (5),
-                   kCoM_Y - 40 * (0), kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 40 * (5), kCoM_Y - 40 * (0), kCoM_X + 40 * (0),
-                   kCoM_Y - 40 * (5), kMainColor, 2.5);
+        DrawLineAA(c_x + 40 * (0), c_y - 40 * (5), c_x + 40 * (-5),
+                   c_y - 40 * (0), main_color, 2.5);
+        DrawLineAA(c_x + 40 * (-5), c_y - 40 * (0), c_x + 40 * (0),
+                   c_y - 40 * (-5), main_color, 2.5);
+        DrawLineAA(c_x + 40 * (0), c_y - 40 * (-5), c_x + 40 * (5),
+                   c_y - 40 * (0), main_color, 2.5);
+        DrawLineAA(c_x + 40 * (5), c_y - 40 * (0), c_x + 40 * (0),
+                   c_y - 40 * (5), main_color, 2.5);
 
-        DrawLineAA(kCoM_X - 500, kCoM_Y, kCoM_X + 500, kCoM_Y, kMainColor, 2.5);
-        DrawLineAA(kCoM_X + 500 * cos(M_PI * 1 / 8),
-                   kCoM_Y + 500 * sin(M_PI * 1 / 8),
-                   kCoM_X - 500 * cos(M_PI * 1 / 8),
-                   kCoM_Y - 500 * sin(M_PI * 1 / 8), kMainColor, 1);
-        DrawLineAA(kCoM_X + 500 * cos(M_PI * 3 / 8),
-                   kCoM_Y + 500 * sin(M_PI * 3 / 8),
-                   kCoM_X - 500 * cos(M_PI * 3 / 8),
-                   kCoM_Y - 500 * sin(M_PI * 3 / 8), kMainColor, 1);
-        DrawLineAA(kCoM_X + 500 * cos(M_PI * 5 / 8),
-                   kCoM_Y + 500 * sin(M_PI * 5 / 8),
-                   kCoM_X - 500 * cos(M_PI * 5 / 8),
-                   kCoM_Y - 500 * sin(M_PI * 5 / 8), kMainColor, 1);
-        DrawLineAA(kCoM_X + 500 * cos(M_PI * 7 / 8),
-                   kCoM_Y + 500 * sin(M_PI * 7 / 8),
-                   kCoM_X - 500 * cos(M_PI * 7 / 8),
-                   kCoM_Y - 500 * sin(M_PI * 7 / 8), kMainColor, 1);
-        DrawLineAA(kCoM_X, kCoM_Y - 500, kCoM_X, kCoM_Y + 500, kMainColor, 2.5);
-        DrawTriangleAA(kCoM_X + 500, kCoM_Y, kCoM_X + 480, kCoM_Y + 10,
-                       kCoM_X + 480, kCoM_Y - 10, kMainColor, TRUE);
-        DrawTriangleAA(kCoM_X, kCoM_Y - 500, kCoM_X + 10, kCoM_Y - 480,
-                       kCoM_X - 10, kCoM_Y - 480, kMainColor, TRUE);
-        DrawCircleAA(kCoM_X + value_[0][2] * 40, kCoM_Y - value_[1][2] * 40, 15,
-                     20, GetColor(0, 0, 0), TRUE);
-        DrawFormatStringToHandle(kCoM_X + 525, kCoM_Y - 25, kMainColor,
-                                 kMainFont, "Roll (Nm)");
-        DrawFormatStringToHandle(kCoM_X - 100, kCoM_Y - 550 - 25, kMainColor,
-                                 kMainFont, "Pitch (Nm)");
+        DrawLineAA(c_x - 500, c_y, c_x + 500, c_y, main_color, 2.5);
+        DrawLineAA(c_x + 500 * cos(M_PI * 1 / 8), c_y + 500 * sin(M_PI * 1 / 8),
+                   c_x - 500 * cos(M_PI * 1 / 8), c_y - 500 * sin(M_PI * 1 / 8),
+                   main_color, 1);
+        DrawLineAA(c_x + 500 * cos(M_PI * 3 / 8), c_y + 500 * sin(M_PI * 3 / 8),
+                   c_x - 500 * cos(M_PI * 3 / 8), c_y - 500 * sin(M_PI * 3 / 8),
+                   main_color, 1);
+        DrawLineAA(c_x + 500 * cos(M_PI * 5 / 8), c_y + 500 * sin(M_PI * 5 / 8),
+                   c_x - 500 * cos(M_PI * 5 / 8), c_y - 500 * sin(M_PI * 5 / 8),
+                   main_color, 1);
+        DrawLineAA(c_x + 500 * cos(M_PI * 7 / 8), c_y + 500 * sin(M_PI * 7 / 8),
+                   c_x - 500 * cos(M_PI * 7 / 8), c_y - 500 * sin(M_PI * 7 / 8),
+                   main_color, 1);
+        DrawLineAA(c_x, c_y - 500, c_x, c_y + 500, main_color, 2.5);
+        DrawTriangleAA(c_x + 500, c_y, c_x + 480, c_y + 10, c_x + 480, c_y - 10,
+                       main_color, TRUE);
+        DrawTriangleAA(c_x, c_y - 500, c_x + 10, c_y - 480, c_x - 10, c_y - 480,
+                       main_color, TRUE);
+        DrawCircleAA(c_x + value_.at(0).at(2) * 40,
+                     c_y - value_.at(1).at(2) * 40, 15, 20, GetColor(0, 0, 0),
+                     TRUE);
+        DrawFormatStringToHandle(c_x + 525, c_y - 25, main_color, main_font,
+                                 "Roll (Nm)");
+        DrawFormatStringToHandle(c_x - 100, c_y - 550 - 25, main_color,
+                                 main_font, "Pitch (Nm)");
 
-        // “dˆ³“d—¬‚Ìƒ‰ƒxƒ‹
+        // é›»åœ§é›»æµã®ãƒ©ãƒ™ãƒ«
         // Voltage and current labels
-        DrawFormatStringToHandle(1400, 1800, kMainColor, kTitleFont, "Voltage");
-        DrawFormatStringToHandle(1400 + 400, 1800, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(1400, 1800, main_color, title_font, "Voltage");
+        DrawFormatStringToHandle(1400 + 400, 1800, main_color, title_font,
                                  "Current");
-        DrawFormatStringToHandle(1400 + 260, 1924, kMainColor, kMainFont, "V");
-        DrawFormatStringToHandle(1400 + 400 + 260, 1924, kMainColor, kMainFont,
+        DrawFormatStringToHandle(1400 + 260, 1924, main_color, main_font, "V");
+        DrawFormatStringToHandle(1400 + 400 + 260, 1924, main_color, main_font,
                                  "A");
 
         /* ----- UI: CAMERA ----- */
 
-        // ƒJƒƒ‰ƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
+        // ã‚«ãƒ¡ãƒ©ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
         // Camera panel labels
-        DrawFormatStringToHandle(2800, 150, kMainColor, kTitleFont,
+        DrawFormatStringToHandle(2800, 150, main_color, title_font,
                                  "Camera Pos.");
-        DrawFormatStringToHandle(2800, 300 + 24, kMainColor, kMainFont, "Base");
-        DrawFormatStringToHandle(2800, 450 + 24, kMainColor, kMainFont, "Pan");
-        DrawFormatStringToHandle(2800, 600 + 24, kMainColor, kMainFont, "Tilt");
-        DrawFormatStringToHandle(2800 + 410, 450 + 24, kMainColor, kMainFont,
+        DrawFormatStringToHandle(2800, 300 + 24, main_color, main_font, "Base");
+        DrawFormatStringToHandle(2800, 450 + 24, main_color, main_font, "Pan");
+        DrawFormatStringToHandle(2800, 600 + 24, main_color, main_font, "Tilt");
+        DrawFormatStringToHandle(2800 + 410, 450 + 24, main_color, main_font,
                                  "deg");
-        DrawFormatStringToHandle(2800 + 410, 600 + 24, kMainColor, kMainFont,
+        DrawFormatStringToHandle(2800 + 410, 600 + 24, main_color, main_font,
                                  "deg");
 
         // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-        // J3‚ğ•‰‚É‚·‚éƒsƒbƒ`Šp‚ğŒvZ
+        // J3ã‚’è² ã«ã™ã‚‹ãƒ”ãƒƒãƒè§’ã‚’è¨ˆç®—
         // Calculate pitch angle to negate J3
-        double j3_pos = libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3);
+        const double j3_pos = libra_arm_->GetCommandPosition(
+            LIBRA_HEBI::Joint::kJ3);
         if (j3_pos <= 30) {
-            camera_pos_[0] = (j3_pos <= 0) ? -j3_pos : 0;
+            camera_pos_.at(0) = (j3_pos <= 0) ? -j3_pos : 0;
         } else {
-            camera_pos_[0] = 180 - j3_pos;
+            camera_pos_.at(0) = 180 - j3_pos;
         }
 
-        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒpƒ“ƒAƒ“ƒOƒ‹‚ğæ“¾
+        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒ‘ãƒ³ã‚¢ãƒ³ã‚°ãƒ«ã‚’å–å¾—
         // Retrieve desired camera pan angle
-        if (camera_dir_[1] != 0) {
-            camera_pos_[1] += camera_dir_[1] * 90.0 / (60.0 * 60.0);
-            if ((camera_pos_[1] > camera_setpos_[1]) == (camera_dir_[1] == 1)) {
-                camera_pos_[1] = camera_setpos_[1];
-                camera_dir_[1] = 0;
+        if (camera_dir_.at(1) != 0) {
+            camera_pos_.at(1) += camera_dir_.at(1) * 90.0 / (60.0 * 60.0);
+            if ((camera_pos_.at(1) > camera_setpos_.at(1))
+                == (camera_dir_.at(1) == 1)) {
+                camera_pos_.at(1) = camera_setpos_.at(1);
+                camera_dir_.at(1) = 0;
             }
         }
 
-        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒ`ƒ‹ƒgŠp“x‚ğæ“¾
+        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒãƒ«ãƒˆè§’åº¦ã‚’å–å¾—
         // Retrieve desired camera tilt angle
-        if (camera_dir_[2] != 0) {
-            camera_pos_[2] += camera_dir_[2] * 90.0 / (60.0 * 60.0);
-            if ((camera_pos_[2] > camera_setpos_[2]) == (camera_dir_[2] == 1)) {
-                camera_pos_[2] = camera_setpos_[2];
-                camera_dir_[2] = 0;
+        if (camera_dir_.at(2) != 0) {
+            camera_pos_.at(2) += camera_dir_.at(2) * 90.0 / (60.0 * 60.0);
+            if ((camera_pos_.at(2) > camera_setpos_.at(2))
+                == (camera_dir_.at(2) == 1)) {
+                camera_pos_.at(2) = camera_setpos_.at(2);
+                camera_dir_.at(2) = 0;
             }
         }
 
-        // ƒJƒƒ‰ƒT[ƒ{ƒf[ƒ^‚ÌXV
+        // ã‚«ãƒ¡ãƒ©ã‚µãƒ¼ãƒœãƒ‡ãƒ¼ã‚¿ã®æ›´æ–°
         // Update camera servo data
-        for (int i = 0; i < 3; i++) {
+        for (auto i = 0; i < kCameraNodeCount; i++) {
             char str[20] = "";
-            sprintf(str, "%8.2f deg", camera_pos_[i]);
-            auto strW = GetDrawStringWidthToHandle(str, strlen(str), kMainFont);
+            sprintf(str, "%8.2f deg", camera_pos_.at(i));
+            auto strW = GetDrawStringWidthToHandle(str, strlen(str), main_font);
             // NOLINTNEXTLINE(readability-magic-numbers): Position of UI element
             DrawFormatStringToHandle(3670 - strW, 300 + 24 + 150 * i,
-                                     kMainColor, kMainFont, str);
+                                     main_color, main_font, str);
         }
 
-        // SerialServo‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
+        // SerialServoã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
         // Send commands to SerialServo Arduino
         std::stringstream servo_str;
-        servo_str << camera_pos_[0] << " " << camera_pos_[1] << " "
-                  << camera_pos_[2] << "\n";
+        servo_str << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
+                  << camera_pos_.at(2) << "\n";
         ser_servo_->WriteStr(servo_str.str());  // send command
 
         /* ----- FLUID SYSTEM ----- */
 
-        // SerialWater‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
+        // SerialWaterã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
         // Send commands to SerialWater Arduino
         switch (water_mode_) {
-            case kStandby:  // ’Êí‰^“] - Normal operational mode
+            case kStandby:  // é€šå¸¸é‹è»¢ - Normal operational mode
                 water_cmd = 0;
 
-                // ƒgƒ‹ƒN’´‰ßi5.0ˆÈãj
+                // ãƒˆãƒ«ã‚¯è¶…éï¼ˆ5.0ä»¥ä¸Šï¼‰
                 // Excess torque (> 5.0)
-                if (water_en_
+                if (water_en_  // TODO: refactor this
                     && (abs(libra_arm_->GetFeedbackEffortMA()) > 5.0
                         || abs(libra_arm_->GetFeedbackEffortMB()) > 5.0)) {
                     // Pause arm movement
@@ -513,19 +521,20 @@ void AppMgr::MainThread() {
                 }
                 break;
 
-            case kAdjust:  // …ˆÊ’²® - Water level adjustment mode
-                // ƒgƒ‹ƒN‚É’Êí”½‰i2.5`5.0j
+            case kAdjust:  // æ°´ä½èª¿æ•´ - Water level adjustment mode
+                // ãƒˆãƒ«ã‚¯ã«é€šå¸¸åå¿œï¼ˆ2.5ï½5.0ï¼‰
                 // Normal response to torque (2.5-5.0)
                 if (water_en_
                     && (abs(libra_arm_->GetFeedbackEffortMA()) >= 2.5
                         || abs(libra_arm_->GetFeedbackEffortMB()) >= 2.5)) {
                     if (count == 0) {
-                        double theta = atan2(libra_arm_->GetFeedbackEffort(
+                        const double theta =
+                            atan2(libra_arm_->GetFeedbackEffort(
                                                  LIBRA_HEBI::Joint::kPitch),
                                              libra_arm_->GetFeedbackEffort(
                                                  LIBRA_HEBI::Joint::kRoll));
 
-                        // A“ü | B“ü | Ao | Bo - A_IN | B_IN | A_OUT | B_OUT
+                        // Bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT
                         if (theta > M_PI * 7 / 8
                             || -M_PI * 7 / 8 >= theta) {  // W
                             water_cmd = 0b1001;
@@ -547,47 +556,44 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // ƒgƒ‹ƒN‚ª–ß‚Á‚½i2.5ˆÈ‰ºj
+                // ãƒˆãƒ«ã‚¯ãŒæˆ»ã£ãŸï¼ˆ2.5ä»¥ä¸‹ï¼‰
                 // If torque subsides (< 2.5)
                 else if (count == 0) {
-                    // Put fluid system on standby
+                    // æ¶²ä½“ã‚·ã‚¹ãƒ†ãƒ ã‚’ã‚¹ã‚¿ãƒ³ãƒã‚¤ - Put fluid system on standby
                     water_mode_ = WaterMode::kStandby;
                     water_cmd = 0;
 
-                    // Resume arm movement
-                    libra_arm_->Move(input_[0], input_[1], input_[2], input_[3],
-                                     input_[4]);
+                    // ã‚¢ãƒ¼ãƒ ã®å‹•ãã‚’å†é–‹ - Resume arm movement
+                    libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
+                                     input_.at(3), input_.at(4));
                 }
                 break;
 
             case kDrain:
-                // Keep draining until ENABLE or DISABLE are clicked
-                ser_water_->Write(0);
+                // ENABLEãƒ»DISABLEãŒã‚¯ãƒªãƒƒã‚¯ã•ã‚Œã‚‹ã¾ã§æ’æ°´
+                // Drain until ENABLE or DISABLE are clicked
+                water_cmd = 0b0011;
                 break;
-
-            default:
-                std::cerr << "[ERROR] Invalid water mode: " << water_mode_
-                          << std::endl;
         }
 
         ser_water_->Write(water_cmd);  // send command
 
-        // —¬‘ÌƒVƒXƒeƒ€‚Ìó‘Ô
+        // æµä½“ã‚·ã‚¹ãƒ†ãƒ ã®çŠ¶æ…‹
         // Status of fluid system
-        for (int i = 0; i < 4; i++) {
+        for (auto i = 0; i < kFluidStateCount; i++) {
             // NOLINTBEGIN(readability-magic-numbers): Position of UI element
 
             if (!water_en_) {
-                DrawFormatStringToHandle(800 + 300 * i, 300, kMainColor,
-                                         kMainFont, "DISABLE");
+                DrawFormatStringToHandle(800 + 300 * i, 300, main_color,
+                                         main_font, "DISABLED");
             } else if (water_cmd & 1 << (3 - i)) {
                 DrawFormatStringToHandle(800 + 300 * i, 300,
                                          i < 2 ? GetColor(50, 150, 50)
                                                : GetColor(0, 0, 255),
-                                         kTitleFont, "ON");
+                                         title_font, "ON");
             } else {
-                DrawFormatStringToHandle(800 + 300 * i, 300, kMainColor,
-                                         kMainFont, "OFF");
+                DrawFormatStringToHandle(800 + 300 * i, 300, main_color,
+                                         main_font, "OFF");
             }
 
             // NOLINTEND(readability-magic-numbers): Position of UI element
@@ -595,28 +601,33 @@ void AppMgr::MainThread() {
 
         /* ----- LOGGING ----- */
 
-        // ˜A‘±ƒƒO‚ÌXV
+        // é€£ç¶šãƒ­ã‚°ã®æ›´æ–°
         // Update continuous log
         if (count == 0) {
+            // Timestamp
             continuous_log_ << GetDateTimeString() + ",,";
-            for (int j = 0; j < 3; j++) {
-                for (int i = 0; i < 5; i++) {
-                    continuous_log_ << value_[i][j];
-                    continuous_log_ << ",";
+
+            // Actuator info
+            for (auto i = 0; i < kHebiFeedbackCount; i++) {
+                for (auto j = 0; j < kHebiNodeCount; j++) {
+                    continuous_log_ << value_.at(j).at(i) << ",";
                 }
                 continuous_log_ << ",";
             }
-            for (int b = 0; b < 4; b++) {
-                continuous_log_ << ((water_cmd & (1 << (3 - b))) ? 1 : 0);
-                continuous_log_ << ",";
+
+            // Fluid system info
+            for (auto i = 0; i < kFluidStateCount; i++) {
+                continuous_log_ << ((water_cmd & (1 << (3 - i))) ? 1 : 0)
+                                << ",";
             }
             continuous_log_ << ",";
-            continuous_log_ << camera_pos_[0] << "," << camera_pos_[1] << ","
-                            << camera_pos_[2];
-            continuous_log_ << std::endl;
+
+            // Camera actuator info
+            continuous_log_ << camera_pos_.at(0) << "," << camera_pos_.at(1)
+                            << "," << camera_pos_.at(2) << "\n";
         }
 
-        // TODO: needs comment
+        // TODO: what is this?
         count++;
         if (count == 30) {
             count = 0;
@@ -641,25 +652,25 @@ void AppMgr::OnClick(View* view) {
         water_mode_ = WaterMode::kDrain;
 
     } else if (view == btn_shot_) {  // SHOT LOG
-        const std::string kDTS = GetDateTimeString();
-        snapshot_log_ << kDTS + ",,";
-        for (int j = 0; j < 3; j++) {
-            for (int i = 0; i < 5; i++) {
-                snapshot_log_ << value_[i][j];
-                snapshot_log_ << ",";
+        const std::string dts = GetDateTimeString();
+        snapshot_log_ << dts << ",,";
+        for (auto i = 0; i < kHebiFeedbackCount; i++) {
+            for (auto j = 0; j < kHebiNodeCount; j++) {
+                snapshot_log_ << value_.at(j).at(i) << ",";
             }
             snapshot_log_ << ",";
         }
-        snapshot_log_ << ibox_voltage_->GetNum();
-        snapshot_log_ << ",";
-        snapshot_log_ << ibox_current_->GetNum();
-        snapshot_log_ << std::endl;
-        std::cout << "[INFO] Snapshot - " << kDTS
+        snapshot_log_ << ibox_voltage_->GetNum() << ","
+                      << ibox_current_->GetNum() << "\n";
+
+        std::cout << "[INFO] Snapshot - " << dts
                   << " | Voltage: " << std::to_string(ibox_voltage_->GetNum())
                   << " V | Current: " << std::to_string(ibox_current_->GetNum())
                   << " A\n";
 
     } else if (view == btn_convert_) {  // CONVERT
+        // NOLINTBEGIN(readability-identifier-length): equation variables
+
         const double r = ibox_r_->GetNum();
         const double theta = ibox_theta_->GetNum();
         const double L = 989;
@@ -671,23 +682,25 @@ void AppMgr::OnClick(View* view) {
         const double alpha = (atan2(0, r) + atan2(sqrt(r * r - k * k), k));
         const double beta = asin(r * sin(alpha) / b);
 
+        // NOLINTEND(readability-identifier-length): equation variables
+
         ibox_j1_->SetNum(theta + alpha / M_PI * 180);
         ibox_j2_->SetNum(-180 + beta / M_PI * 180);
         ibox_j3_->SetNum(0);
 
     } else if (view == btn_start_) {  // START
-        input_[0] = ibox_roll_->GetNum();
-        input_[1] = ibox_pitch_->GetNum();
-        input_[2] = ibox_j1_->GetNum();
-        input_[3] = ibox_j2_->GetNum();
-        input_[4] = ibox_j3_->GetNum();
+        input_.at(0) = ibox_roll_->GetNum();
+        input_.at(1) = ibox_pitch_->GetNum();
+        input_.at(2) = ibox_j1_->GetNum();
+        input_.at(3) = ibox_j2_->GetNum();
+        input_.at(4) = ibox_j3_->GetNum();
 
-        // —¬‘ÌƒVƒXƒeƒ€‚ªì“®‚µ‚Ä‚¢‚È‚¢‚Ì‚İƒA[ƒ€‚ğ“®‚©‚·
+        // æµä½“ã‚·ã‚¹ãƒ†ãƒ ãŒä½œå‹•ã—ã¦ã„ãªã„æ™‚ã®ã¿ã‚¢ãƒ¼ãƒ ã‚’å‹•ã‹ã™
         // Only move arm when fluid system isn't running
         if (water_mode_ == WaterMode::kStandby) {
             // Begin arm movement
-            libra_arm_->Move(input_[0], input_[1], input_[2], input_[3],
-                             input_[4]);
+            libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
+                             input_.at(3), input_.at(4));
         }
 
     } else if (view == btn_stop_) {  // STOP
@@ -714,16 +727,18 @@ void AppMgr::OnClick(View* view) {
         OnClick(btn_convert_);
 
     } else if (view == btn_servo_slow_) {  // SLOW
-        camera_setpos_[1] = ibox_camera_pan_->GetNum();
-        camera_setpos_[2] = ibox_camera_tilt_->GetNum();
-        camera_dir_[1] = (ibox_camera_pan_->GetNum() >= camera_pos_[1]) ? 1
+        camera_setpos_.at(1) = ibox_camera_pan_->GetNum();
+        camera_setpos_.at(2) = ibox_camera_tilt_->GetNum();
+        camera_dir_.at(1) = (ibox_camera_pan_->GetNum() >= camera_pos_.at(1))
+                                ? 1
                                                                         : -1;
-        camera_dir_[2] = (ibox_camera_tilt_->GetNum() >= camera_pos_[2]) ? 1
+        camera_dir_.at(2) = (ibox_camera_tilt_->GetNum() >= camera_pos_.at(2))
+                                ? 1
                                                                          : -1;
 
     } else if (view == btn_servo_fast_) {  // FAST
-        camera_pos_[1] = ibox_camera_pan_->GetNum();
-        camera_pos_[2] = ibox_camera_tilt_->GetNum();
+        camera_pos_.at(1) = ibox_camera_pan_->GetNum();
+        camera_pos_.at(2) = ibox_camera_tilt_->GetNum();
     }
 }
 
@@ -737,56 +752,56 @@ void AppMgr::OnClick(View* view) {
 void AppMgr::SetupIncludeDxlibInit() {
     // NOLINTBEGIN(readability-magic-numbers): UI initialization
 
-    // ƒEƒCƒ“ƒhƒEƒ‚[ƒh‚Å‹N“® - Start in windowed mode
+    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹• - Start in windowed mode
     ChangeWindowMode(TRUE);
 
-    // Å‘å‰»ƒ{ƒ^ƒ“‚ª‘¶İ‚·‚éƒEƒCƒ“ƒhƒEƒ‚[ƒh‚É•ÏX
+    // æœ€å¤§åŒ–ãƒœã‚¿ãƒ³ãŒå­˜åœ¨ã™ã‚‹ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã«å¤‰æ›´
     // Set to windowed mode with maximize button present
     SetWindowStyleMode(7);
 
-    // ‰æ–ÊƒTƒCƒY‚ğw’è - Specify screen size
-    const int k32bitColor = 32;
-    SetGraphMode(kWindowW, kWindowH, k32bitColor);
+    // ç”»é¢ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify screen size
+    const int color_bit_depth = 32;
+    SetGraphMode(kWindowW, kWindowH, color_bit_depth);
 
-    // ƒTƒCƒY•ÏX‚ğ‰Â”\‚É‚·‚é - Allow resizing
+    // ã‚µã‚¤ã‚ºå¤‰æ›´ã‚’å¯èƒ½ã«ã™ã‚‹ - Allow resizing
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
-    // ƒEƒCƒ“ƒhƒEƒTƒCƒY‚ğw’è - Specify window size
+    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify window size
     int desktop_w = 0;
     int desktop_h = 0;
     GetDefaultState(&desktop_w, &desktop_h, nullptr);
 
     if (static_cast<float>(desktop_w) / desktop_h
         > static_cast<float>(kWindowW)
-              / kWindowH) {  // ‰¡’·ƒfƒBƒXƒvƒŒƒC - Landscape display
+              / kWindowH) {  // æ¨ªé•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Landscape display
         SetWindowSize(0.8 * desktop_h * (kWindowW / kWindowH), 0.8 * desktop_h);
     }
 
-    else {  // c’·ƒfƒBƒXƒvƒŒƒC - Portrait display
+    else {  // ç¸¦é•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Portrait display
         SetWindowSize(0.8 * desktop_w, 0.8 * desktop_w * (kWindowH / kWindowW));
     }
 
-    // ƒEƒBƒ“ƒhƒE‚ªƒmƒ“ƒAƒNƒeƒBƒu‚Å‚àÀs - Execute even if window is inactive
+    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒãƒãƒ³ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã§ã‚‚å®Ÿè¡Œ - Execute even if window is inactive
     SetAlwaysRunFlag(TRUE);
 
-    // ƒ}ƒ‹ƒ`ƒXƒŒƒbƒh‚É“K‚µ‚½ƒ‚[ƒh‚Å‹N“®‚·‚é - Start in mode suitable for
+    // ãƒãƒ«ãƒã‚¹ãƒ¬ãƒƒãƒ‰ã«é©ã—ãŸãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹•ã™ã‚‹ - Start in mode suitable for
     // multi-threading
     SetMultiThreadFlag(TRUE);
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÅWM_PAINT‚Ìˆ—‚ğ‚µ‚È‚¢ - Do not process WM_PAINT in the DX
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã§WM_PAINTã®å‡¦ç†ã‚’ã—ãªã„ - Do not process WM_PAINT in the DX
     // library
     SetUseDxLibWM_PAINTProcess(FALSE);
 
-    // Window‚Ìƒ^ƒCƒgƒ‹‚ğİ’è - Set the window title
+    // Windowã®ã‚¿ã‚¤ãƒˆãƒ«ã‚’è¨­å®š - Set the window title
     SetWindowText("LIBRA App");
 
-    // DXƒ‰ƒCƒuƒ‰ƒŠ‚Ì‰Šú‰» - Initialize DX library
+    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®åˆæœŸåŒ– - Initialize DX library
     DxLib_Init();
 
-    // •`‰ææ‚ğ— ‰æ–Ê‚É‚·‚é - Draw the back screen (?)
+    // æç”»å…ˆã‚’è£ç”»é¢ã«ã™ã‚‹ - Draw the back screen (?)
     SetDrawScreen(DX_SCREEN_BACK);
 
-    // ƒAƒ“ƒ`ƒGƒCƒŠƒAƒX•t‚«}Œ`•`‰æ‚Ì€”õ‚ğs‚¤
+    // ã‚¢ãƒ³ãƒã‚¨ã‚¤ãƒªã‚¢ã‚¹ä»˜ãå›³å½¢æç”»ã®æº–å‚™ã‚’è¡Œã†
     // Prepare to draw anti-aliased shapes
     BeginAADraw();
 
@@ -799,12 +814,13 @@ void AppMgr::SetupIncludeDxlibInit() {
  * @return uint The number of COM ports detected on the network
  */
 int AppMgr::printComList() {
-    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğæ“¾ - Get device information set
+    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’å–å¾—
+    // Get device information set
     auto* h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
                                           nullptr,
                                           DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (h_devinfo == nullptr) {
-        // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ªæ“¾‚Å‚«‚È‚©‚Á‚½ê‡
+        // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆãŒå–å¾—ã§ããªã‹ã£ãŸå ´åˆ
         // If the device information set could not be obtained
         return 0;
     }
@@ -813,11 +829,13 @@ int AppMgr::printComList() {
     SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
     data.cbSize = sizeof(data);
 
-    // ƒfƒoƒCƒXƒCƒ“ƒ^[ƒtƒFƒCƒX‚Ìæ“¾ - Get device interface
+    // ãƒ‡ãƒã‚¤ã‚¹ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹ã®å–å¾—
+    // Get device interface
     while (SetupDiEnumDeviceInfo(h_devinfo, num_ports, &data) != 0) {
         DWORD size = 0;
 
-        // COMƒ|[ƒg–¼‚Ìæ“¾ - Obtain COM port name
+        // COMãƒãƒ¼ãƒˆåã®å–å¾—
+        // Obtain COM port name
         HKEY key = SetupDiOpenDevRegKey(h_devinfo, &data, DICS_FLAG_GLOBAL, 0,
                                         DIREG_DEV, KEY_QUERY_VALUE);
         if (key != nullptr) {
@@ -829,14 +847,15 @@ int AppMgr::printComList() {
             _tprintf(_TEXT("%s"), name);
         }
 
-        // ƒfƒoƒCƒX‚Ìà–¾‚ğæ“¾ - Get device description
+        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å–å¾—
+        // Get device description
         DWORD dataT = 0;
         LPTSTR buf = nullptr;
         while (!SetupDiGetDeviceRegistryProperty(h_devinfo, &data,
                                                  SPDRP_DEVICEDESC, &dataT,
                                                  (PBYTE)buf, size, &size)) {
             if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                // buf‚ª‘«‚è‚È‚¢ê‡AŒ³‚ÌƒTƒCƒY‚Ì2”{‚ğÄŠ„‚è“–‚Ä‚·‚é
+                // bufãŒè¶³ã‚Šãªã„å ´åˆã€å…ƒã®ã‚µã‚¤ã‚ºã®2å€ã‚’å†å‰²ã‚Šå½“ã¦ã™ã‚‹
                 // If buf is insufficient, reallocate with twice the original size
                 if (buf != nullptr) {
                     LocalFree(buf);
@@ -847,14 +866,18 @@ int AppMgr::printComList() {
             }
         }
 
+        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å‡ºåŠ›
+        // Print device description
         _tprintf(_TEXT("(%s)\n"), buf);
         if (buf != nullptr) {
             LocalFree(buf);
         }
+
         ++num_ports;
     }
 
-    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğ‰ğ•ú - Release device information set
+    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’è§£æ”¾
+    // Release device information set
     SetupDiDestroyDeviceInfoList(h_devinfo);
 
     return num_ports;
@@ -874,7 +897,7 @@ std::string AppMgr::GetDateTimeString() {
               % 1000;  // std::time doesn't give MS; we have to get it ourselves
 
     std::ostringstream dtss;
-    dtss << std::put_time(&tm, "%Y/%m/%d %H:%M:%S") << ms << "\n";
+    dtss << std::put_time(&tm, "%Y/%m/%d %H:%M:%S.") << ms << "\n";
 
     return dtss.str();
 }

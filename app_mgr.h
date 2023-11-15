@@ -109,9 +109,16 @@ class AppMgr : public OnClickListener {
     bool water_en_{true};
     WaterMode water_mode_{kStandby};
 
+    /*
     double input_[5];
     double value_[5][3] = {0};
     double camera_pos_[3] = {0};
     double camera_setpos_[3] = {0};
     int camera_dir_[3] = {0};
+    */
+    std::array<double, 5> input_{0};
+    std::array<std::array<double, 3>, 5> value_{0};
+    std::array<double, 3> camera_pos_{0};
+    std::array<double, 3> camera_setpos_{0};
+    std::array<int, 3> camera_dir_{0};
 };
