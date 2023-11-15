@@ -232,8 +232,6 @@ double LIBRA_HEBI::GetCommandPosition(Joint joint) {
         case kJ3:
             ret = command_->getPosition()[Act::kHebiJ3];
             break;
-        default:
-            std::cerr << "[ERROR] HEBI - Invalid joint ID: " << joint << "\n";
     }
 
     ret *= 180 / M_PI;  // convert to deg
@@ -269,8 +267,6 @@ double LIBRA_HEBI::GetFeedbackPosition(Joint joint) {
         case kJ3:
             ret = feedback_->getPosition()[Act::kHebiJ3];
             break;
-        default:
-            std::cerr << "[ERROR] HEBI - Invalid joint ID: " << joint << "\n";
     }
 
     ret *= 180 / M_PI;  // convert to deg
@@ -304,8 +300,6 @@ double LIBRA_HEBI::GetFeedbackEffort(Joint joint) {
         case kJ3:
             ret = feedback_->getEffort()[Act::kHebiJ3];
             break;
-        default:
-            std::cerr << "[ERROR] HEBI - Invalid joint ID: " << joint << "\n";
     }
 
     return ret;
