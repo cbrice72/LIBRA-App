@@ -35,21 +35,29 @@ namespace colorize {
  */
 void Print(const std::string& msg, Level lvl) {
     std::string prefix;
-    unsigned attr = 0;
+    unsigned pre_attr = FOREGROUND_INTENSITY;  // default: bold
+    unsigned msg_attr = FOREGROUND_WHITE;      // default: white
 
     // Determine the
     switch (lvl) {
         case kInfo:
             prefix = "[INFO] ";
-            attr = FOREGROUND_BLUE;
+            pre_attr |= FOREGROUND_BLUE;
             break;
         case kWarn:
             prefix = "[WARN] ";
-            attr = FOREGROUND_YELLOW;
+            pre_attr |= FOREGROUND_YELLOW;
             break;
         case kError:
             prefix = "[ERROR] ";
-            attr = FOREGROUND_RED;
+            pre_attr |= FOREGROUND_RED;
+            break;
+        case kPrompt:
+            prefix = "[?] ";
+            pre_attr |= FOREGROUND_GREEN;
+            break;
+        case kTitle:
+            msg_attr |= FOREGROUND_INTENSITY;
             break;
         case kDefault:
             // do nothing
@@ -60,11 +68,13 @@ void Print(const std::string& msg, Level lvl) {
     HANDLE h_console = GetStdHandle(STD_OUTPUT_HANDLE);
 
     // Pretty-print the message
-    SetConsoleTextAttribute(h_console, attr | FOREGROUND_INTENSITY);
+    SetConsoleTextAttribute(h_console, pre_attr);
     std::cout << prefix;
-    SetConsoleTextAttribute(h_console,
-                            FOREGROUND_WHITE);  // reset console attributes
+    SetConsoleTextAttribute(h_console, msg_attr);
     std::cout << msg;
+
+    // Reset console attributes
+    SetConsoleTextAttribute(h_console, FOREGROUND_WHITE);
 }
 
 }  // namespace colorize

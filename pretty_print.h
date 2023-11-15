@@ -23,7 +23,7 @@ namespace colorize {
 /**
  * @brief The log level to print a message at
  */
-enum Level { kInfo = 0, kWarn, kError, kDefault = -1 };
+enum Level { kInfo = 0, kWarn, kError, kPrompt, kTitle, kDefault = -1 };
 
 void Print(const std::string& msg, Level lvl = kDefault);
 
