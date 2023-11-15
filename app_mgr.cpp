@@ -11,7 +11,6 @@
 // C++ Standard Library Headers
 #include <cmath>
 #include <ctime>
-#include <fstream>
 #include <iomanip>
 #include <iostream>
 // POSIX/Windows Library Headers
@@ -39,51 +38,66 @@ constexpr int kWindowH = 1080 * 2;  // app window height
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO.
+ * @brief Initializes the app, spins off threads, and tears down the environment
+ * on exit.
  */
 void AppMgr::Main() {
-    // コンソールを用意 - Prepare console
+    /* ----- INITIALIZATION ----- */
+
+    // コンソールを用意
+    // Prepare console
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
     (void)freopen("CONIN$", "r", stdin);
-    std::cout << "\n===== LIBRA App =====\n" << std::endl;
+    std::cout << "\n===== LIBRA App =====\n\n";
 
-    // HEBIアクチュエータ接続 - HEBI actuator connection
-    libra_arm_ = new LIBRA_HEBI();
-    int hebi_error = libra_arm_->connect();
+    std::string answer;  // used to retrieve user input via std::cin
 
-    // COMポート接続 - COM port connection
-    ser_water_ = new Serial();
-    ser_servo_ = new Serial();
-    if (!hebi_error) {  // HEBIアクチュエータと接続されているときのみ
-                        // Only when connected to HEBI actuators
-        std::string answer;
-        do {
-            std::cout << "----- COM Port List -----\n";
-            int port = printComList();
-            std::cout << "[INFO] Detected " << port << " ports\n";
-            std::cout << "Would you like to scan again? [y/n]:" << std::flush;
-            std::cin >> answer;
-        } while (answer != "n");
-
-        std::string com;
-        std::string comtext;
-
-        std::cout << "Specify the port to be used by SerialWater: "
-                  << std::flush;
-        std::cin >> com;
-        comtext = "COM" + com;
-        if (ser_water_->Open(comtext.c_str()) != 0) {
-            std::cout << "[ERROR] Cannot open " << comtext << std::endl;
+    // HEBIアクチュエータを接続
+    // Connect HEBI actuators
+    libra_arm_ = std::make_unique<LIBRA_HEBI>();
+    while (!libra_arm_->Connect()) {
+        std::cout << "Try again? [y/n]: " << std::flush;
+        std::cin >> answer;
+        if (answer == "n") {
+            // HEBIアクチュエータに接続できない場合は、プログラムを終了
+            // Exit app if connection to HEBI actuators can't be established
+            return;
         }
+    }
 
-        std::cout << "Specify the port to be used by SerialServo: "
-                  << std::flush;
-        std::cin >> com;
-        comtext = "COM" + com;
-        if (ser_servo_->Open(comtext.c_str()) != 0) {
-            std::cout << "[ERROR] Cannot open " << comtext << std::endl;
-        }
+    // 利用可能なCOMポートのスキャン
+    // Scan for available COM ports
+    ser_water_ = std::make_unique<Serial>();
+    ser_servo_ = std::make_unique<Serial>();
+
+    answer = "";
+    while (answer != "n") {
+        std::cout << "----- COM Port List -----\n";
+        const int kNumPorts = printComList();  // TODO: refactor this
+        std::cout << "[INFO] Detected " << kNumPorts << " ports\n";
+        std::cout << "Would you like to scan again? [y/n]: " << std::flush;
+        std::cin >> answer;
+    }
+
+    std::string comtext;  // stores COM port label
+
+    // SerialWaterのCOMポートをユーザーが指定できるようにする
+    // Allow user to specify SerialWater COM port
+    std::cout << "Specify the port to be used by SerialWater: " << std::flush;
+    std::cin >> answer;
+    comtext = "COM" + answer;
+    if (ser_water_->Open(comtext.c_str()) != 0) {
+        std::cout << "[ERROR] Cannot open " << comtext << "\n";
+    }
+
+    // SerialServoのCOMポートをユーザーが指定できるようにする
+    // Allow user to specify SerialServo COM port
+    std::cout << "Specify the port to be used by SerialServo: " << std::flush;
+    std::cin >> answer;
+    comtext = "COM" + answer;
+    if (ser_servo_->Open(comtext.c_str()) != 0) {
+        std::cout << "[ERROR] Cannot open " << comtext << "\n";
     }
 
     // DXライブラリ初期化を含む設定
@@ -91,20 +105,24 @@ void AppMgr::Main() {
     std::cout << "[INFO] Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
+    /* ----- THREAD MANAGEMENT ----- */
+
     // ProcessMessage以外の処理を行うスレッドを作成
-    // Create thread for any non-ProcessMessage processing
-    CreateThread(NULL, 0, MainThread_dmy, this, 0, NULL);
+    // Create thread for any non-DxLib processing
+    CreateThread(nullptr, 0, MainThread_dmy, this, 0, nullptr);
 
     // ProcessMessageループ
     // ProcessMessage loop
-    while (!ProcessMessage() && !flag_thread_end_) {
-        // 少しCPUを休める - Wait for the thread to finish
+    while (ProcessMessage() == 0 && !flag_thread_end_) {
+        // 少しCPUを休める - Wait for MainThread to finish
         Sleep(6);
     }
 
+    /* ----- TEARDOWN ----- */
+
     // プログラムが終了したことを示すフラグを立てる
     // Flag to indicate that the program has finished
-    flag_end_ = 1;
+    flag_end_ = true;
 
     // スレッド終了フラグが立つまで待つ
     // Wait until the thread is flagged as closed
@@ -112,17 +130,23 @@ void AppMgr::Main() {
         Sleep(10);
     }
 
+    // ログの終了
+    // Close the logging streams
+    continuous_log_.close();
+    snapshot_log_.close();
+
+    // DXライブラリのクリーンアップ
     // Clean up DX library
     DxLib_End();
 }
 
 /**
- * @brief TODO.
+ * @brief Runner for MainThread.
  */
 DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
-    AppMgr* p = (AppMgr*)pv;
-    p->MainThread();
-    p->flag_thread_end_ = 1;
+    auto* p = (AppMgr*)pv;
+    p->MainThread();  // loops until app is closed by user
+    p->flag_thread_end_ = true;
     return 0;
 }
 
@@ -133,14 +157,38 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
 void AppMgr::MainThread() {
     // カラーとフォントの初期化
     // Initialize colors and fonts
-    int maincolor = GetColor(50, 50, 50);
-    int mainfont = CreateFontToHandle("Yu Gothic UI", 50, 5,
-                                      DX_FONTTYPE_ANTIALIASING);
-    int titlefont = CreateFontToHandle("Yu Gothic UI", 50, 10,
-                                       DX_FONTTYPE_ANTIALIASING);
-    int bigfont = CreateFontToHandle("Yu Gothic UI", 150, 10,
-                                     DX_FONTTYPE_ANTIALIASING);
+    const int kMainColor = GetColor(50, 50, 50);
+    const int kMainFont = CreateFontToHandle("Yu Gothic UI", 50, 5,
+                                             DX_FONTTYPE_ANTIALIASING);
+    const int kTitleFont = CreateFontToHandle("Yu Gothic UI", 50, 10,
+                                              DX_FONTTYPE_ANTIALIASING);
+    const int kBigFont = CreateFontToHandle("Yu Gothic UI", 150, 10,
+                                            DX_FONTTYPE_ANTIALIASING);
     SetBackgroundColor(255, 255, 255);
+
+    // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
+
+    // Buttonオブジェクトの初期化
+    // Initialize Button objects
+    btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
+                            340, 100, "START", this);
+    OnClick(btn_start_);  // force arm to hold position
+
+    btn_convert_ = new Button(60 + 60, kWindowH - 200 - 100, 340, 100,
+                              "CONVERT", this);
+    btn_stop_ = new Button(1300 - 60 - 340, kWindowH - 200 - 100, 340, 100,
+                           "STOP", this);
+    btn_up_ = new Button(320, 800, 120, 120, "R+", this);
+    btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
+    btn_left_ = new Button(120, 1000, 120, 120, "θ+", this);
+    btn_right_ = new Button(520, 1000, 120, 120, "θ-", this);
+    btn_enable_ = new Button(2200, 100, 340, 100, "ENABLE", this);
+    btn_disable_ = new Button(2200, 250, 340, 100, "DISABLE", this);
+    btn_drain_ = new Button(2200, 400, 340, 100, "DRAIN", this);
+    btn_shot_ = new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT",
+                           this);
+    btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
+    btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
     // InputBoxオブジェクトの初期化
     // Initialize InputBox objects
@@ -159,12 +207,12 @@ void AppMgr::MainThread() {
 
     // InputBoxのデフォルト値を設定
     // Set InputBox default values
-    ibox_roll_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kRoll));
+    ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
     ibox_pitch_->SetNum(
-        libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kPitch));
-    ibox_j1_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kJ1));
-    ibox_j2_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kJ2));
-    ibox_j3_->SetNum(libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kJ3));
+        libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kPitch));
+    ibox_j1_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ1));
+    ibox_j2_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ2));
+    ibox_j3_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3));
     ibox_r_->SetNum(1200);
     ibox_theta_->SetNum(0);
     ibox_increment_->SetNum(10);
@@ -173,27 +221,7 @@ void AppMgr::MainThread() {
     ibox_camera_pan_->SetNum(0);
     ibox_camera_tilt_->SetNum(0);
 
-    // Buttonオブジェクトの初期化
-    // Initialize Button objects
-    btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
-                            340, 100, "START", this);
-    OnClick(btn_start_);  // set Start button as default selection
-
-    btn_convert_ = new Button(60 + 60, kWindowH - 200 - 100, 340, 100,
-                              "CONVERT", this);
-    btn_stop_ = new Button(1300 - 60 - 340, kWindowH - 200 - 100, 340, 100,
-                           "STOP", this);
-    btn_up_ = new Button(320, 800, 120, 120, "R+", this);
-    btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
-    btn_left_ = new Button(120, 1000, 120, 120, "θ+", this);
-    btn_right_ = new Button(520, 1000, 120, 120, "θ-", this);
-    btn_enable_ = new Button(2200, 100, 340, 100, "ENABLE", this);
-    btn_disable_ = new Button(2200, 250, 340, 100, "DISABLE", this);
-    btn_drain_ = new Button(2200, 400, 340, 100, "DRAIN", this);
-    btn_shot_ = new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT",
-                           this);
-    btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
-    btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
+    // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
     // 流体システムランタイム変数の初期化
     // Initialize fluid system runtime variables
@@ -214,28 +242,26 @@ void AppMgr::MainThread() {
         std::cout << "[INFO] Created log directory.\n";
     }
 
-    continuous_log_ = new std::ofstream("./log/" + dt_path_str
-                                        + "_continuous_log.csv");
-    *continuous_log_ << "Time,,";
-    *continuous_log_
-        << "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
-    *continuous_log_
-        << "PP_Roll[deg],PP_Pitch[deg],PP_J1[deg],PP_J2[deg],PP_J3[deg],,";
-    *continuous_log_
-        << "PT_Roll[Nm],PT_Pitch[Nm],PT_J1[Nm],PT_J2[Nm],PT_J3[Nm],,";
-    *continuous_log_ << "A_IN,B_IN,A_OUT,B_OUT,,";
-    *continuous_log_ << "TP_CamBase[deg],TP_CamPan[deg],TP_CamTilt[deg]";
-    *continuous_log_ << std::endl;
+    continuous_log_.open("./log/" + dt_path_str + "_continuous_log.csv");
+    continuous_log_ << "Time,,";
+    continuous_log_
+        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,";
+    continuous_log_
+        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,";
+    continuous_log_
+        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,";
+    continuous_log_ << "A_IN,B_IN,A_OUT,B_OUT,,";
+    continuous_log_ << "TP_CamBase (deg),TP_CamPan (deg),TP_CamTilt (deg)\n";
 
-    shot_log_ = new std::ofstream("./log/" + dt_path_str + "_shot_log.csv");
-    *shot_log_ << "Time,,";
-    *shot_log_
-        << "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
-    *shot_log_
-        << "PP_Roll[deg],PP_Pitch[deg],PP_J1[deg],PP_J2[deg],PP_J3[deg],,";
-    *shot_log_ << "PT_Roll[Nm],PT_Pitch[Nm],PT_J1[Nm],PT_J2[Nm],PT_J3[Nm],,";
-    *shot_log_ << "Voltage[V],Current[A]";
-    *shot_log_ << std::endl;
+    snapshot_log_.open("./log/" + dt_path_str + "_shot_log.csv");
+    snapshot_log_ << "Time,,";
+    snapshot_log_
+        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,";
+    snapshot_log_
+        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,";
+    snapshot_log_
+        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,";
+    snapshot_log_ << "Voltage (V),Current (A)\n";
 
     // 更新ループ
     // Update loop
@@ -279,38 +305,39 @@ void AppMgr::MainThread() {
 
         // 各セクションのタイトル
         // Section titles
-        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), bigfont, "LIBRA-I");
-        DrawFormatStringToHandle(120, 824 - 200, maincolor, titlefont,
+        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), kBigFont,
+                                 "LIBRA-I");
+        DrawFormatStringToHandle(120, 824 - 200, kMainColor, kTitleFont,
                                  "Goal Pos.");
-        DrawFormatStringToHandle(1400, 824 - 200, maincolor, titlefont,
+        DrawFormatStringToHandle(1400, 824 - 200, kMainColor, kTitleFont,
                                  "Target Pos.");
-        DrawFormatStringToHandle(1400 + 400, 824 - 200, maincolor, titlefont,
+        DrawFormatStringToHandle(1400 + 400, 824 - 200, kMainColor, kTitleFont,
                                  "Current Pos.");
-        DrawFormatStringToHandle(1400 + 800, 824 - 200, maincolor, titlefont,
+        DrawFormatStringToHandle(1400 + 800, 824 - 200, kMainColor, kTitleFont,
                                  "Current Torque");
 
         /* ----- UI: FLUID SYSTEM ----- */
 
         // 流体入出力パネルのラベル
         // Fluid I/O panel labels
-        DrawFormatStringToHandle(800, 200, maincolor, titlefont, "A_IN");
-        DrawFormatStringToHandle(1100, 200, maincolor, titlefont, "B_IN");
-        DrawFormatStringToHandle(1400, 200, maincolor, titlefont, "A_OUT");
-        DrawFormatStringToHandle(1700, 200, maincolor, titlefont, "B_OUT");
+        DrawFormatStringToHandle(800, 200, kMainColor, kTitleFont, "A_IN");
+        DrawFormatStringToHandle(1100, 200, kMainColor, kTitleFont, "B_IN");
+        DrawFormatStringToHandle(1400, 200, kMainColor, kTitleFont, "A_OUT");
+        DrawFormatStringToHandle(1700, 200, kMainColor, kTitleFont, "B_OUT");
 
         /* ----- UI: ARM ----- */
 
         // 操作盤の四角
         // Control panel border
-        DrawBoxAA(60, 550, 1300, kWindowH - 100, maincolor, FALSE, 2.5);
+        DrawBoxAA(60, 550, 1300, kWindowH - 100, kMainColor, FALSE, 2.5);
 
         // HEBIアクチュエータのデータを取得
         // Retrieve HEBI actuator data
         for (int i = 0; i < 5; i++) {
             auto joint = static_cast<LIBRA_HEBI::Joint>(i);
-            value_[i][0] = libra_arm_->getCommandPosition(joint);
-            value_[i][1] = libra_arm_->getFeedbackPosition(joint);
-            value_[i][2] = libra_arm_->getFeedbackEffort(joint);
+            value_[i][0] = libra_arm_->GetCommandPosition(joint);
+            value_[i][1] = libra_arm_->GetFeedbackPosition(joint);
+            value_[i][2] = libra_arm_->GetFeedbackEffort(joint);
         }
 
         // アーム制御のラベルとアクチュエータデータ
@@ -318,104 +345,111 @@ void AppMgr::MainThread() {
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
         for (int i = 0; i < 5; i++) {
             // Input box labels
-            DrawFormatStringToHandle(750, 824 + 200 * i, maincolor, mainfont,
+            DrawFormatStringToHandle(750, 824 + 200 * i, kMainColor, kMainFont,
                                      menu[i].c_str());
-            DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, maincolor,
-                                     mainfont, "deg");
+            DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, kMainColor,
+                                     kMainFont, "deg");
 
             // Target Pos., Current Pos., Current Torque
             for (int j = 0; j < 3; j++) {
                 char str[20];
                 int strW;
                 sprintf(str, "%8.2f %s", value_[i][j], j != 2 ? "deg" : "Nm");
-                strW = GetDrawStringWidthToHandle(str, strlen(str), mainfont);
+                strW = GetDrawStringWidthToHandle(str, strlen(str), kMainFont);
                 DrawFormatStringToHandle(1750 + 400 * j - strW, 824 + 200 * i,
-                                         maincolor, mainfont, str);
+                                         kMainColor, kMainFont, str);
             }
         }
 
         // アーム全体コントロールのラベル
         // Whole-arm control labels
-        DrawFormatStringToHandle(120, 824 + 200 * 3, maincolor, mainfont, "R");
-        DrawFormatStringToHandle(530, 824 + 200 * 3, maincolor, mainfont, "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, maincolor, mainfont, "θ");
-        DrawFormatStringToHandle(530, 824 + 200 * 4, maincolor, mainfont, "deg");
+        DrawFormatStringToHandle(120, 824 + 200 * 3, kMainColor, kMainFont, "R");
+        DrawFormatStringToHandle(530, 824 + 200 * 3, kMainColor, kMainFont,
+                                 "mm");
+        DrawFormatStringToHandle(120, 824 + 200 * 4, kMainColor, kMainFont, "θ");
+        DrawFormatStringToHandle(530, 824 + 200 * 4, kMainColor, kMainFont,
+                                 "deg");
 
         // 重心グラフ表示
         // Center of mass visualization
-        const int cX = 3100;
-        const int cY = kWindowH / 2 + 350;
+        const int kCoM_X = 3100;
+        const int kCoM_Y = kWindowH / 2 + 350;
 
-        DrawLineAA(cX + 40 * 0, cY - 40 * 10, cX + 40 * (-10), cY - 40 * 0,
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * -10, cY - 40 * 0, cX + 40 * (0), cY - 40 * -10,
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * 0, cY - 40 * -10, cX + 40 * (10), cY - 40 * 0,
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * 10, cY - 40 * 0, cX + 40 * (0), cY - 40 * 10,
-                   maincolor, 2.5);
+        DrawLineAA(kCoM_X + 40 * 0, kCoM_Y - 40 * 10, kCoM_X + 40 * (-10),
+                   kCoM_Y - 40 * 0, kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * -10, kCoM_Y - 40 * 0, kCoM_X + 40 * (0),
+                   kCoM_Y - 40 * -10, kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * 0, kCoM_Y - 40 * -10, kCoM_X + 40 * (10),
+                   kCoM_Y - 40 * 0, kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * 10, kCoM_Y - 40 * 0, kCoM_X + 40 * (0),
+                   kCoM_Y - 40 * 10, kMainColor, 2.5);
 
-        DrawLineAA(cX + 40 * (0), cY - 40 * (5), cX + 40 * (-5), cY - 40 * (0),
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * (-5), cY - 40 * (0), cX + 40 * (0), cY - 40 * (-5),
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * (0), cY - 40 * (-5), cX + 40 * (5), cY - 40 * (0),
-                   maincolor, 2.5);
-        DrawLineAA(cX + 40 * (5), cY - 40 * (0), cX + 40 * (0), cY - 40 * (5),
-                   maincolor, 2.5);
+        DrawLineAA(kCoM_X + 40 * (0), kCoM_Y - 40 * (5), kCoM_X + 40 * (-5),
+                   kCoM_Y - 40 * (0), kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * (-5), kCoM_Y - 40 * (0), kCoM_X + 40 * (0),
+                   kCoM_Y - 40 * (-5), kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * (0), kCoM_Y - 40 * (-5), kCoM_X + 40 * (5),
+                   kCoM_Y - 40 * (0), kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 40 * (5), kCoM_Y - 40 * (0), kCoM_X + 40 * (0),
+                   kCoM_Y - 40 * (5), kMainColor, 2.5);
 
-        DrawLineAA(cX - 500, cY, cX + 500, cY, maincolor, 2.5);
-        DrawLineAA(cX + 500 * cos(M_PI * 1 / 8), cY + 500 * sin(M_PI * 1 / 8),
-                   cX - 500 * cos(M_PI * 1 / 8), cY - 500 * sin(M_PI * 1 / 8),
-                   maincolor, 1);
-        DrawLineAA(cX + 500 * cos(M_PI * 3 / 8), cY + 500 * sin(M_PI * 3 / 8),
-                   cX - 500 * cos(M_PI * 3 / 8), cY - 500 * sin(M_PI * 3 / 8),
-                   maincolor, 1);
-        DrawLineAA(cX + 500 * cos(M_PI * 5 / 8), cY + 500 * sin(M_PI * 5 / 8),
-                   cX - 500 * cos(M_PI * 5 / 8), cY - 500 * sin(M_PI * 5 / 8),
-                   maincolor, 1);
-        DrawLineAA(cX + 500 * cos(M_PI * 7 / 8), cY + 500 * sin(M_PI * 7 / 8),
-                   cX - 500 * cos(M_PI * 7 / 8), cY - 500 * sin(M_PI * 7 / 8),
-                   maincolor, 1);
-        DrawLineAA(cX, cY - 500, cX, cY + 500, maincolor, 2.5);
-        DrawTriangleAA(cX + 500, cY, cX + 480, cY + 10, cX + 480, cY - 10,
-                       maincolor, TRUE);
-        DrawTriangleAA(cX, cY - 500, cX + 10, cY - 480, cX - 10, cY - 480,
-                       maincolor, TRUE);
-        DrawCircleAA(cX + value_[0][2] * 40, cY - value_[1][2] * 40, 15, 20,
-                     GetColor(0, 0, 0), TRUE);
-        DrawFormatStringToHandle(cX + 525, cY - 25, maincolor, mainfont,
-                                 "Roll[Nm]");
-        DrawFormatStringToHandle(cX - 100, cY - 550 - 25, maincolor, mainfont,
-                                 "Pitch[Nm]");
+        DrawLineAA(kCoM_X - 500, kCoM_Y, kCoM_X + 500, kCoM_Y, kMainColor, 2.5);
+        DrawLineAA(kCoM_X + 500 * cos(M_PI * 1 / 8),
+                   kCoM_Y + 500 * sin(M_PI * 1 / 8),
+                   kCoM_X - 500 * cos(M_PI * 1 / 8),
+                   kCoM_Y - 500 * sin(M_PI * 1 / 8), kMainColor, 1);
+        DrawLineAA(kCoM_X + 500 * cos(M_PI * 3 / 8),
+                   kCoM_Y + 500 * sin(M_PI * 3 / 8),
+                   kCoM_X - 500 * cos(M_PI * 3 / 8),
+                   kCoM_Y - 500 * sin(M_PI * 3 / 8), kMainColor, 1);
+        DrawLineAA(kCoM_X + 500 * cos(M_PI * 5 / 8),
+                   kCoM_Y + 500 * sin(M_PI * 5 / 8),
+                   kCoM_X - 500 * cos(M_PI * 5 / 8),
+                   kCoM_Y - 500 * sin(M_PI * 5 / 8), kMainColor, 1);
+        DrawLineAA(kCoM_X + 500 * cos(M_PI * 7 / 8),
+                   kCoM_Y + 500 * sin(M_PI * 7 / 8),
+                   kCoM_X - 500 * cos(M_PI * 7 / 8),
+                   kCoM_Y - 500 * sin(M_PI * 7 / 8), kMainColor, 1);
+        DrawLineAA(kCoM_X, kCoM_Y - 500, kCoM_X, kCoM_Y + 500, kMainColor, 2.5);
+        DrawTriangleAA(kCoM_X + 500, kCoM_Y, kCoM_X + 480, kCoM_Y + 10,
+                       kCoM_X + 480, kCoM_Y - 10, kMainColor, TRUE);
+        DrawTriangleAA(kCoM_X, kCoM_Y - 500, kCoM_X + 10, kCoM_Y - 480,
+                       kCoM_X - 10, kCoM_Y - 480, kMainColor, TRUE);
+        DrawCircleAA(kCoM_X + value_[0][2] * 40, kCoM_Y - value_[1][2] * 40, 15,
+                     20, GetColor(0, 0, 0), TRUE);
+        DrawFormatStringToHandle(kCoM_X + 525, kCoM_Y - 25, kMainColor,
+                                 kMainFont, "Roll (Nm)");
+        DrawFormatStringToHandle(kCoM_X - 100, kCoM_Y - 550 - 25, kMainColor,
+                                 kMainFont, "Pitch (Nm)");
 
         // 電圧電流のラベル
         // Voltage and current labels
-        DrawFormatStringToHandle(1400, 1800, maincolor, titlefont, "Voltage");
-        DrawFormatStringToHandle(1400 + 400, 1800, maincolor, titlefont,
+        DrawFormatStringToHandle(1400, 1800, kMainColor, kTitleFont, "Voltage");
+        DrawFormatStringToHandle(1400 + 400, 1800, kMainColor, kTitleFont,
                                  "Current");
-        DrawFormatStringToHandle(1400 + 260, 1924, maincolor, mainfont, "V");
-        DrawFormatStringToHandle(1400 + 400 + 260, 1924, maincolor, mainfont,
+        DrawFormatStringToHandle(1400 + 260, 1924, kMainColor, kMainFont, "V");
+        DrawFormatStringToHandle(1400 + 400 + 260, 1924, kMainColor, kMainFont,
                                  "A");
 
         /* ----- UI: CAMERA ----- */
 
         // カメラパネルのラベル
         // Camera panel labels
-        DrawFormatStringToHandle(2800, 150, maincolor, titlefont, "Camera Pos.");
-        DrawFormatStringToHandle(2800, 300 + 24, maincolor, mainfont, "Base");
-        DrawFormatStringToHandle(2800, 450 + 24, maincolor, mainfont, "Pan");
-        DrawFormatStringToHandle(2800, 600 + 24, maincolor, mainfont, "Tilt");
-        DrawFormatStringToHandle(2800 + 410, 450 + 24, maincolor, mainfont,
+        DrawFormatStringToHandle(2800, 150, kMainColor, kTitleFont,
+                                 "Camera Pos.");
+        DrawFormatStringToHandle(2800, 300 + 24, kMainColor, kMainFont, "Base");
+        DrawFormatStringToHandle(2800, 450 + 24, kMainColor, kMainFont, "Pan");
+        DrawFormatStringToHandle(2800, 600 + 24, kMainColor, kMainFont, "Tilt");
+        DrawFormatStringToHandle(2800 + 410, 450 + 24, kMainColor, kMainFont,
                                  "deg");
-        DrawFormatStringToHandle(2800 + 410, 600 + 24, maincolor, mainfont,
+        DrawFormatStringToHandle(2800 + 410, 600 + 24, kMainColor, kMainFont,
                                  "deg");
 
         // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
         // J3を負にするピッチ角を計算
         // Calculate pitch angle to negate J3
-        double j3_pos = libra_arm_->getCommandPosition(LIBRA_HEBI::Joint::kJ3);
+        double j3_pos = libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3);
         if (j3_pos <= 30) {
             camera_pos_[0] = (j3_pos <= 0) ? -j3_pos : 0;
         } else {
@@ -447,10 +481,10 @@ void AppMgr::MainThread() {
         for (int i = 0; i < 3; i++) {
             char str[20] = "";
             sprintf(str, "%8.2f deg", camera_pos_[i]);
-            auto strW = GetDrawStringWidthToHandle(str, strlen(str), mainfont);
+            auto strW = GetDrawStringWidthToHandle(str, strlen(str), kMainFont);
             // NOLINTNEXTLINE(readability-magic-numbers): Position of UI element
-            DrawFormatStringToHandle(3670 - strW, 300 + 24 + 150 * i, maincolor,
-                                     mainfont, str);
+            DrawFormatStringToHandle(3670 - strW, 300 + 24 + 150 * i,
+                                     kMainColor, kMainFont, str);
         }
 
         // SerialServoのArduinoにコマンドを送る
@@ -471,10 +505,10 @@ void AppMgr::MainThread() {
                 // トルク超過（5.0以上）
                 // Excess torque (> 5.0)
                 if (water_en_
-                    && (abs(libra_arm_->getFeedbackEffortMA()) > 5.0
-                        || abs(libra_arm_->getFeedbackEffortMB()) > 5.0)) {
+                    && (abs(libra_arm_->GetFeedbackEffortMA()) > 5.0
+                        || abs(libra_arm_->GetFeedbackEffortMB()) > 5.0)) {
                     // Pause arm movement
-                    libra_arm_->stop();
+                    libra_arm_->Stop();
                     water_mode_ = WaterMode::kAdjust;
                 }
                 break;
@@ -483,12 +517,12 @@ void AppMgr::MainThread() {
                 // トルクに通常反応（2.5～5.0）
                 // Normal response to torque (2.5-5.0)
                 if (water_en_
-                    && (abs(libra_arm_->getFeedbackEffortMA()) >= 2.5
-                        || abs(libra_arm_->getFeedbackEffortMB()) >= 2.5)) {
+                    && (abs(libra_arm_->GetFeedbackEffortMA()) >= 2.5
+                        || abs(libra_arm_->GetFeedbackEffortMB()) >= 2.5)) {
                     if (count == 0) {
-                        double theta = atan2(libra_arm_->getFeedbackEffort(
+                        double theta = atan2(libra_arm_->GetFeedbackEffort(
                                                  LIBRA_HEBI::Joint::kPitch),
-                                             libra_arm_->getFeedbackEffort(
+                                             libra_arm_->GetFeedbackEffort(
                                                  LIBRA_HEBI::Joint::kRoll));
 
                         // A入 | B入 | A出 | B出 - A_IN | B_IN | A_OUT | B_OUT
@@ -521,7 +555,7 @@ void AppMgr::MainThread() {
                     water_cmd = 0;
 
                     // Resume arm movement
-                    libra_arm_->move(input_[0], input_[1], input_[2], input_[3],
+                    libra_arm_->Move(input_[0], input_[1], input_[2], input_[3],
                                      input_[4]);
                 }
                 break;
@@ -544,16 +578,16 @@ void AppMgr::MainThread() {
             // NOLINTBEGIN(readability-magic-numbers): Position of UI element
 
             if (!water_en_) {
-                DrawFormatStringToHandle(800 + 300 * i, 300, maincolor,
-                                         mainfont, "DISABLE");
+                DrawFormatStringToHandle(800 + 300 * i, 300, kMainColor,
+                                         kMainFont, "DISABLE");
             } else if (water_cmd & 1 << (3 - i)) {
                 DrawFormatStringToHandle(800 + 300 * i, 300,
                                          i < 2 ? GetColor(50, 150, 50)
                                                : GetColor(0, 0, 255),
-                                         titlefont, "ON");
+                                         kTitleFont, "ON");
             } else {
-                DrawFormatStringToHandle(800 + 300 * i, 300, maincolor,
-                                         mainfont, "OFF");
+                DrawFormatStringToHandle(800 + 300 * i, 300, kMainColor,
+                                         kMainFont, "OFF");
             }
 
             // NOLINTEND(readability-magic-numbers): Position of UI element
@@ -564,38 +598,22 @@ void AppMgr::MainThread() {
         // 連続ログの更新
         // Update continuous log
         if (count == 0) {
-            /*
-            *continuous_log_ << "Time,,";
-            *continuous_log_ <<
-            "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
-            *continuous_log_ <<
-            "PP_Roll[deg],PP_Pitch[deg],PP_J1[deg],PP_J2[deg],PP_J3[deg],,";
-            *continuous_log_ <<
-            "PT_Roll[Nm],PT_Pitch[Nm],PT_J1[Nm],PT_J2[Nm],PT_J3[Nm],,";
-            *continuous_log_
-            << "A_IN,B_IN,A_OUT,B_OUT,,";
-            *continuous_log_ <<
-            "TP_CamBase[deg],TP_CamPan[deg],TP_CamTilt[deg]";
-            *continuous_log_ <<
-            std::endl;
-            */
-
-            *continuous_log_ << GetDateTimeString() + ",,";
+            continuous_log_ << GetDateTimeString() + ",,";
             for (int j = 0; j < 3; j++) {
                 for (int i = 0; i < 5; i++) {
-                    *continuous_log_ << value_[i][j];
-                    *continuous_log_ << ",";
+                    continuous_log_ << value_[i][j];
+                    continuous_log_ << ",";
                 }
-                *continuous_log_ << ",";
+                continuous_log_ << ",";
             }
             for (int b = 0; b < 4; b++) {
-                *continuous_log_ << ((water_cmd & (1 << (3 - b))) ? 1 : 0);
-                *continuous_log_ << ",";
+                continuous_log_ << ((water_cmd & (1 << (3 - b))) ? 1 : 0);
+                continuous_log_ << ",";
             }
-            *continuous_log_ << ",";
-            *continuous_log_ << camera_pos_[0] << "," << camera_pos_[1] << ","
-                             << camera_pos_[2];
-            *continuous_log_ << std::endl;
+            continuous_log_ << ",";
+            continuous_log_ << camera_pos_[0] << "," << camera_pos_[1] << ","
+                            << camera_pos_[2];
+            continuous_log_ << std::endl;
         }
 
         // TODO: needs comment
@@ -623,44 +641,35 @@ void AppMgr::OnClick(View* view) {
         water_mode_ = WaterMode::kDrain;
 
     } else if (view == btn_shot_) {  // SHOT LOG
-        /*
-        shot_log_ << "Time,,";
-        shot_log_ <<
-        "TP_Roll[deg],TP_Pitch[deg],TP_J1[deg],TP_J2[deg],TP_J3[deg],,";
-        shot_log_ <<
-        "PP_Roll[deg],PP_Pitch[deg],PP_J1[deg],PP_J2[deg],PP_J3[deg],,";
-        shot_log_ << "PT_Roll[Nm],PT_Pitch[Nm],PT_J1[Nm],PT_J2[Nm],PT_J3[Nm],,";
-        shot_log_ << "Voltage[V],Current[A]";
-        */
-        std::string dts = GetDateTimeString();
-        *shot_log_ << dts + ",,";
+        const std::string kDTS = GetDateTimeString();
+        snapshot_log_ << kDTS + ",,";
         for (int j = 0; j < 3; j++) {
             for (int i = 0; i < 5; i++) {
-                *shot_log_ << value_[i][j];
-                *shot_log_ << ",";
+                snapshot_log_ << value_[i][j];
+                snapshot_log_ << ",";
             }
-            *shot_log_ << ",";
+            snapshot_log_ << ",";
         }
-        *shot_log_ << ibox_voltage_->GetNum();
-        *shot_log_ << ",";
-        *shot_log_ << ibox_current_->GetNum();
-        *shot_log_ << std::endl;
-        std::cout << "[INFO] Snapshot - " << dts
+        snapshot_log_ << ibox_voltage_->GetNum();
+        snapshot_log_ << ",";
+        snapshot_log_ << ibox_current_->GetNum();
+        snapshot_log_ << std::endl;
+        std::cout << "[INFO] Snapshot - " << kDTS
                   << " | Voltage: " << std::to_string(ibox_voltage_->GetNum())
                   << " V | Current: " << std::to_string(ibox_current_->GetNum())
                   << " A\n";
 
     } else if (view == btn_convert_) {  // CONVERT
-        double r = ibox_r_->GetNum();
-        double theta = ibox_theta_->GetNum();
-        double L = 989;
-        double L_hand = 1014;
-        double a = L;
-        double b = L + L_hand;
+        const double r = ibox_r_->GetNum();
+        const double theta = ibox_theta_->GetNum();
+        const double L = 989;
+        const double L_hand = 1014;
+        const double a = L;
+        const double b = L + L_hand;
 
-        double k = (r * r + a * a - b * b) / (2 * a);
-        double alpha = (atan2(0, r) + atan2(sqrt(r * r - k * k), k));
-        double beta = asin(r * sin(alpha) / b);
+        const double k = (r * r + a * a - b * b) / (2 * a);
+        const double alpha = (atan2(0, r) + atan2(sqrt(r * r - k * k), k));
+        const double beta = asin(r * sin(alpha) / b);
 
         ibox_j1_->SetNum(theta + alpha / M_PI * 180);
         ibox_j2_->SetNum(-180 + beta / M_PI * 180);
@@ -677,12 +686,12 @@ void AppMgr::OnClick(View* view) {
         // Only move arm when fluid system isn't running
         if (water_mode_ == WaterMode::kStandby) {
             // Begin arm movement
-            libra_arm_->move(input_[0], input_[1], input_[2], input_[3],
+            libra_arm_->Move(input_[0], input_[1], input_[2], input_[3],
                              input_[4]);
         }
 
     } else if (view == btn_stop_) {  // STOP
-        libra_arm_->stop();
+        libra_arm_->Stop();
 
     } else if (view == btn_up_) {  // R+
         ibox_r_->SetNum(ibox_r_->GetNum() + ibox_increment_->GetNum());
@@ -736,23 +745,24 @@ void AppMgr::SetupIncludeDxlibInit() {
     SetWindowStyleMode(7);
 
     // 画面サイズを指定 - Specify screen size
-    SetGraphMode(kWindowW, kWindowH, 32);
+    const int k32bitColor = 32;
+    SetGraphMode(kWindowW, kWindowH, k32bitColor);
 
     // サイズ変更を可能にする - Allow resizing
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
     // ウインドウサイズを指定 - Specify window size
-    int desktop_w{0};
-    int desktop_h{0};
+    int desktop_w = 0;
+    int desktop_h = 0;
     GetDefaultState(&desktop_w, &desktop_h, nullptr);
 
-    // 横長ディスプレイ - Landscape display
     if (static_cast<float>(desktop_w) / desktop_h
-        > static_cast<float>(kWindowW) / kWindowH) {
+        > static_cast<float>(kWindowW)
+              / kWindowH) {  // 横長ディスプレイ - Landscape display
         SetWindowSize(0.8 * desktop_h * (kWindowW / kWindowH), 0.8 * desktop_h);
     }
-    // 縦長ディスプレイ - Portrait display
-    else {
+
+    else {  // 縦長ディスプレイ - Portrait display
         SetWindowSize(0.8 * desktop_w, 0.8 * desktop_w * (kWindowH / kWindowW));
     }
 
@@ -776,44 +786,41 @@ void AppMgr::SetupIncludeDxlibInit() {
     // 描画先を裏画面にする - Draw the back screen (?)
     SetDrawScreen(DX_SCREEN_BACK);
 
-    // アンチエイリアス付き図形描画の準備を行う - Prepare to draw anti-aliased
-    // shapes
+    // アンチエイリアス付き図形描画の準備を行う
+    // Prepare to draw anti-aliased shapes
     BeginAADraw();
 
     // NOLINTEND(readability-magic-numbers): UI initialization
 }
 
 /**
- * @brief TODO.
+ * @brief TODO
+ *
+ * @return uint The number of COM ports detected on the network
  */
-int AppMgr::printComList(void) {
-    HDEVINFO h_devinfo;
-    DWORD member_index = 0;
-    SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
-
-    int max = 0;
+int AppMgr::printComList() {
     // デバイス情報セットを取得 - Get device information set
-    h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
-                                    nullptr,
-                                    DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (!h_devinfo) {
+    auto* h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
+                                          nullptr,
+                                          DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+    if (h_devinfo == nullptr) {
         // デバイス情報セットが取得できなかった場合
         // If the device information set could not be obtained
         return 0;
     }
 
+    int num_ports = 0;
+    SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
     data.cbSize = sizeof(data);
 
     // デバイスインターフェイスの取得 - Get device interface
-    while (SetupDiEnumDeviceInfo(h_devinfo, max, &data)) {
-        DWORD dataT;
-        DWORD size;
-        LPTSTR buf;
+    while (SetupDiEnumDeviceInfo(h_devinfo, num_ports, &data) != 0) {
+        DWORD size = 0;
 
         // COMポート名の取得 - Obtain COM port name
         HKEY key = SetupDiOpenDevRegKey(h_devinfo, &data, DICS_FLAG_GLOBAL, 0,
                                         DIREG_DEV, KEY_QUERY_VALUE);
-        if (key) {
+        if (key != nullptr) {
             TCHAR name[256];
             DWORD type = 0;
             size = sizeof(name);
@@ -823,13 +830,15 @@ int AppMgr::printComList(void) {
         }
 
         // デバイスの説明を取得 - Get device description
-        size = 0;
-        buf = nullptr;
+        DWORD dataT = 0;
+        LPTSTR buf = nullptr;
         while (!SetupDiGetDeviceRegistryProperty(h_devinfo, &data,
                                                  SPDRP_DEVICEDESC, &dataT,
                                                  (PBYTE)buf, size, &size)) {
             if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                if (buf) {
+                // bufが足りない場合、元のサイズの2倍を再割り当てする
+                // If buf is insufficient, reallocate with twice the original size
+                if (buf != nullptr) {
                     LocalFree(buf);
                 }
                 buf = (LPTSTR)LocalAlloc(LPTR, size * 2);
@@ -839,30 +848,33 @@ int AppMgr::printComList(void) {
         }
 
         _tprintf(_TEXT("(%s)\n"), buf);
-        if (buf) {
+        if (buf != nullptr) {
             LocalFree(buf);
         }
-        ++max;
+        ++num_ports;
     }
 
     // デバイス情報セットを解放 - Release device information set
     SetupDiDestroyDeviceInfoList(h_devinfo);
 
-    return max;
+    return num_ports;
 }
 
 /**
  * @brief Provides a formatted string of the current date and time.
  *
- * @return std::string Formatted as "YYYY/MM/DD HH:MM:SS.SSS"
+ * @return std::string Formatted as "YYYY/MM/DD HH:MM:SS.MSS"
  */
 std::string AppMgr::GetDateTimeString() {
-    SYSTEMTIME st;
-    char dt_char[100];
+    auto t = std::time(nullptr);
+    auto tm = *std::localtime(&t);
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  std::chrono::system_clock::now().time_since_epoch())
+                  .count()
+              % 1000;  // std::time doesn't give MS; we have to get it ourselves
 
-    GetLocalTime(&st);
-    sprintf(dt_char, "%04d/%02d/%02d %02d:%02d:%02d.%03d", st.wYear, st.wMonth,
-            st.wDay, st.wHour, st.wMinute, st.wSecond, st.wMilliseconds);
+    std::ostringstream dtss;
+    dtss << std::put_time(&tm, "%Y/%m/%d %H:%M:%S") << ms << "\n";
 
-    return std::string(dt_char);
+    return dtss.str();
 }
