@@ -51,7 +51,7 @@ class AppMgr : public OnClickListener {
     // --- Helper Functions ---
 
     static void SetupIncludeDxlibInit();
-    static int printComList();
+    static int PrintComList();
     static std::string GetDateTimeString();
 
     // --- UI: General ---

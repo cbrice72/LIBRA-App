@@ -23,6 +23,7 @@
 // Project Headers
 #include "button.h"
 #include "mouse.h"
+#include "pretty_print.h"
 #include "serial.h"
 
 /* --- TABLE OF CONTENTS ---
@@ -53,98 +54,123 @@ constexpr int kCameraNodeCount = 3;  // total number of camera servos
 void AppMgr::Main() {
     /* ----- INITIALIZATION ----- */
 
-    // ã‚³ãƒ³ã‚½ãƒ¼ãƒ«ã‚’ç”¨æ„
+    // ƒRƒ“ƒ\[ƒ‹‚ğ—pˆÓ
     // Prepare console
     AllocConsole();
     (void)freopen("CONOUT$", "w", stdout);
     (void)freopen("CONIN$", "r", stdin);
-    std::cout << "\n===== LIBRA App =====\n\n";
+
+    // clang-format off
+    colorize::Print(  // note: do NOT mess with the spacing!
+        "\n"
+        " 888      8888888 888888b.   8888888b.         d8888             d8888 \n"
+        " 888        888   888  \"88b  888   Y88b       d88888            d88888 \n"
+        " 888        888   888  .88P  888    888      d88P888           d88P888 \n"
+        " 888        888   8888888K.  888   d88P     d88P 888          d88P 888 88888b.  88888b. \n"
+        " 888        888   888  \"Y88b 8888888P\"     d88P  888         d88P  888 888 \"88b 888 \"88b \n"
+        " 888        888   888    888 888 T88b     d88P   888        d88P   888 888  888 888  888 \n"
+        " 888        888   888   d88P 888  T88b   d8888888888       d8888888888 888 d88P 888 d88P \n"
+        " 88888888 8888888 8888888P\"  888   T88b d88P     888      d88P     888 88888P\"  88888P\" \n"
+        "                                                                       888      888 \n"
+        "                                                                       888      888 \n"
+        "                                                                       888      888 \n"
+        "\n",
+        colorize::Level::kTitle);
+    // clang-format on
 
     std::string answer;  // used to retrieve user input via std::cin
 
-    // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã‚’æ¥ç¶š
+    // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ğÚ‘±
     // Connect HEBI actuators
     libra_arm_ = std::make_unique<LIBRA_HEBI>();
     while (!libra_arm_->Connect()) {
-        std::cout << "Try again? [y/n]: " << std::flush;
+        colorize::Print("Try again? [y/n]:\n", colorize::Level::kPrompt);
         std::cin >> answer;
         if (answer == "n") {
-            // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã«æ¥ç¶šã§ããªã„å ´åˆã¯ã€ãƒ—ãƒ­ã‚°ãƒ©ãƒ ã‚’çµ‚äº†
+            // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚ÉÚ‘±‚Å‚«‚È‚¢ê‡‚ÍAƒvƒƒOƒ‰ƒ€‚ğI—¹
             // Exit app if connection to HEBI actuators can't be established
+            colorize::Print("Exiting...\n", colorize::Level::kInfo);
+            Sleep(1000);  // give user time to read message
             return;
         }
     }
 
-    // åˆ©ç”¨å¯èƒ½ãªCOMãƒãƒ¼ãƒˆã®ã‚¹ã‚­ãƒ£ãƒ³
+    // —˜—p‰Â”\‚ÈCOMƒ|[ƒg‚ÌƒXƒLƒƒƒ“
     // Scan for available COM ports
     ser_water_ = std::make_unique<Serial>();
     ser_servo_ = std::make_unique<Serial>();
 
     answer = "";
     while (answer != "n") {
-        std::cout << "----- COM Port List -----\n";
-        const int num_ports = printComList();  // TODO: refactor this
-        std::cout << "[INFO] Detected " << num_ports << " ports\n"
-                  << "Would you like to scan again? [y/n]: " << std::flush;
+        colorize::Print("\n----- COM Port List -----\n\n",
+                        colorize::Level::kTitle);
+        auto num_ports = PrintComList();  // TODO: refactor this
+        colorize::Print("Detected " + std::to_string(num_ports) + " ports\n",
+                        colorize::Level::kInfo);
+        colorize::Print("Would you like to scan again? [y/n]:\n",
+                        colorize::Level::kPrompt);
         std::cin >> answer;
     }
 
     std::string comtext;  // stores COM port label
 
-    // SerialWaterã®COMãƒãƒ¼ãƒˆã‚’ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒæŒ‡å®šã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹
+    // SerialWater‚ÌCOMƒ|[ƒg‚ğƒ†[ƒU[‚ªw’è‚Å‚«‚é‚æ‚¤‚É‚·‚é
     // Allow user to specify SerialWater COM port
-    std::cout << "Specify the port to be used by SerialWater: " << std::flush;
+    colorize::Print("Specify the port to be used by SerialWater:\n",
+                    colorize::Level::kPrompt);
     std::cin >> answer;
     comtext = "COM" + answer;
     if (ser_water_->Open(comtext.c_str()) != 0) {
-        std::cout << "[ERROR] Cannot open " << comtext << "\n";
+        colorize::Print("Cannot open " + comtext + "\n",
+                        colorize::Level::kError);
     }
 
-    // SerialServoã®COMãƒãƒ¼ãƒˆã‚’ãƒ¦ãƒ¼ã‚¶ãƒ¼ãŒæŒ‡å®šã§ãã‚‹ã‚ˆã†ã«ã™ã‚‹
+    // SerialServo‚ÌCOMƒ|[ƒg‚ğƒ†[ƒU[‚ªw’è‚Å‚«‚é‚æ‚¤‚É‚·‚é
     // Allow user to specify SerialServo COM port
-    std::cout << "Specify the port to be used by SerialServo: " << std::flush;
+    colorize::Print("Specify the port to be used by SerialServo:\n",
+                    colorize::Level::kPrompt);
     std::cin >> answer;
     comtext = "COM" + answer;
     if (ser_servo_->Open(comtext.c_str()) != 0) {
-        std::cout << "[ERROR] Cannot open " << comtext << "\n";
+        colorize::Print("Cannot open " + comtext + "\n",
+                        colorize::Level::kError);
     }
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªåˆæœŸåŒ–ã‚’å«ã‚€è¨­å®š
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‰Šú‰»‚ğŠÜ‚Şİ’è
     // DX library initialization
-    std::cout << "[INFO] Initializing Dxlib...\n";
     SetupIncludeDxlibInit();
 
     /* ----- THREAD MANAGEMENT ----- */
 
-    // ProcessMessageä»¥å¤–ã®å‡¦ç†ã‚’è¡Œã†ã‚¹ãƒ¬ãƒƒãƒ‰ã‚’ä½œæˆ
+    // ProcessMessageˆÈŠO‚Ìˆ—‚ğs‚¤ƒXƒŒƒbƒh‚ğì¬
     // Create thread for any non-DxLib processing
     CreateThread(nullptr, 0, MainThread_dmy, this, 0, nullptr);
 
-    // ProcessMessageãƒ«ãƒ¼ãƒ—
+    // ProcessMessageƒ‹[ƒv
     // ProcessMessage loop
     while (ProcessMessage() == 0 && !flag_thread_end_) {
-        // å°‘ã—CPUã‚’ä¼‘ã‚ã‚‹ - Wait for MainThread to finish
+        // ­‚µCPU‚ğ‹x‚ß‚é - Wait for MainThread to finish
         Sleep(6);
     }
 
     /* ----- TEARDOWN ----- */
 
-    // ãƒ—ãƒ­ã‚°ãƒ©ãƒ ãŒçµ‚äº†ã—ãŸã“ã¨ã‚’ç¤ºã™ãƒ•ãƒ©ã‚°ã‚’ç«‹ã¦ã‚‹
+    // ƒvƒƒOƒ‰ƒ€‚ªI—¹‚µ‚½‚±‚Æ‚ğ¦‚·ƒtƒ‰ƒO‚ğ—§‚Ä‚é
     // Flag to indicate that the program has finished
     flag_end_ = true;
 
-    // ã‚¹ãƒ¬ãƒƒãƒ‰çµ‚äº†ãƒ•ãƒ©ã‚°ãŒç«‹ã¤ã¾ã§å¾…ã¤
+    // ƒXƒŒƒbƒhI—¹ƒtƒ‰ƒO‚ª—§‚Â‚Ü‚Å‘Ò‚Â
     // Wait until the thread is flagged as closed
     while (!flag_thread_end_) {
         Sleep(10);
     }
 
-    // ãƒ­ã‚°ã®çµ‚äº†
+    // ƒƒO‚ÌI—¹
     // Close the logging streams
     continuous_log_.close();
     snapshot_log_.close();
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®ã‚¯ãƒªãƒ¼ãƒ³ã‚¢ãƒƒãƒ—
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÌƒNƒŠ[ƒ“ƒAƒbƒv
     // Clean up DX library
     DxLib_End();
 }
@@ -164,7 +190,7 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
  * receives user inputs & updates sensor readings.
  */
 void AppMgr::MainThread() {
-    // ã‚«ãƒ©ãƒ¼ã¨ãƒ•ã‚©ãƒ³ãƒˆã®åˆæœŸåŒ–
+    // ƒJƒ‰[‚ÆƒtƒHƒ“ƒg‚Ì‰Šú‰»
     // Initialize colors and fonts
     const int main_color = GetColor(50, 50, 50);
     const int main_font = CreateFontToHandle("Yu Gothic UI", 50, 5,
@@ -178,7 +204,7 @@ void AppMgr::MainThread() {
     // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
     // NOLINTBEGIN(cppcoreguidelines-owning-memory): Creation of UI objects
 
-    // Buttonã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
+    // ButtonƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
     // Initialize Button objects
     btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
                             340, 100, "START", this);
@@ -190,8 +216,8 @@ void AppMgr::MainThread() {
                            "STOP", this);
     btn_up_ = new Button(320, 800, 120, 120, "R+", this);
     btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
-    btn_left_ = new Button(120, 1000, 120, 120, "Î¸+", this);
-    btn_right_ = new Button(520, 1000, 120, 120, "Î¸-", this);
+    btn_left_ = new Button(120, 1000, 120, 120, "ƒÆ+", this);
+    btn_right_ = new Button(520, 1000, 120, 120, "ƒÆ-", this);
     btn_enable_ = new Button(2200, 100, 340, 100, "ENABLE", this);
     btn_disable_ = new Button(2200, 250, 340, 100, "DISABLE", this);
     btn_drain_ = new Button(2200, 400, 340, 100, "DRAIN", this);
@@ -200,7 +226,7 @@ void AppMgr::MainThread() {
     btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
     btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
 
-    // InputBoxã‚ªãƒ–ã‚¸ã‚§ã‚¯ãƒˆã®åˆæœŸåŒ–
+    // InputBoxƒIƒuƒWƒFƒNƒg‚Ì‰Šú‰»
     // Initialize InputBox objects
     ibox_roll_ = new InputBox(1500 - 600, 800);
     ibox_pitch_ = new InputBox(1500 - 600, 1000);
@@ -215,7 +241,7 @@ void AppMgr::MainThread() {
     ibox_camera_pan_ = new InputBox(2800 + 150, 450);
     ibox_camera_tilt_ = new InputBox(2800 + 150, 600);
 
-    // InputBoxã®ãƒ‡ãƒ•ã‚©ãƒ«ãƒˆå€¤ã‚’è¨­å®š
+    // InputBox‚ÌƒfƒtƒHƒ‹ƒg’l‚ğİ’è
     // Set InputBox default values
     ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
     ibox_pitch_->SetNum(
@@ -234,23 +260,23 @@ void AppMgr::MainThread() {
     // NOLINTEND(cppcoreguidelines-owning-memory): Creation of UI objects
     // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-    // æµä½“ã‚·ã‚¹ãƒ†ãƒ ãƒ©ãƒ³ã‚¿ã‚¤ãƒ å¤‰æ•°ã®åˆæœŸåŒ–
+    // —¬‘ÌƒVƒXƒeƒ€ƒ‰ƒ“ƒ^ƒCƒ€•Ï”‚Ì‰Šú‰»
     // Initialize fluid system runtime variables
     int count = 0;
     BYTE water_cmd = 0;
 
-    // ãƒ­ã‚®ãƒ³ã‚°ã®åˆæœŸåŒ–
+    // ƒƒMƒ“ƒO‚Ì‰Šú‰»
     // Initialize logging
     SYSTEMTIME st;
     char dt_path_char[100];
     std::string dt_path_str;
     GetLocalTime(&st);
-    sprintf(dt_path_char, "%04då¹´%02dæœˆ%02dæ—¥_%02dæ™‚%02dåˆ†%02dç§’", st.wYear,
+    sprintf(dt_path_char, "%04d”N%02dŒ%02d“ú_%02d%02d•ª%02d•b", st.wYear,
             st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
     dt_path_str = std::string(dt_path_char);
 
     if (_mkdir("./log/") == 0) {
-        std::cout << "[INFO] Created log directory.\n";
+        colorize::Print("Created log directory\n", colorize::Level::kInfo);
     }
 
     continuous_log_.open("./log/" + dt_path_str + "_continuous_log.csv");
@@ -270,7 +296,7 @@ void AppMgr::MainThread() {
         << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
         << "Voltage (V),Current (A)\n";
 
-    // æ›´æ–°ãƒ«ãƒ¼ãƒ—
+    // XVƒ‹[ƒv
     // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
         Mouse::Instance()->Update();
@@ -310,7 +336,7 @@ void AppMgr::MainThread() {
 
         // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
 
-        // å„ã‚»ã‚¯ã‚·ãƒ§ãƒ³ã®ã‚¿ã‚¤ãƒˆãƒ«
+        // ŠeƒZƒNƒVƒ‡ƒ“‚Ìƒ^ƒCƒgƒ‹
         // Section titles
         DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), big_font,
                                  "LIBRA-I");
@@ -325,7 +351,7 @@ void AppMgr::MainThread() {
 
         /* ----- UI: FLUID SYSTEM ----- */
 
-        // æµä½“å…¥å‡ºåŠ›ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
+        // —¬‘Ì“üo—Íƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
         // Fluid I/O panel labels
         DrawFormatStringToHandle(800, 200, main_color, title_font, "A_IN");
         DrawFormatStringToHandle(1100, 200, main_color, title_font, "B_IN");
@@ -334,11 +360,11 @@ void AppMgr::MainThread() {
 
         /* ----- UI: ARM ----- */
 
-        // æ“ä½œç›¤ã®å››è§’
+        // ‘€ì”Õ‚ÌlŠp
         // Control panel border
         DrawBoxAA(60, 550, 1300, kWindowH - 100, main_color, FALSE, 2.5);
 
-        // HEBIã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ã®ãƒ‡ãƒ¼ã‚¿ã‚’å–å¾—
+        // HEBIƒAƒNƒ`ƒ…ƒG[ƒ^‚Ìƒf[ƒ^‚ğæ“¾
         // Retrieve HEBI actuator data
         for (auto i = 0; i < kHebiNodeCount; i++) {
             auto joint = static_cast<LIBRA_HEBI::Joint>(i);
@@ -347,7 +373,7 @@ void AppMgr::MainThread() {
             value_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
         }
 
-        // ã‚¢ãƒ¼ãƒ åˆ¶å¾¡ã®ãƒ©ãƒ™ãƒ«ã¨ã‚¢ã‚¯ãƒãƒ¥ã‚¨ãƒ¼ã‚¿ãƒ‡ãƒ¼ã‚¿
+        // ƒA[ƒ€§Œä‚Ìƒ‰ƒxƒ‹‚ÆƒAƒNƒ`ƒ…ƒG[ƒ^ƒf[ƒ^
         // Arm control labels and actuator data
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
         for (auto i = 0; i < kHebiNodeCount; i++) {
@@ -369,16 +395,16 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ã‚¢ãƒ¼ãƒ å…¨ä½“ã‚³ãƒ³ãƒˆãƒ­ãƒ¼ãƒ«ã®ãƒ©ãƒ™ãƒ«
+        // ƒA[ƒ€‘S‘ÌƒRƒ“ƒgƒ[ƒ‹‚Ìƒ‰ƒxƒ‹
         // Whole-arm control labels
         DrawFormatStringToHandle(120, 824 + 200 * 3, main_color, main_font, "R");
         DrawFormatStringToHandle(530, 824 + 200 * 3, main_color, main_font,
                                  "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, main_color, main_font, "Î¸");
+        DrawFormatStringToHandle(120, 824 + 200 * 4, main_color, main_font, "ƒÆ");
         DrawFormatStringToHandle(530, 824 + 200 * 4, main_color, main_font,
                                  "deg");
 
-        // é‡å¿ƒã‚°ãƒ©ãƒ•è¡¨ç¤º
+        // dSƒOƒ‰ƒt•\¦
         // Center of mass visualization
         const int c_x = 3100;
         const int c_y = kWindowH / 2 + 350;
@@ -427,7 +453,7 @@ void AppMgr::MainThread() {
         DrawFormatStringToHandle(c_x - 100, c_y - 550 - 25, main_color,
                                  main_font, "Pitch (Nm)");
 
-        // é›»åœ§é›»æµã®ãƒ©ãƒ™ãƒ«
+        // “dˆ³“d—¬‚Ìƒ‰ƒxƒ‹
         // Voltage and current labels
         DrawFormatStringToHandle(1400, 1800, main_color, title_font, "Voltage");
         DrawFormatStringToHandle(1400 + 400, 1800, main_color, title_font,
@@ -438,7 +464,7 @@ void AppMgr::MainThread() {
 
         /* ----- UI: CAMERA ----- */
 
-        // ã‚«ãƒ¡ãƒ©ãƒ‘ãƒãƒ«ã®ãƒ©ãƒ™ãƒ«
+        // ƒJƒƒ‰ƒpƒlƒ‹‚Ìƒ‰ƒxƒ‹
         // Camera panel labels
         DrawFormatStringToHandle(2800, 150, main_color, title_font,
                                  "Camera Pos.");
@@ -452,7 +478,7 @@ void AppMgr::MainThread() {
 
         // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
-        // J3ã‚’è² ã«ã™ã‚‹ãƒ”ãƒƒãƒè§’ã‚’è¨ˆç®—
+        // J3‚ğ•‰‚É‚·‚éƒsƒbƒ`Šp‚ğŒvZ
         // Calculate pitch angle to negate J3
         const double j3_pos = libra_arm_->GetCommandPosition(
             LIBRA_HEBI::Joint::kJ3);
@@ -462,7 +488,7 @@ void AppMgr::MainThread() {
             camera_pos_.at(0) = 180 - j3_pos;
         }
 
-        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒ‘ãƒ³ã‚¢ãƒ³ã‚°ãƒ«ã‚’å–å¾—
+        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒpƒ“ƒAƒ“ƒOƒ‹‚ğæ“¾
         // Retrieve desired camera pan angle
         if (camera_dir_.at(1) != 0) {
             camera_pos_.at(1) += camera_dir_.at(1) * 90.0 / (60.0 * 60.0);
@@ -473,7 +499,7 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ç›®çš„ã®ã‚«ãƒ¡ãƒ©ã®ãƒãƒ«ãƒˆè§’åº¦ã‚’å–å¾—
+        // –Ú“I‚ÌƒJƒƒ‰‚Ìƒ`ƒ‹ƒgŠp“x‚ğæ“¾
         // Retrieve desired camera tilt angle
         if (camera_dir_.at(2) != 0) {
             camera_pos_.at(2) += camera_dir_.at(2) * 90.0 / (60.0 * 60.0);
@@ -484,7 +510,7 @@ void AppMgr::MainThread() {
             }
         }
 
-        // ã‚«ãƒ¡ãƒ©ã‚µãƒ¼ãƒœãƒ‡ãƒ¼ã‚¿ã®æ›´æ–°
+        // ƒJƒƒ‰ƒT[ƒ{ƒf[ƒ^‚ÌXV
         // Update camera servo data
         for (auto i = 0; i < kCameraNodeCount; i++) {
             char str[20] = "";
@@ -495,7 +521,7 @@ void AppMgr::MainThread() {
                                      main_color, main_font, str);
         }
 
-        // SerialServoã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
+        // SerialServo‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
         // Send commands to SerialServo Arduino
         std::stringstream servo_str;
         servo_str << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
@@ -504,13 +530,13 @@ void AppMgr::MainThread() {
 
         /* ----- FLUID SYSTEM ----- */
 
-        // SerialWaterã®Arduinoã«ã‚³ãƒãƒ³ãƒ‰ã‚’é€ã‚‹
+        // SerialWater‚ÌArduino‚ÉƒRƒ}ƒ“ƒh‚ğ‘—‚é
         // Send commands to SerialWater Arduino
         switch (water_mode_) {
-            case kStandby:  // é€šå¸¸é‹è»¢ - Normal operational mode
+            case kStandby:  // ’Êí‰^“] - Normal operational mode
                 water_cmd = 0;
 
-                // ãƒˆãƒ«ã‚¯è¶…éï¼ˆ5.0ä»¥ä¸Šï¼‰
+                // ƒgƒ‹ƒN’´‰ßi5.0ˆÈãj
                 // Excess torque (> 5.0)
                 if (water_en_  // TODO: refactor this
                     && (abs(libra_arm_->GetFeedbackEffortMA()) > 5.0
@@ -521,8 +547,8 @@ void AppMgr::MainThread() {
                 }
                 break;
 
-            case kAdjust:  // æ°´ä½èª¿æ•´ - Water level adjustment mode
-                // ãƒˆãƒ«ã‚¯ã«é€šå¸¸åå¿œï¼ˆ2.5ï½5.0ï¼‰
+            case kAdjust:  // …ˆÊ’²® - Water level adjustment mode
+                // ƒgƒ‹ƒN‚É’Êí”½‰i2.5`5.0j
                 // Normal response to torque (2.5-5.0)
                 if (water_en_
                     && (abs(libra_arm_->GetFeedbackEffortMA()) >= 2.5
@@ -530,9 +556,9 @@ void AppMgr::MainThread() {
                     if (count == 0) {
                         const double theta =
                             atan2(libra_arm_->GetFeedbackEffort(
-                                                 LIBRA_HEBI::Joint::kPitch),
-                                             libra_arm_->GetFeedbackEffort(
-                                                 LIBRA_HEBI::Joint::kRoll));
+                                      LIBRA_HEBI::Joint::kPitch),
+                                  libra_arm_->GetFeedbackEffort(
+                                      LIBRA_HEBI::Joint::kRoll));
 
                         // Bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT
                         if (theta > M_PI * 7 / 8
@@ -556,21 +582,21 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // ãƒˆãƒ«ã‚¯ãŒæˆ»ã£ãŸï¼ˆ2.5ä»¥ä¸‹ï¼‰
+                // ƒgƒ‹ƒN‚ª–ß‚Á‚½i2.5ˆÈ‰ºj
                 // If torque subsides (< 2.5)
                 else if (count == 0) {
-                    // æ¶²ä½“ã‚·ã‚¹ãƒ†ãƒ ã‚’ã‚¹ã‚¿ãƒ³ãƒã‚¤ - Put fluid system on standby
+                    // ‰t‘ÌƒVƒXƒeƒ€‚ğƒXƒ^ƒ“ƒoƒC - Put fluid system on standby
                     water_mode_ = WaterMode::kStandby;
                     water_cmd = 0;
 
-                    // ã‚¢ãƒ¼ãƒ ã®å‹•ãã‚’å†é–‹ - Resume arm movement
+                    // ƒA[ƒ€‚Ì“®‚«‚ğÄŠJ - Resume arm movement
                     libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
                                      input_.at(3), input_.at(4));
                 }
                 break;
 
             case kDrain:
-                // ENABLEãƒ»DISABLEãŒã‚¯ãƒªãƒƒã‚¯ã•ã‚Œã‚‹ã¾ã§æ’æ°´
+                // ENABLEEDISABLE‚ªƒNƒŠƒbƒN‚³‚ê‚é‚Ü‚Å”r…
                 // Drain until ENABLE or DISABLE are clicked
                 water_cmd = 0b0011;
                 break;
@@ -578,7 +604,7 @@ void AppMgr::MainThread() {
 
         ser_water_->Write(water_cmd);  // send command
 
-        // æµä½“ã‚·ã‚¹ãƒ†ãƒ ã®çŠ¶æ…‹
+        // —¬‘ÌƒVƒXƒeƒ€‚Ìó‘Ô
         // Status of fluid system
         for (auto i = 0; i < kFluidStateCount; i++) {
             // NOLINTBEGIN(readability-magic-numbers): Position of UI element
@@ -601,7 +627,7 @@ void AppMgr::MainThread() {
 
         /* ----- LOGGING ----- */
 
-        // é€£ç¶šãƒ­ã‚°ã®æ›´æ–°
+        // ˜A‘±ƒƒO‚ÌXV
         // Update continuous log
         if (count == 0) {
             // Timestamp
@@ -663,10 +689,11 @@ void AppMgr::OnClick(View* view) {
         snapshot_log_ << ibox_voltage_->GetNum() << ","
                       << ibox_current_->GetNum() << "\n";
 
-        std::cout << "[INFO] Snapshot - " << dts
-                  << " | Voltage: " << std::to_string(ibox_voltage_->GetNum())
-                  << " V | Current: " << std::to_string(ibox_current_->GetNum())
-                  << " A\n";
+        colorize::Print("Snapshot - " + dts + " | Voltage: "
+                            + std::to_string(ibox_voltage_->GetNum())
+                            + " V | Current: "
+                            + std::to_string(ibox_current_->GetNum()) + " A\n",
+                        colorize::Level::kInfo);
 
     } else if (view == btn_convert_) {  // CONVERT
         // NOLINTBEGIN(readability-identifier-length): equation variables
@@ -695,7 +722,7 @@ void AppMgr::OnClick(View* view) {
         input_.at(3) = ibox_j2_->GetNum();
         input_.at(4) = ibox_j3_->GetNum();
 
-        // æµä½“ã‚·ã‚¹ãƒ†ãƒ ãŒä½œå‹•ã—ã¦ã„ãªã„æ™‚ã®ã¿ã‚¢ãƒ¼ãƒ ã‚’å‹•ã‹ã™
+        // —¬‘ÌƒVƒXƒeƒ€‚ªì“®‚µ‚Ä‚¢‚È‚¢‚Ì‚İƒA[ƒ€‚ğ“®‚©‚·
         // Only move arm when fluid system isn't running
         if (water_mode_ == WaterMode::kStandby) {
             // Begin arm movement
@@ -731,10 +758,10 @@ void AppMgr::OnClick(View* view) {
         camera_setpos_.at(2) = ibox_camera_tilt_->GetNum();
         camera_dir_.at(1) = (ibox_camera_pan_->GetNum() >= camera_pos_.at(1))
                                 ? 1
-                                                                        : -1;
+                                : -1;
         camera_dir_.at(2) = (ibox_camera_tilt_->GetNum() >= camera_pos_.at(2))
                                 ? 1
-                                                                         : -1;
+                                : -1;
 
     } else if (view == btn_servo_fast_) {  // FAST
         camera_pos_.at(1) = ibox_camera_pan_->GetNum();
@@ -750,62 +777,66 @@ void AppMgr::OnClick(View* view) {
  * @brief Initializes the application UI (via the DX library).
  */
 void AppMgr::SetupIncludeDxlibInit() {
+    colorize::Print("Initializing Dxlib...\n", colorize::Level::kInfo);
+
     // NOLINTBEGIN(readability-magic-numbers): UI initialization
 
-    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹• - Start in windowed mode
+    // ƒEƒCƒ“ƒhƒEƒ‚[ƒh‚Å‹N“® - Start in windowed mode
     ChangeWindowMode(TRUE);
 
-    // æœ€å¤§åŒ–ãƒœã‚¿ãƒ³ãŒå­˜åœ¨ã™ã‚‹ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ãƒ¢ãƒ¼ãƒ‰ã«å¤‰æ›´
+    // Å‘å‰»ƒ{ƒ^ƒ“‚ª‘¶İ‚·‚éƒEƒCƒ“ƒhƒEƒ‚[ƒh‚É•ÏX
     // Set to windowed mode with maximize button present
     SetWindowStyleMode(7);
 
-    // ç”»é¢ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify screen size
+    // ‰æ–ÊƒTƒCƒY‚ğw’è - Specify screen size
     const int color_bit_depth = 32;
     SetGraphMode(kWindowW, kWindowH, color_bit_depth);
 
-    // ã‚µã‚¤ã‚ºå¤‰æ›´ã‚’å¯èƒ½ã«ã™ã‚‹ - Allow resizing
+    // ƒTƒCƒY•ÏX‚ğ‰Â”\‚É‚·‚é - Allow resizing
     SetWindowSizeChangeEnableFlag(TRUE, TRUE);
 
-    // ã‚¦ã‚¤ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’æŒ‡å®š - Specify window size
+    // ƒEƒCƒ“ƒhƒEƒTƒCƒY‚ğw’è - Specify window size
     int desktop_w = 0;
     int desktop_h = 0;
     GetDefaultState(&desktop_w, &desktop_h, nullptr);
 
     if (static_cast<float>(desktop_w) / desktop_h
         > static_cast<float>(kWindowW)
-              / kWindowH) {  // æ¨ªé•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Landscape display
+              / kWindowH) {  // ‰¡’·ƒfƒBƒXƒvƒŒƒC - Landscape display
         SetWindowSize(0.8 * desktop_h * (kWindowW / kWindowH), 0.8 * desktop_h);
     }
 
-    else {  // ç¸¦é•·ãƒ‡ã‚£ã‚¹ãƒ—ãƒ¬ã‚¤ - Portrait display
+    else {  // c’·ƒfƒBƒXƒvƒŒƒC - Portrait display
         SetWindowSize(0.8 * desktop_w, 0.8 * desktop_w * (kWindowH / kWindowW));
     }
 
-    // ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ãŒãƒãƒ³ã‚¢ã‚¯ãƒ†ã‚£ãƒ–ã§ã‚‚å®Ÿè¡Œ - Execute even if window is inactive
+    // ƒEƒBƒ“ƒhƒE‚ªƒmƒ“ƒAƒNƒeƒBƒu‚Å‚àÀs - Execute even if window is inactive
     SetAlwaysRunFlag(TRUE);
 
-    // ãƒãƒ«ãƒã‚¹ãƒ¬ãƒƒãƒ‰ã«é©ã—ãŸãƒ¢ãƒ¼ãƒ‰ã§èµ·å‹•ã™ã‚‹ - Start in mode suitable for
+    // ƒ}ƒ‹ƒ`ƒXƒŒƒbƒh‚É“K‚µ‚½ƒ‚[ƒh‚Å‹N“®‚·‚é - Start in mode suitable for
     // multi-threading
     SetMultiThreadFlag(TRUE);
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã§WM_PAINTã®å‡¦ç†ã‚’ã—ãªã„ - Do not process WM_PAINT in the DX
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‚ÅWM_PAINT‚Ìˆ—‚ğ‚µ‚È‚¢ - Do not process WM_PAINT in the DX
     // library
     SetUseDxLibWM_PAINTProcess(FALSE);
 
-    // Windowã®ã‚¿ã‚¤ãƒˆãƒ«ã‚’è¨­å®š - Set the window title
+    // Window‚Ìƒ^ƒCƒgƒ‹‚ğİ’è - Set the window title
     SetWindowText("LIBRA App");
 
-    // DXãƒ©ã‚¤ãƒ–ãƒ©ãƒªã®åˆæœŸåŒ– - Initialize DX library
+    // DXƒ‰ƒCƒuƒ‰ƒŠ‚Ì‰Šú‰» - Initialize DX library
     DxLib_Init();
 
-    // æç”»å…ˆã‚’è£ç”»é¢ã«ã™ã‚‹ - Draw the back screen (?)
+    // •`‰ææ‚ğ— ‰æ–Ê‚É‚·‚é - Draw the back screen (?)
     SetDrawScreen(DX_SCREEN_BACK);
 
-    // ã‚¢ãƒ³ãƒã‚¨ã‚¤ãƒªã‚¢ã‚¹ä»˜ãå›³å½¢æç”»ã®æº–å‚™ã‚’è¡Œã†
+    // ƒAƒ“ƒ`ƒGƒCƒŠƒAƒX•t‚«}Œ`•`‰æ‚Ì€”õ‚ğs‚¤
     // Prepare to draw anti-aliased shapes
     BeginAADraw();
 
     // NOLINTEND(readability-magic-numbers): UI initialization
+
+    colorize::Print("... done\n", colorize::Level::kInfo);
 }
 
 /**
@@ -813,14 +844,14 @@ void AppMgr::SetupIncludeDxlibInit() {
  *
  * @return uint The number of COM ports detected on the network
  */
-int AppMgr::printComList() {
-    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’å–å¾—
+int AppMgr::PrintComList() {
+    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğæ“¾
     // Get device information set
     auto* h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
                                           nullptr,
                                           DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
     if (h_devinfo == nullptr) {
-        // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆãŒå–å¾—ã§ããªã‹ã£ãŸå ´åˆ
+        // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ªæ“¾‚Å‚«‚È‚©‚Á‚½ê‡
         // If the device information set could not be obtained
         return 0;
     }
@@ -829,12 +860,12 @@ int AppMgr::printComList() {
     SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
     data.cbSize = sizeof(data);
 
-    // ãƒ‡ãƒã‚¤ã‚¹ã‚¤ãƒ³ã‚¿ãƒ¼ãƒ•ã‚§ã‚¤ã‚¹ã®å–å¾—
+    // ƒfƒoƒCƒXƒCƒ“ƒ^[ƒtƒFƒCƒX‚Ìæ“¾
     // Get device interface
     while (SetupDiEnumDeviceInfo(h_devinfo, num_ports, &data) != 0) {
         DWORD size = 0;
 
-        // COMãƒãƒ¼ãƒˆåã®å–å¾—
+        // COMƒ|[ƒg–¼‚Ìæ“¾
         // Obtain COM port name
         HKEY key = SetupDiOpenDevRegKey(h_devinfo, &data, DICS_FLAG_GLOBAL, 0,
                                         DIREG_DEV, KEY_QUERY_VALUE);
@@ -847,7 +878,7 @@ int AppMgr::printComList() {
             _tprintf(_TEXT("%s"), name);
         }
 
-        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å–å¾—
+        // ƒfƒoƒCƒX‚Ìà–¾‚ğæ“¾
         // Get device description
         DWORD dataT = 0;
         LPTSTR buf = nullptr;
@@ -855,7 +886,7 @@ int AppMgr::printComList() {
                                                  SPDRP_DEVICEDESC, &dataT,
                                                  (PBYTE)buf, size, &size)) {
             if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                // bufãŒè¶³ã‚Šãªã„å ´åˆã€å…ƒã®ã‚µã‚¤ã‚ºã®2å€ã‚’å†å‰²ã‚Šå½“ã¦ã™ã‚‹
+                // buf‚ª‘«‚è‚È‚¢ê‡AŒ³‚ÌƒTƒCƒY‚Ì2”{‚ğÄŠ„‚è“–‚Ä‚·‚é
                 // If buf is insufficient, reallocate with twice the original size
                 if (buf != nullptr) {
                     LocalFree(buf);
@@ -866,7 +897,7 @@ int AppMgr::printComList() {
             }
         }
 
-        // ãƒ‡ãƒã‚¤ã‚¹ã®èª¬æ˜ã‚’å‡ºåŠ›
+        // ƒfƒoƒCƒX‚Ìà–¾‚ğo—Í
         // Print device description
         _tprintf(_TEXT("(%s)\n"), buf);
         if (buf != nullptr) {
@@ -876,7 +907,7 @@ int AppMgr::printComList() {
         ++num_ports;
     }
 
-    // ãƒ‡ãƒã‚¤ã‚¹æƒ…å ±ã‚»ãƒƒãƒˆã‚’è§£æ”¾
+    // ƒfƒoƒCƒXî•ñƒZƒbƒg‚ğ‰ğ•ú
     // Release device information set
     SetupDiDestroyDeviceInfoList(h_devinfo);
 

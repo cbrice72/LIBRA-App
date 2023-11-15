@@ -13,11 +13,10 @@
 // POSIX/Windows Library Headers
 #include "mmsystem.h"
 #pragma comment(lib, "winmm.lib")
-
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-//   (none)
+#include "pretty_print.h"
 
 /* --- TABLE OF CONTENTS ---
  * !General Functions
@@ -111,31 +110,39 @@ bool LIBRA_HEBI::Connect() {
      */
     /*
     if (!lookup.available()) {
-        //printf("[エラー]Lookupを使用できません（LAN未接続）\n");
-        std::cout << "[ERROR] HEBI - Unable to use Lookup (LAN not connected)!"
-                  << std::endl;
-        return -1;
+        // colorize::Print("HEBI - Lookupを使用できません（LAN未接続）\n",
+        //                 colorize::Level::kError);
+        colorize::Print(
+            "HEBI - Unable to use Lookup (LAN not connected)!\n",
+            colorize::Level::kError);
+        return false;
     }
     */
 
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
-        // printf("[エラー]HEBI - アクチュエータが接続されていません\n");
-        std::cout << "[ERROR] HEBI - Actuators not connected!\n";
+        // colorize::Print("HEBI - アクチュエータが接続されていません\n",
+        //                 colorize::Level::kError);
+        colorize::Print("HEBI - Actuators not connected!\n",
+                        colorize::Level::kError);
         command_->setPosition(Eigen::VectorXd::Zero(5));
         return false;
     }
 
     if (!command_->readSafetyParameters("params/safety.xml")) {
-        // printf("[エラー]HEBI - 安全パラメータファイルを読み込めません\n");
-        std::cout << "[ERROR] HEBI - Failed to load safety parameters!\n";
+        // colorize::Print("HEBI - 安全パラメータファイルを読み込めません\n",
+        //                 colorize::Level::kError);
+        colorize::Print("HEBI - Failed to load safety parameters!\n",
+                        colorize::Level::kError);
         system("pause");
         return false;
     }
 
     if (!command_->readGains("params/gain.xml")) {
-        // printf("[エラー]HEBI - ゲインパラメータファイルを読み込めません\n");
-        std::cout << "[ERROR] HEBI - Failed to load gain parameters!\n";
+        // colorize::Print("HEBI - ゲインパラメータファイルを読み込めません\n",
+        //                 colorize::Level::kError);
+        colorize::Print("HEBI - Failed to load gain parameters!\n",
+                        colorize::Level::kError);
         system("pause");
         return false;
     }
