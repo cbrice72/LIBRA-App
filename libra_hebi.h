@@ -37,17 +37,17 @@ class LIBRA_HEBI {
 
     // --- Actuator Commands ---
 
-    int connect();
-    void move(double roll, double pitch, double j1, double j2, double j3);
-    void stop();
+    bool Connect();
+    void Move(double roll, double pitch, double j1, double j2, double j3);
+    void Stop();
 
     // --- Getters & Setters ---
 
-    double getCommandPosition(Joint joint);
-    double getFeedbackPosition(Joint joint);
-    double getFeedbackEffort(Joint joint);
-    double getFeedbackEffortMA();
-    double getFeedbackEffortMB();
+    double GetCommandPosition(Joint joint);
+    double GetFeedbackPosition(Joint joint);
+    double GetFeedbackEffort(Joint joint);
+    double GetFeedbackEffortMA();
+    double GetFeedbackEffortMB();
 
   private:
     /**
@@ -55,15 +55,15 @@ class LIBRA_HEBI {
      */
     enum Act { kHebiMA = 0, kHebiMB, kHebiJ1, kHebiJ2, kHebiJ3 };
 
-    static void CALLBACK callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
+    static void CALLBACK Callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
                                   DWORD dw2);
-    void loop();
+    void Loop();
 
     // --- Data Members ---
 
-    hebi::GroupCommand* command;
-    hebi::GroupFeedback* feedback;
-    std::shared_ptr<hebi::Group> group = nullptr;
-    std::shared_ptr<hebi::trajectory::Trajectory> trajectory = nullptr;
-    DWORD start_time = timeGetTime();
+    std::unique_ptr<hebi::GroupCommand> command_;
+    std::unique_ptr<hebi::GroupFeedback> feedback_;
+    std::shared_ptr<hebi::Group> group_{nullptr};
+    std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
+    DWORD start_time_ = timeGetTime();
 };

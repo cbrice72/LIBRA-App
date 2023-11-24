@@ -18,6 +18,7 @@
 #pragma comment(lib, "OleAut32.lib ")
 //   Easy Web Camera LIBrary
 #include "ewclib.h"
+#include "pretty_print.h"
 
 // Project Headers
 //   (none)
@@ -46,13 +47,21 @@ Camera::Camera(int height, int width, int num) {
 
     EWC_GetCameraName(ewcc, &n);
     for (int i = 0; i < n; i++) {
-        std::cout << "[INFO] Camera - Found " << ewcc[i].FriendlyName << "\n";
+        colorize::Print("Camera - Detected \""
+                            + std::string(ewcc[i].FriendlyName) + "\"\n",
+                        colorize::Level::kInfo);
     }
-    std::cout << "[INFO] Camera - Available: " << EWC_GetCamera() << "\n";
-    std::cout << "[INFO] Camera - Open Error: "
-              << EWC_Open(camera_num_, height, width, 30.0, -1,
-                          MEDIASUBTYPE_RGB24)
-              << std::endl;
+    colorize::Print("Camera - Found " + std::to_string(EWC_GetCamera())
+                        + " devices\n",
+                    colorize::Level::kInfo);
+
+    auto err = EWC_Open(camera_num_, height, width, 30.0, -1,
+                        MEDIASUBTYPE_RGB24);
+    if (err != -1) {
+        colorize::Print("Camera - EWC_Open() error code: " + std::to_string(err)
+                            + "\n",
+                        colorize::Level::kError);
+    }
 
     // ‰æ‘œ•ÏŠ·—p - Initialize image conversion
     buffer_ = new unsigned char[height * width * 3];

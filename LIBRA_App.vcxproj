@@ -102,6 +102,7 @@
     <ClCompile Include="input_box.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mouse.cpp" />
+    <ClCompile Include="pretty_print.cpp" />
     <ClCompile Include="serial.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -112,6 +113,7 @@
     <ClInclude Include="input_box.h" />
     <ClInclude Include="mouse.h" />
     <ClInclude Include="onclick_listener.h" />
+    <ClInclude Include="pretty_print.h" />
     <ClInclude Include="qedit.h" />
     <ClInclude Include="serial.h" />
     <ClInclude Include="singleton.h" />
@@ -121,7 +123,6 @@
     <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".gitignore" />
-    <None Include="FILES.md" />
     <None Include="packages.config" />
     <None Include="README.md" />
   </ItemGroup>

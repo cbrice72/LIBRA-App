@@ -8,14 +8,17 @@
 FormatStyle: file
 
 # Disabled checks
-# - bugprone-easily-swappable-parameters: preference
+# - bugprone-easily-swappable-parameters: project preference
 # - bugprone-narrowing-conversions: not necessary in single-platform project
 # - cppcoreguidelines-avoid-magic-numbers: alias (readability)
 # - cppcoreguidelines-narrowing-conversions: alias (bugprone)
 # - cppcoreguidelines-non-private-member-variables-in-classes: alias (misc)
+# - cppcoreguidelines-pro-type-vararg: alias (hicpp)
 # - cppcoreguidelines-special-member-functions: not necessary in such a small project
 # - google-readability-todo: not necessary in single-user project
 # - hicpp-special-member-functions: alias (cppcoreguidelines)
+# - hicpp-vararg: unavoidable with outdated libraries such as DxLib
+# - misc-include-cleaner: project preference
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
 
@@ -34,9 +37,12 @@ Checks: -*,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-narrowing-conversions,
     -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-pro-type-vararg,
     -cppcoreguidelines-special-member-functions,
     -google-readability-todo,
     -hicpp-special-member-functions,
+    -hicpp-vararg,
+    -misc-include-cleaner,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-trailing-return-type
 
@@ -47,8 +53,10 @@ WarningsAsErrors: ''
 
 # Specific options for the aforementioned checks
 CheckOptions:
-  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,     value: true       }
-  - { key: readability-identifier-length.IgnoredVariableNames,     value: x|y        }
+  - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,  value: true }
+  - { key: readability-identifier-length.IgnoredVariableNames,        value: x|y }
+  - { key: readability-identifier-length.MinimumParameterNameLength,  value: 2   }
+  - { key: readability-identifier-length.MinimumVariableNameLength,   value: 2   }
   - { key: readability-identifier-naming.NamespaceCase,            value: lower_case }
   - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
   - { key: readability-identifier-naming.StructCase,               value: CamelCase  }
@@ -60,4 +68,4 @@ CheckOptions:
   - { key: readability-identifier-naming.PrivateMemberSuffix,      value: _          }
   - { key: readability-identifier-naming.ProtectedMemberSuffix,    value: _          }
   - { key: readability-identifier-naming.MacroDefinitionCase,      value: UPPER_CASE }
-  - { key: readability-magic-numbers.IgnoredIntegerValues,         value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 2000}
+  - { key: readability-magic-numbers.IgnoredIntegerValues,  value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 150; 255; 1000; 2000 }

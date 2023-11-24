@@ -10,15 +10,12 @@
     <Filter Include="Header Files">
       <UniqueIdentifier>{16485ae7-c2f8-4f0f-9cfe-2109068d1092}</UniqueIdentifier>
     </Filter>
+    <Filter Include="HEBI Params">
+      <UniqueIdentifier>{96bc95d3-38e7-4bbf-ab9d-869496f034eb}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="AppMgr.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Button.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="InputBox.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="LIBRA_HEBI.cpp">
@@ -33,24 +30,27 @@
     <ClCompile Include="Serial.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="app_mgr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Camera\camera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="input_box.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pretty_print.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="AppMgr.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Button.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="InputBox.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="LIBRA_HEBI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Mouse.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="OnClickListener.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Serial.h">
@@ -62,18 +62,39 @@
     <ClInclude Include="View.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="app_mgr.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Camera\camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="input_box.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pretty_print.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="qedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="onclick_listener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
     <None Include=".clang-format" />
     <None Include=".clang-tidy" />
     <None Include=".gitignore" />
-    <None Include="FILES.md" />
     <None Include="README.md" />
   </ItemGroup>
   <ItemGroup>
-    <Xml Include="safety.xml" />
-    <Xml Include="gain.xml" />
+    <Xml Include="safety.xml">
+      <Filter>HEBI Params</Filter>
+    </Xml>
+    <Xml Include="gain.xml">
+      <Filter>HEBI Params</Filter>
+    </Xml>
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
