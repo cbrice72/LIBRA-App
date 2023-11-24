@@ -528,7 +528,7 @@ void AppMgr::MainThread() {
 
             case kDrain:
                 // Keep draining until ENABLE or DISABLE are clicked
-                ser_water_->Write(0);
+                water_cmd = 0b0011;
                 break;
 
             default:
