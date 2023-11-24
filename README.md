@@ -11,7 +11,6 @@ Project link: https://github.com/christian-brice/LIBRA-II-App
 4. [About Us](#about-us)
 5. [Acknowledgements](#acknowledgements)
 6. [Contributing](#contributing)
-7. [Troubleshooting](#troubleshooting)
 
 ## Requirements
 
@@ -40,6 +39,8 @@ Project link: https://github.com/christian-brice/LIBRA-II-App
 ### LIBRA-II Control App
 
 Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
+
+For detailed operation instructions, see `USAGE.md` in this directory.
 
 ### Code Formatting
 
@@ -108,27 +109,3 @@ You can set "Path" to your liking.
 ```
 https://github.com/christian-brice/LIBRA-II-App.git
 ```
-
-# Troubleshooting
-
-## Network / Connecting to Actuators
-
-To connect to HEBI actuators without a DHCP server (i.e., router), a static IP must be assigned to each actuator as well as the computer running the control app.
-
-### HEBI Actuators
-
-A static IP can be assigned through the HEBI Scope software by right-clicking an actuator in the device list and selecting "set address".
-If the actuator does not show up or is inaccessible, follow the instructions [here](https://docs.hebi.us/core_concepts.html#connectionless-static-ip-reset) to reset it to the default address of `10.11.12.13`.
-
-### Windows
-
-Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet.
-Then, in Settings, navigate to "Network & Internet" -> "Ethernet" and select the actuator's network (may show up as "Unidentified Network" or something similar).
-Under "IP settings", click "Edit" and manually assign a static IP according to the table below.
-
-| Setting | Value | Notes |
-|---|---|---|
-| IP assignment | Manual |  |
-| IP address | `10.11.12.___` | `___` can be anything (e.g., `2`) as long as it doesn't clash with the default actuator address (`10.11.12.13`) or other user-assigned actuator addresses |
-| Subnet prefix length | 24 | i.e., `255.255.255.0` |
-| Gateway | `10.11.12.1` | Doesn't matter, but required |
