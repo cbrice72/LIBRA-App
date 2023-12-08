@@ -21,13 +21,13 @@ Project link: https://github.com/christian-brice/LIBRA-II-App
 | **MSVC Build Tools** | v143 | v143 |
 | **C++ Standard** | C++14 | C++14 |
 
-### Optional
+### *Optional*
 
-#### Packages
+#### **Packages**
 
 - [LLVM (Clang Tools)](https://releases.llvm.org/download.html) 15.0.1 (or newer)
 
-#### Visual Studio Extensions
+#### **Visual Studio Extensions**
 
 - [Clang Power Tools](https://marketplace.visualstudio.com/items?itemName=caphyon.ClangPowerTools)
 - [Doxygen Comments](https://marketplace.visualstudio.com/items?itemName=FinnGegenmantel.doxygenComments) by Finn Gegenmantel
@@ -36,19 +36,19 @@ Project link: https://github.com/christian-brice/LIBRA-II-App
 
 ## Usage
 
-### LIBRA-II Control App
+### *LIBRA-II Control App*
 
 Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
 
 For detailed operation instructions, see `USAGE.md` in this directory.
 
-### Code Formatting
+### *Code Formatting*
 
 This project uses Visual Studio's built-in [clang-format](https://clang.llvm.org/docs/ClangFormat.html) to format header and source files based on the parameters in the `.clang-format` file in this directory.
 
 If you installed the optional extension "Format Document on Save", formatting will be automatically applied whenever you save a file.
 
-### Code Linting
+### *Code Linting*
 
 > **_NOTE:_** temporarily disabled; working off of previous `LIBRA-I_App` project, which did not follow code linting standards (as such there are many warnings and errors that slow development).
 
@@ -80,16 +80,16 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
 
 ## Contributing
 
-### Preparation
+### *Preparation*
 
-#### Git for Windows
+#### **Git for Windows**
 
 First, ensure that "Git for Windows" is installed.
 Open the Visual Studio Installer and click "Modify" under your installation of Visual Studio.
 Then, in the "Individual Components" tab, make sure "Git for Windows" is checked.
 To install it, simply click "Modify" at the bottom right.
 
-#### Giving proxy access to Git
+#### **Giving proxy access to Git**
 
 If you'd like to pull/push from within a proxy, you must also add your proxy settings to Git.
 In Visual Studio, open a Developer PowerShell and input the following command.
@@ -100,7 +100,7 @@ git config --global http.proxy [ADDR]:[PORT]
 
 ... where `[ADDR]` is your proxy address and `[PORT]` is your proxy port (e.g., `http://proxy.noc.titech.ac.jp:3128` for Gen Endo Lab).
 
-### Accessing the Code
+### *Accessing the Code*
 
 Open the "Git Changes" window from the "View" tab at the top and click `Clone Repository...`.
 Under "Repository location", copy/paste the following URL.
