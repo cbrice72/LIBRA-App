@@ -26,12 +26,12 @@ A collection of detailed instructions and lessons learned from operating the LIB
 
 To connect to HEBI actuators without a DHCP server (i.e., router), a static IP must be assigned to each actuator as well as the computer running the control app.
 
-### HEBI Actuators
+### *HEBI Actuators*
 
 A static IP can be assigned through the HEBI Scope software by right-clicking an actuator in the device list and selecting "set address".
 If the actuator does not show up or is inaccessible, follow the instructions [here](https://docs.hebi.us/core_concepts.html#connectionless-static-ip-reset) to reset it to the default address of `10.11.12.13`.
 
-### Windows
+### *Windows*
 
 Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet.
 Then, in Settings, navigate to "Network & Internet" -> "Ethernet" and select the actuator's network (may show up as "Unidentified Network" or something similar).
