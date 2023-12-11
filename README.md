@@ -94,7 +94,7 @@ To install it, simply click "Modify" at the bottom right.
 If you'd like to pull/push from within a proxy, you must also add your proxy settings to Git.
 In Visual Studio, open a Developer PowerShell and input the following command.
 
-```
+```bash
 git config --global http.proxy [ADDR]:[PORT]
 ```
 
@@ -106,6 +106,6 @@ Open the "Git Changes" window from the "View" tab at the top and click `Clone Re
 Under "Repository location", copy/paste the following URL.
 You can set "Path" to your liking.
 
-```
+```txt
 https://github.com/christian-brice/LIBRA-II-App.git
 ```
