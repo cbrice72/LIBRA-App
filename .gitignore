@@ -190,8 +190,11 @@ adobe/*
 # Doxygen-generated files
 **/docs/*
 
-# Don't exclude the manually-downloaded DxLib static libraries
-!DxLib/*.lib
+# Don't exclude the manually-downloaded libraries
+!extern/**/*.dll
+!extern/**/*.lib
+# ... but do exclude the Maxon examples
+extern/Maxon.6.8.1.0/Example\ VC++
 
 # Log file
 Log.txt
