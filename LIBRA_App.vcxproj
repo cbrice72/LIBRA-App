@@ -125,6 +125,13 @@
     <None Include=".gitignore" />
     <None Include="packages.config" />
     <None Include="README.md" />
+    <None Include="res\ind_active.avi" />
+    <None Include="res\ind_idle.avi" />
+    <None Include="res\ind_mstop.avi" />
+    <None Include="res\ind_noip.avi" />
+    <None Include="res\ind_none.avi" />
+    <None Include="res\ind_safety.avi" />
+    <None Include="res\ind_temp.avi" />
   </ItemGroup>
   <ItemGroup>
     <Xml Include="safety.xml" />
@@ -132,6 +139,12 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
+    <Text Include="res\title_ascii.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\LIBRA-II_App.ico" />
+    <Image Include="res\LIBRA-II_App_bw.ico" />
+    <Image Include="res\LIBRA-II_Docs_55x55.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
