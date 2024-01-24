@@ -409,14 +409,14 @@ void AppMgr::MainThread() {
         const int c_x = 3100;
         const int c_y = kWindowH / 2 + 350;
 
-        DrawLineAA(c_x + 40 * 0, c_y - 40 * 10, c_x + 40 * (-10), c_y - 40 * 0,
-                                                                                    main_color, 2.5);
+        DrawLineAA(c_x + 40 * 0, c_y - 40 * 10, c_x + 40 * (-10), c_y - 40 * 0,
+                   main_color, 2.5);
         DrawLineAA(c_x + 40 * -10, c_y - 40 * 0, c_x + 40 * (0), c_y - 40 * -10,
                    main_color, 2.5);
         DrawLineAA(c_x + 40 * 0, c_y - 40 * -10, c_x + 40 * (10), c_y - 40 * 0,
                    main_color, 2.5);
-        DrawLineAA(c_x + 40 * 10, c_y - 40 * 
-                    main_color, 2.5);
+        DrawLineAA(c_x + 40 * 10, c_y - 40 * 0, c_x + 40 * (0), c_y - 40 * 10,
+                   main_color, 2.5);
 
         DrawLineAA(c_x + 40 * (0), c_y - 40 * (5), c_x + 40 * (-5),
                    c_y - 40 * (0), main_color, 2.5);
@@ -536,8 +536,8 @@ void AppMgr::MainThread() {
             case kStandby:  // 通常運転 - Normal operational mode
                 water_cmd = 0;
 
-                // トルク超過（5.0Nm以上）
-                // Excess torque (> 5.0 Nm)
+                // トルク超過（5.0以上）
+                // Excess torque (> 5.0)
                 if (water_en_  // TODO: refactor this
                     && (abs(libra_arm_->GetFeedbackEffortMA()) > 5.0
                         || abs(libra_arm_->GetFeedbackEffortMB()) > 5.0)) {
@@ -548,8 +548,8 @@ void AppMgr::MainThread() {
                 break;
 
             case kAdjust:  // 水位調整 - Water level adjustment mode
-                // トルクに通常反応（2.5～5.0Nm）
-                // Normal response to torque (2.5-5.0 Nm)
+                // トルクに通常反応（2.5～5.0）
+                // Normal response to torque (2.5-5.0)
                 if (water_en_
                     && (abs(libra_arm_->GetFeedbackEffortMA()) >= 2.5
                         || abs(libra_arm_->GetFeedbackEffortMB()) >= 2.5)) {
@@ -582,8 +582,8 @@ void AppMgr::MainThread() {
                     }
                 }
 
-                // トルクが戻った（2.5Nm以下）
-                // If torque subsides (< 2.5 Nm)
+                // トルクが戻った（2.5以下）
+                // If torque subsides (< 2.5)
                 else if (count == 0) {
                     // 液体システムをスタンバイ - Put fluid system on standby
                     water_mode_ = WaterMode::kStandby;
@@ -599,9 +599,6 @@ void AppMgr::MainThread() {
                 // ENABLE・DISABLEがクリックされるまで排水
                 // Drain until ENABLE or DISABLE are clicked
                 water_cmd = 0b0011;
-
-                // Pause arm movement
-                libra_arm_->Stop();
                 break;
         }
 
