@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   camera.cpp
- * @brief  Camera controls implementation file.
+ * @brief  Camera controls implementation file. (UNUSED)
  *
  * @author Yuto Goto, Christian Brice
  * @date   ???

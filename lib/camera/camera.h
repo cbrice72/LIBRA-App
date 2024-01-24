@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   camera.h
- * @brief  Camera controls header file.
+ * @brief  Camera controls header file. (UNUSED)
  *
  * @author Yuto Goto, Christian Brice
  * @date   ???
