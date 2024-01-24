@@ -33,13 +33,13 @@
     <ClCompile Include="app_mgr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Camera\camera.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="input_box.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="pretty_print.cpp">
+    <ClCompile Include="lib\util\pretty_print.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lib\camera\camera.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -65,19 +65,19 @@
     <ClInclude Include="app_mgr.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Camera\camera.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="input_box.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="pretty_print.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="qedit.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="onclick_listener.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\camera\camera.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lib\util\pretty_print.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -87,6 +87,27 @@
     <None Include=".clang-tidy" />
     <None Include=".gitignore" />
     <None Include="README.md" />
+    <None Include="res\ind_active.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_idle.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_mstop.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_noip.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_none.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_safety.avi">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="res\ind_temp.avi">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Xml Include="safety.xml">
@@ -98,5 +119,19 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="LICENSE.txt" />
+    <Text Include="res\title_ascii.txt">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\LIBRA-II_App.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\LIBRA-II_App_bw.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\LIBRA-II_Docs_55x55.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
