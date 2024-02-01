@@ -40,7 +40,7 @@ Project link: https://github.com/christian-brice/LIBRA-II-App
 
 Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
 
-For detailed operation instructions, see `USAGE.md` in this directory.
+For detailed operation instructions, see [USAGE.md](/USAGE.md) in this directory.
 
 ### *Code Formatting*
 
