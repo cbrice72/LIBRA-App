@@ -11,9 +11,29 @@ Acquire::http::Proxy "http://proxy.noc.titech.ac.jp:3128";
 
 ### *Install Dependencies*
 
+Try this first:
 ```bash
-sudo apt install -y ...
+sudo apt install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
 ```
+
+If Qt still doesn't run after the steps below, install each of the following packages one by one:
+- `libfontconfig`
+- `libxcb-glx0`
+- `libx11-xcb1`
+- `libxcb-icccm4`
+- `libxcb-image0`
+- `libxcb-keysyms1`
+- `libxcb-shape0`
+- `libxcb-xkb1`
+- `libxcb-xinerama0`
+- `libxkbcommon-x11-0`
+- `libegl1`
+
+```bash
+sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
+```
+
+> **_NOTE:_** Might be missing some, will have to check on laptop.
 
 ### *Install Qt*
 
