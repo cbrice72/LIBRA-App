@@ -1,0 +1,412 @@
+/******************************************************************************
+ * @file   open_epos_window.cpp
+ * @brief  Open EPOS device window implementation file.
+ *
+ * @author brice.c.aa
+ * @date   2023/7/17
+ ******************************************************************************/
+
+// Related Header
+#include "open_epos_window.h"
+// C++ Standard Library Headers
+//   (none)
+// Other Libraries' Headers
+//   Maxon
+#include "Maxon/Definitions.h"
+// Project Headers
+#include "ui_open_epos_window.h"
+#include "utility.h"
+
+/* --- TABLE OF CONTENTS ---
+ * !Helper Functions
+ * !Main Window
+ * !Uncategorized
+ */
+
+constexpr int kMaxonTrue = 1;   // In general Maxon code = TRUE
+constexpr int kMaxonFalse = 0;  // In general Maxon code = FALSE
+constexpr uint kMaxCharBufSize = 100;
+constexpr uint kTimeout = 100;  // ms
+
+/**
+ * @brief Standard constructor.
+ *        Also populates the "Device" combo box and enables it.
+ *
+ * @param parent Owning Qt widget (default: nullptr)
+ */
+OpenEPOSWindow::OpenEPOSWindow(QWidget* parent)
+    : QDialog(parent), ui_(new Ui::OpenEPOSWindow) {
+    ui_->setupUi(this);
+
+    QStringList devices;
+    char name[kMaxCharBufSize];
+    int end_of_sel = 0;
+    uint err_code = 0;
+
+    // Get name of first device communicating on network
+    if (VCS_GetDeviceNameSelection(kMaxonTrue, name, kMaxCharBufSize,
+                                   &end_of_sel, &err_code)
+        != 0) {
+        devices << name;
+
+        // Get names of other devices on the network, if any
+        while (end_of_sel == 0) {
+            memset(name, '\0', kMaxCharBufSize);
+            VCS_GetDeviceNameSelection(kMaxonFalse, name, kMaxCharBufSize,
+                                       &end_of_sel, &err_code);
+            devices << name;
+        }
+    }
+
+    // Validation
+    if (err_code != 0) {
+        util::PrintEPOSErr("VCS_GetDeviceNameSelection", err_code);
+        return;
+    } else if (devices.empty()) {
+        qWarning() << "No devices found on the network!";
+    }
+
+    // Populate Device combo box and enable it
+    devices.removeDuplicates();  // just in case
+    ui_->cb_device_name->addItems(devices);
+    ui_->cb_device_name->setEnabled(true);
+
+    // If only one device available, automatically populate next combo box
+    if (devices.count() == 1) {
+        on_cb_device_name_textActivated(devices.first());
+    }
+}
+
+/**
+ * @brief Standard destructor.
+ */
+OpenEPOSWindow::~OpenEPOSWindow() {
+    // Clean up the Qt-based GUI
+    delete ui_;
+}
+
+//------------------------------------------------------------------------------
+// !Helper Functions
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the handle used to communicate with the EPOS controller
+ *
+ * @return Handle for port access
+ */
+void* OpenEPOSWindow::GetEPOSHandle() {
+    return handle_;
+}
+
+//------------------------------------------------------------------------------
+// !Main Window
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Event handler for "Device" combo box selection.
+ *        Populates the "Protocol" combo box and enables it.
+ *
+ * @param sel The device name selected by the user
+ */
+void OpenEPOSWindow::on_cb_device_name_textActivated(const QString& sel) {
+    // Save selected device name
+    device_name_ = sel.toStdString();
+
+    // Ensure all "downstream" selections and combo boxes are cleared
+    protocol_name_.clear();
+    ui_->cb_protocol_name->clear();
+    ui_->cb_protocol_name->setEnabled(false);
+    interface_name_.clear();
+    ui_->cb_interface_name->clear();
+    ui_->cb_interface_name->setEnabled(false);
+    port_name_.clear();
+    ui_->cb_port_name->clear();
+    ui_->cb_port_name->setEnabled(false);
+    baud_rate_ = 0;
+    ui_->cb_baud_rate->clear();
+    ui_->cb_baud_rate->setEnabled(false);
+
+    // Get name of first protocol used on network
+    QStringList protocols;
+    char name[kMaxCharBufSize];
+    int end_of_sel = 0;
+    uint err_code = 0;
+
+    if (VCS_GetProtocolStackNameSelection(device_name_.data(), kMaxonTrue, name,
+                                          kMaxCharBufSize, &end_of_sel,
+                                          &err_code)
+        > 0) {
+        protocols << name;
+
+        // Get names of other protocols on the network, if any
+        while (end_of_sel == 0) {
+            memset(name, '\0', kMaxCharBufSize);
+            VCS_GetProtocolStackNameSelection(device_name_.data(), kMaxonFalse,
+                                              name, kMaxCharBufSize,
+                                              &end_of_sel, &err_code);
+            protocols << name;
+        }
+    }
+
+    // Validation
+    if (err_code != 0) {
+        util::PrintEPOSErr("VCS_GetProtocolStackNameSelection", err_code);
+        return;
+    } else if (protocols.empty()) {
+        qWarning() << "No protocols in use by "
+                   << QString::fromStdString(device_name_);
+        return;
+    }
+
+    // Populate Protocol combo box and enable it
+    protocols.removeDuplicates();  // just in case
+    ui_->cb_protocol_name->addItems(protocols);
+    ui_->cb_protocol_name->setEnabled(true);
+
+    // If only one protocol available, automatically populate next combo box
+    if (protocols.count() == 1) {
+        on_cb_protocol_name_textActivated(protocols.first());
+    }
+}
+
+/**
+ * @brief Event handler for "Protocol" combo box selection.
+ *        Populates the "Interface" combo box and enables it.
+ *
+ * @param sel The protocol name selected by the user
+ */
+void OpenEPOSWindow::on_cb_protocol_name_textActivated(const QString& sel) {
+    // Save selected protocol name
+    protocol_name_ = sel.toStdString();
+
+    // Ensure all "downstream" selections and combo boxes are cleared
+    interface_name_.clear();
+    ui_->cb_interface_name->clear();
+    ui_->cb_interface_name->setEnabled(false);
+    port_name_.clear();
+    ui_->cb_port_name->clear();
+    ui_->cb_port_name->setEnabled(false);
+    baud_rate_ = 0;
+    ui_->cb_baud_rate->clear();
+    ui_->cb_baud_rate->setEnabled(false);
+
+    // Get name of first interface listed on network
+    QStringList interfaces;
+    char name[kMaxCharBufSize];
+    int end_of_sel = 0;
+    uint err_code = 0;
+
+    if (VCS_GetInterfaceNameSelection(device_name_.data(),
+                                      protocol_name_.data(), kMaxonTrue, name,
+                                      kMaxCharBufSize, &end_of_sel, &err_code)
+        > 0) {
+        interfaces << name;
+
+        // Get names of other interfaces on the network, if any
+        while (end_of_sel == 0) {
+            memset(name, '\0', kMaxCharBufSize);
+            VCS_GetInterfaceNameSelection(device_name_.data(),
+                                          protocol_name_.data(), kMaxonFalse,
+                                          name, kMaxCharBufSize, &end_of_sel,
+                                          &err_code);
+            interfaces << name;
+        }
+    }
+
+    // Validation
+    if (err_code != 0) {
+        util::PrintEPOSErr("VCS_GetInterfaceNameSelection", err_code);
+        return;
+    } else if (interfaces.empty()) {
+        qWarning() << "No interfaces found running "
+                   << QString::fromStdString(protocol_name_);
+        return;
+    }
+
+    // Populate Interface combo box and enable it
+    interfaces.removeDuplicates();  // just in case
+    ui_->cb_interface_name->addItems(interfaces);
+    ui_->cb_interface_name->setEnabled(true);
+
+    // If only one interface available, automatically populate next combo box
+    if (interfaces.count() == 1) {
+        on_cb_interface_name_textActivated(interfaces.first());
+    }
+}
+
+/**
+ * @brief Event handler for "Interface" combo box selection.
+ *        Populates the "Port" combo box and enables it.
+ *
+ * @param sel The interface name selected by the user
+ */
+void OpenEPOSWindow::on_cb_interface_name_textActivated(const QString& sel) {
+    // Save selected interface name
+    interface_name_ = sel.toStdString();
+
+    // Ensure all "downstream" selections and combo boxes are cleared
+    port_name_.clear();
+    ui_->cb_port_name->clear();
+    ui_->cb_port_name->setEnabled(false);
+    baud_rate_ = 0;
+    ui_->cb_baud_rate->clear();
+    ui_->cb_baud_rate->setEnabled(false);
+
+    // Get name of first port open on network
+    QStringList ports;
+    char name[kMaxCharBufSize];
+    int end_of_sel = 0;
+    uint err_code = 0;
+
+    if (VCS_GetPortNameSelection(device_name_.data(), protocol_name_.data(),
+                                 interface_name_.data(), kMaxonTrue, name,
+                                 kMaxCharBufSize, &end_of_sel, &err_code)
+        > 0) {
+        ports << name;
+
+        // Get names of other ports on the network, if any
+        while (end_of_sel == 0) {
+            memset(name, '\0', kMaxCharBufSize);
+            VCS_GetPortNameSelection(device_name_.data(), protocol_name_.data(),
+                                     interface_name_.data(), kMaxonFalse, name,
+                                     kMaxCharBufSize, &end_of_sel, &err_code);
+            ports << name;
+        }
+    }
+
+    // Validation
+    if (err_code != 0) {
+        util::PrintEPOSErr("VCS_GetPortNameSelection", err_code);
+        return;
+    } else if (ports.empty()) {
+        qWarning() << "No ports found on "
+                   << QString::fromStdString(interface_name_);
+    }
+
+    // Populate Port combo box and enable it
+    ports.removeDuplicates();  // just in case
+    ui_->cb_port_name->addItems(ports);
+    ui_->cb_port_name->setEnabled(true);
+
+    // If only one port available, automatically populate next combo box
+    if (ports.count() == 1) {
+        on_cb_port_name_textActivated(ports.first());
+    }
+}
+
+/**
+ * @brief Event handler for "Port" combo box selection.
+ *        Populates the "Baud Rate" combo box and enables it.
+ *
+ * @param sel The port name selected by the user
+ */
+void OpenEPOSWindow::on_cb_port_name_textActivated(const QString& sel) {
+    // Save selected port name
+    port_name_ = sel.toStdString();
+
+    // Ensure all "downstream" selections and combo boxes are cleared
+    baud_rate_ = 0;
+    ui_->cb_baud_rate->clear();
+    ui_->cb_baud_rate->setEnabled(false);
+
+    // Get first available baud rate for port
+    QStringList bauds;
+    uint rate = 0;
+    int end_of_sel = 0;
+    uint err_code = 0;
+
+    if (VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
+                                 interface_name_.data(), port_name_.data(),
+                                 kMaxonTrue, &rate, &end_of_sel, &err_code)
+        > 0) {
+        bauds << QString::number(rate);
+
+        // Get other baud rates for port, if any
+        while (end_of_sel == 0) {
+            rate = 0;
+            VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
+                                     interface_name_.data(), port_name_.data(),
+                                     kMaxonFalse, &rate, &end_of_sel,
+                                     &err_code);
+            bauds << QString::number(rate);
+        }
+    }
+
+    // Validation
+    if (err_code != 0) {
+        util::PrintEPOSErr("VCS_GetBaudrateSelection", err_code);
+        return;
+    } else if (bauds.empty()) {
+        qWarning() << "No baud rates available for "
+                   << QString::fromStdString(port_name_);
+    }
+
+    // Populate Baud Rate combo box and enable it
+    bauds.removeDuplicates();  // just in case
+    ui_->cb_baud_rate->addItems(bauds);
+    ui_->cb_baud_rate->setEnabled(true);
+
+    // If only one baud rate available, automatically populate next combo box
+    if (bauds.count() == 1) {
+        on_cb_baud_rate_textActivated(bauds.first());
+    }
+}
+
+/**
+ * @brief Event handler for "Baud Rate" combo box selection.
+ *        Enables the "Connect" button.
+ *
+ * @param sel The baud rate selected by the user
+ */
+void OpenEPOSWindow::on_cb_baud_rate_textActivated(const QString& sel) {
+    // Save selected baud rate
+    baud_rate_ = sel.toUInt();
+
+    // Since all device parameters have been specified, enable Connect button
+    ui_->pb_connect->setEnabled(true);
+}
+
+/**
+ * @brief Event handler for "Connect" button (single click).
+ *        Opens the EPOS device specified by the selections in the four combo
+ *        boxes, sets baud rate and timeout, and clears residual faults.
+ */
+void OpenEPOSWindow::on_pb_connect_clicked() {
+    // Connect to specified controller
+    uint err_code = 0;
+
+    handle_ = VCS_OpenDevice(device_name_.data(), protocol_name_.data(),
+                             interface_name_.data(), port_name_.data(),
+                             &err_code);
+
+    // Validation
+    if (handle_ == nullptr || err_code != 0) {
+        util::PrintEPOSErr("VCS_OpenDevice", err_code);
+        VCS_CloseDevice(handle_, &err_code);
+        return;
+    }
+
+    // Set controller baud rate and timeout
+    if (VCS_SetProtocolStackSettings(handle_, baud_rate_, kTimeout, &err_code)
+        <= 0) {
+        util::PrintEPOSErr("VCS_SetProtocolStackSettings", err_code);
+        VCS_CloseDevice(handle_, &err_code);
+        return;
+    }
+
+    // Close the dialog and return `QDialog::Accepted`
+    OpenEPOSWindow::accept();
+}
+
+/**
+ * @brief Give the user another way to close the window
+ *        (in addition to the X in the menu bar).
+ */
+void OpenEPOSWindow::on_pb_cancel_clicked() {
+    // Close the dialog and return `QDialog::Rejected`
+    OpenEPOSWindow::reject();
+}
+
+//------------------------------------------------------------------------------
+// !Uncategorized
+//------------------------------------------------------------------------------

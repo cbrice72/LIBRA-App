@@ -1,15 +1,18 @@
 {
     "configurations": [
         {
-            "name": "Windows",
+            "name": "Win32",
             "includePath": [
-                "${workspaceFolder}",
-                "${workspaceFolder}/arduino/lib/**",
-                "${workspaceFolder}/lib/camera/",
-                "${workspaceFolder}/extern/hebi-cpp-3.7.0/hebi-cpp/hebi/include/",
-                "${workspaceFolder}/extern/hebi-cpp-3.7.0/hebi-cpp/Eigen/Eigen/",
-                "${workspaceFolder}/extern/Maxon.6.8.1.0/"
-            ]
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22621.0",
+            "compilerPath": "cl.exe",
+            "intelliSenseMode": "windows-msvc-x64"
         }
     ],
     "version": 4

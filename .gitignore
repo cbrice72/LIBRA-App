@@ -187,6 +187,9 @@ __pycache__/
 # Adobe project files for graphics in res/ directory
 adobe/*
 
+# Qt project build folders
+**/build-*/*
+
 # Doxygen-generated files
 **/docs/*
 
