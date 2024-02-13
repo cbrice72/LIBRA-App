@@ -181,7 +181,7 @@ __pycache__/
 *.tss
 
 ###############################################################################
-## LIBRA-II App
+## LIBRA App
 ###############################################################################
 
 # Adobe project files for graphics in res/ directory
@@ -190,11 +190,8 @@ adobe/*
 # Doxygen-generated files
 **/docs/*
 
-# Don't exclude the manually-downloaded libraries
-!extern/**/*.dll
-!extern/**/*.lib
-# ... but do exclude the Maxon examples
-extern/Maxon.6.8.1.0/Example\ VC++
+# Don't exclude the 3rd-party libraries
+!extern/*
 
 # Log file
 Log.txt

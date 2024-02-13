@@ -6,9 +6,9 @@
                 "${workspaceFolder}",
                 "${workspaceFolder}/arduino/lib/**",
                 "${workspaceFolder}/lib/camera/",
-                "${workspaceFolder}/extern/DxLib/",
-                "${workspaceFolder}/packages/HEBI.Cpp.3.7.0/build/native/Hebi/include/",
-                "${workspaceFolder}/packages/Eigen.3.3.3/build/native/include/"
+                "${workspaceFolder}/extern/hebi-cpp-3.7.0/hebi-cpp/hebi/include/",
+                "${workspaceFolder}/extern/hebi-cpp-3.7.0/hebi-cpp/Eigen/Eigen/",
+                "${workspaceFolder}/extern/Maxon.6.8.1.0/"
             ]
         }
     ],
