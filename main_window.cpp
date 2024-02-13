@@ -37,7 +37,7 @@
  * @param parent Owning Qt widget (default: nullptr)
  */
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), ui_(new Ui::MainWindow), qnode(new QtNode) {
+    : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
 }
 

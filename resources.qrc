@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="ind_active.avi">res/ind_active.avi</file>
+        <file alias="ind_idle.avi">res/ind_idle.avi</file>
+        <file alias="ind_mstop.avi">res/ind_mstop.avi</file>
+        <file alias="ind_noip.avi">res/ind_noip.avi</file>
+        <file alias="ind_none.avi">res/ind_none.avi</file>
+        <file alias="ind_safety.avi">res/ind_safety.avi</file>
+        <file alias="ind_temp.avi">res/ind_temp.avi</file>
+        <file alias="LIBRA-App_v2.ico">res/LIBRA-App_v2.ico</file>
+    </qresource>
+</RCC>

@@ -49,4 +49,5 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions ---
 
     // --- Data Members ---
+    Ui::MainWindow* ui_;
 };

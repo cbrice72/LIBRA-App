@@ -31,15 +31,21 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 # ROS packages
-#find_package(ament_cmake REQUIRED)
-#find_package(rclcpp REQUIRED)
-#find_package(rmw_implementation REQUIRED)
-#find_package(rosidl_default_generators REQUIRED)
+# ~~~
+# TODO(brice.c.aa): add ROS2 capabilities?
+# find_package(ament_cmake REQUIRED)
+# find_package(rclcpp REQUIRED)
+# find_package(rmw_implementation REQUIRED)
+# find_package(rosidl_default_generators REQUIRED)
+# ~~~
 
 # ROS messages
-#find_package(std_msgs REQUIRED)
-#find_package(sensor_msgs REQUIRED)
-#find_package(epos_interfaces REQUIRED)
+# ~~~
+# TODO(brice.c.aa): add ROS2 capabilities?
+# find_package(std_msgs REQUIRED)
+# find_package(sensor_msgs REQUIRED)
+# find_package(epos_interfaces REQUIRED)
+# ~~~
 
 # Add project subdirectories
 add_subdirectory(lib)
@@ -48,15 +54,24 @@ add_subdirectory(lib)
 set(PROJECT_SOURCES
     # Header
     main_window.h
-    open_epos_window.h
+    # ~~~
+    # TODO(brice.c.aa): add EPOS actuator
+    # open_epos_window.h
+    # ~~~
     # Source
     main.cpp
     main_window.cpp
-    open_epos_window.cpp
+    # ~~~
+    # TODO(brice.c.aa): add EPOS actuator
+    # open_epos_window.cpp
+    # ~~~
     # Qt
     main_window.ui
-    open_epos_window.ui
-    #resources.qrc
+    # ~~~
+    # TODO(brice.c.aa): add EPOS actuator
+    # open_epos_window.ui
+    # ~~~
+    resources.qrc
 )
 
 # Add target executable
@@ -65,7 +80,7 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6) # Desktop, Qt6 (or higher)
 
     # ~~~
     # Define target properties for Android with Qt 6 as:
-    #    set_property(TARGET Remote-Robot-App APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+    #    set_property(TARGET LIBRA-App-v2 APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
     #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
     # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
     # ~~~
@@ -85,22 +100,29 @@ else() # Qt5 (or lower)
 endif()
 
 # Add all 3rd-party libraries packaged with this project to the include path
-target_include_directories(Remote-Robot-App PRIVATE external)
+target_include_directories(
+    LIBRA-App-v2
+    # Maxon
+    PRIVATE external/epos-6.8.1.0/include
+    # HEBI
+    PRIVATE external/hebi-cpp-3.7.0/hebi-cpp/hebi/include
+)
 
 # Tell the linker which libraries to link against
 target_link_libraries(
     LIBRA-App-v2
-    # Project
-    #PRIVATE util
-    # Qt
+    # Project PRIVATE util Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     # Maxon
-    #PRIVATE -lEposCmd
+    # ~~~
+    # TODO(brice.c.aa): add EPOS actuator
+    # PRIVATE -lEposCmd
+    # ~~~
 )
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
+# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1. If
+# you are developing for iOS or macOS you should consider setting an explicit,
+# fixed bundle identifier manually though.
 if(${QT_VERSION} VERSION_LESS 6.1.0)
   set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.LIBRA-App-v2)
 endif()
@@ -119,7 +141,8 @@ set_target_properties(
 include(GNUInstallDirs)
 
 # Specify installation settings
-install(TARGETS LIBRA-App-v2
+install(
+    TARGETS LIBRA-App-v2
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

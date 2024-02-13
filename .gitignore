@@ -188,7 +188,7 @@ __pycache__/
 adobe/*
 
 # Qt project build folders
-**/build-*/*
+**/build-*/
 
 # Doxygen-generated files
 **/docs/*
