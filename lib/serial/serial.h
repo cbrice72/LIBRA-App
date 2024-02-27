@@ -13,12 +13,13 @@
 #include <string>
 // Other Libraries' Headers
 #include <boost/asio.hpp>
+
 // Project Headers
 //   (none)
 
 /**
  * @brief TODO.
- * 
+ *
  * @note For more information about Boost.Asio, see the boost documentation:
  *       https://www.boost.org/doc/libs/1_76_0/doc/html/boost_asio.html
  */
@@ -29,8 +30,7 @@ class Serial {
 
     // --- Public Functions ---
 
-    int Open();
-    int Write(BYTE data);  // TODO: needed?
+    int Write(uint8_t data);  // TODO: needed?
     int WriteStr(std::string str);
 
   private:
@@ -39,5 +39,6 @@ class Serial {
     std::string name_{""};
     std::string port_{""};
 
+    boost::asio::io_context io_;  // only necessary for initializing serial port
     boost::asio::serial_port serial_;
 };
