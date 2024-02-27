@@ -12,7 +12,7 @@
 //   (none)
 // Other Libraries' Headers
 //   Maxon
-#include "Maxon/Definitions.h"
+#include "Definitions.h"
 //   Qt
 #include <QDebug>
 // Project Headers
