@@ -47,6 +47,12 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 # find_package(epos_interfaces REQUIRED)
 # ~~~
 
+# Other packages
+find_package(Boost REQUIRED COMPONENTS system thread)
+if (NOT Boost_FOUND)
+    message(FATAL_ERROR "Boost not found; please install it from -> https://www.boost.org/")
+endif ()
+
 # Add project subdirectories
 add_subdirectory(lib)
 
@@ -106,18 +112,27 @@ target_include_directories(
     PRIVATE external/epos-6.8.1.0/include
     # HEBI
     PRIVATE external/hebi-cpp-3.7.0/hebi-cpp/hebi/include
+    # Other
+    PRIVATE ${BOOST_LIBRARY_INCLUDES}  # ${Boost_INCLUDE_DIRS}?
 )
 
 # Tell the linker which libraries to link against
 target_link_libraries(
     LIBRA-App-v2
-    # Project PRIVATE util Qt
+    # Project
+    # ~~~
+    # TODO(brice.c.aa): ???
+    # PRIVATE util
+    # ~~~
+    # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     # Maxon
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
     # PRIVATE -lEposCmd
     # ~~~
+    # Other
+    #PRIVATE Boost::asio  # ${Boost_LIBRARIES}?
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1. If

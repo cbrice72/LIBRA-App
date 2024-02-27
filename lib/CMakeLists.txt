@@ -7,4 +7,6 @@
 ################################################################################
 
 # Add module subdirectories
+add_subdirectory(libra_hebi)
+add_subdirectory(serial)
 #add_subdirectory(util)  # TODO(brice.c.aa): add EPOS actuator
