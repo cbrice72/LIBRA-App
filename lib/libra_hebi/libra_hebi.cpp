@@ -1,68 +1,66 @@
 /******************************************************************************
  * @file   libra_hebi.cpp
- * @brief  TODO.
+ * @brief  Control code for LIBRA arm HEBI actuators; implementation file.
+ *         (adapted from Yuto Goto's work)
  *
- * @author Yuto Goto, Christian Brice
- * @date   ???
+ * @author Christian Brice
+ * @date   2024/2/22
  ******************************************************************************/
 
 // Related Header
 #include "libra_hebi.h"
 // C++ Standard Library Headers
+#include <chrono>
+#include <iostream>
 #include <stdexcept>
-// POSIX/Windows Library Headers
-#include "mmsystem.h"
-#pragma comment(lib, "winmm.lib")
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-#include "pretty_print.h"
+//   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !General Functions
+ * !Helper Functions
  * !Actuator Commands
  * !Getters & Setters
  */
 
-//------------------------------------------------------------------------------
-// !General Functions
-//------------------------------------------------------------------------------
-
 /**
- * @brief Constructs a new LIBRA_HEBI object.
+ * @brief Constructs a new LibraHebi object.
  */
-LIBRA_HEBI::LIBRA_HEBI() {
+LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
     command_ = std::make_unique<hebi::GroupCommand>(5);
     feedback_ = std::make_unique<hebi::GroupFeedback>(5);
 
     // タイマ割り込み開始 10ms毎に割り込み処理をする
     // Timer interrupt: process interrupts every 10 ms
+    /* TODO(brice.c.aa)
     timeSetEvent(10, 0, Callback, reinterpret_cast<DWORD>(this),
                  TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
+    */
+}
+
+//------------------------------------------------------------------------------
+// !Helper Functions
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Retrieves the current system time (i.e., time since epoch) in seconds.
+ * 
+ * @return std::chrono::system_clock::rep Current system time in seconds
+ */
+std::chrono::system_clock::rep LibraHebi::GetCurrentTimeInSec() {
+    auto now = std::chrono::system_clock::now().time_since_epoch();
+    return std::chrono::duration_cast<std::chrono::seconds>(now).count();
 }
 
 /**
  * @brief TODO.
- *
- * @param uID TODO
- * @param uMsg TODO
- * @param dwUser TODO
- * @param dw1 TODO
- * @param dw2 TODO
  */
-void CALLBACK LIBRA_HEBI::Callback(UINT /*uID*/, UINT /*uMsg*/, DWORD dwUser,
-                                   DWORD /*dw1*/, DWORD /*dw2*/) {
-    (reinterpret_cast<LIBRA_HEBI*>(dwUser))->Loop();
-}
-
-/**
- * @brief TODO.
- */
-void LIBRA_HEBI::Loop() {
+void LibraHebi::Loop() {
     command_->setVelocity(Eigen::VectorXd::Zero(5));
 
     if (trajectory_ != nullptr) {
-        const double time = (timeGetTime() - start_time_) / 1000.0;
+        const double time = (GetCurrentTimeInSec() - start_time_) / 1000.0;
         if (trajectory_->getDuration() > time) {
             Eigen::VectorXd pos_cmd(5);
             Eigen::VectorXd vel_cmd(5);
@@ -88,7 +86,7 @@ void LIBRA_HEBI::Loop() {
  * @return true If connection and initialization succeeded
  * @return false Otherwise
  */
-bool LIBRA_HEBI::Connect() {
+bool LibraHebi::Connect() {
     hebi::Lookup lookup;
 
     /* HEBIライブラリを改造して追加実装したavailable関数を使用。
@@ -110,40 +108,29 @@ bool LIBRA_HEBI::Connect() {
      */
     /*
     if (!lookup.available()) {
-        // colorize::Print("HEBI - Lookupを使用できません（LAN未接続）\n",
-        //                 colorize::Level::kError);
-        colorize::Print(
-            "HEBI - Unable to use Lookup (LAN not connected)!\n",
-            colorize::Level::kError);
+        // std::cerr << "[エラー] HEBI - Lookupを使用できません（LAN未接続）\n";
+        std::cerr << "[ERROR] HEBI - Unable to use Lookup (LAN not connected)!\n";
         return false;
     }
     */
 
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
-        // colorize::Print("HEBI - アクチュエータが接続されていません\n",
-        //                 colorize::Level::kError);
-        colorize::Print("HEBI - Actuators not connected!\n",
-                        colorize::Level::kError);
+        // std::cerr << "[エラー] HEBI - アクチュエータが接続されていません\n";
+        std::cerr << "[ERROR] HEBI - Actuators not connected!\n";
         command_->setPosition(Eigen::VectorXd::Zero(5));
         return false;
     }
 
     if (!command_->readSafetyParameters("params/safety.xml")) {
-        // colorize::Print("HEBI - 安全パラメータファイルを読み込めません\n",
-        //                 colorize::Level::kError);
-        colorize::Print("HEBI - Failed to load safety parameters!\n",
-                        colorize::Level::kError);
-        system("pause");
+        // std::cerr << "[エラー] HEBI - 安全パラメータファイルを読み込めません\n";
+        std::cerr << "[ERROR] HEBI - Failed to load safety parameters!\n";
         return false;
     }
 
     if (!command_->readGains("params/gain.xml")) {
-        // colorize::Print("HEBI - ゲインパラメータファイルを読み込めません\n",
-        //                 colorize::Level::kError);
-        colorize::Print("HEBI - Failed to load gain parameters!\n",
-                        colorize::Level::kError);
-        system("pause");
+        // std::cerr << "[エラー] HEBI - ゲインパラメータファイルを読み込めません\n";
+        std::cerr << "[ERROR] HEBI - Failed to load gain parameters!\n";
         return false;
     }
 
@@ -164,7 +151,7 @@ bool LIBRA_HEBI::Connect() {
  * @param j2 Desired J2 (arm yaw) angle, in degrees
  * @param j3 Desired J3 (arm pitch) angle, in degrees
  */
-void LIBRA_HEBI::Move(double roll, double pitch, double j1, double j2,
+void LibraHebi::Move(double roll, double pitch, double j1, double j2,
                       double j3) {
     Eigen::MatrixXd positions(5, 2);
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
@@ -192,7 +179,7 @@ void LIBRA_HEBI::Move(double roll, double pitch, double j1, double j2,
     time << 0, max_diff_rad * 30 / M_PI;
 
     // Log start time and send movement command
-    start_time_ = timeGetTime();
+    start_time_ = GetCurrentTimeInSec();
     trajectory_ =
         hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions,
                                                             &velocities,
@@ -202,7 +189,7 @@ void LIBRA_HEBI::Move(double roll, double pitch, double j1, double j2,
 /**
  * @brief Clears the active actuator movement command(s).
  */
-void LIBRA_HEBI::Stop() {
+void LibraHebi::Stop() {
     trajectory_ = nullptr;
 }
 
@@ -216,7 +203,7 @@ void LIBRA_HEBI::Stop() {
  * @param joint The LIBRA joint to query
  * @return double The joint's commanded position value, in degrees
  */
-double LIBRA_HEBI::GetCommandPosition(Joint joint) {
+double LibraHebi::GetCommandPosition(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -251,7 +238,7 @@ double LIBRA_HEBI::GetCommandPosition(Joint joint) {
  * @param joint The LIBRA joint to query
  * @return double The joint's actual position value, in degrees
  */
-double LIBRA_HEBI::GetFeedbackPosition(Joint joint) {
+double LibraHebi::GetFeedbackPosition(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -286,7 +273,7 @@ double LIBRA_HEBI::GetFeedbackPosition(Joint joint) {
  * @param joint The LIBRA joint to query
  * @return double The joint's actual torque value, in Newton-meters
  */
-double LIBRA_HEBI::GetFeedbackEffort(Joint joint) {
+double LibraHebi::GetFeedbackEffort(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -317,7 +304,7 @@ double LIBRA_HEBI::GetFeedbackEffort(Joint joint) {
  *
  * @return double The actuator's actual torque value, in Newton-meters
  */
-double LIBRA_HEBI::GetFeedbackEffortMA() {
+double LibraHebi::GetFeedbackEffortMA() {
     return feedback_->getEffort()[Act::kHebiMA];
 }
 
@@ -326,6 +313,6 @@ double LIBRA_HEBI::GetFeedbackEffortMA() {
  *
  * @return double The actuator's actual torque value, in Newton-meters
  */
-double LIBRA_HEBI::GetFeedbackEffortMB() {
+double LibraHebi::GetFeedbackEffortMB() {
     return feedback_->getEffort()[Act::kHebiMB];
 }

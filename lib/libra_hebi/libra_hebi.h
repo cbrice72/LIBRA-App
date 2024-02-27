@@ -1,17 +1,16 @@
 /******************************************************************************
  * @file   libra_hebi.h
- * @brief  TODO.
+ * @brief  Control code for LIBRA arm HEBI actuators; header file.
+ *         (adapted from Yuto Goto's work)
  *
- * @author Yuto Goto, Christian Brice
- * @date   ???
+ * @author Christian Brice
+ * @date   2024/2/22
  ******************************************************************************/
 
 #pragma once
 
 // C++ Standard Library Headers
 //   (none)
-// POSIX/Windows Library Headers
-#include <windows.h>
 // Other Libraries' Headers
 //   HEBI Actuators
 #include <group_command.hpp>
@@ -19,19 +18,19 @@
 #include <hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
-
 // Project Headers
 //   (none)
 
 /**
  * @brief TODO.
  */
-class LIBRA_HEBI {
+class LibraHebi {
   public:
-    LIBRA_HEBI();
+    LibraHebi();
 
     /**
      * @brief LIBRA joint names.
+     * @todo implement `kYaw`.
      */
     enum Joint { kRoll = 0, kPitch, kJ1, kJ2, kJ3 };
 
@@ -52,11 +51,14 @@ class LIBRA_HEBI {
   private:
     /**
      * @brief HEBI actuator names.
+     * @todo implement `kYaw`.
      */
     enum Act { kHebiMA = 0, kHebiMB, kHebiJ1, kHebiJ2, kHebiJ3 };
 
-    static void CALLBACK Callback(UINT uID, UINT uMsg, DWORD dwUser, DWORD dw1,
-                                  DWORD dw2);
+    // --- Helper Functions ---
+
+    static std::chrono::system_clock::rep GetCurrentTimeInSec();
+    
     void Loop();
 
     // --- Data Members ---
@@ -65,5 +67,6 @@ class LIBRA_HEBI {
     std::unique_ptr<hebi::GroupFeedback> feedback_;
     std::shared_ptr<hebi::Group> group_{nullptr};
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
-    DWORD start_time_ = timeGetTime();
+    
+    double start_time_;
 };
