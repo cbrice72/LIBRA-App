@@ -16,7 +16,14 @@ Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with 
 
 ## Setting Up WSL2
 
-1. TODO
+1. Open a PowerShell terminal and install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
+```bash
+wsl --install -d Ubuntu-22.04
+```
+
+> **_NOTE:_** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
+
+2. Once the installation is finished, enter the username and password you want to use when logging into the Ubuntu shell.
 
 ## Preparing Your Development Environment
 
@@ -164,6 +171,9 @@ cd .. && rm -rf EPOS_Linux_Library/
 ### *VS Code*
 
 To install, simply [download](https://code.visualstudio.com/download) and run the `.deb`.
+```bash
+sudo dpkg -i [package_name]
+```
 
 #### **Troubleshooting**
 
