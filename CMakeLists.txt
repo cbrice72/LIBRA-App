@@ -49,9 +49,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
 # Other packages
 find_package(Boost REQUIRED COMPONENTS system thread)
-if (NOT Boost_FOUND)
-    message(FATAL_ERROR "Boost not found; please install it from -> https://www.boost.org/")
-endif ()
 
 # Add project subdirectories
 add_subdirectory(lib)
@@ -60,23 +57,11 @@ add_subdirectory(lib)
 set(PROJECT_SOURCES
     # Header
     main_window.h
-    # ~~~
-    # TODO(brice.c.aa): add EPOS actuator
-    # open_epos_window.h
-    # ~~~
     # Source
     main.cpp
     main_window.cpp
-    # ~~~
-    # TODO(brice.c.aa): add EPOS actuator
-    # open_epos_window.cpp
-    # ~~~
     # Qt
     main_window.ui
-    # ~~~
-    # TODO(brice.c.aa): add EPOS actuator
-    # open_epos_window.ui
-    # ~~~
     resources.qrc
 )
 
@@ -105,15 +90,16 @@ else() # Qt5 (or lower)
     endif()
 endif()
 
+# Copy HEBI actuator configurations to the executable directory
+add_custom_command(TARGET LIBRA-App-v2 POST_BUILD
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory
+                   ${CMAKE_SOURCE_DIR}/params ${CMAKE_INSTALL_BINDIR}/gains)
+
 # Add all 3rd-party libraries packaged with this project to the include path
 target_include_directories(
     LIBRA-App-v2
-    # Maxon
-    PRIVATE external/epos-6.8.1.0/include
-    # HEBI
-    PRIVATE external/hebi-cpp-3.7.0/hebi-cpp/hebi/include
-    # Other
-    PRIVATE ${BOOST_LIBRARY_INCLUDES}  # ${Boost_INCLUDE_DIRS}?
+    # Boost
+    PRIVATE ${Boost_INCLUDE_DIRS}
 )
 
 # Tell the linker which libraries to link against
@@ -121,18 +107,14 @@ target_link_libraries(
     LIBRA-App-v2
     # Project
     # ~~~
-    # TODO(brice.c.aa): ???
-    # PRIVATE util
+    # TODO(brice.c.aa): add EPOS actuator
+    # ~~~
+    PRIVATE libra_hebi serial #util
     # ~~~
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
-    # Maxon
-    # ~~~
-    # TODO(brice.c.aa): add EPOS actuator
-    # PRIVATE -lEposCmd
-    # ~~~
     # Other
-    #PRIVATE Boost::asio  # ${Boost_LIBRARIES}?
+    PRIVATE udev
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1. If

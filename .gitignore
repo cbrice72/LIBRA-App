@@ -194,7 +194,7 @@ adobe/*
 **/docs/*
 
 # Don't exclude the 3rd-party libraries
-!external/*
+!external/**
 
 # Log file
 Log.txt

@@ -48,12 +48,13 @@ sudo apt update && sudo apt upgrade
 
 Install the following packages via the terminal.
 ```bash
-sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev
+sudo apt install -y build-essential libboost-all-dev clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libudev-dev
 ```
 
 Package notes:
 
 - `build-essential`: programs and libraries necessary for basic software development.
+- `libboost-all-dev`: collection of useful C++ libraries ([link](https://www.boost.org/)).
 - (TODO: necessary?) `clang` & `libclang-dev`: C/C++ compiler ([link](https://clang.llvm.org/)).
 - `clang-format`: clang-based C++ formatter ([link](https://clang.llvm.org/docs/ClangFormat.html)).
 - `clang-tidy`: clang-based C++ linter ([link](https://clang.llvm.org/extra/clang-tidy/)).
@@ -63,6 +64,7 @@ Package notes:
 - `git`: popular open-source version control system ([link](https://git-scm.com)).
 - (TODO: necessary?) `libgl1-mesa-dev`: open-source graphics library, used by Qt ([link](https://www.mesa3d.org/)).
 - (TODO: necessary?) `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
+- `libudev-dev`: C++ library for enumerating local devices([link](https://www.freedesktop.org/software/systemd/man/latest/libudev.html)).
 
 ## Project Software
 
