@@ -195,6 +195,9 @@ adobe/*
 
 # Don't exclude the 3rd-party libraries
 !external/**
+# ... but do exclude any symlinks in hebi/lib/, as these are created at build
+**/hebi/lib/
+!/hebi/lib/libhebi.so.2.9
 
 # Log file
 Log.txt
