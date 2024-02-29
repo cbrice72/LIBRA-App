@@ -36,6 +36,10 @@ target_include_directories(
 )
 
 # Import the HEBI library packaged with this project
+# ~~~
+# Note: if the versioned library in the set_target_properties() call below is
+# changed (e.g., updated), make sure to update the .gitignore entry too!
+# ~~~
 add_library(hebi SHARED IMPORTED GLOBAL)
 set_target_properties(hebi PROPERTIES IMPORTED_LOCATION ${HEBI_DIR}/hebi/lib/libhebi.so.2.9)
 
@@ -46,4 +50,24 @@ target_link_libraries(
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
     # HEBI
     PRIVATE pthread hebi
+)
+
+# Create symbolic links for unversioned HEBI library shared object (.so) files
+# ~~~
+# For some reason, the unversioned library files that come in the HEBI C++ API
+# download don't work as symbolic links, so we have to generate them ourselves.
+# ~~~
+add_custom_command(
+    TARGET libra_hebi
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
+            ${HEBI_DIR}/hebi/lib/libhebi.so
+)
+add_custom_command(
+    TARGET libra_hebi
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink
+            ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
+            ${HEBI_DIR}/hebi/lib/libhebi.so.2
 )
