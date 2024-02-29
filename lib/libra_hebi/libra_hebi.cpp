@@ -14,7 +14,8 @@
 #include <iostream>
 #include <stdexcept>
 // Other Libraries' Headers
-//   (none)
+#include "group_command.hpp"
+
 // Project Headers
 //   (none)
 
@@ -45,7 +46,7 @@ LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
 
 /**
  * @brief Retrieves the current system time (i.e., time since epoch) in seconds.
- * 
+ *
  * @return std::chrono::system_clock::rep Current system time in seconds
  */
 std::chrono::system_clock::rep LibraHebi::GetCurrentTimeInSec() {
@@ -109,8 +110,8 @@ bool LibraHebi::Connect() {
     /*
     if (!lookup.available()) {
         // std::cerr << "[エラー] HEBI - Lookupを使用できません（LAN未接続）\n";
-        std::cerr << "[ERROR] HEBI - Unable to use Lookup (LAN not connected)!\n";
-        return false;
+        std::cerr << "[ERROR] HEBI - Unable to use Lookup (LAN not
+    connected)!\n"; return false;
     }
     */
 
@@ -152,7 +153,7 @@ bool LibraHebi::Connect() {
  * @param j3 Desired J3 (arm pitch) angle, in degrees
  */
 void LibraHebi::Move(double roll, double pitch, double j1, double j2,
-                      double j3) {
+                     double j3) {
     Eigen::MatrixXd positions(5, 2);
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
     Eigen::MatrixXd accelerations = Eigen::MatrixXd::Zero(5, 2);

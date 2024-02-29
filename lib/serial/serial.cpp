@@ -43,7 +43,7 @@ Serial::Serial(std::string name, std::string port)
         boost::asio::serial_port_base::flow_control::none));
 
     // Open serial port
-    serial_.open(port_)
+    serial_.open(port_);
 }
 
 /**
