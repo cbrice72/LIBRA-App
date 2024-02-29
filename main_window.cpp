@@ -63,44 +63,37 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Arduino Connection (via serial USB) ---
 
-    std::string answer;  // used to retrieve user input via std::cin
+    QTextStream in(stdin);  // used to retrieve user input via readLine()
 
     // HEBIアクチュエータを接続
     // Connect HEBI actuators
     libra_arm_ = std::make_unique<LibraHebi>();
-    while (!libra_arm_->Connect()) {
-        std::cout << "Try again? [y/n]:\n";
-        std::cin >> answer;
-        if (answer == "n") {
+    if (!libra_arm_->Connect()) {
+        qDebug()
+            << "Failed to connect to HEBI actuators; continue anyways? [y/n]:";
+        if (in.readLine() == "n") {
             // HEBIアクチュエータに接続できない場合は、プログラムを終了
             // Exit app if connection to HEBI actuators can't be established
             std::cout << "Exiting...\n";
-            QThread::sleep(2);  // give user time to read message
+            QThread::sleep(1);  // give user time to read message
             return;
         }
     }
 
     // 利用可能なポートのスキャン
     // Scan for available device ports
-    answer = "";
-    while (answer != "n") {
-        std::cout << "\n----- Device List -----\n\n";
-        PrintDeviceList();
-        std::cout << "\nWould you like to scan again? [y/n]:\n";
-        std::cin >> answer;
-    }
+    std::cout << "\n----- Device List -----\n\n";
+    PrintDeviceList();
 
     // SerialWaterのポートをユーザーが指定できるようにする
     // Allow user to specify SerialWater port
     std::cout << "Specify the port to be used by SerialWater:\n";
-    std::cin >> answer;
-    ser_water_ = std::make_unique<Serial>("water", answer);
+    ser_water_ = std::make_unique<Serial>("water", in.readLine().toStdString());
 
     // SerialServoのポートをユーザーが指定できるようにする
     // Allow user to specify SerialServo port
     std::cout << "Specify the port to be used by SerialServo:\n";
-    std::cin >> answer;
-    ser_servo_ = std::make_unique<Serial>("servo", answer);
+    ser_servo_ = std::make_unique<Serial>("servo", in.readLine().toStdString());
 
     // --- Thread Management ---
 
@@ -283,3 +276,18 @@ void MainWindow::on_pb_logshot_clicked() {}
 //------------------------------------------------------------------------------
 // !Uncategorized
 //------------------------------------------------------------------------------
+
+/**
+ * @brief TODO
+ */
+void MainWindow::on_a_epos_triggered() {}
+
+/**
+ * @brief TODO
+ */
+void MainWindow::on_a_hebi_triggered() {}
+
+/**
+ * @brief TODO
+ */
+void MainWindow::on_a_serial_triggered() {}

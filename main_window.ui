@@ -2346,8 +2346,35 @@
      <height>19</height>
     </rect>
    </property>
+   <widget class="QMenu" name="m_onnect">
+    <property name="title">
+     <string>Connect</string>
+    </property>
+    <addaction name="a_epos"/>
+    <addaction name="a_hebi"/>
+    <addaction name="a_serial"/>
+   </widget>
+   <addaction name="m_onnect"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <action name="a_hebi">
+   <property name="text">
+    <string>HEBI</string>
+   </property>
+  </action>
+  <action name="a_serial">
+   <property name="text">
+    <string>Serial</string>
+   </property>
+  </action>
+  <action name="a_epos">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>EPOS</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections/>

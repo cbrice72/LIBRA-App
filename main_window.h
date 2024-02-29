@@ -62,6 +62,8 @@ class MainWindow : public QMainWindow {
   private slots:
     // --- Menu Bar ---
 
+    // Connect Menu
+
     // --- Main Window ---
 
     // Input
@@ -86,6 +88,12 @@ class MainWindow : public QMainWindow {
     void on_pb_logshot_clicked();
 
     // --- Uncategorized ---
+
+    void on_a_hebi_triggered();
+
+    void on_a_serial_triggered();
+
+    void on_a_epos_triggered();
 
   private:
     // NOLINTEND
