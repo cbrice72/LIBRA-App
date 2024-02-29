@@ -89,32 +89,6 @@ void LibraHebi::Loop() {
  */
 bool LibraHebi::Connect() {
     hebi::Lookup lookup;
-
-    /* HEBIライブラリを改造して追加実装したavailable関数を使用。
-     * 内部の_lookupがnullptrでないときに使用可能。
-     * The HEBI library must be modified to implement the `available()` function.
-     * It can be implemented by making the following additions to Lookup.hpp/.cpp:
-     *
-     * - Declare the following in the `public` field of the `Lookup` class.
-     *     ```
-     *     bool available();
-     *     ```
-     *
-     * - Define the `available()` function as follows:
-     *     ```
-     *     bool Lookup::available() {
-     *         return lookup_ != nullptr;
-     *     }
-     *     ```
-     */
-    /*
-    if (!lookup.available()) {
-        // std::cerr << "[エラー] HEBI - Lookupを使用できません（LAN未接続）\n";
-        std::cerr << "[ERROR] HEBI - Unable to use Lookup (LAN not
-    connected)!\n"; return false;
-    }
-    */
-
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
         // std::cerr << "[エラー] HEBI - アクチュエータが接続されていません\n";
