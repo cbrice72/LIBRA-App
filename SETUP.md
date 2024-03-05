@@ -1,55 +1,29 @@
- # Setup for LIBRA_App on WSL2
+# Setup
 
-## Proxy Configuration
+This document lists the necessary steps to set up a Visual Studio 2022 development environment for the LIBRA App on a Windows 11 machine.
+Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with any questions or revision suggestions.
 
-In `/etc/apt/apt.conf` (requires sudo):
-```txt
-Acquire::http::Proxy "http://proxy.noc.titech.ac.jp:3128";
-```
+## Table of Contents
 
-## Qt
+1. [Installing Visual Studio](#setting-up-visual-studio)
+2. [Preparing Your Development Environment](#preparing-your-development-environment)
+3. [Optional Items](#optional-items)
 
-### *Install Dependencies*
+## Installing Visual Studio
 
-Try this first:
-```bash
-sudo apt install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
-```
+1. Download [Visual Studio Community edition](https://visualstudio.microsoft.com/downloads/) and launch the installer.
+2. Once you get to the component selection screen, do the following:
+    - In "Workloads" -> "Desktop & Mobile", select **"Desktop development with C++"**
+    - In "Individual components", select **"Python language support"**, **"MSBuild support for LLVM (clang-cl) toolset"**, **"C++ Clang Compiler for Windows"**, and **"Git for Windows"**
+3. In the details tab on the right, expand the "Desktop development with C++" category and do the following:
+    - Deselect "Test Adapter for Boost.Test", "Test Adapter for Google Test", and "Live Share"
+    - Select "C++ MFC for latest v143 build tools"
+4. Click "Install"; this may take a while.
 
-If Qt still doesn't run after the steps below, install each of the following packages one by one:
-- `libfontconfig`
-- `libxcb-glx0`
-- `libx11-xcb1`
-- `libxcb-icccm4`
-- `libxcb-image0`
-- `libxcb-keysyms1`
-- `libxcb-shape0`
-- `libxcb-xkb1`
-- `libxcb-xinerama0`
-- `libxkbcommon-x11-0`
-- `libegl1`
+## Preparing Your Development Environment
 
-```bash
-sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
-```
+...
 
-> **_NOTE:_** Might be missing some, will have to check on laptop.
+## Optional Items
 
-### *Install Qt*
-
-```bash
-chmod +x qt-unified-linux-x64-[ver]-online.run
-./qt-unified-linux-x64-[ver]-online.run
-```
-
-> **_NOTE:_** To set the proxy, open the settings menu (bottom left) and select "Manual proxy configuration".
-Enter HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`.
-
-### *Add QtCreator to PATH*
-
-In `~/.bashrc`:
-```bash
-if [ -d "$HOME/Qt/Tools" ]; then
-    PATH="$PATH:$HOME/Qt/Tools/QtCreator/bin"
-fi
-```
+...
