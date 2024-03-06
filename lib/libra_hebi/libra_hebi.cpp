@@ -26,7 +26,7 @@
  */
 
 /**
- * @brief Constructs a new LibraHebi object.
+ * @brief Standard constructor.
  */
 LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
     command_ = std::make_unique<hebi::GroupCommand>(5);
