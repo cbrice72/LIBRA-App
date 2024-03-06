@@ -19,7 +19,8 @@ Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with 
 
 ## Setting Up
 
-You may set up a development environment in either a Virtual Machine (VM) or Windows Subsystem for Linux (WSL). There are a few differences you should be aware of.
+You may set up a development environment in either a Virtual Machine (VM) or Windows Subsystem for Linux (WSL).
+There are a few differences you should be aware of.
 
 | | Ability | Environment | USB Support | Shared Folder Support
 |---|---|---|---|---|
@@ -109,13 +110,15 @@ Package notes:
 The `URG_USB_Driver.inf` setup file can be found in `external/urg-cpp-1.2.7/driver/`.
 
 To install, simply right-click the file in Windows and select "Install".
-For any troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).
+Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](external/urg-cpp-1.2.7/driver/README.md) for instructions.
+For further troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).
 
 #### **Maxon EPOS**
 
 The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
 
-If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](external/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf). All driver installation files are located in `external/epos-6.8.1.0/driver/`.
+If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](external/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf).
+All driver installation files are located in `external/epos-6.8.1.0/driver/`.
 
 ## Project Software
 
@@ -180,7 +183,7 @@ If Qt Creator still doesn't run, try explicitly installing the following package
 sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
 ```
 
-> **_NOTE:_** Might be missing some, will have to check on laptop. (TODO)
+> **_NOTE:_** Might be missing some, will have to check on laptop.
 
 See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt6-qt-qpa-plugin-could-not-load-the-qt-platform-plugin-xcb-in-even-thou) for more details.
 
@@ -196,7 +199,7 @@ unzip EPOS-Linux-Library-En.zip -d ~/Downloads
 cd ~/Downloads/EPOS_Linux_Library
 ```
 
-2. Run the install script (make sure you give it execution permissions). 
+2. Run the install script (make sure you give it execution permissions).
 ```bash
 chmod +x install.sh && sudo ./install.sh
 ```
