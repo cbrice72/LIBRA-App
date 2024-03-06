@@ -11,11 +11,11 @@
 // C++ Standard Library Headers
 #include <iostream>
 // Other Libraries' Headers
-#include <libudev.h>
+//   (none)
 // Project Headers
-#include "open_epos_window.h"
+//#include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
+#include "serial_dialog.h"
 #include "ui_main_window.h"
-
 // #include "utility.h"
 
 /* --- TABLE OF CONTENTS ---
@@ -80,21 +80,6 @@ MainWindow::MainWindow(QWidget* parent)
         }
     }
 
-    // 利用可能なポートのスキャン
-    // Scan for available device ports
-    std::cout << "\n----- Device List -----\n\n";
-    PrintDeviceList();
-
-    // SerialWaterのポートをユーザーが指定できるようにする
-    // Allow user to specify SerialWater port
-    std::cout << "Specify the port to be used by SerialWater:\n";
-    ser_water_ = std::make_unique<Serial>("water", in.readLine().toStdString());
-
-    // SerialServoのポートをユーザーが指定できるようにする
-    // Allow user to specify SerialServo port
-    std::cout << "Specify the port to be used by SerialServo:\n";
-    ser_servo_ = std::make_unique<Serial>("servo", in.readLine().toStdString());
-
     // --- Thread Management ---
 
     // TOOD: is this necessary in the new app?
@@ -129,60 +114,6 @@ MainWindow::~MainWindow() {}
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
-
-/**
- * @brief TODO
- */
-void MainWindow::PrintDeviceList() {
-    // Create udev context
-    struct udev* udev = udev_new();
-    if (!udev) {
-        std::cerr << "[ERROR] Unable to create udev context" << std::endl;
-        return;
-    }
-
-    // Initialize udev enumerator
-    struct udev_enumerate* enumerate = udev_enumerate_new(udev);
-    udev_enumerate_add_match_subsystem(enumerate, "tty");
-    udev_enumerate_scan_devices(enumerate);
-
-    // Get list of devices
-    struct udev_list_entry* devices = udev_enumerate_get_list_entry(enumerate);
-    struct udev_list_entry* entry;
-
-    // Iterate through list
-    udev_list_entry_foreach(entry, devices) {
-        const char* path = udev_list_entry_get_name(entry);
-        struct udev_device* device = udev_device_new_from_syspath(udev, path);
-
-        // Retrieve device information
-        const char* deviceNode = udev_device_get_devnode(device);
-        const char* deviceName = udev_device_get_sysname(device);
-
-        std::cout << "Device Node: " << (deviceNode ? deviceNode : "unknown")
-                  << std::endl;
-        std::cout << "Device Name: " << (deviceName ? deviceName : "unknown")
-                  << std::endl;
-        std::cout << std::endl;
-
-        // Free current device before moving on to next one
-        udev_device_unref(device);
-    }
-
-    // Clean up
-    udev_enumerate_unref(enumerate);
-    udev_unref(udev);
-}
-
-/**
- * @brief TODO
- */
-void MainWindow::ConnectSerial() {}
-
-/**
- * @brief TODO
- */
-void MainWindow::ConnectHebi() {}
 
 //------------------------------------------------------------------------------
 // !Worker Threads
@@ -290,4 +221,23 @@ void MainWindow::on_a_hebi_triggered() {}
 /**
  * @brief TODO
  */
-void MainWindow::on_a_serial_triggered() {}
+void MainWindow::on_a_pumps_triggered() {
+    // Display the "Open EPOS device" dialog
+    SerialDialog w_serial;
+    w_serial.setModal(true);
+    w_serial.exec();
+
+    // Only continue if "Connect" was successful
+    if (w_serial.result() != QDialog::Accepted) {
+        qWarning() << "Failed to connect to serial pump controller!";
+        return;
+    }
+
+    // Save off the port handle (TODO)
+    //handle_ = w_open_epos.GetEPOSHandle();
+}
+
+/**
+ * @brief TODO
+ */
+void MainWindow::on_a_camera_triggered() {}

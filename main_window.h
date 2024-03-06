@@ -64,6 +64,11 @@ class MainWindow : public QMainWindow {
 
     // Connect Menu
 
+    void on_a_epos_triggered();
+    void on_a_hebi_triggered();
+    void on_a_pumps_triggered();
+    void on_a_camera_triggered();
+
     // --- Main Window ---
 
     // Input
@@ -89,12 +94,6 @@ class MainWindow : public QMainWindow {
 
     // --- Uncategorized ---
 
-    void on_a_hebi_triggered();
-
-    void on_a_serial_triggered();
-
-    void on_a_epos_triggered();
-
   private:
     // NOLINTEND
 
@@ -105,11 +104,8 @@ class MainWindow : public QMainWindow {
 
     // --- Helper Functions ---
 
-    void PrintDeviceList();
-    void ConnectSerial();
-    void ConnectHebi();
-
     // --- Data Members ---
+
     Ui::MainWindow* ui_;
 
     // TODO: is this necessary in the new app?

@@ -57,11 +57,14 @@ add_subdirectory(lib)
 set(PROJECT_SOURCES
     # Header
     main_window.h
+    serial_dialog.h
     # Source
     main.cpp
     main_window.cpp
+    serial_dialog.cpp
     # Qt
     main_window.ui
+    serial_dialog.ui
     resources.qrc
 )
 
