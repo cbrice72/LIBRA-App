@@ -91,9 +91,12 @@ else() # Qt5 (or lower)
 endif()
 
 # Copy HEBI actuator configurations to the executable directory
-add_custom_command(TARGET LIBRA-App-v2 POST_BUILD
-                   COMMAND ${CMAKE_COMMAND} -E copy_directory
-                   ${CMAKE_SOURCE_DIR}/params ${CMAKE_INSTALL_BINDIR}/gains)
+add_custom_command(
+    TARGET LIBRA-App-v2
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/params
+            ${CMAKE_INSTALL_BINDIR}/gains
+)
 
 # Add all 3rd-party libraries packaged with this project to the include path
 target_include_directories(
@@ -109,7 +112,7 @@ target_link_libraries(
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
     # ~~~
-    PRIVATE libra_hebi serial #util
+    PRIVATE libra_hebi serial # TODO: util
     # ~~~
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
@@ -125,6 +128,7 @@ if(${QT_VERSION} VERSION_LESS 6.1.0)
 endif()
 
 # Specify platform-specific properties
+# ~~~
 set_target_properties(
     LIBRA-App-v2
     PROPERTIES ${BUNDLE_ID_OPTION}
@@ -133,6 +137,7 @@ set_target_properties(
                MACOSX_BUNDLE TRUE
                WIN32_EXECUTABLE TRUE
 )
+# ~~~
 
 # TODO(brice.c.aa): auto-included by Qt -- is this necessary?
 include(GNUInstallDirs)
