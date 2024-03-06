@@ -47,9 +47,9 @@ I also recommend you allocate more cores and RAM to your VM; this can be done in
 ### *WSL*
 
 1. Open a PowerShell terminal and install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
-```bash
-wsl --install -d Ubuntu-22.04
-```
+    ```bash
+    wsl --install -d Ubuntu-22.04
+    ```
 
 > **_NOTE:_** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
 
@@ -156,9 +156,9 @@ Upon opening Qt Creator, you may get an error that there is no valid license ava
 You can fix this via the Qt Maintenance Tool.
 
 1. Open Qt Maintenance Tool as superuser.
-```bash
-sudo /opt/Qt/MaintenanceTool
-```
+    ```bash
+    sudo /opt/Qt/MaintenanceTool
+    ```
 
 2. Wait for the "Performing license check" message to give you the "Cancel" prompt, cancel it, then open the settings menu and select "Manual proxy configuration".
     - Since Qt Maintenance Tool is technically a different app, the proxy settings you entered in Qt Installer may not be set correctly.
@@ -194,20 +194,20 @@ However, for ease of compilation (specifically, using the `-lEposCmd` flag), fol
 
 1. Open a terminal in the `external/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice.
 Navigate to the extracted directory.
-```bash
-unzip EPOS-Linux-Library-En.zip -d ~/Downloads
-cd ~/Downloads/EPOS_Linux_Library
-```
+    ```bash
+    unzip EPOS-Linux-Library-En.zip -d ~/Downloads
+    cd ~/Downloads/EPOS_Linux_Library
+    ```
 
 2. Run the install script (make sure you give it execution permissions).
-```bash
-chmod +x install.sh && sudo ./install.sh
-```
+    ```bash
+    chmod +x install.sh && sudo ./install.sh
+    ```
 
 3. Once the install script finishes, you can delete the extracted files.
-```bash
-cd .. && rm -rf EPOS_Linux_Library/
-```
+    ```bash
+    cd .. && rm -rf EPOS_Linux_Library/
+    ```
 
 <br><hr><br>
 
@@ -227,15 +227,15 @@ sudo dpkg -i [package_name]
 If you're prompted to "unlock a keyring" (by entering your Linux password) every time you start up VS Code, follow these instructions.
 
 1. Open your display manager config file. If you're not sure what that is, look for a file ending in "dm" in the `/etc/pam.d` directory (e.g., `sddm`, `lightdm`).
-```bash
-sudo nano /etc/pam.d/[file ending in dm]
-```
+    ```bash
+    sudo nano /etc/pam.d/[file ending in dm]
+    ```
 
 2. Check if the following "keyring" lines exist. If they do, simply remove the preceding dashes (`-`). Otherwise, append them to the end of their respective sections as shown below.
-```txt
-@include common-auth
-auth    optional        pam_gnome_keyring.so
-...
-@include common-session
-session optional        pam_gnome_keyring.so auto_start
-```
+    ```txt
+    @include common-auth
+    auth    optional        pam_gnome_keyring.so
+    ...
+    @include common-session
+    session optional        pam_gnome_keyring.so auto_start
+    ```
