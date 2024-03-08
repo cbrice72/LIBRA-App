@@ -21,10 +21,19 @@
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
  * !Main Window
+ * !Getters & Setters
+ * !Uncategorized
  */
 
-SerialDialog::SerialDialog(QWidget* parent)
-    : QDialog(parent), ui_(new Ui::SerialDialog) {
+/**
+ * @brief Standard constructor.
+ *
+ * @param device_type The "tty" device type to be managed (e.g., "USB", "ACM")
+ * @param parent Owning Qt widget (default: nullptr)
+ */
+SerialDialog::SerialDialog(const std::string& device_type, QWidget* parent)
+    : QDialog(parent), device_type_("tty" + device_type),
+      ui_(new Ui::SerialDialog) {
     ui_->setupUi(this);
 
     // Populate the combobox
@@ -35,6 +44,9 @@ SerialDialog::SerialDialog(QWidget* parent)
     }
 }
 
+/**
+ * @brief Standard QDialog destructor;
+ */
 SerialDialog::~SerialDialog() {
     delete ui_;
 }
@@ -44,9 +56,9 @@ SerialDialog::~SerialDialog() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO
+ * @brief Check whether the app is being run in Windows Subsystem for Linux.
  *
- * @return
+ * @return true if `WSL` directory is detected; false otherwise
  */
 bool SerialDialog::isRunningOnWSL() {
     const char* wslPath = "/run/WSL";
@@ -56,17 +68,24 @@ bool SerialDialog::isRunningOnWSL() {
 }
 
 /**
- * @brief TODO
+ * @brief Searches the Linux `tty` serial list and returns all devices that
+ *        match `device_type_`.
  *
- * @return
+ * @return List of available serial devices.
  */
 QStringList SerialDialog::GetDeviceList() {
     QStringList device_list;
 
+    if (isRunningOnWSL()) {
+        qWarning() << "[WARN] Serial - You seem to be running this on "
+                      "WSL/WSL2. Please ensure you have properly forwarded "
+                      "your USB connections.";
+    }
+
     // Create udev context
     struct udev* udev = udev_new();
     if (!udev) {
-        qCritical() << "[ERROR] Unable to create udev context";
+        qCritical() << "[ERROR] Serial - Unable to create udev context";
         return device_list;
     }
 
@@ -87,7 +106,7 @@ QStringList SerialDialog::GetDeviceList() {
         const char* devnode = udev_device_get_devnode(device);
 
         // Only list physical connections
-        if (device && strstr(devnode, "ttyUSB")) {
+        if (device && strstr(devnode, device_type_.c_str())) {
             device_list.append(QString::fromUtf8(devnode));
         }
 
@@ -109,6 +128,20 @@ QStringList SerialDialog::GetDeviceList() {
 //------------------------------------------------------------------------------
 
 /**
+ * @brief Event handler for "" combo box selection.
+ *        Enables the "Connect" button.
+ *
+ * @param sel The device name selected by the user
+ */
+void SerialDialog::on_cb_serial_name_textActivated(const QString& sel) {
+    // Save selected device name
+    selected_device_ = sel.toStdString();
+
+    // Since the device name has been specified, enable Connect button
+    ui_->pb_connect->setEnabled(true);
+}
+
+/**
  * @brief Event handler for "Connect" button (single click).
  *        Opens the specified serial device.
  */
@@ -125,3 +158,20 @@ void SerialDialog::on_pb_cancel_clicked() {
     // Close the dialog and return `QDialog::Rejected`
     SerialDialog::reject();
 }
+
+//------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the Linux device name used to communicate with a serial device
+ *
+ * @return Device name for serial connection
+ */
+std::string SerialDialog::GetDeviceName() {
+    return selected_device_;
+}
+
+//------------------------------------------------------------------------------
+// !Uncategorized
+//------------------------------------------------------------------------------

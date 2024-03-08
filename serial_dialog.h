@@ -13,6 +13,7 @@
 // Other Libraries' Headers
 //   Qt
 #include <QDialog>
+
 // Project Headers
 //   (none)
 
@@ -26,12 +27,17 @@ class SerialDialog : public QDialog {
     // NOLINTEND
 
   public:
-    explicit SerialDialog(QWidget* parent = nullptr);
+    explicit SerialDialog(const std::string& device_type,
+                          QWidget* parent = nullptr);
     ~SerialDialog();
+
+    std::string GetDeviceName();  // has to be public so MainWindow can access it
 
     // NOLINTBEGIN: Qt-generated
   private slots:
     // --- Main Window ---
+
+    void on_cb_serial_name_textActivated(const QString& sel);
 
     void on_pb_connect_clicked();
     void on_pb_cancel_clicked();
@@ -41,9 +47,12 @@ class SerialDialog : public QDialog {
     // --- Helper Functions ---
 
     static bool isRunningOnWSL();
-    QStringList  GetDeviceList();
+    QStringList GetDeviceList();
 
     // --- Data Members ---
 
     Ui::SerialDialog* ui_;
+    std::string device_type_;
+
+    std::string selected_device_;
 };
