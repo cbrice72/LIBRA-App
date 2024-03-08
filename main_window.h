@@ -14,6 +14,7 @@
 #include <QThread>
 // Project Headers
 #include "libra_hebi.h"
+#include "libra_lidar.h"
 #include "serial.h"
 
 #pragma once
@@ -68,6 +69,7 @@ class MainWindow : public QMainWindow {
     void on_a_hebi_triggered();
     void on_a_pumps_triggered();
     void on_a_camera_triggered();
+    void on_a_lidar_triggered();
 
     // --- Main Window ---
 
@@ -114,6 +116,7 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<LibraHebi> libra_arm_;
     std::unique_ptr<Serial> ser_water_;
     std::unique_ptr<Serial> ser_servo_;
+    std::unique_ptr<LibraLidar> lidar_;
 
     // TODO(brice.c.aa): possibly unneeded in Qt implementation
     volatile bool flag_thread_end_{0};

@@ -2358,6 +2358,7 @@
     <addaction name="a_hebi"/>
     <addaction name="a_pumps"/>
     <addaction name="a_camera"/>
+    <addaction name="a_lidar"/>
    </widget>
    <addaction name="m_connect"/>
   </widget>
@@ -2383,6 +2384,11 @@
   <action name="a_camera">
    <property name="text">
     <string>Camera</string>
+   </property>
+  </action>
+  <action name="a_lidar">
+   <property name="text">
+    <string>LIDAR</string>
    </property>
   </action>
  </widget>

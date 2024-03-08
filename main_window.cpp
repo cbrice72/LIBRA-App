@@ -45,21 +45,11 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Arduino Connection (via serial USB) ---
 
-    QTextStream in(stdin);  // used to retrieve user input via readLine()
-
     // HEBIアクチュエータを接続
     // Connect HEBI actuators
     libra_arm_ = std::make_unique<LibraHebi>();
     if (!libra_arm_->Connect()) {
-        qDebug()
-            << "Failed to connect to HEBI actuators; continue anyways? [y/n]:";
-        if (in.readLine() == "n") {
-            // HEBIアクチュエータに接続できない場合は、プログラムを終了
-            // Exit app if connection to HEBI actuators can't be established
-            std::cout << "Exiting...\n";
-            QThread::sleep(1);  // give user time to read message
-            return;
-        }
+        qWarning() << "[WARN] Initializing without HEBI actuators.";
     }
 
     // --- Thread Management ---
@@ -122,6 +112,85 @@ void MainThread::run() {
 //------------------------------------------------------------------------------
 // !Menu Bar
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Event handler for "Connect" menu bar action "EPOS".
+ *        Brings up a dialog box similar to `VCS_OpenDeviceDlg()`.
+ */
+void MainWindow::on_a_epos_triggered() {}
+
+/**
+ * @brief Event handler for "Connect" menu bar action "HEBI".
+ *        Brings up a dialog box for inputting an IP address and actuator names.
+ */
+void MainWindow::on_a_hebi_triggered() {}
+
+/**
+ * @brief Event handler for "Connect" menu bar action "Pumps".
+ *        Brings up a dialog box of available serial USB devices.
+ */
+void MainWindow::on_a_pumps_triggered() {
+    // Display the "Connect to Serial" dialog
+    SerialDialog w_serial("USB");
+    w_serial.setModal(true);
+    w_serial.exec();
+
+    // Only continue if "Connect" was successful
+    if (w_serial.result() != QDialog::Accepted) {
+        qWarning() << "[WARN] Failed to connect to serial pump controller!";
+        return;
+    }
+
+    // Open a connection to the "SerialWater" Arduino
+    ser_water_ = std::make_unique<Serial>("SerialWater",
+                                          "/dev/" + w_serial.GetDeviceName());
+}
+
+/**
+ * @brief Event handler for "Connect" menu bar action "Camera".
+ *        Brings up a dialog box of available serial USB devices.
+ */
+void MainWindow::on_a_camera_triggered() {
+    // Display the "Connect to Serial" dialog
+    SerialDialog w_serial("USB");
+    w_serial.setModal(true);
+    w_serial.exec();
+
+    // Only continue if "Connect" was successful
+    if (w_serial.result() != QDialog::Accepted) {
+        qWarning()
+            << "[WARN] Failed to connect to serial camera servo controller!";
+        return;
+    }
+
+    // Open a connection to the "SerialServo" Arduino
+    ser_servo_ = std::make_unique<Serial>("SerialServo",
+                                          "/dev/" + w_serial.GetDeviceName());
+}
+
+/**
+ * @brief Event handler for "Connect" menu bar action "LIDAR".
+ *        Brings up a dialog box of available serial ACM devices.
+ *
+ * @note Although the Hokuyo LIDAR is connected via USB, it is listed as ACM.
+ *       See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
+ */
+void MainWindow::on_a_lidar_triggered() {
+    // Display the "Connect to Serial" dialog
+    SerialDialog w_serial("ACM");
+    w_serial.setModal(true);
+    w_serial.exec();
+
+    // Only continue if "Connect" was successful
+    if (w_serial.result() != QDialog::Accepted) {
+        qWarning()
+            << "[WARN] Failed to connect to serial camera servo controller!";
+        return;
+    }
+
+    // Open a connection to the Hokuyo LIDAR
+    lidar_->Open(w_serial.GetDeviceName());
+}
 
 //------------------------------------------------------------------------------
 // !Main Window
@@ -191,37 +260,3 @@ void MainWindow::on_pb_logshot_clicked() {}
 //------------------------------------------------------------------------------
 // !Uncategorized
 //------------------------------------------------------------------------------
-
-/**
- * @brief TODO
- */
-void MainWindow::on_a_epos_triggered() {}
-
-/**
- * @brief TODO
- */
-void MainWindow::on_a_hebi_triggered() {}
-
-/**
- * @brief TODO
- */
-void MainWindow::on_a_pumps_triggered() {
-    // Display the "Open EPOS device" dialog
-    SerialDialog w_serial;
-    w_serial.setModal(true);
-    w_serial.exec();
-
-    // Only continue if "Connect" was successful
-    if (w_serial.result() != QDialog::Accepted) {
-        qWarning() << "Failed to connect to serial pump controller!";
-        return;
-    }
-
-    // Save off the port handle (TODO)
-    // handle_ = w_open_epos.GetEPOSHandle();
-}
-
-/**
- * @brief TODO
- */
-void MainWindow::on_a_camera_triggered() {}

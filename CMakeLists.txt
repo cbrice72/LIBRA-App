@@ -120,7 +120,7 @@ target_link_libraries(
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
     # ~~~
-    PRIVATE libra_hebi serial # TODO: util
+    PRIVATE libra_hebi libra_lidar serial # TODO: util
     # ~~~
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
