@@ -18,8 +18,8 @@
 #include "utility.h"
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
  * !Main Window
+ * !Getters & Setters
  * !Uncategorized
  */
 
@@ -83,19 +83,6 @@ OpenEPOSWindow::OpenEPOSWindow(QWidget* parent)
 OpenEPOSWindow::~OpenEPOSWindow() {
     // Clean up the Qt-based GUI
     delete ui_;
-}
-
-//------------------------------------------------------------------------------
-// !Helper Functions
-//------------------------------------------------------------------------------
-
-/**
- * @brief Returns the handle used to communicate with the EPOS controller
- *
- * @return Handle for port access
- */
-void* OpenEPOSWindow::GetEPOSHandle() {
-    return handle_;
 }
 
 //------------------------------------------------------------------------------
@@ -405,6 +392,19 @@ void OpenEPOSWindow::on_pb_connect_clicked() {
 void OpenEPOSWindow::on_pb_cancel_clicked() {
     // Close the dialog and return `QDialog::Rejected`
     OpenEPOSWindow::reject();
+}
+
+//------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the handle used to communicate with the EPOS controller
+ *
+ * @return Handle for port access
+ */
+void* OpenEPOSWindow::GetEPOSHandle() {
+    return handle_;
 }
 
 //------------------------------------------------------------------------------

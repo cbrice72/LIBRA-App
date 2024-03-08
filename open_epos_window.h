@@ -13,6 +13,7 @@
 // Other Libraries' Headers
 //   Qt
 #include <QDialog>
+
 // Project Headers
 //   (none)
 
@@ -31,8 +32,10 @@ class OpenEPOSWindow : public QDialog {
     // NOLINTEND
 
   public:
-    explicit OpenEPOSWindow(QWidget *parent = nullptr);
+    explicit OpenEPOSWindow(QWidget* parent = nullptr);
     ~OpenEPOSWindow() override;
+
+    // --- Getters & Setters ---
 
     void* GetEPOSHandle();  // has to be public so MainWindow can access it
 
@@ -51,8 +54,6 @@ class OpenEPOSWindow : public QDialog {
 
   private:
     // NOLINTEND
-    // --- Helper Functions ---
-
     // --- Data Members ---
     Ui::OpenEPOSWindow* ui_;
 
