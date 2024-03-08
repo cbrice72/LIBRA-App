@@ -9,23 +9,35 @@
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
+#include <string>
 // Other Libraries' Headers
 //   Hokuyo URG
-// TODO...
+#include "Urg_driver.h"
 // Project Headers
 //   (none)
 
+/**
+ * @brief TODO
+ */
 class LibraLidar {
   public:
-    LibraLidar();
+    LibraLidar() = default;
+    ~LibraLidar();
 
     // --- Sensor Commands ---
 
+    void Open(const std::string& device_name);
+
     // --- Getters & Setters ---
+
+    std::vector<long> GetData();
 
   private:
     // --- Helper Functions ---
 
+    void PrintTimestamp();
+
     // --- Data Members ---
+
+    qrk::Urg_driver urg_;
 };
