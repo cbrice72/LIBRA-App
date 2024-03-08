@@ -50,7 +50,7 @@ Serial::Serial(std::string name, std::string port)
  * @brief Standard destructor - automatically closes the contained serial port.
  */
 Serial::~Serial() {
-    // Close serial port
+    // Gracefully close serial port
     if (serial_.is_open()) {
         serial_.close();
     }

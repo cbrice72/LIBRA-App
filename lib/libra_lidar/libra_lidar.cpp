@@ -28,8 +28,10 @@
  * @brief Standard destructor.
  */
 LibraLidar::~LibraLidar() {
-    // Properly terminate connection with sensor
-    urg_.close();
+    // Gracefully close sensor connection
+    if (urg_.is_open()) {
+        urg_.close();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -121,7 +123,7 @@ std::vector<long> LibraLidar::GetData() {
     if (!urg_.get_distance(data)) {
         std::cout << "[ERROR] LIDAR - Urg_driver::get_distance() failed: "
                   << urg_.what() << std::endl;
-        return std::vector<long>();  // empty vector
+        return {};
     }
 
     return data;
