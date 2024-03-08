@@ -13,9 +13,10 @@
 // Other Libraries' Headers
 //   (none)
 // Project Headers
-//#include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
+// #include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
 #include "serial_dialog.h"
 #include "ui_main_window.h"
+
 // #include "utility.h"
 
 /* --- TABLE OF CONTENTS ---
@@ -41,25 +42,6 @@
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
-
-    // コンソールを用意
-    // Prepare console
-    // clang-format off
-    std::cout <<  // note: do NOT mess with the spacing!
-        "\n"
-        " 888      8888888 888888b.   8888888b.         d8888             d8888 \n"
-        " 888        888   888  \"88b  888   Y88b       d88888            d88888 \n"
-        " 888        888   888  .88P  888    888      d88P888           d88P888 \n"
-        " 888        888   8888888K.  888   d88P     d88P 888          d88P 888 88888b.  88888b. \n"
-        " 888        888   888  \"Y88b 8888888P\"     d88P  888         d88P  888 888 \"88b 888 \"88b \n"
-        " 888        888   888    888 888 T88b     d88P   888        d88P   888 888  888 888  888 \n"
-        " 888        888   888   d88P 888  T88b   d8888888888       d8888888888 888 d88P 888 d88P \n"
-        " 88888888 8888888 8888888P\"  888   T88b d88P     888      d88P     888 88888P\"  88888P\" \n"
-        "                                                                       888      888 \n"
-        "                                                                       888      888 \n"
-        "                                                                       888      888 \n"
-        << std::endl;
-    // clang-format on
 
     // --- Arduino Connection (via serial USB) ---
 
@@ -109,7 +91,9 @@ MainWindow::MainWindow(QWidget* parent)
 /**
  * @brief Standard destructor.
  */
-MainWindow::~MainWindow() {}
+MainWindow::~MainWindow() {
+    // TODO
+}
 
 //------------------------------------------------------------------------------
 // !Helper Functions
@@ -234,7 +218,7 @@ void MainWindow::on_a_pumps_triggered() {
     }
 
     // Save off the port handle (TODO)
-    //handle_ = w_open_epos.GetEPOSHandle();
+    // handle_ = w_open_epos.GetEPOSHandle();
 }
 
 /**

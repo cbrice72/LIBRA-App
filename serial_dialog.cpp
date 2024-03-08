@@ -12,7 +12,7 @@
 #include <sys/stat.h>
 // Other Libraries' Headers
 //   Qt
-#include<QDebug>
+#include <QDebug>
 //   Userspace Devices
 #include <libudev.h>
 // Project Headers
@@ -72,7 +72,7 @@ QStringList SerialDialog::GetDeviceList() {
 
     // Initialize udev enumerator
     struct udev_enumerate* enumerate = udev_enumerate_new(udev);
-    udev_enumerate_add_match_subsystem(enumerate, "usb");  // "tty"?
+    udev_enumerate_add_match_subsystem(enumerate, "tty");
     udev_enumerate_scan_devices(enumerate);
 
     // Get list of devices
@@ -84,12 +84,11 @@ QStringList SerialDialog::GetDeviceList() {
         // Retrieve device information
         const char* path = udev_list_entry_get_name(entry);
         struct udev_device* device = udev_device_new_from_syspath(udev, path);
-        const char* device_node = udev_device_get_devnode(device);
-        const char* desc = udev_device_get_sysattr_value(device, "description");
+        const char* devnode = udev_device_get_devnode(device);
 
         // Only list physical connections
-        if (desc && !strstr(desc, "virtual")) {
-            device_list.append(QString::fromUtf8(device_node));
+        if (device && strstr(devnode, "ttyUSB")) {
+            device_list.append(QString::fromUtf8(devnode));
         }
 
         // Free udev device object before moving on to next one
@@ -113,8 +112,7 @@ QStringList SerialDialog::GetDeviceList() {
  * @brief Event handler for "Connect" button (single click).
  *        Opens the specified serial device.
  */
-void SerialDialog::on_pb_connect_clicked()
-{
+void SerialDialog::on_pb_connect_clicked() {
     // Close the dialog and return `QDialog::Accepted`
     SerialDialog::accept();
 }
@@ -123,8 +121,7 @@ void SerialDialog::on_pb_connect_clicked()
  * @brief Give the user another way to close the dialog
  *        (in addition to the X in the menu bar).
  */
-void SerialDialog::on_pb_cancel_clicked()
-{
+void SerialDialog::on_pb_cancel_clicked() {
     // Close the dialog and return `QDialog::Rejected`
     SerialDialog::reject();
 }
