@@ -12,7 +12,6 @@
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
-#include <stdexcept>
 // Other Libraries' Headers
 #include "group_command.hpp"
 
@@ -92,7 +91,7 @@ bool LibraHebi::Connect() {
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
         // std::cerr << "[エラー] HEBI - アクチュエータが接続されていません\n";
-        std::cerr << "[ERROR] HEBI - Actuators not connected!\n";
+        std::cerr << "[ERROR] HEBI - Failed to connect to actuators!\n";
         command_->setPosition(Eigen::VectorXd::Zero(5));
         return false;
     }
