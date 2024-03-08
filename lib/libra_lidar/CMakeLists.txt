@@ -36,8 +36,6 @@ target_include_directories(
 # Tell the linker which libraries to link against
 target_link_libraries(
     libra_lidar
-    # Qt
-    PRIVATE Qt${QT_VERSION_MAJOR}::Core
     # Hokuyo URG
-    PRIVATE -lurg_cpp -m
+    PRIVATE -lurg_cpp
 )
