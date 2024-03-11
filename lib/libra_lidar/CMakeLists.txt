@@ -23,7 +23,8 @@ qt_add_library(
 target_include_directories(
     libra_lidar
     # Hokuyo URG
-    PUBLIC ${URG_DIR}/include
+    PUBLIC ${URG_DIR}/include/c
+    PUBLIC ${URG_DIR}/include/cpp
     # Make sure the path to this directory is automatically added as an include
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
