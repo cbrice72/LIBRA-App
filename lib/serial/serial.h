@@ -25,7 +25,7 @@
  */
 class Serial {
   public:
-    Serial(std::string name, std::string port);
+    explicit Serial(std::string name, std::string port);
     ~Serial();
 
     // --- Public Functions ---
@@ -36,8 +36,8 @@ class Serial {
   private:
     // --- Data Members ---
 
-    std::string name_{""};
-    std::string port_{""};
+    std::string name_;
+    std::string port_;
 
     boost::asio::io_context io_;  // only necessary for initializing serial port
     boost::asio::serial_port serial_;

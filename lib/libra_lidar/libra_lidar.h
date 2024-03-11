@@ -21,12 +21,10 @@
  */
 class LibraLidar {
   public:
-    LibraLidar() = default;
+    explicit LibraLidar(const std::string& device_name);
     ~LibraLidar();
 
     // --- Sensor Commands ---
-
-    void Open(const std::string& device_name);
 
     // --- Getters & Setters ---
 

@@ -17,6 +17,8 @@
 // Project Headers
 //   (none)
 
+constexpr uint kBaudRate = 115200;  // default: 115200
+
 /* --- TABLE OF CONTENTS ---
  * !Public Functions
  */
@@ -31,9 +33,7 @@
 Serial::Serial(std::string name, std::string port)
     : name_(name), port_(port), serial_(io_) {
     // Set port options
-    unsigned int baud_rate = 115200;
-
-    serial_.set_option(boost::asio::serial_port_base::baud_rate(baud_rate));
+    serial_.set_option(boost::asio::serial_port_base::baud_rate(kBaudRate));
     serial_.set_option(boost::asio::serial_port_base::character_size(8));
     serial_.set_option(boost::asio::serial_port_base::parity(
         boost::asio::serial_port_base::parity::none));

@@ -25,6 +25,56 @@
  */
 
 /**
+ * @brief Standard constructor - automatically opens the given device.
+ * 
+ * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
+ */
+LibraLidar::LibraLidar(const std::string& device_name) {
+    // --- Connection ---
+
+    if (!urg_.open(device_name.c_str(), qrk::Urg_driver::Default_baudrate,
+                   qrk::Urg_driver::Serial)) {
+        std::cout << "[ERROR] LIDAR - Urg_driver::open(device_name) failed: "
+                  << urg_.what() << std::endl;
+        return;
+    }
+
+#ifdef DEBUG
+    std::cout << "[DEBUG] LIDAR - Connected!\n";
+    std::cout << "  Type:      " << urg_.product_type() << "\n";
+    std::cout << "  Firmware:  " << urg_.firmware_version() << "\n";
+    std::cout << "  Serial ID: " << urg_.serial_id() << "\n";
+    std::cout << "  Status:    " << urg_.status() << "\n";
+    std::cout << "  State:     " << urg_.state() << std::endl;
+#endif
+
+    // --- Settings ---
+
+    // Limit scanning range to camera FOV (default: 270 deg)
+    urg_.set_scanning_parameter(urg_.deg2step(-90), urg_.deg2step(+90),
+                                0);  // 180 deg
+
+    // Reset LIDAR timestamp to match current PC system time
+#ifdef DEBUG
+    std::cout << "[DEBUG] LIDAR - Timestamp before: ";
+    PrintTimestamp();
+#endif
+
+    urg_.set_sensor_time_stamp(qrk::ticks());
+
+#ifdef DEBUG
+    std::cout << "[DEBUG] LIDAR - Timestamp after: ";
+    PrintTimestamp();
+#endif
+
+    // --- Measurement ---
+
+    // Spin up the LIDAR and prepare to retrieve data
+    urg_.start_measurement(qrk::Urg_driver::Distance,
+                           qrk::Urg_driver::Infinity_times, 0);
+}
+
+/**
  * @brief Standard destructor.
  */
 LibraLidar::~LibraLidar() {
@@ -57,52 +107,6 @@ void LibraLidar::PrintTimestamp() {
 //------------------------------------------------------------------------------
 // !Sensor Commands
 //------------------------------------------------------------------------------
-
-void LibraLidar::Open(const std::string& device_name) {
-    // --- Connection ---
-
-    if (!urg_.open(device_name.c_str(), qrk::Urg_driver::Default_baudrate,
-                   qrk::Urg_driver::Serial)) {
-        std::cout << "[ERROR] LIDAR - Urg_driver::open(device_name) failed: "
-                  << urg_.what() << std::endl;
-        return;
-    }
-
-#ifdef DEBUG
-    std::cout << "Connected!"
-              << "\n";
-    std::cout << "  Type:      " << urg_.product_type() << "\n";
-    std::cout << "  Firmware:  " << urg_.firmware_version() << "\n";
-    std::cout << "  Serial ID: " << urg_.serial_id() << "\n";
-    std::cout << "  Status:    " << urg_.status() << "\n";
-    std::cout << "  State:     " << urg_.state() << std::endl;
-#endif
-
-    // --- Settings ---
-
-    // Limit scanning range to camera FOV (default: 270 deg)
-    urg_.set_scanning_parameter(urg_.deg2step(-90), urg_.deg2step(+90),
-                                0);  // 180 deg
-
-    // Reset LIDAR timestamp to match current PC system time
-#ifdef DEBUG
-    std::cout << "[INFO] LIDAR - Timestamp before: ";
-    PrintTimestamp();
-#endif
-
-    urg_.set_sensor_time_stamp(qrk::ticks());
-
-#ifdef DEBUG
-    std::cout << "[INFO] LIDAR - Timestamp after: ";
-    PrintTimestamp();
-#endif
-
-    // --- Measurement ---
-
-    // Spin up the LIDAR and prepare to retrieve data
-    urg_.start_measurement(qrk::Urg_driver::Distance,
-                           qrk::Urg_driver::Infinity_times, 0);
-}
 
 //------------------------------------------------------------------------------
 // !Getters & Setters

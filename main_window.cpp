@@ -123,7 +123,22 @@ void MainWindow::on_a_epos_triggered() {}
  * @brief Event handler for "Connect" menu bar action "HEBI".
  *        Brings up a dialog box for inputting an IP address and actuator names.
  */
-void MainWindow::on_a_hebi_triggered() {}
+void MainWindow::on_a_hebi_triggered() {
+    // Display the "Connect to HEBI" dialog
+    // TODO
+
+    // Only continue if "Connect" was successful
+    // TODO
+
+    /*
+#ifdef DEBUG
+    qDebug() << "[DEBUG] Main - HEBI serial dialog returned successfully";
+#endif
+    */
+
+    // Open a connection to the HEBI actuators
+    // TODO
+}
 
 /**
  * @brief Event handler for "Connect" menu bar action "Pumps".
@@ -140,6 +155,10 @@ void MainWindow::on_a_pumps_triggered() {
         qWarning() << "[WARN] Failed to connect to serial pump controller!";
         return;
     }
+
+#ifdef DEBUG
+    qDebug() << "[DEBUG] Main - Pumps serial dialog returned successfully";
+#endif
 
     // Open a connection to the "SerialWater" Arduino
     ser_water_ = std::make_unique<Serial>("SerialWater",
@@ -162,6 +181,10 @@ void MainWindow::on_a_camera_triggered() {
             << "[WARN] Failed to connect to serial camera servo controller!";
         return;
     }
+
+#ifdef DEBUG
+    qDebug() << "[DEBUG] Main - Camera serial dialog returned successfully";
+#endif
 
     // Open a connection to the "SerialServo" Arduino
     ser_servo_ = std::make_unique<Serial>("SerialServo",
@@ -188,8 +211,12 @@ void MainWindow::on_a_lidar_triggered() {
         return;
     }
 
+#ifdef DEBUG
+    qDebug() << "[DEBUG] Main - LIDAR serial dialog returned successfully";
+#endif
+
     // Open a connection to the Hokuyo LIDAR
-    lidar_->Open(w_serial.GetDeviceName());
+    lidar_ = std::make_unique<LibraLidar>(w_serial.GetDeviceName());
 }
 
 //------------------------------------------------------------------------------

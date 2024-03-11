@@ -61,10 +61,10 @@ SerialDialog::~SerialDialog() {
  * @return true if `WSL` directory is detected; false otherwise
  */
 bool SerialDialog::isRunningOnWSL() {
-    const char* wslPath = "/run/WSL";
-    struct stat buf;
+    const char* wsl_path = "/run/WSL";
+    struct stat buf{};
 
-    return (stat(wslPath, &buf) == 0 && S_ISDIR(buf.st_mode));
+    return (stat(wsl_path, &buf) == 0 && S_ISDIR(buf.st_mode));
 }
 
 /**
@@ -84,7 +84,7 @@ QStringList SerialDialog::GetDeviceList() {
 
     // Create udev context
     struct udev* udev = udev_new();
-    if (!udev) {
+    if (udev == nullptr) {
         qCritical() << "[ERROR] Serial - Unable to create udev context";
         return device_list;
     }
@@ -96,7 +96,7 @@ QStringList SerialDialog::GetDeviceList() {
 
     // Get list of devices
     struct udev_list_entry* devices = udev_enumerate_get_list_entry(enumerate);
-    struct udev_list_entry* entry;
+    struct udev_list_entry* entry = nullptr;
 
     // Iterate through list
     udev_list_entry_foreach(entry, devices) {
@@ -104,6 +104,11 @@ QStringList SerialDialog::GetDeviceList() {
         const char* path = udev_list_entry_get_name(entry);
         struct udev_device* device = udev_device_new_from_syspath(udev, path);
         const char* devnode = udev_device_get_devnode(device);
+
+#ifdef DEBUG
+        // Print out all found devices
+        qDebug() << "[DEBUG] Serial - Found " << devnode;
+#endif
 
         // Only list physical connections
         if (device && strstr(devnode, device_type_.c_str())) {
