@@ -132,7 +132,7 @@ std::vector<long> LibraLidar::GetData() {
     std::vector<long> data;
 
     if (!urg_.get_distance(data)) {
-        std::cout << "[ERROR] LIDAR - Urg_driver::get_distance() failed: "
+        std::cerr << "[ERROR] LIDAR - Urg_driver::get_distance() failed: "
                   << urg_.what() << std::endl;
         return {};
     }
