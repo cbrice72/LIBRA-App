@@ -11,7 +11,7 @@ Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with 
 2. [Preparing Your Development Environment](#preparing-your-development-environment)
     - [Proxy Settings](#proxy-settings)
     - [System Updates and Required Packages](#system-updates-and-required-packages)
-    - [Required Drivers](#required-drivers)
+    - [Required Drivers and Permissions](#required-drivers-and-permissions)
 3. [Project Software](#project-software)
     - [Qt Creator](#qt-creator)
     - [Maxon EPOS Library (system-wide install)](#maxon-epos-library-system-wide-install)
@@ -103,15 +103,15 @@ Package notes:
 - (TODO: necessary?) `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
 - `libudev-dev`: C++ library for enumerating local devices([link](https://www.freedesktop.org/software/systemd/man/latest/libudev.html)).
 
-### *Required Drivers*
+### *Required Drivers and Permissions*
 
-#### **Hokuyo URG (LIDAR)**
+#### **Hokuyo URG (LIDAR) Port Access**
 
-The `URG_USB_Driver.inf` setup file can be found in `external/urg-cpp-1.2.7/driver/`.
+In order for the app to open ports on your behalf *without sudo*, you need to add  yourself to the `dialout` group.
 
-To install, simply right-click the file in Windows and select "Install".
-Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](external/urg-cpp-1.2.7/driver/README.md) for instructions.
-For further troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).
+```bash
+sudo adduser $USER dialout
+```
 
 #### **Maxon EPOS**
 
@@ -239,3 +239,11 @@ If you're prompted to "unlock a keyring" (by entering your Linux password) every
     @include common-session
     session optional        pam_gnome_keyring.so auto_start
     ```
+
+### **Hokuyo URG (LIDAR) Windows Driver**
+
+To test the sample URG library apps (available [here](https://sourceforge.net/projects/urgnetwork/files/urg_library/)), which are Windows-only, you'll need to install the URG driver for Windows. The `URG_USB_Driver.inf` setup file can be found in `external/urg-cpp-1.2.7/driver/`.
+
+To install, simply right-click the file in Windows and select "Install".
+Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](external/urg-cpp-1.2.7/driver/README.md) for instructions.
+For further troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).
