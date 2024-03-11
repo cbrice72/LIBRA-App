@@ -30,12 +30,12 @@ target_include_directories(
 )
 
 # Import the Hokuyo URG library packaged with this project
-#add_library(urg SHARED IMPORTED GLOBAL)
-#set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_DIR}/lib/liburg_cpp.so)
+add_library(urg_cpp SHARED IMPORTED GLOBAL)
+set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_DIR}/lib/liburg_cpp.so)
 
 # Tell the linker which libraries to link against
 target_link_libraries(
     libra_lidar
     # Hokuyo URG
-    PRIVATE -lurg_cpp
+    PRIVATE urg_cpp #-lurg_cpp
 )
