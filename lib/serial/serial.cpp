@@ -32,6 +32,13 @@ constexpr uint kBaudRate = 115200;  // default: 115200
  */
 Serial::Serial(std::string name, std::string port)
     : name_(name), port_(port), serial_(io_) {
+    if (port.empty()) {
+        std::cerr << "[ERROR] Serial - Given port is empty; cannot init serial"
+                     "connection without valid path (e.g., \"/dev/ttyUSB0\")!"
+                  << std::endl;
+        return;
+    }
+
     // Set port options
     serial_.set_option(boost::asio::serial_port_base::baud_rate(kBaudRate));
     serial_.set_option(boost::asio::serial_port_base::character_size(8));

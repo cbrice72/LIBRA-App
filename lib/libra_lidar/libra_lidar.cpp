@@ -30,12 +30,19 @@
  * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
  */
 LibraLidar::LibraLidar(const std::string& device_name) {
+    if (device_name.empty()) {
+        std::cerr << "[ERROR] LIDAR - Given device_name is empty; cannot init "
+                     "sensor without valid path (e.g., \"/dev/ttyASM0\")!"
+                  << std::endl;
+        return;
+    }
+
     // --- Connection ---
 
     if (!urg_.open(device_name.c_str(), qrk::Urg_driver::Default_baudrate,
                    qrk::Urg_driver::Serial)) {
-        std::cout << "[ERROR] LIDAR - Urg_driver::open(device_name) failed: "
-                  << urg_.what() << std::endl;
+        std::cerr << "[ERROR] LIDAR - Urg_driver::open(" << device_name
+                  << ") failed: " << urg_.what() << std::endl;
         return;
     }
 
