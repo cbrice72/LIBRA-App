@@ -107,7 +107,7 @@ QStringList SerialDialog::GetDeviceList() {
 
 #ifdef DEBUG
         // Print out all found devices
-        qDebug() << "[DEBUG] Serial - Found " << devnode;
+        qDebug() << "[DEBUG] Serial - Found" << devnode;
 #endif
 
         // Only list physical connections
