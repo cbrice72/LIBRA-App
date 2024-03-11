@@ -133,24 +133,26 @@ QStringList SerialDialog::GetDeviceList() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Event handler for "" combo box selection.
+ * @brief Event handler for "Serial Name" combo box selection.
  *        Enables the "Connect" button.
  *
  * @param sel The device name selected by the user
  */
 void SerialDialog::on_cb_serial_name_textActivated(const QString& sel) {
-    // Save selected device name
-    selected_device_ = sel.toStdString();
-
     // Since the device name has been specified, enable Connect button
     ui_->pb_connect->setEnabled(true);
 }
 
 /**
  * @brief Event handler for "Connect" button (single click).
- *        Opens the specified serial device.
+ *
+ * @note Since there are various types of serial devices (e.g., "USB", "ASM",
+ *       etc.), the calling code is responsible for establishing the connection.
  */
 void SerialDialog::on_pb_connect_clicked() {
+    // Save selected device name
+    selected_device_ = ui_->cb_serial_name->currentText().toStdString();
+
     // Close the dialog and return `QDialog::Accepted`
     SerialDialog::accept();
 }
