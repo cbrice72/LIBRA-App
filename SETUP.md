@@ -107,11 +107,23 @@ Package notes:
 
 #### **Hokuyo URG (LIDAR) Port Access**
 
-In order for the app to open ports on your behalf *without sudo*, you need to add  yourself to the `dialout` group.
+In order for the app to open ports on your behalf *without sudo*, you need to add yourself to the `dialout` system group.
 
 ```bash
 sudo adduser $USER dialout
 ```
+
+Then, reboot in order for this to take effect.
+
+To check whether this worked, first try the `groups` command in the terminal.
+If you see `dialout` listed, then try connecting to the port while the LIDAR is running.
+
+```bash
+od /dev/ttyACM0
+```
+
+If there is no output (i.e., only a blank line), then it worked.
+If you get a permissions error, it hasn't taken effect yet.
 
 #### **Maxon EPOS**
 
