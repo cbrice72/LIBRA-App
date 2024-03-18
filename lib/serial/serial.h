@@ -28,13 +28,16 @@ class Serial {
     explicit Serial(std::string name, std::string port);
     ~Serial();
 
-    // --- Public Functions ---
+    // --- Getters & Setters ---
 
+    void SetDebugMode(bool enabled);
     int Write(uint8_t data);  // TODO: needed?
     int WriteStr(std::string str);
 
   private:
     // --- Data Members ---
+
+    bool debug_mode_{false};
 
     std::string name_;
     std::string port_;

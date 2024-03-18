@@ -48,6 +48,8 @@ class LibraHebi {
     double GetFeedbackEffortMA();
     double GetFeedbackEffortMB();
 
+    void SetDebugMode(bool enabled);
+
   private:
     /**
      * @brief HEBI actuator names.
@@ -62,6 +64,8 @@ class LibraHebi {
     void Loop();
 
     // --- Data Members ---
+
+    bool debug_mode_{false};
 
     std::unique_ptr<hebi::GroupCommand> command_;
     std::unique_ptr<hebi::GroupFeedback> feedback_;

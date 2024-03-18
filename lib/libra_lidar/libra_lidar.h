@@ -31,12 +31,16 @@ class LibraLidar {
     std::string GetMetadata();
     std::vector<long> GetData();
 
+    void SetDebugMode(bool enabled);
+
   private:
     // --- Helper Functions ---
 
     void PrintTimestamp();
 
     // --- Data Members ---
+
+    bool debug_mode_{false};
 
     qrk::Urg_driver urg_;
 

@@ -17,11 +17,6 @@ project(
 # CMake options
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
 
-option(DEBUG "Enable debugging print statements" ON)
-if(DEBUG)
-    add_compile_definitions(DEBUG) # make -DDEBUG available to all targets
-endif()
-
 # Tell CMake to automatically handle Qt code generators and preprocessors
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)

@@ -59,10 +59,10 @@ LibraLidar::LibraLidar(const std::string& device_name) {
                                 0);  // 180 deg
 
     // Reset LIDAR timestamp to match current PC system time
-#ifdef DEBUG
-    std::cout << "[DEBUG] LIDAR - Timestamp before: ";
-    PrintTimestamp();
-#endif
+    if (debug_mode_) {
+        std::cout << "[DEBUG] LIDAR - Timestamp before: ";
+        PrintTimestamp();
+    }
 
     auto pc_time_stamp = std::chrono::time_point_cast<std::chrono::milliseconds>(
                              std::chrono::system_clock::now())
@@ -70,10 +70,10 @@ LibraLidar::LibraLidar(const std::string& device_name) {
                              .count();
     urg_.set_sensor_time_stamp(pc_time_stamp);
 
-#ifdef DEBUG
-    std::cout << "[DEBUG] LIDAR - Timestamp after: ";
-    PrintTimestamp();
-#endif
+    if (debug_mode_) {
+        std::cout << "[DEBUG] LIDAR - Timestamp after:  ";
+        PrintTimestamp();
+    }
 
     // --- Measurement ---
 
@@ -158,4 +158,12 @@ std::vector<long> LibraLidar::GetData() {
     }
 
     return data;
+}
+
+/**
+ * @brief Sets whether or not verbose debug text is displayed
+ * @param true to enable, false to disable
+ */
+void LibraLidar::SetDebugMode(bool enabled) {
+    debug_mode_ = enabled;
 }

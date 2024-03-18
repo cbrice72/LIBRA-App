@@ -31,9 +31,10 @@
  * @param device_type The "tty" device type to be managed (e.g., "USB", "ACM")
  * @param parent Owning Qt widget (default: nullptr)
  */
-SerialDialog::SerialDialog(const std::string& device_type, QWidget* parent)
+SerialDialog::SerialDialog(const std::string& device_type,
+                           const bool debug_mode, QWidget* parent)
     : QDialog(parent), device_type_("tty" + device_type),
-      ui_(new Ui::SerialDialog) {
+      debug_mode_(debug_mode), ui_(new Ui::SerialDialog) {
     ui_->setupUi(this);
 
     // Populate the combobox
@@ -105,10 +106,10 @@ QStringList SerialDialog::GetDeviceList() {
         struct udev_device* device = udev_device_new_from_syspath(udev, path);
         const char* devnode = udev_device_get_devnode(device);
 
-#ifdef DEBUG
-        // Print out all found devices
-        qDebug() << "[DEBUG] Serial - Found" << devnode;
-#endif
+        if (debug_mode_) {
+            // Print out all found devices
+            qDebug() << "[DEBUG] Serial - Found" << devnode;
+        }
 
         // Only list physical connections
         if (device && strstr(devnode, device_type_.c_str())) {

@@ -28,6 +28,7 @@ class SerialDialog : public QDialog {
 
   public:
     explicit SerialDialog(const std::string& device_type,
+                          const bool debug_mode = false,
                           QWidget* parent = nullptr);
     ~SerialDialog();
 
@@ -52,6 +53,7 @@ class SerialDialog : public QDialog {
     // --- Data Members ---
 
     Ui::SerialDialog* ui_;
+    bool debug_mode_;
     std::string device_type_;
 
     std::string selected_device_;

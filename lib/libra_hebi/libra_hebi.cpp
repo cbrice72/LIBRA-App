@@ -290,3 +290,11 @@ double LibraHebi::GetFeedbackEffortMA() {
 double LibraHebi::GetFeedbackEffortMB() {
     return feedback_->getEffort()[Act::kHebiMB];
 }
+
+/**
+ * @brief Sets whether or not verbose debug text is displayed
+ * @param true to enable, false to disable
+ */
+void LibraHebi::SetDebugMode(bool enabled) {
+    debug_mode_ = enabled;
+}

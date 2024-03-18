@@ -20,7 +20,7 @@
 constexpr uint kBaudRate = 115200;  // default: 115200
 
 /* --- TABLE OF CONTENTS ---
- * !Public Functions
+ * !Getters & Setters
  */
 
 /**
@@ -64,8 +64,16 @@ Serial::~Serial() {
 }
 
 //------------------------------------------------------------------------------
-// !Public Functions
+// !Getters & Setters
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Sets whether or not verbose debug text is displayed
+ * @param true to enable, false to disable
+ */
+void Serial::SetDebugMode(bool enabled) {
+    debug_mode_ = enabled;
+}
 
 /**
  * @brief TODO.
@@ -75,7 +83,7 @@ Serial::~Serial() {
  */
 int Serial::Write(uint8_t data) {
     if (!serial_.is_open()) {
-        std::cout << "[ERROR] Serial(" << name_
+        std::cerr << "[ERROR] Serial(" << name_
                   << ") - Failed to communicate with port " << port_ << "\n";
         return -1;
     }
@@ -108,7 +116,7 @@ int Serial::Write(uint8_t data) {
  */
 int Serial::WriteStr(std::string str) {
     if (!serial_.is_open()) {
-        std::cout << "[ERROR] Serial(" << name_
+        std::cerr << "[ERROR] Serial(" << name_
                   << ") - Failed to communicate with port " << port_ << "\n";
         return -1;
     }

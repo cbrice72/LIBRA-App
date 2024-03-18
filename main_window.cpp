@@ -114,6 +114,10 @@ void MainThread::run() {
 // !Menu Bar
 //------------------------------------------------------------------------------
 
+void MainWindow::on_a_debug_mode_toggled(bool checked) {
+    debug_mode_ = checked;
+}
+
 /**
  * @brief Event handler for "EPOS" menu bar action "Connect".
  *        Brings up a dialog box similar to `VCS_OpenDeviceDlg()`.
@@ -142,9 +146,9 @@ void MainWindow::on_a_hebi_connect_triggered() {
     // TODO
 
     /*
-#ifdef DEBUG
-    qDebug() << "[DEBUG] HEBI serial dialog returned successfully";
-#endif
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] HEBI serial dialog returned successfully"
+    }
     */
 
     // Open a connection to the HEBI actuators
@@ -175,9 +179,9 @@ void MainWindow::on_a_pumps_connect_triggered() {
         return;
     }
 
-#ifdef DEBUG
-    qDebug() << "[DEBUG] Pumps serial dialog returned successfully";
-#endif
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Pumps serial dialog returned successfully";
+    }
 
     // Open a connection to the "SerialWater" Arduino
     ser_water_ = std::make_unique<Serial>("SerialWater",
@@ -209,9 +213,9 @@ void MainWindow::on_a_camera_connect_triggered() {
         return;
     }
 
-#ifdef DEBUG
-    qDebug() << "[DEBUG] Camera serial dialog returned successfully";
-#endif
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Camera serial dialog returned successfully";
+    }
 
     // Open a connection to the "SerialServo" Arduino
     ser_servo_ = std::make_unique<Serial>("SerialServo",
@@ -235,7 +239,7 @@ void MainWindow::on_a_camera_disconnect_triggered() {
  */
 void MainWindow::on_a_lidar_connect_triggered() {
     // Display the "Connect to Serial" dialog
-    SerialDialog w_serial("ACM");
+    SerialDialog w_serial("ACM", debug_mode_);
     w_serial.setModal(true);
     w_serial.exec();
 
@@ -246,9 +250,9 @@ void MainWindow::on_a_lidar_connect_triggered() {
         return;
     }
 
-#ifdef DEBUG
-    qDebug() << "[DEBUG] LIDAR serial dialog returned successfully";
-#endif
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] LIDAR serial dialog returned successfully";
+    }
 
     // Open a connection to the Hokuyo LIDAR
     lidar_ = std::make_unique<LibraLidar>(w_serial.GetDeviceName());

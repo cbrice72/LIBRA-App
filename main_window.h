@@ -63,6 +63,10 @@ class MainWindow : public QMainWindow {
   private slots:
     // --- Menu Bar ---
 
+    // Preferences Menu
+
+    void on_a_debug_mode_toggled(bool checked);
+
     // EPOS Menu
 
     void on_a_epos_connect_triggered();
@@ -128,6 +132,7 @@ class MainWindow : public QMainWindow {
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
+    bool debug_mode_{false};
 
     // TODO: is this necessary in the new app?
     // MainThread* main_thread_;  // primary loop

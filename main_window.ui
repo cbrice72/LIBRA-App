@@ -2350,16 +2350,6 @@
      <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="m_connect">
-    <property name="title">
-     <string>Connect</string>
-    </property>
-    <addaction name="a_epos"/>
-    <addaction name="a_hebi"/>
-    <addaction name="a_pumps"/>
-    <addaction name="a_camera"/>
-    <addaction name="a_lidar"/>
-   </widget>
    <widget class="QMenu" name="m_epos">
     <property name="enabled">
      <bool>false</bool>
@@ -2404,7 +2394,13 @@
     <addaction name="separator"/>
     <addaction name="a_lidar_about"/>
    </widget>
-   <addaction name="m_connect"/>
+   <widget class="QMenu" name="m_preferences">
+    <property name="title">
+     <string>Preferences</string>
+    </property>
+    <addaction name="a_debug_mode"/>
+   </widget>
+   <addaction name="m_preferences"/>
    <addaction name="m_epos"/>
    <addaction name="m_hebi"/>
    <addaction name="m_pumps"/>
@@ -2493,6 +2489,14 @@
   <action name="a_lidar_about">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="a_debug_mode">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Debug Mode</string>
    </property>
   </action>
  </widget>
