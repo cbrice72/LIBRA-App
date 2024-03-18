@@ -54,11 +54,10 @@ LibraLidar::LibraLidar(const std::string& device_name) {
 
     // --- Settings ---
 
-    // Limit scanning range to camera FOV (default: 270 deg)
-    urg_.set_scanning_parameter(urg_.deg2step(-90), urg_.deg2step(+90),
-                                0);  // 180 deg
+    // Limit scanning range to camera FOV, or 180 deg (default: 270 deg)
+    urg_.set_scanning_parameter(urg_.deg2step(-90), urg_.deg2step(+90), 0);
 
-    // Reset LIDAR timestamp to match current PC system time
+    // Sync LIDAR and PC timestamps
     if (debug_mode_) {
         std::cout << "[DEBUG] LIDAR - Timestamp before: ";
         PrintTimestamp();
@@ -150,14 +149,15 @@ std::string LibraLidar::GetMetadata() {
  */
 std::vector<long> LibraLidar::GetData() {
     std::vector<long> data;
+    long timestamp;
 
-    if (!urg_.get_distance(data)) {
+    if (!urg_.get_distance(data, &timestamp)) {
         std::cerr << "[ERROR] LIDAR - Urg_driver::get_distance() failed: "
                   << urg_.what() << std::endl;
         return {};
     }
 
-    return data;
+    return data;  // TODO: return timestamp, if necessary
 }
 
 /**
