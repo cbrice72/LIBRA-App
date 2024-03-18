@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
+#include <sstream>
 // Other Libraries' Headers
 //   Hokuyo URG
 #include "ticks.h"
@@ -30,14 +31,14 @@
  * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
  */
 LibraLidar::LibraLidar(const std::string& device_name) {
+    // --- Connection ---
+
     if (device_name.empty()) {
         std::cerr << "[ERROR] LIDAR - Given device_name is empty; cannot init "
                      "sensor without valid path (e.g., \"/dev/ttyASM0\")!"
                   << std::endl;
         return;
     }
-
-    // --- Connection ---
 
     if (!urg_.open(device_name.c_str(), qrk::Urg_driver::Default_baudrate,
                    qrk::Urg_driver::Serial)) {
@@ -46,14 +47,10 @@ LibraLidar::LibraLidar(const std::string& device_name) {
         return;
     }
 
-#ifdef DEBUG
-    std::cout << "[DEBUG] LIDAR - Connected!\n";
-    std::cout << "  Type:      " << urg_.product_type() << "\n";
-    std::cout << "  Firmware:  " << urg_.firmware_version() << "\n";
-    std::cout << "  Serial ID: " << urg_.serial_id() << "\n";
-    std::cout << "  Status:    " << urg_.status() << "\n";
-    std::cout << "  State:     " << urg_.state() << std::endl;
-#endif
+    // Retrieve metadata before measurement mode is turned on
+    product_type_ = urg_.product_type();
+    firmware_version_ = urg_.firmware_version();
+    serial_id_ = urg_.serial_id();
 
     // --- Settings ---
 
@@ -67,7 +64,11 @@ LibraLidar::LibraLidar(const std::string& device_name) {
     PrintTimestamp();
 #endif
 
-    urg_.set_sensor_time_stamp(qrk::ticks());
+    auto pc_time_stamp = std::chrono::time_point_cast<std::chrono::milliseconds>(
+                             std::chrono::system_clock::now())
+                             .time_since_epoch()
+                             .count();
+    urg_.set_sensor_time_stamp(pc_time_stamp);
 
 #ifdef DEBUG
     std::cout << "[DEBUG] LIDAR - Timestamp after: ";
@@ -120,13 +121,32 @@ void LibraLidar::PrintTimestamp() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief LibraLidar::GetData
+ * @brief Gets LIDAR metadata (product type, firmware version, etc.).
  *
- * @return
+ * @return Newline-delimited string of metadata in the format "Category: Value"
+ */
+std::string LibraLidar::GetMetadata() {
+    std::stringstream ret;
+
+    if (urg_.is_open()) {
+        ret << "Type:      " << product_type_ << "\n";
+        ret << "Firmware:  " << firmware_version_ << "\n";
+        ret << "Serial ID: " << serial_id_ << "\n";
+    } else {
+        ret << "Not connected!";
+    }
+
+    return ret.str();
+}
+
+/**
+ * @brief TODO
+ *
+ * @return TODO
  *
  * @note The Hokuyo URG library is not entirely cross-platform.
  *       In this case, `urg.get_distance()` only accepts a reference to a
- *       vector of Windows `long` (Linux alttern would be `uint64_t`).
+ *       vector of Windows `long` (Linux alternative would be `uint64_t`).
  */
 std::vector<long> LibraLidar::GetData() {
     std::vector<long> data;

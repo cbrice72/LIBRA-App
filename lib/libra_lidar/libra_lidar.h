@@ -28,6 +28,7 @@ class LibraLidar {
 
     // --- Getters & Setters ---
 
+    std::string GetMetadata();
     std::vector<long> GetData();
 
   private:
@@ -38,4 +39,8 @@ class LibraLidar {
     // --- Data Members ---
 
     qrk::Urg_driver urg_;
+
+    std::string product_type_;
+    std::string firmware_version_;
+    std::string serial_id_;
 };

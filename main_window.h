@@ -63,13 +63,32 @@ class MainWindow : public QMainWindow {
   private slots:
     // --- Menu Bar ---
 
-    // Connect Menu
+    // EPOS Menu
 
-    void on_a_epos_triggered();
-    void on_a_hebi_triggered();
-    void on_a_pumps_triggered();
-    void on_a_camera_triggered();
-    void on_a_lidar_triggered();
+    void on_a_epos_connect_triggered();
+    void on_a_epos_disconnect_triggered();
+
+    // HEBI Menu
+
+    void on_a_hebi_connect_triggered();
+    void on_a_hebi_disconnect_triggered();
+
+    // Pumps Menu
+
+    void on_a_pumps_connect_triggered();
+    void on_a_pumps_disconnect_triggered();
+
+    // Camera Menu
+
+    void on_a_camera_connect_triggered();
+    void on_a_camera_disconnect_triggered();
+
+    // LIDAR Menu
+
+    void on_a_lidar_connect_triggered();
+    void on_a_lidar_disconnect_triggered();
+
+    void on_a_lidar_about_triggered();
 
     // --- Main Window ---
 

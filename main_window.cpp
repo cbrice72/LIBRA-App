@@ -11,7 +11,8 @@
 // C++ Standard Library Headers
 #include <iostream>
 // Other Libraries' Headers
-//   (none)
+//   Qt
+#include <QMessageBox>
 // Project Headers
 // #include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
 #include "serial_dialog.h"
@@ -45,7 +46,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Arduino Connection (via serial USB) ---
 
-    // HEBIÉAÉNÉ`ÉÖÉGÅ[É^Çê⁄ë±
+    // HEBIÔøΩAÔøΩNÔøΩ`ÔøΩÔøΩÔøΩGÔøΩ[ÔøΩ^ÔøΩÔøΩÔøΩ⁄ëÔøΩ
     // Connect HEBI actuators
     libra_arm_ = std::make_unique<LibraHebi>();
     if (!libra_arm_->Connect()) {
@@ -114,16 +115,26 @@ void MainThread::run() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Event handler for "Connect" menu bar action "EPOS".
+ * @brief Event handler for "EPOS" menu bar action "Connect".
  *        Brings up a dialog box similar to `VCS_OpenDeviceDlg()`.
  */
-void MainWindow::on_a_epos_triggered() {}
+void MainWindow::on_a_epos_connect_triggered() {
+    // TODO
+}
 
 /**
- * @brief Event handler for "Connect" menu bar action "HEBI".
+ * @brief Event handler for "EPOS" menu bar action "Disonnect".
+ *        Terminates the active EPOS controller connection, if any.
+ */
+void MainWindow::on_a_epos_disconnect_triggered() {
+    // TODO
+}
+
+/**
+ * @brief Event handler for "HEBI" menu bar action "Connect".
  *        Brings up a dialog box for inputting an IP address and actuator names.
  */
-void MainWindow::on_a_hebi_triggered() {
+void MainWindow::on_a_hebi_connect_triggered() {
     // Display the "Connect to HEBI" dialog
     // TODO
 
@@ -132,7 +143,7 @@ void MainWindow::on_a_hebi_triggered() {
 
     /*
 #ifdef DEBUG
-    qDebug() << "[DEBUG] Main - HEBI serial dialog returned successfully";
+    qDebug() << "[DEBUG] HEBI serial dialog returned successfully";
 #endif
     */
 
@@ -141,10 +152,18 @@ void MainWindow::on_a_hebi_triggered() {
 }
 
 /**
- * @brief Event handler for "Connect" menu bar action "Pumps".
+ * @brief Event handler for "HEBI" menu bar action "Disconnect".
+ *        Terminates all active HEBI actuator connections, if any.
+ */
+void MainWindow::on_a_hebi_disconnect_triggered() {
+    libra_arm_.reset();
+}
+
+/**
+ * @brief Event handler for "Pumps" menu bar action "Connect".
  *        Brings up a dialog box of available serial USB devices.
  */
-void MainWindow::on_a_pumps_triggered() {
+void MainWindow::on_a_pumps_connect_triggered() {
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("USB");
     w_serial.setModal(true);
@@ -157,7 +176,7 @@ void MainWindow::on_a_pumps_triggered() {
     }
 
 #ifdef DEBUG
-    qDebug() << "[DEBUG] Main - Pumps serial dialog returned successfully";
+    qDebug() << "[DEBUG] Pumps serial dialog returned successfully";
 #endif
 
     // Open a connection to the "SerialWater" Arduino
@@ -166,10 +185,18 @@ void MainWindow::on_a_pumps_triggered() {
 }
 
 /**
- * @brief Event handler for "Connect" menu bar action "Camera".
+ * @brief Event handler for "Pumps" menu bar action "Disconnect".
+ *        Terminates the connection to the `SerialWater` Arduino, if it exists.
+ */
+void MainWindow::on_a_pumps_disconnect_triggered() {
+    ser_water_.reset();
+}
+
+/**
+ * @brief Event handler for "Camera" menu bar action "Connect".
  *        Brings up a dialog box of available serial USB devices.
  */
-void MainWindow::on_a_camera_triggered() {
+void MainWindow::on_a_camera_connect_triggered() {
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("USB");
     w_serial.setModal(true);
@@ -183,7 +210,7 @@ void MainWindow::on_a_camera_triggered() {
     }
 
 #ifdef DEBUG
-    qDebug() << "[DEBUG] Main - Camera serial dialog returned successfully";
+    qDebug() << "[DEBUG] Camera serial dialog returned successfully";
 #endif
 
     // Open a connection to the "SerialServo" Arduino
@@ -192,13 +219,21 @@ void MainWindow::on_a_camera_triggered() {
 }
 
 /**
- * @brief Event handler for "Connect" menu bar action "LIDAR".
+ * @brief Event handler for "Camera" menu bar action "Disconnect".
+ *        Terminates the connection to the `SerialServo` Arduino, if it exists.
+ */
+void MainWindow::on_a_camera_disconnect_triggered() {
+    ser_servo_.reset();
+}
+
+/**
+ * @brief Event handler for "LIDAR" menu bar action "Connect".
  *        Brings up a dialog box of available serial ACM devices.
  *
  * @note Although the Hokuyo LIDAR is connected via USB, it is listed as ACM.
  *       See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
  */
-void MainWindow::on_a_lidar_triggered() {
+void MainWindow::on_a_lidar_connect_triggered() {
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("ACM");
     w_serial.setModal(true);
@@ -212,11 +247,34 @@ void MainWindow::on_a_lidar_triggered() {
     }
 
 #ifdef DEBUG
-    qDebug() << "[DEBUG] Main - LIDAR serial dialog returned successfully";
+    qDebug() << "[DEBUG] LIDAR serial dialog returned successfully";
 #endif
 
     // Open a connection to the Hokuyo LIDAR
     lidar_ = std::make_unique<LibraLidar>(w_serial.GetDeviceName());
+}
+
+/**
+ * @brief Event handler for "LIDAR" menu bar action "Disconnect".
+ *        Terminates the connection to the LIDAR, if it exists.
+ */
+void MainWindow::on_a_lidar_disconnect_triggered() {
+    lidar_.reset();
+}
+
+/**
+ * @brief Event handler for "LIDAR" menu bar action "About".
+ *        Opens a dialog box with sensor metadata, if connected.
+ */
+void MainWindow::on_a_lidar_about_triggered() {
+    if (lidar_ != nullptr) {
+        QMessageBox::information(this, "LIDAR - About",
+                                 QString::fromStdString("<pre>"  // monospace
+                                                        + lidar_->GetMetadata()
+                                                        + "</pre>"));
+    } else {
+        qWarning() << "[WARN] LIDAR object not yet initialized!";
+    }
 }
 
 //------------------------------------------------------------------------------

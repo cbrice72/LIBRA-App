@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>936</width>
-    <height>564</height>
+    <width>968</width>
+    <height>579</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -2346,8 +2346,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>936</width>
-     <height>19</height>
+     <width>968</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_connect">
@@ -2360,7 +2360,56 @@
     <addaction name="a_camera"/>
     <addaction name="a_lidar"/>
    </widget>
+   <widget class="QMenu" name="m_epos">
+    <property name="enabled">
+     <bool>false</bool>
+    </property>
+    <property name="title">
+     <string>EPOS</string>
+    </property>
+    <addaction name="a_epos_connect"/>
+    <addaction name="a_epos_disconnect"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="m_hebi">
+    <property name="title">
+     <string>HEBI</string>
+    </property>
+    <addaction name="a_hebi_connect"/>
+    <addaction name="a_hebi_disconnect"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="m_pumps">
+    <property name="title">
+     <string>Pumps</string>
+    </property>
+    <addaction name="a_pumps_connect"/>
+    <addaction name="a_pumps_disconnect"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="m_camera">
+    <property name="title">
+     <string>Camera</string>
+    </property>
+    <addaction name="a_camera_connect"/>
+    <addaction name="a_camera_disconnect"/>
+    <addaction name="separator"/>
+   </widget>
+   <widget class="QMenu" name="m_lidar">
+    <property name="title">
+     <string>LIDAR</string>
+    </property>
+    <addaction name="a_lidar_connect"/>
+    <addaction name="a_lidar_disconnect"/>
+    <addaction name="separator"/>
+    <addaction name="a_lidar_about"/>
+   </widget>
    <addaction name="m_connect"/>
+   <addaction name="m_epos"/>
+   <addaction name="m_hebi"/>
+   <addaction name="m_pumps"/>
+   <addaction name="m_camera"/>
+   <addaction name="m_lidar"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <action name="a_hebi">
@@ -2389,6 +2438,61 @@
   <action name="a_lidar">
    <property name="text">
     <string>LIDAR</string>
+   </property>
+  </action>
+  <action name="a_epos_connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="a_epos_disconnect">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_hebi_connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="a_hebi_disconnect">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_pumps_connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="a_pumps_disconnect">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_camera_connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="a_camera_disconnect">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_lidar_connect">
+   <property name="text">
+    <string>Connect</string>
+   </property>
+  </action>
+  <action name="a_lidar_disconnect">
+   <property name="text">
+    <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_lidar_about">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
