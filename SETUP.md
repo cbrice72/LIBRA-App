@@ -62,7 +62,7 @@ I also recommend you allocate more cores and RAM to your VM; this can be done in
 Open `/etc/apt/apt.conf` (requires sudo) and add the following line with your proxy details.
 Note that the address *must* include the leading "http://" (e.g., `http://proxy.noc.titech.ac.jp:3128`).
 ```txt
-Acquire::http::Proxy "[address]:[port]";
+Acquire::http::Proxy "<address>:<port>";
 ```
 
 #### **Git**
@@ -71,7 +71,7 @@ If you already have Git installed, go ahead and configure its proxy now.
 If not, remember to do so after the `sudo apt install` step in the next section.
 Note that the address *must* include the leading "http://".
 ```bash
-git config --global http.proxy [address]:[port]
+git config --global http.proxy <address>:<port>
 ```
 
 ### *System Updates and Required Packages*
@@ -141,8 +141,8 @@ Apply for a [Qt educational license](https://www.qt.io/qt-educational-license#ap
 Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux".
 To run it, you must first give the `.run` file execution permissions (remember to replace the text in brackets).
 ```bash
-chmod +x qt-unified-linux-x64-[ver]-online.run
-./qt-unified-linux-x64-[ver]-online.run
+chmod +x qt-unified-linux-x64-<ver>-online.run
+./qt-unified-linux-x64-<ver>-online.run
 ```
 
 > **_NOTE:_** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration".
@@ -231,7 +231,7 @@ Navigate to the extracted directory.
 
 To install, simply [download](https://code.visualstudio.com/download) and run the `.deb`.
 ```bash
-sudo dpkg -i [package_name]
+sudo dpkg -i <package_name>
 ```
 
 #### **Troubleshooting**
@@ -240,7 +240,7 @@ If you're prompted to "unlock a keyring" (by entering your Linux password) every
 
 1. Open your display manager config file. If you're not sure what that is, look for a file ending in "dm" in the `/etc/pam.d` directory (e.g., `sddm`, `lightdm`).
     ```bash
-    sudo nano /etc/pam.d/[file ending in dm]
+    sudo nano /etc/pam.d/<file ending in "dm">
     ```
 
 2. Check if the following "keyring" lines exist. If they do, simply remove the preceding dashes (`-`). Otherwise, append them to the end of their respective sections as shown below.
