@@ -92,13 +92,12 @@ To install it, simply click "Modify" at the bottom right.
 #### **Giving proxy access to Git**
 
 If you'd like to pull/push from within a proxy, you must also add your proxy settings to Git.
-In Visual Studio, open a Developer PowerShell and input the following command.
+In Visual Studio, open a Developer PowerShell and input the following command (note: the `address` should be entered with the `http://` prefix).
 
 ```bash
-git config --global http.proxy [ADDR]:[PORT]
+# (e.g., http://proxy.noc.titech.ac.jp:3128 for Gen Endo Lab)
+git config --global http.proxy <address>:<port>
 ```
-
-... where `[ADDR]` is your proxy address and `[PORT]` is your proxy port (e.g., `http://proxy.noc.titech.ac.jp:3128` for Gen Endo Lab).
 
 ### *Accessing the Code*
 
