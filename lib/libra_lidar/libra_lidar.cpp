@@ -13,8 +13,12 @@
 #include <iostream>
 #include <sstream>
 // Other Libraries' Headers
-//   Hokuyo URG
-#include "ticks.h"
+#ifdef USE_URG3D
+//   URG3D
+#else
+//   URG2D
+# include "ticks.h"
+#endif
 
 // Project Headers
 //   (none)
@@ -27,10 +31,13 @@
 
 /**
  * @brief Standard constructor - automatically opens the given device.
- * 
+ *
  * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
  */
 LibraLidar::LibraLidar(const std::string& device_name) {
+#ifdef USE_URG3D
+    // TODO: implement URG3D version
+#else
     // --- Connection ---
 
     if (device_name.empty()) {
@@ -79,16 +86,21 @@ LibraLidar::LibraLidar(const std::string& device_name) {
     // Spin up the LIDAR and prepare to retrieve data
     urg_.start_measurement(qrk::Urg_driver::Distance,
                            qrk::Urg_driver::Infinity_times, 0);
+#endif
 }
 
 /**
  * @brief Standard destructor.
  */
 LibraLidar::~LibraLidar() {
+#ifdef USE_URG3D
+    // TODO: implement URG3D version
+#else
     // Gracefully close sensor connection
     if (urg_.is_open()) {
         urg_.close();
     }
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -99,6 +111,9 @@ LibraLidar::~LibraLidar() {
  * @brief Prints current PC and LIDAR timestamps (in ms), for comparison
  */
 void LibraLidar::PrintTimestamp() {
+#ifdef USE_URG3D
+    // TODO: implement URG3D version
+#else
     urg_.start_time_stamp_mode();
 
     auto pc_time_stamp = std::chrono::time_point_cast<std::chrono::milliseconds>(
@@ -109,6 +124,7 @@ void LibraLidar::PrintTimestamp() {
               << "  |  LIDAR: " << urg_.get_sensor_time_stamp() << std::endl;
 
     urg_.stop_time_stamp_mode();
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -125,6 +141,9 @@ void LibraLidar::PrintTimestamp() {
  * @return Newline-delimited string of metadata in the format "Category: Value"
  */
 std::string LibraLidar::GetMetadata() {
+#ifdef USE_URG3D
+    // TODO: implement URG3D version
+#else
     std::stringstream ret;
 
     if (urg_.is_open()) {
@@ -136,6 +155,7 @@ std::string LibraLidar::GetMetadata() {
     }
 
     return ret.str();
+#endif
 }
 
 /**
@@ -148,6 +168,9 @@ std::string LibraLidar::GetMetadata() {
  *       vector of Windows `long` (Linux alternative would be `uint64_t`).
  */
 std::vector<long> LibraLidar::GetData() {
+#ifdef USE_URG3D
+    // TODO: implement URG3D version
+#else
     std::vector<long> data;
     long timestamp;
 
@@ -158,11 +181,15 @@ std::vector<long> LibraLidar::GetData() {
     }
 
     return data;  // TODO: return timestamp, if necessary
+#endif
 }
 
 /**
  * @brief Sets whether or not verbose debug text is displayed
+ *
  * @param true to enable, false to disable
+ *
+ * @note This setting only affects `LibraLidar` functions.
  */
 void LibraLidar::SetDebugMode(bool enabled) {
     debug_mode_ = enabled;

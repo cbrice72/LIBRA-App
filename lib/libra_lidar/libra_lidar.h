@@ -11,8 +11,13 @@
 // C++ Standard Library Headers
 #include <string>
 // Other Libraries' Headers
-//   Hokuyo URG
-#include "Urg_driver.h"
+#ifdef USE_URG3D
+//   URG3D
+// TODO
+#else
+//   URG2D
+# include "Urg_driver.h"
+#endif
 // Project Headers
 //   (none)
 
