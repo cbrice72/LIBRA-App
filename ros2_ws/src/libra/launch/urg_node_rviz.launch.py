@@ -72,9 +72,7 @@ def generate_launch_description():
         condition=IfCondition(use_urg_driver),
         package='urg_node',
         executable='urg_node_driver',
-        name='urg_driver',
         arguments=['--ros-args', '--params-file', sensor_config]
-        # parameters=[LaunchConfiguration('sensor_config')]
     )
 
     # Subscribe to and transform LIDAR data
