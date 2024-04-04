@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>libra</name>
+  <version>0.0.0</version>
+  <description>LIghtweight Balanced Robot Arm (LIBRA)</description>
+  <maintainer email="brice.c.aa@m.titech.ac.jp">Christian Brice</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Joint State Publisher: publish joint state values for a given URDF -->
+  <exec_depend>joint_state_publisher</exec_depend>
+  <!-- Robot Localization: smooth data from multiple sensors to improve robot state estimate -->
+  <exec_depend>robot_localization</exec_depend>
+  <!-- Robot State Publisher: publish robot state to tf2 by combining URDF model and joint states -->
+  <exec_depend>robot_state_publisher</exec_depend>
+  <!-- ROS 3D Robot Visualizer: visualize robot state and other sensor data via interactive 3D map -->
+  <exec_depend>rviz</exec_depend>
+  <!-- XML Macro Language: enable shorter and more readable URDF files; e.g., defining string constants -->
+  <exec_depend>xacro</exec_depend>
+
+
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
