@@ -74,6 +74,12 @@ Note that the address *must* include the leading "http://".
 git config --global http.proxy <address>:<port>
 ```
 
+To download the required submodules (i.e., copy other repositories used as dependencies), run the following.
+```bash
+git submodule init  # only necessary the first time
+git submodule update
+```
+
 ### *System Updates and Required Packages*
 
 Update the APT package lists and ensure your system is up to date.
