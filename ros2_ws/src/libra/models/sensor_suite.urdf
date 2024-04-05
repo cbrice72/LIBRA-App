@@ -11,7 +11,7 @@
   -->
 
   <!-- ******************** ROBOT CONSTANTS ******************** -->
-  <!-- Dimensions: Mount (m) -->
+  <!-- Dimensions: Mount -->
   <xacro:property name="base_length" value="0.060"/>
   <xacro:property name="base_width" value="0.020"/>
   <xacro:property name="base_height" value="0.060"/>
@@ -97,11 +97,14 @@
       </geometry>
     </collision>
 
+    <xacro:box_inertia m="0.066" w="0.052" d="0.060" h="0.039"/>
+    <!-- 
     <inertial>
       <mass value="0.066"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
+    -->
   </link>
 
   <joint name="camera_joint" type="fixed">
@@ -129,11 +132,14 @@
       </geometry>
     </collision>
 
+    <xacro:box_inertia m="0.370" w="0.060" d="0.060" h="0.090"/>
+    <!-- 
     <inertial>
       <mass value="0.370"/>
       <origin xyz="0 0 0" rpy="0 0 0"/>
       <inertia ixx="0.001" ixy="0" ixz="0" iyy="0.001" iyz="0" izz="0.001"/>
     </inertial>
+    -->
   </link>
 
   <joint name="lidar_joint" type="fixed">
