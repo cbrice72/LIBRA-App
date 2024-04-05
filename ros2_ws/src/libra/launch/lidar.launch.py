@@ -5,6 +5,9 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
+
+# NOTE: see the following forum post for explanation on why ParameterValue() is used when passing "xacro" files as parameters to ROS actions.
+# https://answers.ros.org/question/417369/caught-exception-in-launch-see-debug-for-traceback-unable-to-parse-the-value-of-parameter-robot_description-as-yaml/
 from launch_ros.descriptions import ParameterValue
 
 
@@ -27,8 +30,8 @@ def generate_launch_description():
     rviz_config = LaunchConfiguration('rviz_config')
     use_urg_driver = LaunchConfiguration('use_urg_driver')
     use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
-    use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
+    use_rviz = LaunchConfiguration('use_rviz')
 
     declare_sensor_config_file_cmd = DeclareLaunchArgument(
         name='sensor_config',
@@ -55,15 +58,15 @@ def generate_launch_description():
         default_value='True',
         description='Whether to start robot state publisher')
 
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        name='use_rviz',
-        default_value='True',
-        description='Whether to start RViz')
-
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         name='use_sim_time',
         default_value='True',
         description='Whether to use simulation (Gazebo) clock')
+
+    declare_use_rviz_cmd = DeclareLaunchArgument(
+        name='use_rviz',
+        default_value='True',
+        description='Whether to start RViz')
 
     # --- DEFINE ROS ACTIONS ---
 
@@ -81,13 +84,6 @@ def generate_launch_description():
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{'use_sim_time': use_sim_time,
-                     # Note: If ANY text in the xacro output can be interpreted as yaml,
-                     # the roslaunch system will try to interpret the ENTIRE text as yaml
-                     # instead of passing on the string. The biggest cause of this false
-                     # interpretation is commenting out xacro calls since the xacro:property
-                     # or similar looks a lot like a yaml key:value pair. Comments are not
-                     # removed by xacro so they are included in the output.
-                     # (source: https://answers.ros.org/question/417369/caught-exception-in-launch-see-debug-for-traceback-unable-to-parse-the-value-of-parameter-robot_description-as-yaml/)
                      'robot_description': ParameterValue(Command(['xacro ', urdf_model]), value_type=str)}],
         arguments=[default_urdf_model_path])
 
@@ -109,8 +105,8 @@ def generate_launch_description():
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_use_urg_driver_cmd)
     ld.add_action(declare_use_robot_state_pub_cmd)
-    ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_use_sim_time_cmd)
+    ld.add_action(declare_use_rviz_cmd)
 
     # --- DECLARE ROS ACTIONS ---
 
