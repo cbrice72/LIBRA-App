@@ -18,17 +18,9 @@ def generate_launch_description():
 
     # --- DEFINE LAUNCH OPTIONS ---
 
-    gui = LaunchConfiguration('gui')
     rviz_config_file = LaunchConfiguration('rviz_config_file')
     urdf_model = LaunchConfiguration('urdf_model')
-    use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
-    use_rviz = LaunchConfiguration('use_rviz')
     use_sim_time = LaunchConfiguration('use_sim_time')
-
-    declare_use_joint_state_publisher_cmd = DeclareLaunchArgument(
-        name='gui',
-        default_value='True',
-        description='Whether to run joint_state_publisher_gui')
 
     declare_rviz_config_file_cmd = DeclareLaunchArgument(
         name='rviz_config_file',
@@ -40,16 +32,6 @@ def generate_launch_description():
         default_value=default_urdf_model_path,
         description='Full path to robot URDF file')
 
-    declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-        name='use_robot_state_pub',
-        default_value='True',
-        description='Whether to start robot state publisher')
-
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        name='use_rviz',
-        default_value='True',
-        description='Whether to start RViz')
-
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         name='use_sim_time',
         default_value='True',
@@ -57,23 +39,14 @@ def generate_launch_description():
 
     # --- DEFINE ROS ACTIONS ---
 
-    # Publish joint state values for any non-fixed joints (see URDF)
+    # Publish joint state values (see URDF)
     start_joint_state_publisher_cmd = Node(
-        condition=UnlessCondition(gui),
         package='joint_state_publisher',
         executable='joint_state_publisher',
         name='joint_state_publisher')
 
-    # GUI for manipulating joint state values
-    start_joint_state_publisher_gui_node = Node(
-        condition=IfCondition(gui),
-        package='joint_state_publisher_gui',
-        executable='joint_state_publisher_gui',
-        name='joint_state_publisher_gui')
-
     # Subscribe to joint states of robot and publish 3D pose of each link
     start_robot_state_publisher_cmd = Node(
-        condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{'use_sim_time': use_sim_time,
@@ -89,7 +62,6 @@ def generate_launch_description():
 
     # Launch RViz
     start_rviz_cmd = Node(
-        condition=IfCondition(use_rviz),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
@@ -100,17 +72,13 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    ld.add_action(declare_use_joint_state_publisher_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
     ld.add_action(declare_urdf_model_path_cmd)
-    ld.add_action(declare_use_robot_state_pub_cmd)
-    ld.add_action(declare_use_rviz_cmd)
     ld.add_action(declare_use_sim_time_cmd)
 
     # --- DECLARE ROS ACTIONS ---
 
     ld.add_action(start_joint_state_publisher_cmd)
-    ld.add_action(start_joint_state_publisher_gui_node)
     ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(start_rviz_cmd)
 

@@ -15,37 +15,51 @@ def generate_launch_description():
     # Set paths to required files and dirs
     libra_pkg_share = FindPackageShare(package='libra').find('libra')
 
+    default_sensor_config_path = os.path.join(
+        libra_pkg_share, 'config/camera_params.yaml')
     default_urdf_model_path = os.path.join(
         libra_pkg_share, 'models/camera.urdf')
     default_rviz_config_path = os.path.join(
-        libra_pkg_share, 'rviz/rviz_basic_urg_settings.rviz')
+        libra_pkg_share, 'rviz/rviz_basic_camera_settings.rviz')
 
     # --- DEFINE LAUNCH OPTIONS ---
 
-    use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
+    sensor_config = LaunchConfiguration('sensor_config')
+    urdf_model = LaunchConfiguration('urdf_model')
+    rviz_config = LaunchConfiguration('rviz_config')
     use_sim_time = LaunchConfiguration('use_sim_time')
-    use_rviz = LaunchConfiguration('use_rviz')
 
-    declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-        name='use_robot_state_pub',
-        default_value='True',
-        description='Whether to start robot state publisher')
+    declare_sensor_config_file_cmd = DeclareLaunchArgument(
+        name='sensor_config',
+        default_value=default_sensor_config_path,
+        description='Full path to sensor config file')
+
+    declare_urdf_model_file_cmd = DeclareLaunchArgument(
+        name='urdf_model',
+        default_value=default_urdf_model_path,
+        description='Full path to URDF model file')
+
+    declare_rviz_config_file_cmd = DeclareLaunchArgument(
+        name='rviz_config',
+        default_value=default_rviz_config_path,
+        description='Full path to RViz config file')
 
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         name='use_sim_time',
         default_value='True',
         description='Whether to use simulation (Gazebo) clock')
 
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        name='use_rviz',
-        default_value='True',
-        description='Whether to start RViz')
-
     # --- DEFINE ROS ACTIONS ---
 
-    # Subscribe to and transform camera data
+    # USB camera data
+    start_camera_driver_cmd = Node(
+        package='usb_cam',
+        executable='usb_cam_node_exe',
+        arguments=['--ros-args', '--params-file', sensor_config]
+    )
+
+    # Robot data
     start_robot_state_publisher_cmd = Node(
-        condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{'use_sim_time': use_sim_time,
@@ -54,7 +68,6 @@ def generate_launch_description():
 
     # Launch RViz
     start_rviz_cmd = Node(
-        condition=IfCondition(use_rviz),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
@@ -65,12 +78,15 @@ def generate_launch_description():
 
     ld = LaunchDescription()
 
-    # TODO
+    ld.add_action(declare_sensor_config_file_cmd)
+    ld.add_action(declare_urdf_model_file_cmd)
+    ld.add_action(declare_rviz_config_file_cmd)
+    ld.add_action(declare_use_sim_time_cmd)
 
     # --- DECLARE ROS ACTIONS ---
-    ld.add_action(declare_use_sim_time_cmd)
-    ld.add_action(declare_use_rviz_cmd)
 
+    ld.add_action(start_camera_driver_cmd)
+    ld.add_action(start_robot_state_publisher_cmd)
     ld.add_action(start_rviz_cmd)
 
     return ld

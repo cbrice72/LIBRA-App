@@ -28,10 +28,7 @@ def generate_launch_description():
     sensor_config = LaunchConfiguration('sensor_config')
     urdf_model = LaunchConfiguration('urdf_model')
     rviz_config = LaunchConfiguration('rviz_config')
-    use_urg_driver = LaunchConfiguration('use_urg_driver')
-    use_robot_state_pub = LaunchConfiguration('use_robot_state_pub')
     use_sim_time = LaunchConfiguration('use_sim_time')
-    use_rviz = LaunchConfiguration('use_rviz')
 
     declare_sensor_config_file_cmd = DeclareLaunchArgument(
         name='sensor_config',
@@ -48,39 +45,22 @@ def generate_launch_description():
         default_value=default_rviz_config_path,
         description='Full path to RViz config file')
 
-    declare_use_urg_driver_cmd = DeclareLaunchArgument(
-        name='use_urg_driver',
-        default_value='True',
-        description='Whether to start URG driver')
-
-    declare_use_robot_state_pub_cmd = DeclareLaunchArgument(
-        name='use_robot_state_pub',
-        default_value='True',
-        description='Whether to start robot state publisher')
-
     declare_use_sim_time_cmd = DeclareLaunchArgument(
         name='use_sim_time',
         default_value='True',
         description='Whether to use simulation (Gazebo) clock')
 
-    declare_use_rviz_cmd = DeclareLaunchArgument(
-        name='use_rviz',
-        default_value='True',
-        description='Whether to start RViz')
-
     # --- DEFINE ROS ACTIONS ---
 
-    # Launch LIDAR driver to collect data
+    # LIDAR data
     start_urg_driver_cmd = Node(
-        condition=IfCondition(use_urg_driver),
         package='urg_node',
         executable='urg_node_driver',
         arguments=['--ros-args', '--params-file', sensor_config]
     )
 
-    # Subscribe to and transform LIDAR data
+    # Robot data
     start_robot_state_publisher_cmd = Node(
-        condition=IfCondition(use_robot_state_pub),
         package='robot_state_publisher',
         executable='robot_state_publisher',
         parameters=[{'use_sim_time': use_sim_time,
@@ -89,7 +69,6 @@ def generate_launch_description():
 
     # Launch RViz
     start_rviz_cmd = Node(
-        condition=IfCondition(use_rviz),
         package='rviz2',
         executable='rviz2',
         name='rviz2',
@@ -103,10 +82,7 @@ def generate_launch_description():
     ld.add_action(declare_sensor_config_file_cmd)
     ld.add_action(declare_urdf_model_file_cmd)
     ld.add_action(declare_rviz_config_file_cmd)
-    ld.add_action(declare_use_urg_driver_cmd)
-    ld.add_action(declare_use_robot_state_pub_cmd)
     ld.add_action(declare_use_sim_time_cmd)
-    ld.add_action(declare_use_rviz_cmd)
 
     # --- DECLARE ROS ACTIONS ---
 
