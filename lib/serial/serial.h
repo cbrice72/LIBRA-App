@@ -18,7 +18,7 @@
 //   (none)
 
 /**
- * @brief TODO.
+ * @brief TODO: documentation.
  *
  * @note For more information about Boost.Asio, see the boost documentation:
  *       https://www.boost.org/doc/libs/1_76_0/doc/html/boost_asio.html

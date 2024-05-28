@@ -11,18 +11,13 @@
 // C++ Standard Library Headers
 #include <string>
 // Other Libraries' Headers
-#ifdef USE_URG3D
-//   URG3D
-// TODO
-#else
 //   URG2D
 # include "Urg_driver.h"
-#endif
 // Project Headers
 //   (none)
 
 /**
- * @brief TODO
+ * @brief TODO: documentation
  */
 class LibraLidar {
   public:
