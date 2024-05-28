@@ -13,18 +13,6 @@
 #include <ctime>
 #include <iomanip>
 #include <iostream>
-// POSIX/Windows Library Headers
-#include <direct.h>
-#include <setupapi.h>
-#pragma comment(lib, "setupapi.lib")
-// Other Libraries' Headers
-//   DirectX Wrapper
-#include <DxLib.h>
-// Project Headers
-#include "button.h"
-#include "mouse.h"
-#include "pretty_print.h"
-#include "serial.h"
 
 /* --- TABLE OF CONTENTS ---
  * !Main Window
