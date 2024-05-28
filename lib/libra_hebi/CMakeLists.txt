@@ -26,10 +26,13 @@ qt_add_library(
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/src")
+
+# Ensure this module has access to the necessary 3rd-party libraries
 target_include_directories(
     libra_hebi
     # HEBI
-    PUBLIC ${HEBI_DIR}/hebi/include ${HEBI_DIR}/src
+    PUBLIC ${HEBI_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -41,7 +44,9 @@ target_include_directories(
 # changed (e.g., updated), make sure to update the .gitignore entry too!
 # ~~~
 add_library(hebi SHARED IMPORTED GLOBAL)
-set_target_properties(hebi PROPERTIES IMPORTED_LOCATION ${HEBI_DIR}/hebi/lib/libhebi.so.2.9)
+set_target_properties(
+    hebi PROPERTIES IMPORTED_LOCATION ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
+)
 
 # Tell the linker which libraries to link against
 target_link_libraries(
@@ -61,13 +66,12 @@ add_custom_command(
     TARGET libra_hebi
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink
-            ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
-            ${HEBI_DIR}/hebi/lib/libhebi.so
+            ${HEBI_DIR}/hebi/lib/libhebi.so.2.9 ${HEBI_DIR}/hebi/lib/libhebi.so
 )
 add_custom_command(
     TARGET libra_hebi
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink
-            ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
-            ${HEBI_DIR}/hebi/lib/libhebi.so.2
+    COMMAND
+        ${CMAKE_COMMAND} -E create_symlink ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
+        ${HEBI_DIR}/hebi/lib/libhebi.so.2
 )
