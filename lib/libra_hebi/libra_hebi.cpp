@@ -31,7 +31,6 @@ LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
     command_ = std::make_unique<hebi::GroupCommand>(5);
     feedback_ = std::make_unique<hebi::GroupFeedback>(5);
 
-    // タイマ割り込み開始 10ms毎に割り込み処理をする
     // Timer interrupt: process interrupts every 10 ms
     /* TODO(brice.c.aa)
     timeSetEvent(10, 0, Callback, reinterpret_cast<DWORD>(this),
@@ -90,20 +89,17 @@ bool LibraHebi::Connect() {
     hebi::Lookup lookup;
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
-        // std::cerr << "[エラー] HEBI - アクチュエータが接続されていません\n";
         std::cerr << "[ERROR] HEBI - Failed to connect to actuators!\n";
         command_->setPosition(Eigen::VectorXd::Zero(5));
         return false;
     }
 
     if (!command_->readSafetyParameters("params/safety.xml")) {
-        // std::cerr << "[エラー] HEBI - 安全パラメータファイルを読み込めません\n";
         std::cerr << "[ERROR] HEBI - Failed to load safety parameters!\n";
         return false;
     }
 
     if (!command_->readGains("params/gain.xml")) {
-        // std::cerr << "[エラー] HEBI - ゲインパラメータファイルを読み込めません\n";
         std::cerr << "[ERROR] HEBI - Failed to load gain parameters!\n";
         return false;
     }
@@ -133,8 +129,8 @@ void LibraHebi::Move(double roll, double pitch, double j1, double j2,
 
     // Populate positions vector
     positions.col(0) = command_->getPosition();
-    positions(Act::kHebiMA, 1) = -roll - pitch;  // 変更! - Change!
-    positions(Act::kHebiMB, 1) = -roll + pitch;  // 変更! - Change!
+    positions(Act::kHebiMA, 1) = -roll - pitch;  // TODO: improve
+    positions(Act::kHebiMB, 1) = -roll + pitch;  // TODO: improve
     positions(Act::kHebiJ1, 1) = j1;
     positions(Act::kHebiJ2, 1) = -j2;
     positions(Act::kHebiJ3, 1) = j3;

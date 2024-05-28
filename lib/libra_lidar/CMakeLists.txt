@@ -6,14 +6,8 @@
 # @date   2024/3/6
 ################################################################################
 
-option(USE_URG3D "Use 3D library (URG3D) instead of 2D library (URG)" OFF)
-
 # Specify the Hokuyo URG library directory
-if(USE_URG3D)
-    set(URG_DIR ${CMAKE_SOURCE_DIR}/external/urg3d-1.1.1)
-else()
-    set(URG_DIR ${CMAKE_SOURCE_DIR}/external/urg-1.2.7)
-endif()
+set(URG_DIR ${CMAKE_SOURCE_DIR}/external/urg-1.2.7)
 
 # Create and configure the module
 qt_add_library(
@@ -26,11 +20,7 @@ qt_add_library(
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
-if(USE_URG3D)
-    set(URG_INCLUDE_DIRS ${URG_DIR}/include)
-else()
-    set(URG_INCLUDE_DIRS "${URG_DIR}/include/c ${URG_DIR}/include/cpp")
-endif()
+set(URG_INCLUDE_DIRS "${URG_DIR}/include/c" "${URG_DIR}/include/cpp")
 
 target_include_directories(
     libra_lidar
@@ -42,11 +32,7 @@ target_include_directories(
 )
 
 # Import the Hokuyo URG library packaged with this project
-if(USE_URG3D)
-    set(URG_LIB ${URG_DIR}/lib/liburg3d.so)
-else()
-    set(URG_LIB ${URG_DIR}/lib/liburg_cpp.so)
-endif()
+set(URG_LIB ${URG_DIR}/lib/liburg_cpp.so)
 
 add_library(urg_cpp SHARED IMPORTED GLOBAL)
 set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_LIB})
@@ -55,5 +41,5 @@ set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_LIB})
 target_link_libraries(
     libra_lidar
     # Hokuyo URG
-    PRIVATE urg_cpp #-lurg_cpp
+    PRIVATE urg_cpp # -lurg_cpp
 )

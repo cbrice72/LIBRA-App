@@ -22,7 +22,7 @@
 //   (none)
 
 /**
- * @brief TODO.
+ * @brief TODO: documentation.
  */
 class LibraHebi {
   public:
