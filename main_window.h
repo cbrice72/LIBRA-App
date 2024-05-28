@@ -28,19 +28,22 @@ class MainWindow;
 QT_END_NAMESPACE
 
 /**
- * @brief TODO(brice.c.aa)
+ * @brief TODO: documentation(brice.c.aa)
  *
- * @todo is this necessary in the new app?
+ * @todo is this necessary in
+ * the new app?
  */
 /*
 class MainThread : public QThread {
     // NOLINTBEGIN: required by Qt
-    Q_OBJECT
+
+ * Q_OBJECT
     // NOLINTEND
 
   public:
     MainThread() = default;
-    ~MainThread() = default;
+
+ * ~MainThread() = default;
 
   private:
     void run() override;

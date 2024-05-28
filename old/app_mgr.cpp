@@ -54,12 +54,6 @@ constexpr int kCameraNodeCount = 3;  // total number of camera servos
 void AppMgr::Main() {
     /* ----- INITIALIZATION ----- */
 
-    // コンソールを用意
-    // Prepare console
-    AllocConsole();
-    (void)freopen("CONOUT$", "w", stdout);
-    (void)freopen("CONIN$", "r", stdin);
-
     // clang-format off
     colorize::Print(  // note: do NOT mess with the spacing!
         "\n"
@@ -94,51 +88,6 @@ void AppMgr::Main() {
             return;
         }
     }
-
-    // 利用可能なCOMポートのスキャン
-    // Scan for available COM ports
-    ser_water_ = std::make_unique<Serial>();
-    ser_servo_ = std::make_unique<Serial>();
-
-    answer = "";
-    while (answer != "n") {
-        colorize::Print("\n----- COM Port List -----\n\n",
-                        colorize::Level::kTitle);
-        auto num_ports = PrintComList();  // TODO: refactor this
-        colorize::Print("Detected " + std::to_string(num_ports) + " ports\n",
-                        colorize::Level::kInfo);
-        colorize::Print("Would you like to scan again? [y/n]:\n",
-                        colorize::Level::kPrompt);
-        std::cin >> answer;
-    }
-
-    std::string comtext;  // stores COM port label
-
-    // SerialWaterのCOMポートをユーザーが指定できるようにする
-    // Allow user to specify SerialWater COM port
-    colorize::Print("Specify the port to be used by SerialWater:\n",
-                    colorize::Level::kPrompt);
-    std::cin >> answer;
-    comtext = "COM" + answer;
-    if (ser_water_->Open(comtext.c_str()) != 0) {
-        colorize::Print("Cannot open " + comtext + "\n",
-                        colorize::Level::kError);
-    }
-
-    // SerialServoのCOMポートをユーザーが指定できるようにする
-    // Allow user to specify SerialServo COM port
-    colorize::Print("Specify the port to be used by SerialServo:\n",
-                    colorize::Level::kPrompt);
-    std::cin >> answer;
-    comtext = "COM" + answer;
-    if (ser_servo_->Open(comtext.c_str()) != 0) {
-        colorize::Print("Cannot open " + comtext + "\n",
-                        colorize::Level::kError);
-    }
-
-    // DXライブラリ初期化を含む設定
-    // DX library initialization
-    SetupIncludeDxlibInit();
 
     /* ----- THREAD MANAGEMENT ----- */
 
@@ -190,57 +139,6 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
  * receives user inputs & updates sensor readings.
  */
 void AppMgr::MainThread() {
-    // カラーとフォントの初期化
-    // Initialize colors and fonts
-    const int main_color = GetColor(50, 50, 50);
-    const int main_font = CreateFontToHandle("Yu Gothic UI", 50, 5,
-                                             DX_FONTTYPE_ANTIALIASING);
-    const int title_font = CreateFontToHandle("Yu Gothic UI", 50, 10,
-                                              DX_FONTTYPE_ANTIALIASING);
-    const int big_font = CreateFontToHandle("Yu Gothic UI", 150, 10,
-                                            DX_FONTTYPE_ANTIALIASING);
-    SetBackgroundColor(255, 255, 255);
-
-    // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
-    // NOLINTBEGIN(cppcoreguidelines-owning-memory): Creation of UI objects
-
-    // Buttonオブジェクトの初期化
-    // Initialize Button objects
-    btn_start_ = new Button(1300 - 60 - 340 - 60 - 330, kWindowH - 200 - 100,
-                            340, 100, "START", this);
-    OnClick(btn_start_);  // force arm to hold position
-
-    btn_convert_ = new Button(60 + 60, kWindowH - 200 - 100, 340, 100,
-                              "CONVERT", this);
-    btn_stop_ = new Button(1300 - 60 - 340, kWindowH - 200 - 100, 340, 100,
-                           "STOP", this);
-    btn_up_ = new Button(320, 800, 120, 120, "R+", this);
-    btn_down_ = new Button(320, 1200, 120, 120, "R-", this);
-    btn_left_ = new Button(120, 1000, 120, 120, "θ+", this);
-    btn_right_ = new Button(520, 1000, 120, 120, "θ-", this);
-    btn_enable_ = new Button(2200, 100, 340, 100, "ENABLE", this);
-    btn_disable_ = new Button(2200, 250, 340, 100, "DISABLE", this);
-    btn_drain_ = new Button(2200, 400, 340, 100, "DRAIN", this);
-    btn_shot_ = new Button(2200, kWindowH - 200 - 100, 340, 100, "LOG SHOT",
-                           this);
-    btn_servo_slow_ = new Button(3230, 150, 200, 100, "SLOW", this);
-    btn_servo_fast_ = new Button(3500, 150, 200, 100, "FAST", this);
-
-    // InputBoxオブジェクトの初期化
-    // Initialize InputBox objects
-    ibox_roll_ = new InputBox(1500 - 600, 800);
-    ibox_pitch_ = new InputBox(1500 - 600, 1000);
-    ibox_j1_ = new InputBox(1500 - 600, 1200);
-    ibox_j2_ = new InputBox(1500 - 600, 1400);
-    ibox_j3_ = new InputBox(1500 - 600, 1600);
-    ibox_r_ = new InputBox(270, 1400);
-    ibox_theta_ = new InputBox(270, 1600);
-    ibox_increment_ = new InputBox(270, 1010);
-    ibox_voltage_ = new InputBox(1400, 1900);
-    ibox_current_ = new InputBox(1400 + 400, 1900);
-    ibox_camera_pan_ = new InputBox(2800 + 150, 450);
-    ibox_camera_tilt_ = new InputBox(2800 + 150, 600);
-
     // InputBoxのデフォルト値を設定
     // Set InputBox default values
     ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
@@ -256,9 +154,6 @@ void AppMgr::MainThread() {
     ibox_current_->SetNum(0);
     ibox_camera_pan_->SetNum(0);
     ibox_camera_tilt_->SetNum(0);
-
-    // NOLINTEND(cppcoreguidelines-owning-memory): Creation of UI objects
-    // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
     // 流体システムランタイム変数の初期化
     // Initialize fluid system runtime variables
@@ -299,71 +194,6 @@ void AppMgr::MainThread() {
     // 更新ループ
     // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
-        Mouse::Instance()->Update();
-
-        /* ----- UI: InputBox OBJECTS ----- */
-
-        ibox_voltage_->UpdateDraw();
-        ibox_current_->UpdateDraw();
-        ibox_roll_->UpdateDraw();
-        ibox_pitch_->UpdateDraw();
-        ibox_j1_->UpdateDraw();
-        ibox_j2_->UpdateDraw();
-        ibox_j3_->UpdateDraw();
-        ibox_increment_->UpdateDraw();
-        ibox_r_->UpdateDraw();
-        ibox_theta_->UpdateDraw();
-        ibox_camera_pan_->UpdateDraw();
-        ibox_camera_tilt_->UpdateDraw();
-
-        /* ----- UI: Button OBJECTS ----- */
-
-        btn_enable_->UpdateDraw();
-        btn_disable_->UpdateDraw();
-        btn_drain_->UpdateDraw();
-        btn_shot_->UpdateDraw();
-        btn_convert_->UpdateDraw();
-        btn_start_->UpdateDraw();
-        btn_stop_->UpdateDraw();
-        btn_up_->UpdateDraw();
-        btn_down_->UpdateDraw();
-        btn_left_->UpdateDraw();
-        btn_right_->UpdateDraw();
-        btn_servo_slow_->UpdateDraw();
-        btn_servo_fast_->UpdateDraw();
-
-        /* ----- UI: GENERAL ----- */
-
-        // NOLINTBEGIN(readability-magic-numbers): Positions of UI elements
-
-        // 各セクションのタイトル
-        // Section titles
-        DrawFormatStringToHandle(60, 200, GetColor(0, 0, 0), big_font,
-                                 "LIBRA-I");
-        DrawFormatStringToHandle(120, 824 - 200, main_color, title_font,
-                                 "Goal Pos.");
-        DrawFormatStringToHandle(1400, 824 - 200, main_color, title_font,
-                                 "Target Pos.");
-        DrawFormatStringToHandle(1400 + 400, 824 - 200, main_color, title_font,
-                                 "Current Pos.");
-        DrawFormatStringToHandle(1400 + 800, 824 - 200, main_color, title_font,
-                                 "Current Torque");
-
-        /* ----- UI: FLUID SYSTEM ----- */
-
-        // 流体入出力パネルのラベル
-        // Fluid I/O panel labels
-        DrawFormatStringToHandle(800, 200, main_color, title_font, "A_IN");
-        DrawFormatStringToHandle(1100, 200, main_color, title_font, "B_IN");
-        DrawFormatStringToHandle(1400, 200, main_color, title_font, "A_OUT");
-        DrawFormatStringToHandle(1700, 200, main_color, title_font, "B_OUT");
-
-        /* ----- UI: ARM ----- */
-
-        // 操作盤の四角
-        // Control panel border
-        DrawBoxAA(60, 550, 1300, kWindowH - 100, main_color, FALSE, 2.5);
-
         // HEBIアクチュエータのデータを取得
         // Retrieve HEBI actuator data
         for (auto i = 0; i < kHebiNodeCount; i++) {
@@ -377,12 +207,6 @@ void AppMgr::MainThread() {
         // Arm control labels and actuator data
         std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
         for (auto i = 0; i < kHebiNodeCount; i++) {
-            // Input box labels
-            DrawFormatStringToHandle(750, 824 + 200 * i, main_color, main_font,
-                                     menu[i].c_str());
-            DrawFormatStringToHandle(1500 - 340, 824 + 200 * i, main_color,
-                                     main_font, "deg");
-
             // Target Pos., Current Pos., Current Torque
             for (auto j = 0; j < kHebiFeedbackCount; j++) {
                 char str[20];
@@ -394,15 +218,6 @@ void AppMgr::MainThread() {
                                          main_color, main_font, str);
             }
         }
-
-        // アーム全体コントロールのラベル
-        // Whole-arm control labels
-        DrawFormatStringToHandle(120, 824 + 200 * 3, main_color, main_font, "R");
-        DrawFormatStringToHandle(530, 824 + 200 * 3, main_color, main_font,
-                                 "mm");
-        DrawFormatStringToHandle(120, 824 + 200 * 4, main_color, main_font, "θ");
-        DrawFormatStringToHandle(530, 824 + 200 * 4, main_color, main_font,
-                                 "deg");
 
         // 重心グラフ表示
         // Center of mass visualization
@@ -452,31 +267,6 @@ void AppMgr::MainThread() {
                                  "Roll (Nm)");
         DrawFormatStringToHandle(c_x - 100, c_y - 550 - 25, main_color,
                                  main_font, "Pitch (Nm)");
-
-        // 電圧電流のラベル
-        // Voltage and current labels
-        DrawFormatStringToHandle(1400, 1800, main_color, title_font, "Voltage");
-        DrawFormatStringToHandle(1400 + 400, 1800, main_color, title_font,
-                                 "Current");
-        DrawFormatStringToHandle(1400 + 260, 1924, main_color, main_font, "V");
-        DrawFormatStringToHandle(1400 + 400 + 260, 1924, main_color, main_font,
-                                 "A");
-
-        /* ----- UI: CAMERA ----- */
-
-        // カメラパネルのラベル
-        // Camera panel labels
-        DrawFormatStringToHandle(2800, 150, main_color, title_font,
-                                 "Camera Pos.");
-        DrawFormatStringToHandle(2800, 300 + 24, main_color, main_font, "Base");
-        DrawFormatStringToHandle(2800, 450 + 24, main_color, main_font, "Pan");
-        DrawFormatStringToHandle(2800, 600 + 24, main_color, main_font, "Tilt");
-        DrawFormatStringToHandle(2800 + 410, 450 + 24, main_color, main_font,
-                                 "deg");
-        DrawFormatStringToHandle(2800 + 410, 600 + 24, main_color, main_font,
-                                 "deg");
-
-        // NOLINTEND(readability-magic-numbers): Positions of UI elements
 
         // J3を負にするピッチ角を計算
         // Calculate pitch angle to negate J3
@@ -664,258 +454,9 @@ void AppMgr::MainThread() {
     }
 }
 
-/**
- * @brief Windows callback for button click actions.
- */
-void AppMgr::OnClick(View* view) {
-    if (view == btn_enable_) {  // ENABLE
-        water_en_ = true;
-        water_mode_ = WaterMode::kStandby;
-
-    } else if (view == btn_disable_) {  // DISABLE
-        water_en_ = false;
-        water_mode_ = WaterMode::kStandby;
-
-    } else if (view == btn_drain_) {  // DRAIN
-        water_en_ = true;
-        water_mode_ = WaterMode::kDrain;
-
-    } else if (view == btn_shot_) {  // SHOT LOG
-        const std::string dts = GetDateTimeString();
-        snapshot_log_ << dts << ",,";
-        for (auto i = 0; i < kHebiFeedbackCount; i++) {
-            for (auto j = 0; j < kHebiNodeCount; j++) {
-                snapshot_log_ << value_.at(j).at(i) << ",";
-            }
-            snapshot_log_ << ",";
-        }
-        snapshot_log_ << ibox_voltage_->GetNum() << ","
-                      << ibox_current_->GetNum() << "\n";
-
-        colorize::Print("Snapshot - " + dts + " | Voltage: "
-                            + std::to_string(ibox_voltage_->GetNum())
-                            + " V | Current: "
-                            + std::to_string(ibox_current_->GetNum()) + " A\n",
-                        colorize::Level::kInfo);
-
-    } else if (view == btn_convert_) {  // CONVERT
-        // NOLINTBEGIN(readability-identifier-length): equation variables
-
-        const double r = ibox_r_->GetNum();
-        const double theta = ibox_theta_->GetNum();
-        const double L = 989;
-        const double L_hand = 1014;
-        const double a = L;
-        const double b = L + L_hand;
-
-        const double k = (r * r + a * a - b * b) / (2 * a);
-        const double alpha = (atan2(0, r) + atan2(sqrt(r * r - k * k), k));
-        const double beta = asin(r * sin(alpha) / b);
-
-        // NOLINTEND(readability-identifier-length): equation variables
-
-        ibox_j1_->SetNum(theta + alpha / M_PI * 180);
-        ibox_j2_->SetNum(-180 + beta / M_PI * 180);
-        ibox_j3_->SetNum(0);
-
-    } else if (view == btn_start_) {  // START
-        input_.at(0) = ibox_roll_->GetNum();
-        input_.at(1) = ibox_pitch_->GetNum();
-        input_.at(2) = ibox_j1_->GetNum();
-        input_.at(3) = ibox_j2_->GetNum();
-        input_.at(4) = ibox_j3_->GetNum();
-
-        // 流体システムが作動していない時のみアームを動かす
-        // Only move arm when fluid system isn't running
-        if (water_mode_ == WaterMode::kStandby) {
-            // Begin arm movement
-            libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
-                             input_.at(3), input_.at(4));
-        }
-
-    } else if (view == btn_stop_) {  // STOP
-        libra_arm_->Stop();
-
-    } else if (view == btn_up_) {  // R+
-        ibox_r_->SetNum(ibox_r_->GetNum() + ibox_increment_->GetNum());
-        OnClick(btn_convert_);
-
-    } else if (view == btn_down_) {  // R-
-        ibox_r_->SetNum(ibox_r_->GetNum() - ibox_increment_->GetNum());
-        OnClick(btn_convert_);
-
-    } else if (view == btn_left_) {  // Theta+
-        ibox_theta_->SetNum(ibox_theta_->GetNum()
-                            + ibox_increment_->GetNum() / ibox_r_->GetNum()
-                                  * 180 / M_PI);
-        OnClick(btn_convert_);
-
-    } else if (view == btn_right_) {  // Theta-
-        ibox_theta_->SetNum(ibox_theta_->GetNum()
-                            - ibox_increment_->GetNum() / ibox_r_->GetNum()
-                                  * 180 / M_PI);
-        OnClick(btn_convert_);
-
-    } else if (view == btn_servo_slow_) {  // SLOW
-        camera_setpos_.at(1) = ibox_camera_pan_->GetNum();
-        camera_setpos_.at(2) = ibox_camera_tilt_->GetNum();
-        camera_dir_.at(1) = (ibox_camera_pan_->GetNum() >= camera_pos_.at(1))
-                                ? 1
-                                : -1;
-        camera_dir_.at(2) = (ibox_camera_tilt_->GetNum() >= camera_pos_.at(2))
-                                ? 1
-                                : -1;
-
-    } else if (view == btn_servo_fast_) {  // FAST
-        camera_pos_.at(1) = ibox_camera_pan_->GetNum();
-        camera_pos_.at(2) = ibox_camera_tilt_->GetNum();
-    }
-}
-
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
-
-/**
- * @brief Initializes the application UI (via the DX library).
- */
-void AppMgr::SetupIncludeDxlibInit() {
-    colorize::Print("Initializing Dxlib...\n", colorize::Level::kInfo);
-
-    // NOLINTBEGIN(readability-magic-numbers): UI initialization
-
-    // ウインドウモードで起動 - Start in windowed mode
-    ChangeWindowMode(TRUE);
-
-    // 最大化ボタンが存在するウインドウモードに変更
-    // Set to windowed mode with maximize button present
-    SetWindowStyleMode(7);
-
-    // 画面サイズを指定 - Specify screen size
-    const int color_bit_depth = 32;
-    SetGraphMode(kWindowW, kWindowH, color_bit_depth);
-
-    // サイズ変更を可能にする - Allow resizing
-    SetWindowSizeChangeEnableFlag(TRUE, TRUE);
-
-    // ウインドウサイズを指定 - Specify window size
-    int desktop_w = 0;
-    int desktop_h = 0;
-    GetDefaultState(&desktop_w, &desktop_h, nullptr);
-
-    if (static_cast<float>(desktop_w) / desktop_h
-        > static_cast<float>(kWindowW)
-              / kWindowH) {  // 横長ディスプレイ - Landscape display
-        SetWindowSize(0.8 * desktop_h * (kWindowW / kWindowH), 0.8 * desktop_h);
-    }
-
-    else {  // 縦長ディスプレイ - Portrait display
-        SetWindowSize(0.8 * desktop_w, 0.8 * desktop_w * (kWindowH / kWindowW));
-    }
-
-    // ウィンドウがノンアクティブでも実行 - Execute even if window is inactive
-    SetAlwaysRunFlag(TRUE);
-
-    // マルチスレッドに適したモードで起動する - Start in mode suitable for
-    // multi-threading
-    SetMultiThreadFlag(TRUE);
-
-    // DXライブラリでWM_PAINTの処理をしない - Do not process WM_PAINT in the DX
-    // library
-    SetUseDxLibWM_PAINTProcess(FALSE);
-
-    // Windowのタイトルを設定 - Set the window title
-    SetWindowText("LIBRA App");
-
-    // DXライブラリの初期化 - Initialize DX library
-    DxLib_Init();
-
-    // 描画先を裏画面にする - Draw the back screen (?)
-    SetDrawScreen(DX_SCREEN_BACK);
-
-    // アンチエイリアス付き図形描画の準備を行う
-    // Prepare to draw anti-aliased shapes
-    BeginAADraw();
-
-    // NOLINTEND(readability-magic-numbers): UI initialization
-
-    colorize::Print("... done\n", colorize::Level::kInfo);
-}
-
-/**
- * @brief TODO
- *
- * @return uint The number of COM ports detected on the network
- */
-int AppMgr::PrintComList() {
-    // デバイス情報セットを取得
-    // Get device information set
-    auto* h_devinfo = SetupDiGetClassDevs(&GUID_DEVINTERFACE_COMPORT, nullptr,
-                                          nullptr,
-                                          DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
-    if (h_devinfo == nullptr) {
-        // デバイス情報セットが取得できなかった場合
-        // If the device information set could not be obtained
-        return 0;
-    }
-
-    int num_ports = 0;
-    SP_DEVINFO_DATA data = {sizeof(SP_DEVINFO_DATA)};
-    data.cbSize = sizeof(data);
-
-    // デバイスインターフェイスの取得
-    // Get device interface
-    while (SetupDiEnumDeviceInfo(h_devinfo, num_ports, &data) != 0) {
-        DWORD size = 0;
-
-        // COMポート名の取得
-        // Obtain COM port name
-        HKEY key = SetupDiOpenDevRegKey(h_devinfo, &data, DICS_FLAG_GLOBAL, 0,
-                                        DIREG_DEV, KEY_QUERY_VALUE);
-        if (key != nullptr) {
-            TCHAR name[256];
-            DWORD type = 0;
-            size = sizeof(name);
-            RegQueryValueEx(key, _T("PortName"), nullptr, &type, (LPBYTE)name,
-                            &size);
-            _tprintf(_TEXT("%s"), name);
-        }
-
-        // デバイスの説明を取得
-        // Get device description
-        DWORD dataT = 0;
-        LPTSTR buf = nullptr;
-        while (!SetupDiGetDeviceRegistryProperty(h_devinfo, &data,
-                                                 SPDRP_DEVICEDESC, &dataT,
-                                                 (PBYTE)buf, size, &size)) {
-            if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
-                // bufが足りない場合、元のサイズの2倍を再割り当てする
-                // If buf is insufficient, reallocate with twice the original size
-                if (buf != nullptr) {
-                    LocalFree(buf);
-                }
-                buf = (LPTSTR)LocalAlloc(LPTR, size * 2);
-            } else {
-                break;
-            }
-        }
-
-        // デバイスの説明を出力
-        // Print device description
-        _tprintf(_TEXT("(%s)\n"), buf);
-        if (buf != nullptr) {
-            LocalFree(buf);
-        }
-
-        ++num_ports;
-    }
-
-    // デバイス情報セットを解放
-    // Release device information set
-    SetupDiDestroyDeviceInfoList(h_devinfo);
-
-    return num_ports;
-}
 
 /**
  * @brief Provides a formatted string of the current date and time.
