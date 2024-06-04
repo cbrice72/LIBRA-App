@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   libra_hebi.cpp
+ * @file   hebi_thread.cpp
  * @brief  Control code for LIBRA arm HEBI actuators; implementation file.
  *         (adapted from Yuto Goto's work)
  *
@@ -8,14 +8,17 @@
  ******************************************************************************/
 
 // Related Header
-#include "libra_hebi.h"
+#include "hebi_thread.h"
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
 // Other Libraries' Headers
-//   (none)
+//   Qt
+#include <QWidget>
 // Project Headers
 //   (none)
+
+constexpr uint8_t kHebiNodeCount = 5;  // total number of HEBI actuators
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -26,15 +29,13 @@
 /**
  * @brief Standard constructor.
  */
-LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
+HebiThread::HebiThread() : start_time_(GetCurrentTimeInSec()) {
     command_ = std::make_unique<hebi::GroupCommand>(5);
     feedback_ = std::make_unique<hebi::GroupFeedback>(5);
 
-    // Timer interrupt: process interrupts every 10 ms
-    /* TODO(brice.c.aa)
-    timeSetEvent(10, 0, Callback, reinterpret_cast<DWORD>(this),
-                 TIME_PERIODIC | TIME_CALLBACK_FUNCTION);
-    */
+    if (!Connect()) {
+        qWarning() << "[WARN] Initializing without HEBI actuators.";
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -46,7 +47,7 @@ LibraHebi::LibraHebi() : start_time_(GetCurrentTimeInSec()) {
  *
  * @return std::chrono::system_clock::rep Current system time in seconds
  */
-std::chrono::system_clock::rep LibraHebi::GetCurrentTimeInSec() {
+std::chrono::system_clock::rep HebiThread::GetCurrentTimeInSec() {
     auto now = std::chrono::system_clock::now().time_since_epoch();
     return std::chrono::duration_cast<std::chrono::seconds>(now).count();
 }
@@ -54,23 +55,47 @@ std::chrono::system_clock::rep LibraHebi::GetCurrentTimeInSec() {
 /**
  * @brief TODO.
  */
-void LibraHebi::Loop() {
-    command_->setVelocity(Eigen::VectorXd::Zero(5));
+void HebiThread::run() {
+    // Initialize feedback containers prior to thread start for efficiency
+    std::array<double, 5> target;
+    std::array<double, 5> actual;
+    std::array<double, 5> torque;
 
-    if (trajectory_ != nullptr) {
-        const double time = (GetCurrentTimeInSec() - start_time_) / 1000.0;
-        if (trajectory_->getDuration() > time) {
-            Eigen::VectorXd pos_cmd(5);
-            Eigen::VectorXd vel_cmd(5);
-            trajectory_->getState(time, &pos_cmd, &vel_cmd, nullptr);
-            command_->setPosition(pos_cmd);
-            command_->setVelocity(vel_cmd);
+    // Loop until MainWindow calls QThread::requestInterruption()
+    while (!isInterruptionRequested()) {
+        command_->setVelocity(Eigen::VectorXd::Zero(5));
+
+        // Calculate trajectories
+        if (trajectory_ != nullptr) {
+            const double time = (GetCurrentTimeInSec() - start_time_) / 1000.0;
+            if (trajectory_->getDuration() > time) {
+                Eigen::VectorXd pos_cmd(5);
+                Eigen::VectorXd vel_cmd(5);
+                trajectory_->getState(time, &pos_cmd, &vel_cmd, nullptr);
+                command_->setPosition(pos_cmd);
+                command_->setVelocity(vel_cmd);
+            }
         }
-    }
 
-    if (group_ != nullptr) {
-        group_->sendCommand(*command_);
-        group_->getNextFeedback(*feedback_);
+        if (group_ != nullptr) {
+            // Send movement commands and update feedback
+            group_->sendCommand(*command_);
+            group_->getNextFeedback(*feedback_);
+
+            // Retrieve HEBI actuator data
+            for (auto i = 0; i < kHebiNodeCount; i++) {
+                auto joint = static_cast<HebiThread::Joint>(i);
+                target.at(i) = GetCommandPosition(joint);
+                actual.at(i) = GetFeedbackPosition(joint);
+                torque.at(i) = GetFeedbackEffort(joint);
+
+                // Emit signal
+                emit InformState(target, actual, torque);
+            }
+        }
+
+        QThread::sleep(1);  // TOOD: for testing purposes only
+        //QThread::msleep(20);  // update 50 times/second
     }
 }
 
@@ -84,7 +109,7 @@ void LibraHebi::Loop() {
  * @return true If connection and initialization succeeded
  * @return false Otherwise
  */
-bool LibraHebi::Connect() {
+bool HebiThread::Connect() {
     hebi::Lookup lookup;
     group_ = lookup.getGroupFromNames({"X8-16"}, {"MA", "MB", "J1", "J2", "J3"});
     if (group_ == nullptr) {
@@ -120,7 +145,7 @@ bool LibraHebi::Connect() {
  * @param j2 Desired J2 (arm yaw) angle, in degrees
  * @param j3 Desired J3 (arm pitch) angle, in degrees
  */
-void LibraHebi::Move(double roll, double pitch, double j1, double j2,
+void HebiThread::Move(double roll, double pitch, double j1, double j2,
                      double j3) {
     Eigen::MatrixXd positions(5, 2);
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
@@ -158,7 +183,7 @@ void LibraHebi::Move(double roll, double pitch, double j1, double j2,
 /**
  * @brief Clears the active actuator movement command(s).
  */
-void LibraHebi::Stop() {
+void HebiThread::Stop() {
     trajectory_ = nullptr;
 }
 
@@ -172,7 +197,7 @@ void LibraHebi::Stop() {
  * @param joint The LIBRA joint to query
  * @return double The joint's commanded position value, in degrees
  */
-double LibraHebi::GetCommandPosition(Joint joint) {
+double HebiThread::GetCommandPosition(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -207,7 +232,7 @@ double LibraHebi::GetCommandPosition(Joint joint) {
  * @param joint The LIBRA joint to query
  * @return double The joint's actual position value, in degrees
  */
-double LibraHebi::GetFeedbackPosition(Joint joint) {
+double HebiThread::GetFeedbackPosition(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -242,7 +267,7 @@ double LibraHebi::GetFeedbackPosition(Joint joint) {
  * @param joint The LIBRA joint to query
  * @return double The joint's actual torque value, in Newton-meters
  */
-double LibraHebi::GetFeedbackEffort(Joint joint) {
+double HebiThread::GetFeedbackEffort(Joint joint) {
     double ret = 0;
 
     switch (joint) {
@@ -273,7 +298,7 @@ double LibraHebi::GetFeedbackEffort(Joint joint) {
  *
  * @return double The actuator's actual torque value, in Newton-meters
  */
-double LibraHebi::GetFeedbackEffortMA() {
+double HebiThread::GetFeedbackEffortMA() {
     return feedback_->getEffort()[Act::kHebiMA];
 }
 
@@ -282,7 +307,7 @@ double LibraHebi::GetFeedbackEffortMA() {
  *
  * @return double The actuator's actual torque value, in Newton-meters
  */
-double LibraHebi::GetFeedbackEffortMB() {
+double HebiThread::GetFeedbackEffortMB() {
     return feedback_->getEffort()[Act::kHebiMB];
 }
 
@@ -290,6 +315,6 @@ double LibraHebi::GetFeedbackEffortMB() {
  * @brief Sets whether or not verbose debug text is displayed
  * @param true to enable, false to disable
  */
-void LibraHebi::SetDebugMode(bool enabled) {
+void HebiThread::SetDebugMode(bool enabled) {
     debug_mode_ = enabled;
 }

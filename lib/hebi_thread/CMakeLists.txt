@@ -14,12 +14,12 @@ file(GLOB HEBI_SOURCE_FILES "${HEBI_DIR}/src/*.cpp")
 
 # Create and configure the module
 qt_add_library(
-    libra_hebi
+    hebi_thread
     STATIC
     # Header
-    libra_hebi.h
+    hebi_thread.h
     # Source
-    libra_hebi.cpp
+    hebi_thread.cpp
     # HEBI src/ folder needs to be passed in during compilation/linking process
     # (see HEBI C++ API docs: https://files.hebi.us/docs/cpp/cpp-3.7.0/)
     ${HEBI_SOURCE_FILES}
@@ -30,7 +30,7 @@ set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/src")
 
 # Ensure this module has access to the necessary 3rd-party libraries
 target_include_directories(
-    libra_hebi
+    hebi_thread
     # HEBI
     PUBLIC ${HEBI_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
@@ -50,9 +50,9 @@ set_target_properties(
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    libra_hebi
+    hebi_thread
     # Qt
-    PRIVATE Qt${QT_VERSION_MAJOR}::Core
+    PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     # HEBI
     PRIVATE pthread hebi
 )
@@ -63,13 +63,13 @@ target_link_libraries(
 # download don't work as symbolic links, so we have to generate them ourselves.
 # ~~~
 add_custom_command(
-    TARGET libra_hebi
+    TARGET hebi_thread
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink
             ${HEBI_DIR}/hebi/lib/libhebi.so.2.9 ${HEBI_DIR}/hebi/lib/libhebi.so
 )
 add_custom_command(
-    TARGET libra_hebi
+    TARGET hebi_thread
     POST_BUILD
     COMMAND
         ${CMAKE_COMMAND} -E create_symlink ${HEBI_DIR}/hebi/lib/libhebi.so.2.9
