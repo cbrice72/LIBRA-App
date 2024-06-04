@@ -19,18 +19,6 @@
  * !Helper Functions
  */
 
-constexpr int kWindowW = 1920 * 2;  // app window width
-constexpr int kWindowH = 1080 * 2;  // app window height
-
-constexpr int kHebiNodeCount = 5;      // total number of HEBI actuators
-constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
-
-constexpr int kMaxonNodeCount = 1;  // total number of Maxon (EPOS) actuators
-
-constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
-
-constexpr int kCameraNodeCount = 3;  // total number of camera servos
-
 //------------------------------------------------------------------------------
 // !Main Window
 //------------------------------------------------------------------------------
@@ -92,34 +80,10 @@ void AppMgr::Main() {
 
     /* ----- TEARDOWN ----- */
 
-    // プログラムが終了したことを示すフラグを立てる
-    // Flag to indicate that the program has finished
-    flag_end_ = true;
-
-    // スレッド終了フラグが立つまで待つ
-    // Wait until the thread is flagged as closed
-    while (!flag_thread_end_) {
-        Sleep(10);
-    }
-
     // ログの終了
     // Close the logging streams
     continuous_log_.close();
     snapshot_log_.close();
-
-    // DXライブラリのクリーンアップ
-    // Clean up DX library
-    DxLib_End();
-}
-
-/**
- * @brief Runner for MainThread.
- */
-DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
-    auto* p = (AppMgr*)pv;
-    p->MainThread();  // loops until app is closed by user
-    p->flag_thread_end_ = true;
-    return 0;
 }
 
 /**
@@ -129,12 +93,6 @@ DWORD WINAPI AppMgr::MainThread_dmy(LPVOID pv) {
 void AppMgr::MainThread() {
     // InputBoxのデフォルト値を設定
     // Set InputBox default values
-    ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
-    ibox_pitch_->SetNum(
-        libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kPitch));
-    ibox_j1_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ1));
-    ibox_j2_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ2));
-    ibox_j3_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3));
     ibox_r_->SetNum(1200);
     ibox_theta_->SetNum(0);
     ibox_increment_->SetNum(10);
@@ -148,65 +106,9 @@ void AppMgr::MainThread() {
     int count = 0;
     BYTE water_cmd = 0;
 
-    // ロギングの初期化
-    // Initialize logging
-    SYSTEMTIME st;
-    char dt_path_char[100];
-    std::string dt_path_str;
-    GetLocalTime(&st);
-    sprintf(dt_path_char, "%04d年%02d月%02d日_%02d時%02d分%02d秒", st.wYear,
-            st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond);
-    dt_path_str = std::string(dt_path_char);
-
-    if (_mkdir("./log/") == 0) {
-        colorize::Print("Created log directory\n", colorize::Level::kInfo);
-    }
-
-    continuous_log_.open("./log/" + dt_path_str + "_continuous_log.csv");
-    continuous_log_
-        << "Time,,"
-        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,"
-        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,"
-        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
-        << "A_IN,B_IN,A_OUT,B_OUT,,"
-        << "TP_CamBase (deg),TP_CamPan (deg),TP_CamTilt (deg)\n";
-
-    snapshot_log_.open("./log/" + dt_path_str + "_shot_log.csv");
-    snapshot_log_
-        << "Time,,"
-        << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,"
-        << "PP_Roll (deg),PP_Pitch (deg),PP_J1 (deg),PP_J2 (deg),PP_J3 (deg),,"
-        << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
-        << "Voltage (V),Current (A)\n";
-
     // 更新ループ
     // Update loop
     while (!flag_end_ && ScreenFlip() == 0 && ClearDrawScreen() == 0) {
-        // HEBIアクチュエータのデータを取得
-        // Retrieve HEBI actuator data
-        for (auto i = 0; i < kHebiNodeCount; i++) {
-            auto joint = static_cast<LIBRA_HEBI::Joint>(i);
-            value_.at(i).at(0) = libra_arm_->GetCommandPosition(joint);
-            value_.at(i).at(1) = libra_arm_->GetFeedbackPosition(joint);
-            value_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
-        }
-
-        // アーム制御のラベルとアクチュエータデータ
-        // Arm control labels and actuator data
-        std::string menu[] = {"Roll", "Pitch", "J1", "J2", "J3"};
-        for (auto i = 0; i < kHebiNodeCount; i++) {
-            // Target Pos., Current Pos., Current Torque
-            for (auto j = 0; j < kHebiFeedbackCount; j++) {
-                char str[20];
-                int strW;
-                sprintf(str, "%8.2f %s", value_.at(i).at(j),
-                        j != 2 ? "deg" : "Nm");
-                strW = GetDrawStringWidthToHandle(str, strlen(str), main_font);
-                DrawFormatStringToHandle(1750 + 400 * j - strW, 824 + 200 * i,
-                                         main_color, main_font, str);
-            }
-        }
-
         // 重心グラフ表示
         // Center of mass visualization
         const int c_x = 3100;
@@ -405,62 +307,5 @@ void AppMgr::MainThread() {
 
             // NOLINTEND(readability-magic-numbers): Position of UI element
         }
-
-        /* ----- LOGGING ----- */
-
-        // 連続ログの更新
-        // Update continuous log
-        if (count == 0) {
-            // Timestamp
-            continuous_log_ << GetDateTimeString() + ",,";
-
-            // Actuator info
-            for (auto i = 0; i < kHebiFeedbackCount; i++) {
-                for (auto j = 0; j < kHebiNodeCount; j++) {
-                    continuous_log_ << value_.at(j).at(i) << ",";
-                }
-                continuous_log_ << ",";
-            }
-
-            // Fluid system info
-            for (auto i = 0; i < kFluidStateCount; i++) {
-                continuous_log_ << ((water_cmd & (1 << (3 - i))) ? 1 : 0)
-                                << ",";
-            }
-            continuous_log_ << ",";
-
-            // Camera actuator info
-            continuous_log_ << camera_pos_.at(0) << "," << camera_pos_.at(1)
-                            << "," << camera_pos_.at(2) << "\n";
-        }
-
-        // TODO: what is this?
-        count++;
-        if (count == 30) {
-            count = 0;
-        }
     }
-}
-
-//------------------------------------------------------------------------------
-// !Helper Functions
-//------------------------------------------------------------------------------
-
-/**
- * @brief Provides a formatted string of the current date and time.
- *
- * @return std::string Formatted as "YYYY/MM/DD HH:MM:SS.MSS"
- */
-std::string AppMgr::GetDateTimeString() {
-    auto t = std::time(nullptr);
-    auto tm = *std::localtime(&t);
-    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
-                  std::chrono::system_clock::now().time_since_epoch())
-                  .count()
-              % 1000;  // std::time doesn't give MS; we have to get it ourselves
-
-    std::ostringstream dtss;
-    dtss << std::put_time(&tm, "%Y/%m/%d %H:%M:%S.") << ms << "\n";
-
-    return dtss.str();
 }
