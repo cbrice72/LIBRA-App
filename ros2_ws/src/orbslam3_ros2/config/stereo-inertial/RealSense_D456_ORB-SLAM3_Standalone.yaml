@@ -3,45 +3,33 @@
 #--------------------------------------------------------------------------------------------
 # RealSense D456 Camera Parameters. (Infrared, 848x480)
 #--------------------------------------------------------------------------------------------
-Camera.type: "PinHole"
+File.version: "1.0"
 
-# Left Camera calibration and distortion parameters (OpenCV)
+Camera.type: "Rectified"
+
+# Rectified Camera calibration (OpenCV)
 Camera.fx: 430.714
 Camera.fy: 430.714
 Camera.cx: 425.014
 Camera.cy: 240.590
-# distortion parameters
-Camera.k1: 0.0
-Camera.k2: 0.0
-Camera.p1: 0.0
-Camera.p2: 0.0
+
+Stereo.b: 0.050
 
 # Camera resolution
 Camera.width: 848
 Camera.height: 480
 
 # Camera frames per second 
-Camera.fps: 30.0
+Camera.fps: 30
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
 
-# Image scale, it changes the image size to be processed (<1.0: reduce, >1.0: increase)
-Camera.imageScale: 0.5 # 0.5 #0.7071 # 1/sqrt(2)
-
 # Close/Far threshold
-ThDepth: 50.0
-
-# Stereo baseline (in meters) times fx
-# - D410: b=0.055
-# - D415: b=0.055
-# - D430: b=0.050
-# - D450: b=0.095
-# - D401: b=0.018
-Camera.bf: 40.91783
+Stereo.ThDepth: 50.0
 
 # Transformation from body-frame (Gyro/Accel) to left camera (Infrared 1)
-Tbc: !!opencv-matrix
+IMU.T_b_c1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: f

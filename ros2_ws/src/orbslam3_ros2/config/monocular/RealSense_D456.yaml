@@ -31,6 +31,7 @@ Camera.imageScale: 1.0 # 0.5 #0.7071 # 1/sqrt(2)
 
 # Close/Far threshold
 ThDepth: 50.0
+
 # Stereo baseline (in meters) times fx
 # - D410: b=0.055
 # - D415: b=0.055
