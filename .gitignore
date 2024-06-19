@@ -206,5 +206,8 @@ adobe/*
 # Log file
 Log.txt
 
+# ORB-SLAM3 vocabulary file (i.e., only upload archive)
+ORBvoc.txt
+
 # Temporary Excel files
 ~$*
