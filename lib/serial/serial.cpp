@@ -76,7 +76,7 @@ void Serial::SetDebugMode(bool enabled) {
 }
 
 /**
- * @brief TODO.
+ * @brief TODO: documentation.
  *
  * @param data TODO
  * @return int TODO
@@ -109,7 +109,7 @@ int Serial::Write(uint8_t data) {
 }
 
 /**
- * @brief TODO.
+ * @brief TODO: documentation.
  *
  * @param str TODO
  * @return int TODO

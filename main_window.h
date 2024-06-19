@@ -13,7 +13,7 @@
 #include <QMainWindow>
 #include <QThread>
 // Project Headers
-#include "libra_hebi.h"
+#include "hebi_thread.h"
 #include "libra_lidar.h"
 #include "serial.h"
 
@@ -28,24 +28,27 @@ class MainWindow;
 QT_END_NAMESPACE
 
 /**
- * @brief TODO(brice.c.aa)
- *
- * @todo is this necessary in the new app?
+ * @brief TODO: documentation
  */
-/*
-class MainThread : public QThread {
+class PumpThread : public QThread {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
 
   public:
-    MainThread() = default;
-    ~MainThread() = default;
+    PumpThread() = default;
+    ~PumpThread() = default;
+
+  signals:
+    void SignalName();  // TODO: implementation
 
   private:
     void run() override;
+
+    // --- Data Members ---
+
+    //...
 };
-*/
 
 /**
  * @brief The main app window.
@@ -58,6 +61,9 @@ class MainWindow : public QMainWindow {
   public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
+
+  signals:
+    void DisconnectHebi();
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -102,6 +108,11 @@ class MainWindow : public QMainWindow {
     void on_pb_arm_stop_clicked();
     void on_pb_arm_convert_clicked();
 
+    void on_pb_arm_r_plus_clicked();
+    void on_pb_arm_r_minus_clicked();
+    void on_pb_arm_theta_plus_clicked();
+    void on_pb_arm_theta_minus_clicked();
+
     // Pumps
 
     void on_pb_pumps_enable_clicked();
@@ -129,15 +140,18 @@ class MainWindow : public QMainWindow {
 
     // --- Helper Functions ---
 
+    QString GetDateTimeString();
+
+    void UpdateHebi(std::array<double, 5> pos, std::array<double, 5> torque);
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
     bool debug_mode_{false};
 
-    // TODO: is this necessary in the new app?
-    // MainThread* main_thread_;  // primary loop
+    HebiThread* hebi_thread_;  // TODO: blurb
+    PumpThread* pump_thread_;  // TODO: blurb
 
-    std::unique_ptr<LibraHebi> libra_arm_;
     std::unique_ptr<Serial> ser_water_;
     std::unique_ptr<Serial> ser_servo_;
     std::unique_ptr<LibraLidar> lidar_;
