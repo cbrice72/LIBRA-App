@@ -26,7 +26,7 @@ Camera.fps: 30
 Camera.RGB: 1
 
 # Close/Far threshold
-Stereo.ThDepth: 50.0
+Stereo.ThDepth: 40.0 # 50.0
 
 # Transformation from body-frame (Gyro/Accel) to left camera (Infrared 1)
 IMU.T_b_c1: !!opencv-matrix
@@ -39,7 +39,7 @@ IMU.T_b_c1: !!opencv-matrix
           0.0, 0.0, 0.0, 1.0]
 
 # Do not insert KFs when recently lost
-InsertKFsWhenLost: 0
+IMU.InsertKFsWhenLost: 0
 
 # IMU noise (Use those from VINS-mono)
 # (unchanged from RealSense_D435i.yaml)
