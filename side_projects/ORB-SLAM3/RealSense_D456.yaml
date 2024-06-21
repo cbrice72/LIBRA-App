@@ -3,63 +3,50 @@
 #--------------------------------------------------------------------------------------------
 # RealSense D456 Camera Parameters. (Infrared, 848x480)
 #--------------------------------------------------------------------------------------------
-Camera.type: "PinHole"
+File.version: "1.0"
 
-# Left Camera calibration and distortion parameters (OpenCV)
-Camera.fx: 430.714
-Camera.fy: 430.714
-Camera.cx: 425.014
-Camera.cy: 240.590
-# distortion parameters
-Camera.k1: 0.0
-Camera.k2: 0.0
-Camera.p1: 0.0
-Camera.p2: 0.0
+Camera.type: "Rectified"
+
+# Rectified Camera calibration (OpenCV)
+Camera1.fx: 430.714
+Camera1.fy: 430.714
+Camera1.cx: 425.014
+Camera1.cy: 240.590
+
+Stereo.b: 0.050
 
 # Camera resolution
 Camera.width: 848
 Camera.height: 480
 
 # Camera frames per second 
-Camera.fps: 30.0
+Camera.fps: 30
 
 # Color order of the images (0: BGR, 1: RGB. It is ignored if images are grayscale)
 Camera.RGB: 1
 
-# Image scale, it changes the image size to be processed (<1.0: reduce, >1.0: increase)
-Camera.imageScale: 0.5 # 0.5 #0.7071 # 1/sqrt(2)
-
 # Close/Far threshold
-ThDepth: 50.0
-
-# Stereo baseline (in meters) times fx
-# - D410: b=0.055
-# - D415: b=0.055
-# - D430: b=0.050
-# - D450: b=0.095
-# - D401: b=0.018
-Camera.bf: 40.91783
+Stereo.ThDepth: 50.0
 
 # Transformation from body-frame (Gyro/Accel) to left camera (Infrared 1)
-Tbc: !!opencv-matrix
+IMU.T_b_c1: !!opencv-matrix
    rows: 4
    cols: 4
    dt: f
-   data: [1.0, 0.0, 0.0,  0.030,
-          0.0, 1.0, 0.0, -0.007,
-          0.0, 0.0, 1.0, -0.016,
+   data: [1.0, 0.0, 0.0,  0.03022,
+          0.0, 1.0, 0.0, -0.00740,
+          0.0, 0.0, 1.0, -0.01602,
           0.0, 0.0, 0.0, 1.0]
 
 # Do not insert KFs when recently lost
-InsertKFsWhenLost: 0
+IMU.InsertKFsWhenLost: 0
 
 # IMU noise (Use those from VINS-mono)
-# (unchanged from RealSense_D435i.yaml)
-IMU.NoiseGyro: 1e-3 # 2.44e-4 #1e-3 # rad/s^0.5
-IMU.NoiseAcc: 1e-2 # 1.47e-3 #1e-2 # m/s^1.5
-IMU.GyroWalk: 1e-6 # rad/s^1.5
-IMU.AccWalk: 1e-4 # m/s^2.5
-IMU.Frequency: 200
+IMU.NoiseGyro: 1e-3 # 2.44e-4 # rad/s^0.5
+IMU.NoiseAcc: 1e-2 # 1.47e-3 # m/s^1.5
+IMU.GyroWalk: 1e-7 # 1e-6 # rad/s^1.5
+IMU.AccWalk: 1e-7 # 1e-4 # m/s^2.5
+IMU.Frequency: 200.0
 
 #--------------------------------------------------------------------------------------------
 # ORB Parameters (unchanged from RealSense_D435i.yaml)
@@ -84,12 +71,12 @@ ORBextractor.minThFAST: 7
 # Viewer Parameters (unchanged from RealSense_D435i.yaml)
 #--------------------------------------------------------------------------------------------
 Viewer.KeyFrameSize: 0.05
-Viewer.KeyFrameLineWidth: 1
+Viewer.KeyFrameLineWidth: 1.0
 Viewer.GraphLineWidth: 0.9
-Viewer.PointSize: 2
+Viewer.PointSize: 2.0
 Viewer.CameraSize: 0.08
-Viewer.CameraLineWidth: 3
-Viewer.ViewpointX: 0
+Viewer.CameraLineWidth: 3.0
+Viewer.ViewpointX: 0.0
 Viewer.ViewpointY: -0.7
 Viewer.ViewpointZ: -3.5
-Viewer.ViewpointF: 500
+Viewer.ViewpointF: 500.0
