@@ -27,8 +27,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Qt packages
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core SerialPort Widgets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core SerialPort Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core SerialPort Widgets)
 
 # ROS packages
 # ~~~
@@ -69,7 +68,6 @@ set(PROJECT_SOURCES
 )
 
 # Add target executable
-if(${QT_VERSION_MAJOR} GREATER_EQUAL 6) # Desktop, Qt6 (or higher)
     qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCES})
 
     # ~~~
@@ -78,20 +76,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6) # Desktop, Qt6 (or higher)
     #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
     # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
     # ~~~
-
-else() # Qt5 (or lower)
-    if(ANDROID) # Mobile
-        add_library(LIBRA-App-v2 SHARED ${PROJECT_SOURCES})
-
-        # ~~~
-        # Define properties for Android with Qt 5 after find_package() calls as:
-        #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-        # ~~~
-
-    else() # Desktop
-        add_executable(LIBRA-App-v2 ${PROJECT_SOURCES})
-    endif()
-endif()
 
 # Copy HEBI actuator configurations to the executable directory
 add_custom_command(
@@ -118,8 +102,7 @@ target_link_libraries(
     PRIVATE libra_hebi libra_lidar serial # TODO: util
     # ~~~
     # Qt
-    PRIVATE Qt${QT_VERSION_MAJOR}::Core Qt${QT_VERSION_MAJOR}::SerialPort
-            Qt${QT_VERSION_MAJOR}::Widgets
+    PRIVATE Qt6::Core Qt6::SerialPort Qt6::Widgets
     # Other
     PRIVATE udev
 )
@@ -155,6 +138,4 @@ install(
 )
 
 # Generate proper deployment settings for the target
-if(QT_VERSION_MAJOR EQUAL 6)
     qt_finalize_executable(LIBRA-App-v2)
-endif()
