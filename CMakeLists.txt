@@ -68,14 +68,14 @@ set(PROJECT_SOURCES
 )
 
 # Add target executable
-    qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCES})
 
-    # ~~~
-    # Define target properties for Android with Qt 6 as:
-    #    set_property(TARGET LIBRA-App-v2 APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-    #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-    # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
-    # ~~~
+# ~~~
+# Define target properties for Android with Qt 6 as:
+#    set_property(TARGET LIBRA-App-v2 APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
+# For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+# ~~~
 
 # Copy HEBI actuator configurations to the executable directory
 add_custom_command(
@@ -106,13 +106,6 @@ target_link_libraries(
     # Other
     PRIVATE udev
 )
-
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1. If
-# you are developing for iOS or macOS you should consider setting an explicit,
-# fixed bundle identifier manually though.
-if(${QT_VERSION} VERSION_LESS 6.1.0)
-  set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.LIBRA-App-v2)
-endif()
 
 # Specify platform-specific properties
 # ~~~
