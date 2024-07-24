@@ -2506,6 +2506,9 @@
    </property>
   </action>
   <action name="a_hebi_disconnect">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Disconnect</string>
    </property>
