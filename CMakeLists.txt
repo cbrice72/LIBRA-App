@@ -138,4 +138,4 @@ install(
 )
 
 # Generate proper deployment settings for the target
-    qt_finalize_executable(LIBRA-App-v2)
+qt_finalize_executable(LIBRA-App-v2)
