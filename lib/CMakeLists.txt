@@ -7,7 +7,7 @@
 ################################################################################
 
 # Add module subdirectories
-add_subdirectory(hebi_thread)
+add_subdirectory(libra_hebi)
 add_subdirectory(libra_lidar)  # TODO(brice.c.aa): add Hokuyo LIDAR
 add_subdirectory(serial)
 #add_subdirectory(util)  # TODO(brice.c.aa): add EPOS actuator
