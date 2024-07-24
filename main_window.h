@@ -11,9 +11,10 @@
 // Other Libraries' Headers
 //   Qt
 #include <QMainWindow>
+#include <QSerialPort>
 #include <QThread>
 // Project Headers
-#include "hebi_thread.h"
+#include "libra_hebi.h"
 #include "libra_lidar.h"
 #include "serial.h"
 
@@ -28,30 +29,71 @@ class MainWindow;
 QT_END_NAMESPACE
 
 /**
- * @brief TODO: documentation
+ * @brief The primary control loop.
  */
-class PumpThread : public QThread {
+class MainThread : public QThread {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
 
   public:
-    PumpThread() = default;
-    ~PumpThread() = default;
+    MainThread() = default;
+    ~MainThread() = default;
 
-  signals:
-    void SignalName();  // TODO: implementation
+    // --- Getters & Setters ---
+
+    void SetDebugMode(bool enabled);
+
+  public slots:
+    void UpdateArmTarget(const std::array<double, 5>& input);
 
   private:
     void run() override;
 
+    /**
+     * @brief Logical status of the fluid system.
+     */
+    enum WaterMode { kStandby = 0, kAdjust, kDrain };
+
+    // --- Helper Functions ---
+
+    std::ofstream InitializeLog(std::string name);
+
     // --- Data Members ---
 
-    //...
+    bool debug_mode_{false};
+
+    // LIBRA Components
+
+    std::shared_ptr<LibraHebi> libra_arm_;
+    std::shared_ptr<Serial> ser_water_;
+    std::shared_ptr<Serial> ser_servo_;
+    std::shared_ptr<LibraLidar> lidar_;
+
+    // Arm
+
+    std::array<double, 5> arm_target_{0};
+    std::array<std::array<double, 3>, 5> arm_current_{0};
+
+    // Counterweight
+
+    bool water_en_{true};
+    WaterMode water_mode_{kStandby};
+
+    // Camera
+
+    std::array<double, 3> camera_pos_{0};
+    std::array<double, 3> camera_setpos_{0};
+    std::array<int, 3> camera_dir_{0};
+
+    // Logging
+
+    std::ofstream continuous_log_;
+    std::ofstream snapshot_log_;
 };
 
 /**
- * @brief The main app window.
+ * @brief The main command app window.
  */
 class MainWindow : public QMainWindow {
     // NOLINTBEGIN: required by Qt
@@ -63,7 +105,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
   signals:
-    void DisconnectHebi();
+    void CommandArm(std::array<double, 5> target);
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -133,42 +175,23 @@ class MainWindow : public QMainWindow {
   private:
     // NOLINTEND
 
-    /**
-     * @brief Logical status of the fluid system.
-     */
-    enum WaterMode { kStandby = 0, kAdjust, kDrain };
-
     // --- Helper Functions ---
 
-    QString GetDateTimeString();
-
-    void UpdateHebi(std::array<double, 5> pos, std::array<double, 5> torque);
+    void UpdatePumpVals();
+    void UpdateCameraVals();
 
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
     bool debug_mode_{false};
 
-    HebiThread* hebi_thread_;  // TODO: blurb
-    PumpThread* pump_thread_;  // TODO: blurb
+    std::shared_ptr<LibraHebi> libra_arm_;
+    //std::shared_ptr<Serial> ser_water_;
+    std::shared_ptr<QSerialPort> ser_water_;
+    std::shared_ptr<Serial> ser_servo_;
+    std::shared_ptr<LibraLidar> lidar_;
 
-    std::unique_ptr<Serial> ser_water_;
-    std::unique_ptr<Serial> ser_servo_;
-    std::unique_ptr<LibraLidar> lidar_;
+    MainThread* main_thread_;  // primary control loop
 
-    // TODO(brice.c.aa): possibly unneeded in Qt implementation
-    volatile bool flag_thread_end_{0};
-    volatile bool flag_end_{0};
-
-    std::ofstream continuous_log_;
-    std::ofstream snapshot_log_;
-
-    bool water_en_{true};
-    WaterMode water_mode_{kStandby};
-
-    std::array<double, 5> input_{0};
     std::array<std::array<double, 3>, 5> value_{0};
-    std::array<double, 3> camera_pos_{0};
-    std::array<double, 3> camera_setpos_{0};
-    std::array<int, 3> camera_dir_{0};
 };
