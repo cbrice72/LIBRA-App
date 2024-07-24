@@ -164,7 +164,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 
 LambdaBodyIndentation: Signature
 
-LineEnding: CRLF
+LineEnding: DeriveLF
 
 MacroBlockBegin: ''
 MacroBlockEnd: ''
