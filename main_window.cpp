@@ -9,8 +9,8 @@
 // Related Header
 #include "main_window.h"
 // C++ Standard Library Headers
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 // Other Libraries' Headers
 //   Qt
 #include <QDateTime>
@@ -38,8 +38,8 @@
 
 constexpr int kHebiNodeCount = 5;      // total number of HEBI actuators
 constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
-constexpr int kFluidStateCount = 4;    // number of pumps * number of pump states
-constexpr int kCameraNodeCount = 3;    // total number of camera servos
+constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
+constexpr int kCameraNodeCount = 3;  // total number of camera servos
 
 /**
  * @brief Standard constructor.
@@ -52,7 +52,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Component Connection ---
 
-    //on_a_epos_connect_triggered();
+    // on_a_epos_connect_triggered();
     on_a_hebi_connect_triggered();
     on_a_pumps_connect_triggered();
     on_a_camera_connect_triggered();
@@ -74,11 +74,11 @@ MainWindow::MainWindow(QWidget* parent)
     main_thread_ = new MainThread();
 
     // - Send arm commands on button press
-    connect(this, &MainWindow::CommandArm,
-            main_thread_, &MainThread::UpdateArmTarget);
+    connect(this, &MainWindow::CommandArm, main_thread_,
+            &MainThread::UpdateArmTarget);
     // - When thread exits, deallocate it
-    connect(main_thread_, &MainThread::finished,
-            main_thread_, &MainThread::deleteLater);
+    connect(main_thread_, &MainThread::finished, main_thread_,
+            &MainThread::deleteLater);
 
     main_thread_->start();
 }
@@ -111,7 +111,7 @@ std::string GetDateTimeString() {
 
 /**
  * @brief Initializes a logfile with named columns.
- * 
+ *
  * @param name The identifier to be assigned to the log filename.
  */
 std::ofstream MainThread::InitializeLog(std::string name) {
@@ -140,7 +140,7 @@ std::ofstream MainThread::InitializeLog(std::string name) {
 
 /**
  * @brief TODO: Documentation.
- * 
+ *
  * @param input ...
  */
 void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
@@ -168,7 +168,6 @@ void MainThread::run() {
     continuous_log_ = InitializeLog("continuous_log");
     snapshot_log_ = InitializeLog("shot_log");
 
-
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
         /* ----- CHECK FOR COMPONENT OBJECTS (TEMPORARY) ----- */
@@ -178,11 +177,13 @@ void MainThread::run() {
             QThread::sleep(5);  // check again in 5 seconds
             continue;
         } else if (ser_water_ == nullptr) {
-            qDebug() << "[WARN] SerialWater Arduino is not connected! Sleeping...";
+            qDebug()
+                << "[WARN] SerialWater Arduino is not connected! Sleeping...";
             QThread::sleep(5);  // check again in 5 seconds
             continue;
         } else if (ser_servo_ == nullptr) {
-            qDebug() << "[WARN] SerialServo Arduino is not connected! Sleeping...";
+            qDebug()
+                << "[WARN] SerialServo Arduino is not connected! Sleeping...";
             QThread::sleep(5);  // check again in 5 seconds
             continue;
         }
@@ -198,6 +199,7 @@ void MainThread::run() {
         }
 
         // TODO: Center of mass visualization
+        // clang-format off
         /*
         const int c_x = 3100;
         const int c_y = kWindowH / 2 + 350;
@@ -246,6 +248,7 @@ void MainThread::run() {
         DrawFormatStringToHandle(c_x - 100, c_y - 550 - 25, main_color,
                                  main_font, "Pitch (Nm)");
         */
+        // clang-format on
 
         /* ----- CAMERA ----- */
 
@@ -433,7 +436,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 void MainWindow::on_a_epos_connect_triggered() {
     qDebug() << "[WARN] EPOS not yet implemented";
     return;
-    
+
     // TODO: implementation
 
     // Reflect changes in UI
@@ -495,13 +498,13 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
  */
 void MainWindow::on_a_pumps_connect_triggered() {
     // Enumerate available serial ports
-    foreach (const QSerialPortInfo &info, QSerialPortInfo::availablePorts()) {
+    foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
         qDebug() << "Port: " << info.portName();
         qDebug() << "Description: " << info.description();
         qDebug() << "Manufacturer: " << info.manufacturer() << "\n";
         return;
     }
-    
+
     // Set port options
     ser_water_ = std::make_shared<QSerialPort>(this);
     ser_water_->setPortName("COM1");
@@ -519,8 +522,8 @@ void MainWindow::on_a_pumps_connect_triggered() {
     }
 
     // Ensure data gets processed when it's made available
-    connect(ser_water_, &QSerialPort::readyRead,
-            this, &MainWindow::UpdatePumpVals);
+    connect(ser_water_, &QSerialPort::readyRead, this,
+            &MainWindow::UpdatePumpVals);
 
 #if false
     // Display the "Connect to Serial" dialog
@@ -710,7 +713,7 @@ void MainWindow::on_pb_arm_convert_clicked() {
         qDebug() << "[WARN] HEBI actuators not connected!";
         return;
     }
-    
+
     // TODO: adapt code
     /*
     // NOLINTBEGIN(readability-identifier-length): equation variables
@@ -845,7 +848,7 @@ void MainWindow::on_pb_pumps_drain_clicked() {
 
 /**
  * @brief TODO: description
- * 
+ *
  * @param input ...
  */
 void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {

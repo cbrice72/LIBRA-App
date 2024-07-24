@@ -186,7 +186,7 @@ class MainWindow : public QMainWindow {
     bool debug_mode_{false};
 
     std::shared_ptr<LibraHebi> libra_arm_;
-    //std::shared_ptr<Serial> ser_water_;
+    // std::shared_ptr<Serial> ser_water_;
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<Serial> ser_servo_;
     std::shared_ptr<LibraLidar> lidar_;
