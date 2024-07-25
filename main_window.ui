@@ -27,60 +27,6 @@
          <string>PUMPS</string>
         </property>
         <layout class="QGridLayout" name="gridLayout_8">
-         <item row="0" column="0">
-          <layout class="QGridLayout" name="gl_pump_status">
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_pump_a">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>A (L?)</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="l_pump_a_status">
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="l_pump_b_status">
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="static_l_pump_b">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>B (R?)</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
          <item row="0" column="1">
           <layout class="QVBoxLayout" name="vl_pumps_control">
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
@@ -159,6 +105,63 @@
             </widget>
            </item>
           </layout>
+         </item>
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gl_pump_status">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_pump_a">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>A (L?)</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QLabel" name="l_pump_a_status">
+             <property name="text">
+              <string>...</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1">
+            <widget class="QLabel" name="l_pump_b_status">
+             <property name="text">
+              <string>...</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QLabel" name="static_l_pump_b">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>B (R?)</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="2">
+          <widget class="QWidget" name="w_torque_visual" native="true"/>
          </item>
         </layout>
        </widget>
@@ -1137,9 +1140,6 @@
          </widget>
         </item>
        </layout>
-      </item>
-      <item row="2" column="3" rowspan="2">
-       <widget class="QWidget" name="w_torque_visual" native="true"/>
       </item>
       <item row="1" column="0">
        <widget class="QLabel" name="static_l_title">
@@ -2403,6 +2403,63 @@
         </layout>
        </widget>
       </item>
+      <item row="3" column="3">
+       <layout class="QHBoxLayout" name="hl_camera_feed">
+        <item>
+         <widget class="QPushButton" name="pb_camera_capture">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>CAPTURE</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="pb_camera_record">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+          <property name="minimumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="maximumSize">
+           <size>
+            <width>80</width>
+            <height>30</height>
+           </size>
+          </property>
+          <property name="text">
+           <string>RECORD</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="2" column="3">
+       <widget class="QVideoWidget" name="vw_camera_viewfinder" native="true"/>
+      </item>
      </layout>
     </item>
    </layout>
@@ -2447,7 +2504,8 @@
     <property name="title">
      <string>Camera</string>
     </property>
-    <addaction name="a_camera_connect"/>
+    <addaction name="a_camera_device_connect"/>
+    <addaction name="a_camera_servos_connect"/>
     <addaction name="a_camera_disconnect"/>
     <addaction name="separator"/>
    </widget>
@@ -2541,9 +2599,9 @@
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="a_camera_connect">
+  <action name="a_camera_servos_connect">
    <property name="text">
-    <string>Connect</string>
+    <string>Connect (servos)</string>
    </property>
   </action>
   <action name="a_camera_disconnect">
@@ -2583,7 +2641,20 @@
     <string>Debug Mode</string>
    </property>
   </action>
+  <action name="a_camera_device_connect">
+   <property name="text">
+    <string>Connect (camera)</string>
+   </property>
+  </action>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>QVideoWidget</class>
+   <extends>QWidget</extends>
+   <header>QtMultimediaWidgets/QVideoWidget</header>
+   <container>1</container>
+  </customwidget>
+ </customwidgets>
  <resources>
   <include location="resources.qrc"/>
  </resources>
