@@ -71,14 +71,13 @@ MainWindow::MainWindow(QWidget* parent)
      */
 
     // Main controller thread
-    main_thread_ = new MainThread();
+    main_thread_ = new MainThread(libra_arm_, ser_water_, ser_servo_);
 
-    // - Send arm commands on button press
-    connect(this, &MainWindow::CommandArm, main_thread_,
-            &MainThread::UpdateArmTarget);
-    // - When thread exits, deallocate it
-    connect(main_thread_, &MainThread::finished, main_thread_,
-            &MainThread::deleteLater);
+    connect(this, &MainWindow::CommandArm,  // send arm commands to main thread
+            main_thread_, &MainThread::UpdateArmTarget);
+    connect(main_thread_,
+            &MainThread::finished,  // when thread exits, deallocate
+            main_thread_, &MainThread::deleteLater);
 
     main_thread_->start();
 }
@@ -91,6 +90,14 @@ MainWindow::~MainWindow() {
     main_thread_->requestInterruption();  // signal thread to stop looping
     main_thread_->wait();                 // wait for thread cleanup to finish
 }
+
+/**
+ * @brief Standard constructor.
+ */
+MainThread(std::shared_ptr<LibraHebi> libra_arm,
+           std::shared_ptr<QSerialPort> ser_water,
+           std::shared_ptr<Serial> ser_servo)
+    : libra_arm_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
 //------------------------------------------------------------------------------
 // !Helper Functions
@@ -422,7 +429,8 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
         libra_arm_->SetDebugMode(debug_mode_);
     }
     if (ser_water_ != nullptr) {
-        ser_water_->SetDebugMode(debug_mode_);
+        // TODO: make new class inheriting from QSerialPort
+        // ser_water_->SetDebugMode(debug_mode_);
     }
     if (ser_servo_ != nullptr) {
         ser_servo_->SetDebugMode(debug_mode_);
@@ -507,7 +515,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
 
     // Set port options
     ser_water_ = std::make_shared<QSerialPort>(this);
-    ser_water_->setPortName("COM1");
+    ser_water_->setPortName("COM3");
     ser_water_->setBaudRate(QSerialPort::Baud115200);
     ser_water_->setDataBits(QSerialPort::Data8);
     ser_water_->setParity(QSerialPort::NoParity);
@@ -522,7 +530,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
     }
 
     // Ensure data gets processed when it's made available
-    connect(ser_water_, &QSerialPort::readyRead, this,
+    connect(ser_water_.get(), &QSerialPort::readyRead, this,
             &MainWindow::UpdatePumpVals);
 
 #if false
@@ -802,7 +810,7 @@ void MainWindow::on_pb_arm_theta_minus_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_pumps_enable_clicked() {
-    if (ser_water_ == nullptr) {
+    if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
     }
@@ -818,7 +826,7 @@ void MainWindow::on_pb_pumps_enable_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_pumps_disable_clicked() {
-    if (ser_water_ == nullptr) {
+    if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
     }
@@ -834,7 +842,7 @@ void MainWindow::on_pb_pumps_disable_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_pumps_drain_clicked() {
-    if (ser_water_ == nullptr) {
+    if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
     }
@@ -848,17 +856,12 @@ void MainWindow::on_pb_pumps_drain_clicked() {
 
 /**
  * @brief TODO: description
- *
- * @param input ...
  */
-void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
-    arm_target_ = input;
+void MainWindow::UpdatePumpVals() {
+    auto data = ser_water_->readAll();
+    qDebug() << "Received data from SerialWater:" << data;
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Received the following arm targets:" << input.at(0)
-                 << ", " << input.at(1) << ", " << input.at(2) << ", "
-                 << input.at(3) << ", " << input.at(4);
-    }
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
