@@ -27,7 +27,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Qt packages
-find_package(Qt6 REQUIRED COMPONENTS Core SerialPort Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPort Widgets)
 
 # ROS packages
 # ~~~
@@ -57,10 +57,12 @@ set(PROJECT_SOURCES
     # Header
     main_window.h
     serial_dialog.h
+    camera_manager.h
     # Source
     main.cpp
     main_window.cpp
     serial_dialog.cpp
+    camera_manager.cpp
     # Qt
     main_window.ui
     serial_dialog.ui
@@ -102,7 +104,7 @@ target_link_libraries(
     PRIVATE libra_hebi libra_lidar serial # TODO: util
     # ~~~
     # Qt
-    PRIVATE Qt6::Core Qt6::SerialPort Qt6::Widgets
+    PRIVATE Qt6::Core Qt6::Multimedia Qt6::MultimediaWidgets Qt6::SerialPort Qt6::Widgets
     # Other
     PRIVATE udev
 )

@@ -14,6 +14,7 @@
 #include <QSerialPort>
 #include <QThread>
 // Project Headers
+#include "camera_manager.h"
 #include "libra_hebi.h"
 #include "libra_lidar.h"
 #include "serial.h"
@@ -68,7 +69,8 @@ class MainThread : public QThread {
     // LIBRA Components
 
     std::shared_ptr<LibraHebi> libra_arm_;
-    std::shared_ptr<Serial> ser_water_;
+    std::shared_ptr<QSerialPort> ser_water_;
+    // std::shared_ptr<Serial> ser_water_;
     std::shared_ptr<Serial> ser_servo_;
 
     // Arm
@@ -133,7 +135,8 @@ class MainWindow : public QMainWindow {
 
     // Camera Menu
 
-    void on_a_camera_connect_triggered();
+    void on_a_camera_device_connect_triggered();
+    void on_a_camera_servos_connect_triggered();
     void on_a_camera_disconnect_triggered();
 
     // LIDAR Menu
@@ -167,6 +170,9 @@ class MainWindow : public QMainWindow {
     void on_pb_camera_slow_clicked();
     void on_pb_camera_fast_clicked();
 
+    void on_pb_camera_capture_clicked();
+    void on_pb_camera_record_clicked();
+
     // Misc.
 
     void on_pb_logshot_clicked();
@@ -186,13 +192,13 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui_;
     bool debug_mode_{false};
 
+    MainThread* main_thread_;  // primary control loop
+
     std::shared_ptr<LibraHebi> libra_arm_;
     // std::shared_ptr<Serial> ser_water_;
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<Serial> ser_servo_;
     std::shared_ptr<LibraLidar> lidar_;
 
-    MainThread* main_thread_;  // primary control loop
-
-    std::array<std::array<double, 3>, 5> value_{0};
+    std::unique_ptr<CameraManager> camera_manager_;
 };

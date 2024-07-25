@@ -55,7 +55,8 @@ MainWindow::MainWindow(QWidget* parent)
     // on_a_epos_connect_triggered();
     on_a_hebi_connect_triggered();
     on_a_pumps_connect_triggered();
-    on_a_camera_connect_triggered();
+    on_a_camera_device_connect_triggered();
+    on_a_camera_servos_connect_triggered();
 
     // --- Thread Management ---
 
@@ -94,14 +95,16 @@ MainWindow::~MainWindow() {
 /**
  * @brief Standard constructor.
  */
-MainThread(std::shared_ptr<LibraHebi> libra_arm,
-           std::shared_ptr<QSerialPort> ser_water,
-           std::shared_ptr<Serial> ser_servo)
+MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
+                       std::shared_ptr<QSerialPort> ser_water,
+                       std::shared_ptr<Serial> ser_servo)
     : libra_arm_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
+
+namespace {
 
 /**
  * @brief Provides a formatted string of the current date and time.
@@ -111,6 +114,8 @@ MainThread(std::shared_ptr<LibraHebi> libra_arm,
 std::string GetDateTimeString() {
     return QDateTime::currentDateTime().toString(Qt::ISODateWithMs).toStdString();
 }
+
+}  // namespace
 
 //------------------------------------------------------------------------------
 // !Worker Threads
@@ -367,7 +372,8 @@ void MainThread::run() {
                 break;
         }
 
-        ser_water_->Write(water_cmd);  // send command
+        auto to_write = static_cast<char>(water_cmd);
+        ser_water_->write(&to_write);  // send command
 
         // TODO: Visualize status of fluid system
 
@@ -524,7 +530,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
 
     // Only continue if "open" was successful
     if (!ser_water_->open(QIODevice::ReadOnly)) {
-        qDebug() << "Failed to open port";
+        qDebug() << "[ERROR] Failed to open port: " << ser_water_.portName();
         ser_water_.reset();
         return;
     }
@@ -573,10 +579,25 @@ void MainWindow::on_a_pumps_disconnect_triggered() {
 }
 
 /**
- * @brief Event handler for "Camera" menu bar action "Connect".
+ * @brief Event handler for "Camera" menu bar action "Connect (camera)".
+ *        Hard-coded to connect to a camera device named "mycamera".
+ */
+void MainWindow::on_a_camera_device_connect_triggered() {
+    camera_manager_ = std::make_unique<CameraManager>("mycamera",
+                                                      ui_->vw_camera_viewfinder,
+                                                      this);
+    camera_manager_->Start();
+
+    // Reflect changes in UI
+    ui_->a_camera_device_connect->setEnabled(false);
+    ui_->a_camera_disconnect->setEnabled(true);
+}
+
+/**
+ * @brief Event handler for "Camera" menu bar action "Connect (servos)".
  *        Brings up a dialog box of available serial USB devices.
  */
-void MainWindow::on_a_camera_connect_triggered() {
+void MainWindow::on_a_camera_servos_connect_triggered() {
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("USB");
     w_serial.setModal(true);
@@ -598,7 +619,7 @@ void MainWindow::on_a_camera_connect_triggered() {
                                           "/dev/" + w_serial.GetDeviceName());
 
     // Reflect changes in UI
-    ui_->a_camera_connect->setEnabled(false);
+    ui_->a_camera_servos_connect->setEnabled(false);
     ui_->a_camera_disconnect->setEnabled(true);
 }
 
@@ -607,11 +628,13 @@ void MainWindow::on_a_camera_connect_triggered() {
  *        Terminates the connection to the `SerialServo` Arduino, if it exists.
  */
 void MainWindow::on_a_camera_disconnect_triggered() {
-    // Clear the Serial object
+    // Clear the Serial and CameraManager objects
     ser_servo_.reset();
+    camera_manager_.reset();
 
     // Reflect changes in UI
-    ui_->a_camera_connect->setEnabled(true);
+    ui_->a_camera_device_connect->setEnabled(true);
+    ui_->a_camera_servos_connect->setEnabled(true);
     ui_->a_camera_disconnect->setEnabled(false);
 }
 
@@ -904,6 +927,29 @@ void MainWindow::on_pb_camera_fast_clicked() {
     camera_pos_.at(1) = ibox_camera_pan_->GetNum();
     camera_pos_.at(2) = ibox_camera_tilt_->GetNum();
     */
+}
+
+/**
+ * @brief TODO: documentation
+ */
+void MainWindow::on_pb_camera_capture_clicked() {
+    camera_manager_->Capture();
+}
+
+/**
+ * @brief TODO: documentation
+ */
+void MainWindow::on_pb_camera_record_clicked() {
+    if (ser_servo_ == nullptr) {
+        qDebug() << "[WARN] Record not yet implemented!";
+        return;
+    }
+
+    if (camera_manager_->Record()) {
+        // TODO: do something
+    } else {
+        // TODO: revert to original state
+    }
 }
 
 //------------------------------------------------------------------------------
