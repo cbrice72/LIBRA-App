@@ -73,9 +73,7 @@ MainWindow::MainWindow(QWidget* parent)
     // TODO: SerialWater autoconnect
 
     // Camera
-    if (debug_mode_) {
-        qDebug() << "[INFO] Checking available video inputs...";
-    }
+    qDebug() << "[INFO] Checking available video inputs...";
 
     QStringList camera_list;  // used to populate ComboBox
     const auto cameras = QMediaDevices::videoInputs();
