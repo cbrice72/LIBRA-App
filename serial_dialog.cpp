@@ -46,7 +46,7 @@ SerialDialog::SerialDialog(const std::string& device_type,
 }
 
 /**
- * @brief Standard QDialog destructor;
+ * @brief Standard QDialog destructor.
  */
 SerialDialog::~SerialDialog() {
     delete ui_;
