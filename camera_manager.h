@@ -7,7 +7,7 @@
  ******************************************************************************/
 
 // C++ Standard Library Headers
-//   (none)
+#include <unordered_map>
 // Other Libraries' Headers
 //   Qt
 #include <QtMultimedia>
@@ -23,8 +23,7 @@ class CameraManager : public QObject {
     // NOLINTEND
 
   public:
-    CameraManager(const std::string& name, QVideoWidget* viewfinder,
-                  QObject* parent);
+    CameraManager(const QString& id, QVideoWidget* viewfinder, QObject* parent);
     ~CameraManager();
 
     void Start();
@@ -37,9 +36,10 @@ class CameraManager : public QObject {
 
     // --- Data Members ---
 
-    QString name_;
+    QString id_;
     QVideoWidget* viewfinder_;
 
+    std::string output_dir_;
     QCamera* camera_;
 
     QMediaCaptureSession session_;
@@ -47,4 +47,5 @@ class CameraManager : public QObject {
     QMediaRecorder* recorder_;
 
     bool is_recording_{false};
+    QString video_filename_;
 };

@@ -135,9 +135,8 @@ class MainWindow : public QMainWindow {
 
     // Camera Menu
 
-    void on_a_camera_device_connect_triggered();
     void on_a_camera_servos_connect_triggered();
-    void on_a_camera_disconnect_triggered();
+    void on_a_camera_servos_disconnect_triggered();
 
     // LIDAR Menu
 
@@ -170,6 +169,7 @@ class MainWindow : public QMainWindow {
     void on_pb_camera_slow_clicked();
     void on_pb_camera_fast_clicked();
 
+    void on_cb_camera_id_textActivated(const QString& sel);
     void on_pb_camera_capture_clicked();
     void on_pb_camera_record_clicked();
 
@@ -200,5 +200,6 @@ class MainWindow : public QMainWindow {
     std::shared_ptr<Serial> ser_servo_;
     std::shared_ptr<LibraLidar> lidar_;
 
+    std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;
 };

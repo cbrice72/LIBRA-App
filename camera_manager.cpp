@@ -13,6 +13,7 @@
 // Other Libraries' Headers
 //   Qt
 #include <QDateTime>
+#include <QDir>
 
 // Project Headers
 //   (none)
@@ -25,19 +26,18 @@
 /**
  * @brief Standard constructor.
  *
- * @param name Camera descriptor; will be used to find the device
+ * @param id Camera location (e.g., `/dev/video0`); will be used to find the device
  * @param viewfinder The QVideoWidget object to display the camera feeed in
  * @param parent Owning Qt widget (default: nullptr)
  */
-CameraManager::CameraManager(const std::string& name, QVideoWidget* viewfinder,
+CameraManager::CameraManager(const QString& id, QVideoWidget* viewfinder,
                              QObject* parent = nullptr)
-    : QObject(parent), camera_(nullptr), name_(QString::fromStdString(name)),
-      viewfinder_(viewfinder) {
+    : QObject(parent), id_(id), viewfinder_(viewfinder), camera_(nullptr),
+      output_dir_(QDir::currentPath().toStdString() + "/") {
     // Find requested camera
     const auto cameras = QMediaDevices::videoInputs();
     for (const auto& camera_device : cameras) {
-        qDebug() << "[INFO] found camera: " << camera_device.description();
-        if (camera_device.description() == name_) {
+        if (camera_device.id() == id_) {
             camera_ = new QCamera(camera_device);
             break;
         }
@@ -69,10 +69,10 @@ CameraManager::CameraManager(const std::string& name, QVideoWidget* viewfinder,
         // Set output format for video
         QMediaFormat format(QMediaFormat::MPEG4);
         format.setVideoCodec(QMediaFormat::VideoCodec::H264);
-        format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
+        // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
         recorder_->setMediaFormat(format);
     } else {
-        qDebug() << "[ERROR] Camera " << name_ << " not found!";
+        qDebug() << "[ERROR] Camera " << id_ << " not found!";
     }
 };
 
@@ -135,8 +135,10 @@ void CameraManager::Stop() {
  */
 void CameraManager::Capture() {
     if (camera_ != nullptr) {
-        capture_->captureToFile(
-            QString::fromStdString(GetDateTimeString() + "_img.jpg"));
+        auto filename = QString::fromStdString(output_dir_ + "img/"
+                                               + GetDateTimeString() + ".jpg");
+        capture_->captureToFile(filename);
+        qDebug() << "[INFO] Saved image data to " << filename;
     } else {
         qDebug() << "[ERROR] Cannot capture image; camera not initialized!";
     }
@@ -148,17 +150,15 @@ void CameraManager::Capture() {
  * @return true if recording is active, false otherwise
  */
 bool CameraManager::Record() {
-    if (camera_ == nullptr) {
-        qDebug() << "[ERROR] Cannot capture video; camera not initialized!";
-        return false;
-    }
-
     if (!is_recording_) {
-        recorder_->setOutputLocation(QUrl::fromLocalFile(
-            QString::fromStdString(GetDateTimeString() + "_video.mp4")));
+        video_filename_ = QString::fromStdString(
+            output_dir_ + "vid/" + GetDateTimeString() + ".mp4");
+        recorder_->setOutputLocation(QUrl::fromLocalFile(video_filename_));
         recorder_->record();
     } else {
         recorder_->stop();
+        qDebug() << "[INFO] Saved video recording to " << video_filename_;
+        video_filename_.clear();
     }
 
     return is_recording_ = !is_recording_;

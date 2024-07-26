@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <filesystem>
 #include <iostream>
+#include <sys/stat.h>
 // Other Libraries' Headers
 //   Qt
 #include <QDateTime>
@@ -50,13 +51,53 @@ MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
 
+    {
+        // Check if app is running in Windows Subsystem for Linux (WSL2)
+        const char* wsl_path = "/run/WSL";
+
+        struct stat buf {};
+
+        if (stat(wsl_path, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+            qWarning()
+                << "[WARN] You seem to be running this on WSL2. Please ensure "
+                   "you have properly forwarded your USB connections.";
+        }
+    }
+
     // --- Component Connection ---
 
-    // on_a_epos_connect_triggered();
-    on_a_hebi_connect_triggered();
-    on_a_pumps_connect_triggered();
-    on_a_camera_device_connect_triggered();
-    on_a_camera_servos_connect_triggered();
+    // TODO: EPOS autoconnect
+
+    // TODO: LibraHebi autoconnect
+
+    // TODO: SerialWater autoconnect
+
+    // Camera
+    if (debug_mode_) {
+        qDebug() << "[INFO] Checking available video inputs...";
+    }
+
+    QStringList camera_list;  // used to populate ComboBox
+    const auto cameras = QMediaDevices::videoInputs();
+    for (const auto& camera_device : cameras) {
+        auto id = QString(camera_device.id());
+
+        if (debug_mode_) {
+            qDebug() << "[DEBUG] Camera - Found" << id;
+        }
+
+        // Populate ComboBox (new items are appended to existing list)
+        ui_->cb_camera_id->addItem(id);
+        // Populate internal map (used on ComboBox change)
+        available_cameras_[id] = camera_device.description();
+    }
+
+    if (!camera_list.empty()) {
+        ui_->pb_camera_capture->setEnabled(true);
+        ui_->pb_camera_record->setEnabled(true);
+    }
+
+    // TODO: SerialServo autoconnect
 
     // --- Thread Management ---
 
@@ -530,7 +571,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
 
     // Only continue if "open" was successful
     if (!ser_water_->open(QIODevice::ReadOnly)) {
-        qDebug() << "[ERROR] Failed to open port: " << ser_water_.portName();
+        qDebug() << "[ERROR] Failed to open port: COM3";  // TODO: un-hardcode
         ser_water_.reset();
         return;
     }
@@ -578,19 +619,23 @@ void MainWindow::on_a_pumps_disconnect_triggered() {
     ui_->a_pumps_disconnect->setEnabled(false);
 }
 
-/**
- * @brief Event handler for "Camera" menu bar action "Connect (camera)".
- *        Hard-coded to connect to a camera device named "mycamera".
- */
-void MainWindow::on_a_camera_device_connect_triggered() {
-    camera_manager_ = std::make_unique<CameraManager>("mycamera",
+void MainWindow::on_cb_camera_id_textActivated(const QString& sel) {
+    if (camera_manager_ != nullptr) {
+        camera_manager_.reset();
+    }
+
+    // Show human-readable camera name
+    ui_->l_camera_name->setText(available_cameras_[sel]);
+
+    // Open a connection to the camera
+    camera_manager_ = std::make_unique<CameraManager>(sel,
                                                       ui_->vw_camera_viewfinder,
                                                       this);
     camera_manager_->Start();
 
     // Reflect changes in UI
-    ui_->a_camera_device_connect->setEnabled(false);
-    ui_->a_camera_disconnect->setEnabled(true);
+    ui_->pb_camera_capture->setEnabled(true);
+    ui_->pb_camera_record->setEnabled(true);
 }
 
 /**
@@ -620,22 +665,22 @@ void MainWindow::on_a_camera_servos_connect_triggered() {
 
     // Reflect changes in UI
     ui_->a_camera_servos_connect->setEnabled(false);
-    ui_->a_camera_disconnect->setEnabled(true);
+    ui_->a_camera_servos_disconnect->setEnabled(true);
 }
 
 /**
  * @brief Event handler for "Camera" menu bar action "Disconnect".
  *        Terminates the connection to the `SerialServo` Arduino, if it exists.
  */
-void MainWindow::on_a_camera_disconnect_triggered() {
+void MainWindow::on_a_camera_servos_disconnect_triggered() {
     // Clear the Serial and CameraManager objects
     ser_servo_.reset();
     camera_manager_.reset();
 
     // Reflect changes in UI
-    ui_->a_camera_device_connect->setEnabled(true);
+    ui_->action->setEnabled(true);
     ui_->a_camera_servos_connect->setEnabled(true);
-    ui_->a_camera_disconnect->setEnabled(false);
+    ui_->a_camera_servos_disconnect->setEnabled(false);
 }
 
 /**
@@ -647,7 +692,7 @@ void MainWindow::on_a_camera_disconnect_triggered() {
  */
 void MainWindow::on_a_lidar_connect_triggered() {
     // Display the "Connect to Serial" dialog
-    SerialDialog w_serial("ACM", debug_mode_);
+    SerialDialog w_serial("ACM", debug_mode_, this);
     w_serial.setModal(true);
     w_serial.exec();
 
