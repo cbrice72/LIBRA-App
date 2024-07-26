@@ -26,7 +26,9 @@ qt_add_library(
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/src")
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/Eigen" "${HEBI_DIR}/hebi/include"
+                      "${HEBI_DIR}/src"
+)
 
 # Ensure this module has access to the necessary 3rd-party libraries
 target_include_directories(
