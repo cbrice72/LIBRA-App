@@ -21,6 +21,9 @@ namespace Ui {  // NOLINT: Qt-generated
 class SerialDialog;
 }  // namespace Ui
 
+/**
+ * @brief TODO: documentation.
+ */
 class SerialDialog : public QDialog {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT

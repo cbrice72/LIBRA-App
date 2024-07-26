@@ -63,7 +63,8 @@ SerialDialog::~SerialDialog() {
  */
 bool SerialDialog::isRunningOnWSL() {
     const char* wsl_path = "/run/WSL";
-    struct stat buf{};
+
+    struct stat buf {};
 
     return (stat(wsl_path, &buf) == 0 && S_ISDIR(buf.st_mode));
 }
@@ -172,7 +173,7 @@ void SerialDialog::on_pb_cancel_clicked() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns the Linux device name used to communicate with a serial device
+ * @brief Returns the Linux device name used to communicate with a serial device.
  *
  * @return Device name for serial connection
  */
