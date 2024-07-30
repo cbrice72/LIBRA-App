@@ -37,7 +37,6 @@ class CameraManager : public QObject {
     // --- Data Members ---
 
     QString id_;
-    QVideoWidget* viewfinder_;
 
     std::string output_dir_;
     QCamera* camera_;
