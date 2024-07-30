@@ -31,6 +31,9 @@
           <layout class="QVBoxLayout" name="vl_pumps_control">
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
             <widget class="QPushButton" name="pb_pumps_enable">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -56,6 +59,9 @@
            </item>
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
             <widget class="QPushButton" name="pb_pumps_disable">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -81,6 +87,9 @@
            </item>
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
             <widget class="QPushButton" name="pb_pumps_drain">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -453,6 +462,9 @@
           <layout class="QHBoxLayout" name="hl_camera_servo_control">
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
             <widget class="QPushButton" name="pb_camera_slow">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -478,6 +490,9 @@
            </item>
            <item alignment="Qt::AlignHCenter|Qt::AlignVCenter">
             <widget class="QPushButton" name="pb_camera_fast">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -2182,6 +2197,9 @@
        <layout class="QHBoxLayout" name="hl_arm_control">
         <item>
          <widget class="QPushButton" name="pb_arm_convert">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -2207,6 +2225,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="pb_arm_start">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -2232,6 +2253,9 @@
         </item>
         <item>
          <widget class="QPushButton" name="pb_arm_stop">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="sizePolicy">
            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
             <horstretch>0</horstretch>
@@ -2512,7 +2536,7 @@
            <enum>QComboBox::AdjustToContents</enum>
           </property>
           <property name="placeholderText">
-           <string>unavailable</string>
+           <string>...</string>
           </property>
          </widget>
         </item>

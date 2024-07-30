@@ -41,7 +41,7 @@ class MainThread : public QThread {
     MainThread(std::shared_ptr<LibraHebi> libra_arm,
                std::shared_ptr<QSerialPort> ser_water,
                std::shared_ptr<Serial> ser_servo);
-    ~MainThread() = default;
+    ~MainThread();
 
     // --- Getters & Setters ---
 
@@ -169,7 +169,7 @@ class MainWindow : public QMainWindow {
     void on_pb_camera_slow_clicked();
     void on_pb_camera_fast_clicked();
 
-    void on_cb_camera_id_textActivated(const QString& sel);
+    void on_cb_camera_id_currentTextChanged(const QString& sel);
     void on_pb_camera_capture_clicked();
     void on_pb_camera_record_clicked();
 
@@ -190,7 +190,7 @@ class MainWindow : public QMainWindow {
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
-    bool debug_mode_{false};
+    bool debug_mode_{true};
 
     MainThread* main_thread_;  // primary control loop
 

@@ -37,6 +37,8 @@
 
 /* Constants */
 
+constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
+
 constexpr int kHebiNodeCount = 5;      // total number of HEBI actuators
 constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
 constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
@@ -48,11 +50,15 @@ constexpr int kCameraNodeCount = 3;  // total number of camera servos
  * @param parent Owning Qt widget (default: nullptr)
  */
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), ui_(new Ui::MainWindow) {
+    : QMainWindow(parent), ui_(new Ui::MainWindow),
+      ser_water_(std::make_shared<QSerialPort>(this)) {
     ui_->setupUi(this);
 
+    // Set UI elements
+    ui_->a_debug_mode->setChecked(debug_mode_);
+
+    // Check if app is running in Windows Subsystem for Linux (WSL2)
     {
-        // Check if app is running in Windows Subsystem for Linux (WSL2)
         const char* wsl_path = "/run/WSL";
 
         struct stat buf {};
@@ -75,13 +81,12 @@ MainWindow::MainWindow(QWidget* parent)
     // Camera
     qDebug() << "[INFO] Checking available video inputs...";
 
-    QStringList camera_list;  // used to populate ComboBox
     const auto cameras = QMediaDevices::videoInputs();
     for (const auto& camera_device : cameras) {
         auto id = QString(camera_device.id());
 
         if (debug_mode_) {
-            qDebug() << "[DEBUG] Camera - Found" << id;
+            qDebug() << "[DEBUG] Found camera at " << camera_device.id();
         }
 
         // Populate ComboBox (new items are appended to existing list)
@@ -90,9 +95,11 @@ MainWindow::MainWindow(QWidget* parent)
         available_cameras_[id] = camera_device.description();
     }
 
-    if (!camera_list.empty()) {
+    if (!available_cameras_.empty()) {
         ui_->pb_camera_capture->setEnabled(true);
         ui_->pb_camera_record->setEnabled(true);
+    } else if (debug_mode_) {
+        qDebug() << "[DEBUG] No cameras were found";
     }
 
     // TODO: SerialServo autoconnect
@@ -139,6 +146,15 @@ MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
                        std::shared_ptr<Serial> ser_servo)
     : libra_arm_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
+/**
+ * @brief Standard destructor.
+ */
+MainThread::~MainThread() {
+    // Ensure data is flushed to log files and close them
+    continuous_log_.close();
+    snapshot_log_.close();
+}
+
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
@@ -146,12 +162,24 @@ MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
 namespace {
 
 /**
- * @brief Provides a formatted string of the current date and time.
+ * @brief Provides a filename-safe string of the current date and time.
  *
- * @return std::string Formatted as "yyyy-MM-ddTHH:mm:ss.zzz"
+ * @return std::string Formatted as "yyyy-MM-ddTHH-mm-ss"
  */
-std::string GetDateTimeString() {
-    return QDateTime::currentDateTime().toString(Qt::ISODateWithMs).toStdString();
+std::string GetDateTimeStr() {
+    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+    dts.replace(":", "-");         // replace colons (invalid in filenames)
+    dts = dts.section('.', 0, 0);  // remove milliseconds
+    return dts.toStdString();
+}
+
+/**
+ * @brief Provides an Excel-friendly string of the current time.
+ *
+ * @return std::string Formatted as "HH-mm-ss.zzz"
+ */
+std::string GetTimestampStr() {
+    return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();
 }
 
 }  // namespace
@@ -176,7 +204,7 @@ std::ofstream MainThread::InitializeLog(std::string name) {
 
     // Create log file and populate column headers
     std::ofstream logfile;
-    logfile.open("log/" + GetDateTimeString() + "_" + name + ".csv");
+    logfile.open("log/" + GetDateTimeStr() + "_" + name + ".csv");
     logfile
         << "Time,,"
         << "TP_Roll (deg),TP_Pitch (deg),TP_J1 (deg),TP_J2 (deg),TP_J3 (deg),,"
@@ -184,7 +212,7 @@ std::ofstream MainThread::InitializeLog(std::string name) {
         << "PT_Roll (Nm),PT_Pitch (Nm),PT_J1 (Nm),PT_J2 (Nm),PT_J3 (Nm),,"
         << "A_IN,B_IN,A_OUT,B_OUT,,"
         << "TP_CamBase (deg),TP_CamPan (deg),TP_CamTilt (deg),,"
-        << "Voltage (V),Current (A)\n";
+        << "Voltage (V),Current (A)" << std::endl;
 
     return logfile;
 }
@@ -421,7 +449,7 @@ void MainThread::run() {
         // Update continuous log
         if (count == 0) {
             // Timestamp
-            continuous_log_ << GetDateTimeString() + ",,";
+            continuous_log_ << GetTimestampStr() + ",,";
 
             // Actuator info
             for (auto i = 0; i < kHebiFeedbackCount; i++) {
@@ -441,7 +469,10 @@ void MainThread::run() {
             // Camera actuator info
             // TODO: use kCameraNodeCount
             continuous_log_ << camera_pos_.at(0) << "," << camera_pos_.at(1)
-                            << "," << camera_pos_.at(2) << "\n";
+                            << "," << camera_pos_.at(2);
+
+            // Flush the current line
+            continuous_log_ << std::endl;
         }
 
         // TODO: refactor this weird attempt at update limiting
@@ -467,6 +498,11 @@ void MainThread::SetDebugMode(bool enabled) {
 void MainWindow::on_a_debug_mode_toggled(bool checked) {
     debug_mode_ = checked;
 
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Debug mode enabled";
+    }
+
+    // Propagate to all children
     if (main_thread_ != nullptr) {
         main_thread_->SetDebugMode(debug_mode_);
     }
@@ -487,7 +523,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
  *        Brings up a dialog box similar to `VCS_OpenDeviceDlg()`.
  */
 void MainWindow::on_a_epos_connect_triggered() {
-    qDebug() << "[WARN] EPOS not yet implemented";
+    qDebug() << "[WARN] EPOS not yet implemented!";
     return;
 
     // TODO: implementation
@@ -495,6 +531,7 @@ void MainWindow::on_a_epos_connect_triggered() {
     // Reflect changes in UI
     ui_->a_epos_connect->setEnabled(false);
     ui_->a_epos_disconnect->setEnabled(true);
+    // TODO: enable relevant MainWindow buttons
 }
 
 /**
@@ -502,7 +539,7 @@ void MainWindow::on_a_epos_connect_triggered() {
  *        Terminates the active EPOS controller connection, if any.
  */
 void MainWindow::on_a_epos_disconnect_triggered() {
-    qDebug() << "[WARN] EPOS not yet implemented";
+    qDebug() << "[WARN] EPOS not yet implemented!";
     return;
 
     // TODO: implementation
@@ -510,6 +547,7 @@ void MainWindow::on_a_epos_disconnect_triggered() {
     // Reflect changes in UI
     ui_->a_epos_connect->setEnabled(true);
     ui_->a_epos_disconnect->setEnabled(false);
+    // TODO: disable relevant MainWindow buttons
 }
 
 /**
@@ -530,6 +568,9 @@ void MainWindow::on_a_hebi_connect_triggered() {
     // Reflect changes in UI
     ui_->a_hebi_connect->setEnabled(false);
     ui_->a_hebi_disconnect->setEnabled(true);
+    ui_->pb_arm_convert->setEnabled(true);
+    ui_->pb_arm_start->setEnabled(true);
+    ui_->pb_arm_stop->setEnabled(true);
 }
 
 /**
@@ -543,6 +584,9 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
     // Reflect changes in UI
     ui_->a_hebi_connect->setEnabled(true);
     ui_->a_hebi_disconnect->setEnabled(false);
+    ui_->pb_arm_convert->setEnabled(false);
+    ui_->pb_arm_start->setEnabled(false);
+    ui_->pb_arm_stop->setEnabled(false);
 }
 
 /**
@@ -550,16 +594,29 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
  *        Brings up a dialog box of available serial USB devices.
  */
 void MainWindow::on_a_pumps_connect_triggered() {
-    // Enumerate available serial ports
+    // Check if SerialWater Arduino (COM3) is connected
+    bool found = false;
     foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
-        qDebug() << "Port: " << info.portName();
-        qDebug() << "Description: " << info.description();
-        qDebug() << "Manufacturer: " << info.manufacturer() << "\n";
+        if (info.portName() == "COM3") {
+            found = true;
+            break;
+        }
+        if (debug_mode_) {
+            // Enumerate available serial ports
+            qDebug() << "[DEBUG] Found SerialPort with following metadata";
+            qDebug() << "  Port: " << info.portName();
+            qDebug() << "  Description: " << info.description();
+            qDebug() << "  Manufacturer: " << info.manufacturer() << "\n";
+            return;
+        }
+    }
+
+    if (!found) {
+        qDebug() << "[ERROR] SerialWater (COM3) not found!";
         return;
     }
 
     // Set port options
-    ser_water_ = std::make_shared<QSerialPort>(this);
     ser_water_->setPortName("COM3");
     ser_water_->setBaudRate(QSerialPort::Baud115200);
     ser_water_->setDataBits(QSerialPort::Data8);
@@ -569,7 +626,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
 
     // Only continue if "open" was successful
     if (!ser_water_->open(QIODevice::ReadOnly)) {
-        qDebug() << "[ERROR] Failed to open port: COM3";  // TODO: un-hardcode
+        qDebug() << "[ERROR] Failed to open port: COM3!";
         ser_water_.reset();
         return;
     }
@@ -578,6 +635,7 @@ void MainWindow::on_a_pumps_connect_triggered() {
     connect(ser_water_.get(), &QSerialPort::readyRead, this,
             &MainWindow::UpdatePumpVals);
 
+    // TODO: delete this if the above Qt class works fine
 #if false
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("USB");
@@ -602,6 +660,9 @@ void MainWindow::on_a_pumps_connect_triggered() {
     // Reflect changes in UI
     ui_->a_pumps_connect->setEnabled(false);
     ui_->a_pumps_disconnect->setEnabled(true);
+    ui_->pb_pumps_enable->setEnabled(true);
+    ui_->pb_pumps_disable->setEnabled(true);
+    ui_->pb_pumps_drain->setEnabled(true);
 }
 
 /**
@@ -615,10 +676,16 @@ void MainWindow::on_a_pumps_disconnect_triggered() {
     // Reflect changes in UI
     ui_->a_pumps_connect->setEnabled(true);
     ui_->a_pumps_disconnect->setEnabled(false);
+    ui_->pb_pumps_enable->setEnabled(false);
+    ui_->pb_pumps_disable->setEnabled(false);
+    ui_->pb_pumps_drain->setEnabled(false);
 }
 
-void MainWindow::on_cb_camera_id_textActivated(const QString& sel) {
+void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
     if (camera_manager_ != nullptr) {
+        if (debug_mode_) {
+            qDebug() << "[DEBUG] Resetting existing camera manager";
+        }
         camera_manager_.reset();
     }
 
@@ -658,12 +725,14 @@ void MainWindow::on_a_camera_servos_connect_triggered() {
     }
 
     // Open a connection to the "SerialServo" Arduino
-    ser_servo_ = std::make_unique<Serial>("SerialServo",
+    ser_servo_ = std::make_shared<Serial>("SerialServo",
                                           "/dev/" + w_serial.GetDeviceName());
 
     // Reflect changes in UI
     ui_->a_camera_servos_connect->setEnabled(false);
     ui_->a_camera_servos_disconnect->setEnabled(true);
+    ui_->pb_camera_slow->setEnabled(true);
+    ui_->pb_camera_fast->setEnabled(true);
 }
 
 /**
@@ -676,9 +745,10 @@ void MainWindow::on_a_camera_servos_disconnect_triggered() {
     camera_manager_.reset();
 
     // Reflect changes in UI
-    ui_->action->setEnabled(true);
     ui_->a_camera_servos_connect->setEnabled(true);
     ui_->a_camera_servos_disconnect->setEnabled(false);
+    ui_->pb_camera_slow->setEnabled(false);
+    ui_->pb_camera_fast->setEnabled(false);
 }
 
 /**
@@ -815,7 +885,7 @@ void MainWindow::on_pb_arm_convert_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_arm_r_plus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented";
+    qDebug() << "[WARN] Not yet reimplemented!";
     return;
 
     // TODO: adapt code
@@ -829,7 +899,7 @@ void MainWindow::on_pb_arm_r_plus_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_arm_r_minus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented";
+    qDebug() << "[WARN] Not yet reimplemented!";
     return;
 
     // TODO: adapt code
@@ -843,7 +913,7 @@ void MainWindow::on_pb_arm_r_minus_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_arm_theta_plus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented";
+    qDebug() << "[WARN] Not yet reimplemented!";
     return;
 
     // TODO: adapt code
@@ -857,7 +927,7 @@ void MainWindow::on_pb_arm_theta_plus_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_arm_theta_minus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented";
+    qDebug() << "[WARN] Not yet reimplemented!";
     return;
 
     // TODO: adapt code
@@ -925,7 +995,9 @@ void MainWindow::on_pb_pumps_drain_clicked() {
  */
 void MainWindow::UpdatePumpVals() {
     auto data = ser_water_->readAll();
-    qDebug() << "Received data from SerialWater:" << data;
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Received data from SerialWater:" << data;
+    }
 
     // TODO: implementation
 }
@@ -977,21 +1049,27 @@ void MainWindow::on_pb_camera_fast_clicked() {
  */
 void MainWindow::on_pb_camera_capture_clicked() {
     camera_manager_->Capture();
+
+    // Display a status tip at the bottom of the UI
+    statusBar()->showMessage("Saved capture to img/ directory!", kInfoLifespan);
 }
 
 /**
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_camera_record_clicked() {
-    if (ser_servo_ == nullptr) {
-        qDebug() << "[WARN] Record not yet implemented!";
-        return;
-    }
-
     if (camera_manager_->Record()) {
-        // TODO: do something
+        // Clearly display a "recording" state
+        ui_->pb_camera_record->setStyleSheet("color: red;");
+        ui_->pb_camera_record->setText("STOP");
     } else {
-        // TODO: revert to original state
+        // Display a status tip at the bottom of the UI
+        statusBar()->showMessage("Saved recording to vid/ directory!",
+                                 kInfoLifespan);
+
+        // Revert to original state
+        ui_->pb_camera_record->setStyleSheet("color: black;");
+        ui_->pb_camera_record->setText("RECORD");
     }
 }
 
@@ -1003,12 +1081,12 @@ void MainWindow::on_pb_camera_record_clicked() {
  * @brief TODO: documentation
  */
 void MainWindow::on_pb_logshot_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented";
+    qDebug() << "[WARN] Not yet reimplemented!";
     return;
 
     // TODO: adapt code
     /*
-    const std::string dts = GetDateTimeString();
+    const std::string dts = GetTimestampStr();
     snapshot_log_ << dts << ",,";
     for (auto i = 0; i < kHebiFeedbackCount; i++) {
         for (auto j = 0; j < kHebiNodeCount; j++) {
