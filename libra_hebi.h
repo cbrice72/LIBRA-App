@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   ???
  ******************************************************************************/
 
 #pragma once
@@ -48,6 +47,8 @@ class LIBRA_HEBI {
     double GetFeedbackEffort(Joint joint);
     double GetFeedbackEffortMA();
     double GetFeedbackEffortMB();
+
+    bool is_open_ = false;
 
   private:
     /**

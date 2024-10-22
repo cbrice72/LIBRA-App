@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   2022/7/5
  ******************************************************************************/
 
 #pragma once
@@ -28,4 +27,5 @@ class Serial {
     int WriteStr(std::string str);
 
     HANDLE handle_;
+    bool is_open_ = false;
 };

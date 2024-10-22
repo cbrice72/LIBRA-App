@@ -3,12 +3,12 @@
  * @brief  Application manager implementation file.
  *
  * @author Yuto Goto, Christian Brice
- * @date   ???
  ******************************************************************************/
 
 // Related Header
 #include "app_mgr.h"
 // C++ Standard Library Headers
+#include <bitset>
 #include <cmath>
 #include <ctime>
 #include <iomanip>
@@ -87,6 +87,14 @@ void AppMgr::Main() {
         colorize::Print("Try again? [y/n]:\n", colorize::Level::kPrompt);
         std::cin >> answer;
         if (answer == "n") {
+            // テスティング・モードの確認
+            // Allow user to enter testing mode
+            colorize::Print("Enter testing mode? [y/n]:\n", colorize::Level::kPrompt);
+            std::cin >> answer;
+            if (answer == "y") {
+                break;
+            }
+
             // HEBIアクチュエータに接続できない場合は、プログラムを終了
             // Exit app if connection to HEBI actuators can't be established
             colorize::Print("Exiting...\n", colorize::Level::kInfo);
@@ -121,8 +129,10 @@ void AppMgr::Main() {
     std::cin >> answer;
     comtext = "COM" + answer;
     if (ser_water_->Open(comtext.c_str()) != 0) {
-        colorize::Print("Cannot open " + comtext + "\n",
+        colorize::Print("Could not open " + comtext + "\n",
                         colorize::Level::kError);
+        colorize::Print("ser_water_ will be stubbed (for testing)\n",
+            colorize::Level::kWarn);
     }
 
     // SerialServoのCOMポートをユーザーが指定できるようにする
@@ -132,8 +142,10 @@ void AppMgr::Main() {
     std::cin >> answer;
     comtext = "COM" + answer;
     if (ser_servo_->Open(comtext.c_str()) != 0) {
-        colorize::Print("Cannot open " + comtext + "\n",
+        colorize::Print("Could not open " + comtext + "\n",
                         colorize::Level::kError);
+        colorize::Print("ser_servo_ will be stubbed (for testing)\n",
+            colorize::Level::kWarn);
     }
 
     // DXライブラリ初期化を含む設定
@@ -243,12 +255,21 @@ void AppMgr::MainThread() {
 
     // InputBoxのデフォルト値を設定
     // Set InputBox default values
-    ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
-    ibox_pitch_->SetNum(
-        libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kPitch));
-    ibox_j1_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ1));
-    ibox_j2_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ2));
-    ibox_j3_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3));
+    if (libra_arm_->is_open_) {
+        ibox_roll_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kRoll));
+        ibox_pitch_->SetNum(
+            libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kPitch));
+        ibox_j1_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ1));
+        ibox_j2_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ2));
+        ibox_j3_->SetNum(libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3));
+    }
+    else {
+        ibox_roll_->SetNum(0);
+        ibox_pitch_->SetNum(0);
+        ibox_j1_->SetNum(0);
+        ibox_j2_->SetNum(0);
+        ibox_j3_->SetNum(0);
+    }
     ibox_r_->SetNum(1200);
     ibox_theta_->SetNum(0);
     ibox_increment_->SetNum(10);
@@ -366,11 +387,13 @@ void AppMgr::MainThread() {
 
         // HEBIアクチュエータのデータを取得
         // Retrieve HEBI actuator data
-        for (auto i = 0; i < kHebiNodeCount; i++) {
-            auto joint = static_cast<LIBRA_HEBI::Joint>(i);
-            value_.at(i).at(0) = libra_arm_->GetCommandPosition(joint);
-            value_.at(i).at(1) = libra_arm_->GetFeedbackPosition(joint);
-            value_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
+        if (libra_arm_->is_open_) {
+            for (auto i = 0; i < kHebiNodeCount; i++) {
+                auto joint = static_cast<LIBRA_HEBI::Joint>(i);
+                value_.at(i).at(0) = libra_arm_->GetCommandPosition(joint);
+                value_.at(i).at(1) = libra_arm_->GetFeedbackPosition(joint);
+                value_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
+            }
         }
 
         // アーム制御のラベルとアクチュエータデータ
@@ -480,8 +503,13 @@ void AppMgr::MainThread() {
 
         // J3を負にするピッチ角を計算
         // Calculate pitch angle to negate J3
-        const double j3_pos = libra_arm_->GetCommandPosition(
-            LIBRA_HEBI::Joint::kJ3);
+        double j3_pos;
+        if (libra_arm_->is_open_) {
+            j3_pos = libra_arm_->GetCommandPosition(LIBRA_HEBI::Joint::kJ3);
+        } else {
+            j3_pos = ibox_j3_->GetNum();
+        }
+
         if (j3_pos <= 30) {
             camera_pos_.at(0) = (j3_pos <= 0) ? -j3_pos : 0;
         } else {
@@ -526,7 +554,14 @@ void AppMgr::MainThread() {
         std::stringstream servo_str;
         servo_str << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
                   << camera_pos_.at(2) << "\n";
-        ser_servo_->WriteStr(servo_str.str());  // send command
+        if (ser_servo_->is_open_) {
+            ser_servo_->WriteStr(servo_str.str());  // send command
+        }
+        else {
+            colorize::Print("(TEST) Servo (camera) command: "
+                                + servo_str.str() + "\n",
+                            colorize::Level::kInfo);
+        }
 
         /* ----- FLUID SYSTEM ----- */
 
@@ -550,7 +585,7 @@ void AppMgr::MainThread() {
             case kAdjust:  // 水位調整 - Water level adjustment mode
                 // トルクに通常反応（2.5～5.0Nm）
                 // Normal response to torque (2.5-5.0 Nm)
-                if (water_en_
+                if (water_en_ && libra_arm_->is_open_
                     && (abs(libra_arm_->GetFeedbackEffortMA()) >= 2.5
                         || abs(libra_arm_->GetFeedbackEffortMB()) >= 2.5)) {
                     if (count == 0) {
@@ -589,9 +624,21 @@ void AppMgr::MainThread() {
                     water_mode_ = WaterMode::kStandby;
                     water_cmd = 0;
 
-                    // アームの動きを再開 - Resume arm movement
-                    libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
-                                     input_.at(3), input_.at(4));
+                    if (libra_arm_->is_open_) {
+                        // アームの動きを再開 - Resume arm movement
+                        libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
+                            input_.at(3), input_.at(4));
+                    }
+                    else {
+                        colorize::Print("(TEST) Moving LIBRA arm:\n",
+                            colorize::Level::kInfo);
+                        colorize::Print("Roll = " + std::to_string(input_.at(0)) + "\n"
+                            + "Pitch = " + std::to_string(input_.at(1)) + "\n"
+                            + "J1 = " + std::to_string(input_.at(2)) + "\n"
+                            + "J2 = " + std::to_string(input_.at(3)) + "\n"
+                            + "J3 = " + std::to_string(input_.at(4)) + "\n",
+                            colorize::Level::kInfo);
+                    }
                 }
                 break;
 
@@ -601,11 +648,24 @@ void AppMgr::MainThread() {
                 water_cmd = 0b0011;
 
                 // Pause arm movement
-                libra_arm_->Stop();
+                if (libra_arm_->is_open_) {
+                    libra_arm_->Stop();
+                }
+                else {
+                    colorize::Print("(TEST) Stopping LIBRA arm\n", colorize::Level::kInfo);
+                }
                 break;
         }
 
-        ser_water_->Write(water_cmd);  // send command
+        if (ser_water_->is_open_) {
+            ser_water_->Write(water_cmd);  // send command
+        }
+        else {
+            std::bitset<8> x(water_cmd);
+            colorize::Print("(TEST) Pump command: "
+                                + x.to_string('*') + "\n",
+                            colorize::Level::kInfo);
+        }
 
         // 流体システムの状態
         // Status of fluid system
@@ -728,13 +788,30 @@ void AppMgr::OnClick(View* view) {
         // 流体システムが作動していない時のみアームを動かす
         // Only move arm when fluid system isn't running
         if (water_mode_ == WaterMode::kStandby) {
-            // Begin arm movement
-            libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
-                             input_.at(3), input_.at(4));
+            if (libra_arm_->is_open_) {
+                // Begin arm movement
+                libra_arm_->Move(input_.at(0), input_.at(1), input_.at(2),
+                                 input_.at(3), input_.at(4));
+            }
+            else {
+                colorize::Print("(TEST) Moving LIBRA arm:\n",
+                                colorize::Level::kInfo);
+                colorize::Print("Roll = " + std::to_string(input_.at(0)) + "\n"
+                                    + "Pitch = " + std::to_string(input_.at(1)) + "\n"
+                                    + "J1 = " + std::to_string(input_.at(2)) + "\n"
+                                    + "J2 = " + std::to_string(input_.at(3)) + "\n"
+                                    + "J3 = " + std::to_string(input_.at(4)) + "\n",
+                                colorize::Level::kInfo);
+            }
         }
 
     } else if (view == btn_stop_) {  // STOP
-        libra_arm_->Stop();
+        if (libra_arm_->is_open_) {
+            libra_arm_->Stop();
+        }
+        else {
+            colorize::Print("(TEST) Stopping LIBRA arm\n", colorize::Level::kInfo);
+        }
 
     } else if (view == btn_up_) {  // R+
         ibox_r_->SetNum(ibox_r_->GetNum() + ibox_increment_->GetNum());

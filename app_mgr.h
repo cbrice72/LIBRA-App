@@ -3,7 +3,6 @@
  * @brief  Application manager header file.
  *
  * @author Yuto Goto, Christian Brice
- * @date   ???
  ******************************************************************************/
 
 #pragma once

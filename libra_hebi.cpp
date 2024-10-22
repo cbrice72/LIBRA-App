@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   ???
  ******************************************************************************/
 
 // Related Header
@@ -152,6 +151,7 @@ bool LIBRA_HEBI::Connect() {
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());  // hold current position
 
+    is_open_ = true;
     return true;
 }
 

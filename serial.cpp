@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   2022/7/5
  ******************************************************************************/
 
 // Related Header
@@ -110,6 +109,7 @@ int Serial::Open(const char* port) {
     ClearCommError(handle_, &dwErrorMask, &comStat);
     dwCount = comStat.cbInQue;
 
+    is_open_ = true;
     return 0;
 }
 
