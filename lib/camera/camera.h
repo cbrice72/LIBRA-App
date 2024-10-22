@@ -3,7 +3,6 @@
  * @brief  Camera controls header file. (UNUSED)
  *
  * @author Yuto Goto, Christian Brice
- * @date   ???
  ******************************************************************************/
 
 #pragma once

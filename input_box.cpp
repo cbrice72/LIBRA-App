@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   2022/7/5
  ******************************************************************************/
 
 // Related Header

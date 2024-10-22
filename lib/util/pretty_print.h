@@ -3,7 +3,6 @@
  * @brief  Utility header file for colorizing Windows console output.
  *
  * @author Christian Brice
- * @date   2023/11/15
  ******************************************************************************/
 
 #pragma once

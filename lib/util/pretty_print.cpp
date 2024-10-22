@@ -3,7 +3,6 @@
  * @brief  Utility implementation file for colorizing Windows console output
  *
  * @author Christian Brice
- * @date   2023/11/15
  ******************************************************************************/
 
 // Related Header

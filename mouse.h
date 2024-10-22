@@ -3,7 +3,6 @@
  * @brief  TODO.
  *
  * @author Yuto Goto, Christian Brice
- * @date   2022/1/13
  ******************************************************************************/
 
 #pragma once
