@@ -1,9 +1,11 @@
-# LIBRA-II Usage
+# LIBRA-I Usage
 
 A collection of detailed instructions and lessons learned from operating the LIBRA robot.
 
 1. [Extending the Arm in Kikura Lab (North Lab Bldg. 1)](#extending-the-arm-in-kikura-lab-north-lab-bldg-1)
 2. [Troubleshooting](#troubleshooting)
+    1. [Network / Connecting to Actuators](#network--connecting-to-actuators)
+    2. [Resetting Misaligned Actuators](#resetting-misaligned-actuators)
 
 ## Extending the Arm in Kikura Lab (North Lab Bldg. 1)
 
