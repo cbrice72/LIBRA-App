@@ -63,7 +63,9 @@ set(PROJECT_SOURCES
     serial_dialog.cpp
     camera_manager.cpp
     # Qt
-    main_window.ui
+    # TODO(brice): no plans to use LIBRA-I version, so archive it
+    #main_window_libra-i.ui
+    main_window_libra-ii.ui
     serial_dialog.ui
     resources.qrc
 )
