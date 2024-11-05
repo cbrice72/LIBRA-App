@@ -3,7 +3,6 @@
  * @brief  QMediaCaptureSession convenience class implementation file.
  *
  * @author brice.c.aa
- * @date   2024/7/25
  ******************************************************************************/
 
 // Related Header

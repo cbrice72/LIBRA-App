@@ -3,7 +3,6 @@
  * @brief  Main app window implementation file.
  *
  * @author brice.c.aa
- * @date   2024/2/22
  ******************************************************************************/
 
 // Related Header

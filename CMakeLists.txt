@@ -3,7 +3,6 @@
 # @brief  Root CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2024/2/13
 ################################################################################
 
 cmake_minimum_required(VERSION 3.5)
@@ -100,7 +99,6 @@ target_link_libraries(
     # Project
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
-    # ~~~
     PRIVATE libra_hebi libra_lidar serial # TODO: util
     # ~~~
     # Qt

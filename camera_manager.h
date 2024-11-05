@@ -3,7 +3,6 @@
  * @brief  QMediaCaptureSession convenience class header file.
  *
  * @author brice.c.aa
- * @date   2024/2/22
  ******************************************************************************/
 
 // C++ Standard Library Headers

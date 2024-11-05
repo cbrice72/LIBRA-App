@@ -3,7 +3,6 @@
  * @brief  Root file of the LIBRA App (v2) program.
  *
  * @author brice.c.aa
- * @date   2024/2/13
  ******************************************************************************/
 
 // Related Header

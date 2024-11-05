@@ -3,7 +3,6 @@
  * @brief  Serial (USB) selection dialog box implementation file.
  *
  * @author brice.c.aa
- * @date   2024/3/1
  ******************************************************************************/
 
 // Related Header
