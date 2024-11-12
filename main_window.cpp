@@ -158,7 +158,7 @@ MainThread::~MainThread() {
 // !Helper Functions
 //------------------------------------------------------------------------------
 
-namespace {
+namespace {  // local to this file
 
 /**
  * @brief Provides a filename-safe string of the current date and time.
@@ -217,9 +217,9 @@ std::ofstream MainThread::InitializeLog(std::string name) {
 }
 
 /**
- * @brief TODO: Documentation.
+ * @brief Sends HEBI thread new target values.
  *
- * @param input ...
+ * @param input HEBI actuator target value(s) (order defined in `hebi_thread.h`)
  */
 void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
     arm_target_ = input;
@@ -229,6 +229,10 @@ void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
                  << ", " << input.at(1) << ", " << input.at(2) << ", "
                  << input.at(3) << ", " << input.at(4);
     }
+
+    qDebug() << "[WARN] HEBI actuator control unimplemented!";
+
+    // TODO: implementation
 }
 
 /**
@@ -496,6 +500,9 @@ void MainThread::SetDebugMode(bool enabled) {
 // !Menu Bar
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Toggles debug prinouts for this object and all its children.
+ */
 void MainWindow::on_a_debug_mode_toggled(bool checked) {
     debug_mode_ = checked;
 
@@ -570,7 +577,6 @@ void MainWindow::on_a_hebi_connect_triggered() {
     // Reflect changes in UI
     ui_->a_hebi_connect->setEnabled(false);
     ui_->a_hebi_disconnect->setEnabled(true);
-    ui_->pb_arm_convert->setEnabled(true);
     ui_->pb_arm_start->setEnabled(true);
     ui_->pb_arm_stop->setEnabled(true);
 }
@@ -586,7 +592,6 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
     // Reflect changes in UI
     ui_->a_hebi_connect->setEnabled(true);
     ui_->a_hebi_disconnect->setEnabled(false);
-    ui_->pb_arm_convert->setEnabled(false);
     ui_->pb_arm_start->setEnabled(false);
     ui_->pb_arm_stop->setEnabled(false);
 }
@@ -659,28 +664,6 @@ void MainWindow::on_a_pumps_disconnect_triggered() {
     ui_->pb_pumps_enable->setEnabled(false);
     ui_->pb_pumps_disable->setEnabled(false);
     ui_->pb_pumps_drain->setEnabled(false);
-}
-
-void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
-    if (camera_manager_ != nullptr) {
-        if (debug_mode_) {
-            qDebug() << "[DEBUG] Resetting existing camera manager";
-        }
-        camera_manager_.reset();
-    }
-
-    // Show human-readable camera name
-    ui_->l_camera_name->setText(available_cameras_[sel]);
-
-    // Open a connection to the camera
-    camera_manager_ = std::make_unique<CameraManager>(sel,
-                                                      ui_->vw_camera_viewfinder,
-                                                      this);
-    camera_manager_->Start();
-
-    // Reflect changes in UI
-    ui_->pb_camera_capture->setEnabled(true);
-    ui_->pb_camera_record->setEnabled(true);
 }
 
 /**
@@ -817,7 +800,7 @@ void MainWindow::on_a_lidar_about_triggered() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation
+ * @brief Starts movement of all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
     if (libra_arm_ == nullptr) {
@@ -836,7 +819,7 @@ void MainWindow::on_pb_arm_start_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Stops movement of all actuators.
  */
 void MainWindow::on_pb_arm_stop_clicked() {
     if (libra_arm_ == nullptr) {
@@ -850,101 +833,12 @@ void MainWindow::on_pb_arm_stop_clicked() {
     */
 }
 
-/**
- * @brief TODO: documentation
- */
-void MainWindow::on_pb_arm_convert_clicked() {
-    if (libra_arm_ == nullptr) {
-        qDebug() << "[WARN] HEBI actuators not connected!";
-        return;
-    }
-
-    // TODO: adapt code
-    /*
-    // NOLINTBEGIN(readability-identifier-length): equation variables
-
-    const double r = ibox_r_->GetNum();
-    const double theta = ibox_theta_->GetNum();
-    const double L = 989;
-    const double L_hand = 1014;
-    const double a = L;
-    const double b = L + L_hand;
-
-    const double k = (r * r + a * a - b * b) / (2 * a);
-    const double alpha = (atan2(0, r) + atan2(sqrt(r * r - k * k), k));
-    const double beta = asin(r * sin(alpha) / b);
-
-    // NOLINTEND(readability-identifier-length): equation variables
-
-    ibox_j1_->SetNum(theta + alpha / M_PI * 180);
-    ibox_j2_->SetNum(-180 + beta / M_PI * 180);
-    ibox_j3_->SetNum(0);
-    */
-}
-
-/**
- * @brief TODO: documentation
- */
-void MainWindow::on_pb_arm_r_plus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented!";
-    return;
-
-    // TODO: adapt code
-    /*
-    ibox_r_->SetNum(ibox_r_->GetNum() + ibox_increment_->GetNum());
-    OnClick(btn_convert_);
-    */
-}
-
-/**
- * @brief TODO: documentation
- */
-void MainWindow::on_pb_arm_r_minus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented!";
-    return;
-
-    // TODO: adapt code
-    /*
-    ibox_r_->SetNum(ibox_r_->GetNum() - ibox_increment_->GetNum());
-    OnClick(btn_convert_);
-    */
-}
-
-/**
- * @brief TODO: documentation
- */
-void MainWindow::on_pb_arm_theta_plus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented!";
-    return;
-
-    // TODO: adapt code
-    /*
-    ibox_r_->SetNum(ibox_r_->GetNum() - ibox_increment_->GetNum());
-    OnClick(btn_convert_);
-    */
-}
-
-/**
- * @brief TODO: documentation
- */
-void MainWindow::on_pb_arm_theta_minus_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented!";
-    return;
-
-    // TODO: adapt code
-    /*
-    ibox_theta_->SetNum(ibox_theta_->GetNum() - ibox_increment_->GetNum()
-                        / ibox_r_->GetNum() * 180 / M_PI);
-    OnClick(btn_convert_);
-    */
-}
-
 //------------------------------------------------------------------------------
 // !Counterweight
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation
+ * @brief Enables operation of fluid system pumps.
  */
 void MainWindow::on_pb_pumps_enable_clicked() {
     if (!ser_water_->isOpen()) {
@@ -952,7 +846,9 @@ void MainWindow::on_pb_pumps_enable_clicked() {
         return;
     }
 
-    // TODO: adapt code
+    qDebug() << "[WARN] Pump control not yet implemented!";
+
+    // TODO: implementation (adapt code below)
     /*
     water_en_ = true;
     water_mode_ = WaterMode::kStandby;
@@ -960,7 +856,12 @@ void MainWindow::on_pb_pumps_enable_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Disables operation of fluid system pumps.
+ *
+ * @todo Combine funcitonality with `on_pb_pumps_enable_clicked()` and refactor
+ *       the resulting function. Don't forget to rename it to something that
+ *       makes more sense, e.g., including the word "toggle". For reference on
+ *       changing button text to reflect state, see `on_pb_camera_record_clicked()`.
  */
 void MainWindow::on_pb_pumps_disable_clicked() {
     if (!ser_water_->isOpen()) {
@@ -968,7 +869,9 @@ void MainWindow::on_pb_pumps_disable_clicked() {
         return;
     }
 
-    // TODO: adapt code
+    qDebug() << "[WARN] Pump control not yet implemented!";
+
+    // TODO: implementation (adapt code below)
     /*
     water_en_ = false;
     water_mode_ = WaterMode::kStandby;
@@ -976,7 +879,7 @@ void MainWindow::on_pb_pumps_disable_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Enables fluid system pumps and forces them on.
  */
 void MainWindow::on_pb_pumps_drain_clicked() {
     if (!ser_water_->isOpen()) {
@@ -984,7 +887,9 @@ void MainWindow::on_pb_pumps_drain_clicked() {
         return;
     }
 
-    // TODO: adapt code
+    qDebug() << "[WARN] Pump control not yet implemented!";
+
+    // TODO: implementation (adapt code below)
     /*
     water_en_ = true;
     water_mode_ = WaterMode::kDrain;
@@ -992,13 +897,15 @@ void MainWindow::on_pb_pumps_drain_clicked() {
 }
 
 /**
- * @brief TODO: description
+ * @brief Updates pump values shown in the UI (from `ser_water_` Arduino).
  */
 void MainWindow::UpdatePumpVals() {
     auto data = ser_water_->readAll();
     if (debug_mode_) {
         qDebug() << "[DEBUG] Received data from SerialWater:" << data;
     }
+
+    qDebug() << "[WARN] Pump control not yet implemented!";
 
     // TODO: implementation
 }
@@ -1008,7 +915,7 @@ void MainWindow::UpdatePumpVals() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation
+ * @brief Moves camera servos at a leisure pace.
  */
 void MainWindow::on_pb_camera_slow_clicked() {
     if (ser_servo_ == nullptr) {
@@ -1016,7 +923,9 @@ void MainWindow::on_pb_camera_slow_clicked() {
         return;
     }
 
-    // TODO: adapt code
+    qDebug() << "[WARN] Camera servo control not yet implemented!";
+
+    // TODO: implementation (adapt code below)
     /*
     camera_setpos_.at(1) = ibox_camera_pan_->GetNum();
     camera_setpos_.at(2) = ibox_camera_tilt_->GetNum();
@@ -1030,7 +939,7 @@ void MainWindow::on_pb_camera_slow_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Moves camera servos at maximum speed (near-instant).
  */
 void MainWindow::on_pb_camera_fast_clicked() {
     if (ser_servo_ == nullptr) {
@@ -1038,7 +947,9 @@ void MainWindow::on_pb_camera_fast_clicked() {
         return;
     }
 
-    // TODO: adapt code
+    qDebug() << "[WARN] Camera servo control not yet implemented!";
+
+    // TODO: implementation (adapt code below)
     /*
     camera_pos_.at(1) = ibox_camera_pan_->GetNum();
     camera_pos_.at(2) = ibox_camera_tilt_->GetNum();
@@ -1046,7 +957,32 @@ void MainWindow::on_pb_camera_fast_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Connects to the selected camera feed.
+ */
+void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
+    if (camera_manager_ != nullptr) {
+        if (debug_mode_) {
+            qDebug() << "[DEBUG] Resetting existing camera manager";
+        }
+        camera_manager_.reset();
+    }
+
+    // Show human-readable camera name
+    ui_->l_camera_name->setText(available_cameras_[sel]);
+
+    // Open a connection to the camera
+    camera_manager_ = std::make_unique<CameraManager>(sel,
+                                                      ui_->vw_camera_viewfinder,
+                                                      this);
+    camera_manager_->Start();
+
+    // Reflect changes in UI
+    ui_->pb_camera_capture->setEnabled(true);
+    ui_->pb_camera_record->setEnabled(true);
+}
+
+/**
+ * @brief Captures a still image from the active camera feed.
  */
 void MainWindow::on_pb_camera_capture_clicked() {
     camera_manager_->Capture();
@@ -1056,7 +992,7 @@ void MainWindow::on_pb_camera_capture_clicked() {
 }
 
 /**
- * @brief TODO: documentation
+ * @brief Toggles video recording from the active camera feed.
  */
 void MainWindow::on_pb_camera_record_clicked() {
     if (camera_manager_->Record()) {
@@ -1075,13 +1011,15 @@ void MainWindow::on_pb_camera_record_clicked() {
 }
 
 /**
- * @brief TODO: description
+ * @brief Updates camera servo values shown in the UI (from `ser_servo_` Arduino).
  */
 void MainWindow::UpdateCameraVals() {
     auto data = ser_servo_->readAll();
     if (debug_mode_) {
         qDebug() << "[DEBUG] Received data from SerialServo:" << data;
     }
+
+    qDebug() << "[WARN] Camera servo control not yet implemented!";
 
     // TODO: implementation
 }
@@ -1091,13 +1029,12 @@ void MainWindow::UpdateCameraVals() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation
+ * @brief Records a "screenshot" of loggable data to a separate log file.
  */
 void MainWindow::on_pb_logshot_clicked() {
     qDebug() << "[WARN] Not yet reimplemented!";
-    return;
 
-    // TODO: adapt code
+    // TODO: implementation (adapt code below)
     /*
     const std::string dts = GetTimestampStr();
     snapshot_log_ << dts << ",,";

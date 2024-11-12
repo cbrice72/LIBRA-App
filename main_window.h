@@ -15,7 +15,7 @@
 // Project Headers
 #include "camera_manager.h"
 #include "libra_hebi.h"
-#include "libra_lidar.h"  // TODO: uncomment if using a Hokuyo LIDAR
+#include "libra_lidar.h"  // unused
 
 #pragma once
 
@@ -148,12 +148,6 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
     void on_pb_arm_stop_clicked();
-    void on_pb_arm_convert_clicked();
-
-    void on_pb_arm_r_plus_clicked();
-    void on_pb_arm_r_minus_clicked();
-    void on_pb_arm_theta_plus_clicked();
-    void on_pb_arm_theta_minus_clicked();
 
     // Pumps
 
@@ -194,7 +188,7 @@ class MainWindow : public QMainWindow {
     std::shared_ptr<LibraHebi> libra_arm_;
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<QSerialPort> ser_servo_;
-    std::shared_ptr<LibraLidar> lidar_;
+    std::shared_ptr<LibraLidar> lidar_;  // unused
 
     std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;
