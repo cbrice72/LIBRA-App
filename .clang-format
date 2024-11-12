@@ -2,40 +2,22 @@
 # Configure formatting options for this project.
 # (disable formatting project-wide by setting the `DisableFormat` option to `true`)
 # (disable formatting on individual lines by adding the trailing comment `// NOFORMAT`; see `CommentPragmas`)
-# For more information, see https://clang.llvm.org/docs/ClangFormatStyleOptions.html
+#
+# This .clang-format file is compatible with Clang 14.0.0 or earlier. For more information, see the following link:
+# https://releases.llvm.org/14.0.0/tools/clang/docs/ClangFormatStyleOptions.html
+
+DisableFormat: false
 
 AccessModifierOffset: -2
 
 AlignArrayOfStructures: Right
-AlignConsecutiveAssignments:
-  Enabled:          false
-  AcrossEmptyLines: false
-  AcrossComments:   false
-  AlignCompound:    false
-  PadOperators:     true
-AlignConsecutiveBitFields:
-  Enabled:          false
-  AcrossEmptyLines: false
-  AcrossComments:   false
-  AlignCompound:    false
-  PadOperators:     true
-AlignConsecutiveDeclarations:
-  Enabled:          false
-  AcrossEmptyLines: false
-  AcrossComments:   false
-  AlignCompound:    false
-  PadOperators:     true
-AlignConsecutiveMacros:
-  Enabled:          true
-  AcrossEmptyLines: true
-  AcrossComments:   false
-  AlignCompound:    false
-  PadOperators:     true
+AlignConsecutiveAssignments: None
+AlignConsecutiveBitFields: None
+AlignConsecutiveDeclarations: None
+AlignConsecutiveMacros: Consecutive
 AlignEscapedNewlines: Right
 AlignOperands: Align
-AlignTrailingComments:
-  Kind:           Always
-  OverEmptyLines: 0
+AlignTrailingComments: true
 
 AllowAllArgumentsOnNextLine: false
 AllowAllParametersOfDeclarationOnNextLine: false
@@ -80,13 +62,10 @@ BraceWrapping:
   SplitEmptyRecord:      false
   SplitEmptyNamespace:   false
 
-BreakAfterAttributes: Never
 BreakAfterJavaFieldAnnotations: false
-BreakArrays: true
 BreakBeforeBinaryOperators: NonAssignment
-BreakBeforeConceptDeclarations: Always
+BreakBeforeConceptDeclarations: true
 BreakBeforeBraces: Attach
-BreakBeforeInlineASMColon: OnlyMultiline
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializers: BeforeColon
 BreakInheritanceList: AfterComma
@@ -104,8 +83,6 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 
 DerivePointerAlignment: false
-
-DisableFormat: false
 
 EmptyLineAfterAccessModifier: Leave
 EmptyLineBeforeAccessModifier: Always
@@ -144,18 +121,10 @@ IndentCaseLabels: true
 IndentExternBlock: Indent
 IndentGotoLabels: false
 IndentPPDirectives: AfterHash
-IndentRequiresClause: true
 IndentWidth: 4
 IndentWrappedFunctionNames: false
 
-InsertBraces: true
-InsertNewlineAtEOF: false
 InsertTrailingCommas: None
-
-IntegerLiteralSeparator:
-  Binary:  0
-  Decimal: 0
-  Hex:     0
 
 JavaScriptQuotes: Leave
 JavaScriptWrapImports: true
@@ -164,7 +133,7 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 
 LambdaBodyIndentation: Signature
 
-LineEnding: DeriveLF
+DeriveLineEnding: true
 
 MacroBlockBegin: ''
 MacroBlockEnd: ''
@@ -199,10 +168,6 @@ ReferenceAlignment: Pointer
 ReflowComments: true
 
 RemoveBracesLLVM: false
-RemoveSemicolon: false
-
-RequiresClausePosition: OwnLine
-RequiresExpressionIndentation: OuterScope
 
 SeparateDefinitionBlocks: Always
 
@@ -210,7 +175,7 @@ ShortNamespaceLines: 0
 
 SortIncludes: CaseInsensitive
 SortJavaStaticImport: Before
-SortUsingDeclarations: LexicographicNumeric
+SortUsingDeclarations: true
 
 SpaceAfterCStyleCast: false
 SpaceAfterLogicalNot: false
@@ -222,16 +187,6 @@ SpaceBeforeCpp11BracedList: false
 SpaceBeforeCtorInitializerColon: true
 SpaceBeforeInheritanceColon: true
 SpaceBeforeParens: ControlStatements
-SpaceBeforeParensOptions:
-  AfterControlStatements: true
-  AfterForeachMacros: true
-  AfterFunctionDefinitionName: false
-  AfterFunctionDeclarationName: false
-  AfterIfMacros: true
-  AfterOverloadedOperator: false
-  AfterRequiresInClause: false
-  AfterRequiresInExpression: false
-  BeforeNonEmptyParentheses: false
 SpaceBeforeRangeBasedForLoopColon: true
 SpaceBeforeSquareBrackets: false
 SpaceInEmptyBlock: false
