@@ -63,7 +63,7 @@ set(PROJECT_SOURCES
     serial_dialog.cpp
     camera_manager.cpp
     # Qt
-    # TODO(brice): no plans to use LIBRA-I version, so archive it
+    # TODO(brice.c.aa): no plans to use LIBRA-I version, so archive it
     #main_window_libra-i.ui
     main_window_libra-ii.ui
     serial_dialog.ui
@@ -101,7 +101,7 @@ target_link_libraries(
     # Project
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
-    PRIVATE libra_hebi libra_lidar serial # TODO: util
+    PRIVATE libra_hebi libra_lidar
     # ~~~
     # Qt
     PRIVATE Qt6::Core Qt6::Multimedia Qt6::MultimediaWidgets Qt6::SerialPort Qt6::Widgets

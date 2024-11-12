@@ -15,7 +15,7 @@
 // Project Headers
 #include "camera_manager.h"
 #include "libra_hebi.h"
-#include "libra_lidar.h"
+#include "libra_lidar.h"  // TODO: uncomment if using a Hokuyo LIDAR
 
 #pragma once
 
@@ -38,7 +38,7 @@ class MainThread : public QThread {
   public:
     MainThread(std::shared_ptr<LibraHebi> libra_arm,
                std::shared_ptr<QSerialPort> ser_water,
-               std::shared_ptr<Serial> ser_servo);
+               std::shared_ptr<QSerialPort> ser_servo);
     ~MainThread();
 
     // --- Getters & Setters ---
@@ -192,9 +192,8 @@ class MainWindow : public QMainWindow {
     MainThread* main_thread_;  // primary control loop
 
     std::shared_ptr<LibraHebi> libra_arm_;
-    // std::shared_ptr<Serial> ser_water_;
     std::shared_ptr<QSerialPort> ser_water_;
-    std::shared_ptr<Serial> ser_servo_;
+    std::shared_ptr<QSerialPort> ser_servo_;
     std::shared_ptr<LibraLidar> lidar_;
 
     std::unordered_map<QString, QString> available_cameras_;

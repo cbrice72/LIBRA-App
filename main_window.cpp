@@ -19,7 +19,7 @@
 // Project Headers
 // #include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
 #include "serial_dialog.h"
-#include "ui_main_window.h"
+#include "ui_main_window_libra-ii.h"
 
 // #include "utility.h"
 
@@ -142,7 +142,7 @@ MainWindow::~MainWindow() {
  */
 MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
                        std::shared_ptr<QSerialPort> ser_water,
-                       std::shared_ptr<Serial> ser_servo)
+                       std::shared_ptr<QSerialPort> ser_servo)
     : libra_arm_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
 /**
@@ -240,7 +240,7 @@ void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
 void MainThread::run() {
     // Initialize fluid system runtime variables
     int count = 0;
-    uint8_t water_cmd = 0;
+    uint8_t cmd_water = 0;
 
     // Initialize logging
     continuous_log_ = InitializeLog("continuous_log");
@@ -360,17 +360,19 @@ void MainThread::run() {
         }
 
         // Send commands to SerialServo Arduino
-        std::stringstream servo_str;
-        servo_str << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
-                  << camera_pos_.at(2) << "\n";
-        ser_servo_->WriteStr(servo_str.str());  // send command
+        std::stringstream servo_ss;
+        servo_ss << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
+                 << camera_pos_.at(2) << "\n";
+        // (create string object to avoid using temporary object in call to write)
+        auto cmd_servo = servo_ss.str();
+        ser_servo_->write(cmd_servo.c_str());  // send command
 
         /* ----- ARM and FLUID SYSTEM ----- */
 
         // Send commands to SerialWater Arduino
         switch (water_mode_) {
             case kStandby:  // Normal operational mode
-                water_cmd = 0;
+                cmd_water = 0;
 
                 // Excess torque (> 5.0 Nm)
                 if (water_en_  // TODO: refactor this
@@ -397,21 +399,21 @@ void MainThread::run() {
                         // Bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT
                         if (theta > M_PI * 7 / 8
                             || -M_PI * 7 / 8 >= theta) {  // W
-                            water_cmd = 0b1001;
+                            cmd_water = 0b1001;
                         } else if (theta > M_PI * 5 / 8) {  // NW
-                            water_cmd = 0b0001;
+                            cmd_water = 0b0001;
                         } else if (theta > M_PI * 3 / 8) {  // N
-                            water_cmd = 0b0011;
+                            cmd_water = 0b0011;
                         } else if (theta > M_PI * 1 / 8) {  // NE
-                            water_cmd = 0b0010;
+                            cmd_water = 0b0010;
                         } else if (theta > -M_PI * 1 / 8) {  // E
-                            water_cmd = 0b0110;
+                            cmd_water = 0b0110;
                         } else if (theta > -M_PI * 3 / 8) {  // SE
-                            water_cmd = 0b0100;
+                            cmd_water = 0b0100;
                         } else if (theta > -M_PI * 5 / 8) {  // S
-                            water_cmd = 0b1100;
+                            cmd_water = 0b1100;
                         } else {  // SW
-                            water_cmd = 0b1000;
+                            cmd_water = 0b1000;
                         }
                     }
                 }
@@ -420,7 +422,7 @@ void MainThread::run() {
                 else if (count == 0) {
                     // Put fluid system on standby
                     water_mode_ = WaterMode::kStandby;
-                    water_cmd = 0;
+                    cmd_water = 0;
 
                     // Resume arm movement
                     libra_arm_->Move(arm_target_.at(0), arm_target_.at(1),
@@ -431,14 +433,14 @@ void MainThread::run() {
 
             case kDrain:
                 // Drain until ENABLE or DISABLE are clicked
-                water_cmd = 0b0011;
+                cmd_water = 0b0011;
 
                 // Pause arm movement
                 libra_arm_->Stop();
                 break;
         }
 
-        auto to_write = static_cast<char>(water_cmd);
+        auto to_write = static_cast<char>(cmd_water);
         ser_water_->write(&to_write);  // send command
 
         // TODO: Visualize status of fluid system
@@ -460,7 +462,7 @@ void MainThread::run() {
 
             // Fluid system info
             for (auto i = 0; i < kFluidStateCount; i++) {
-                continuous_log_ << ((water_cmd & (1 << (3 - i))) ? 1 : 0)
+                continuous_log_ << ((cmd_water & (1 << (3 - i))) ? 1 : 0)
                                 << ",";
             }
             continuous_log_ << ",";
@@ -513,7 +515,8 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
         // ser_water_->SetDebugMode(debug_mode_);
     }
     if (ser_servo_ != nullptr) {
-        ser_servo_->SetDebugMode(debug_mode_);
+        // TODO: make new class inheriting from QSerialPort
+        // ser_servo_->SetDebugMode(debug_mode_);
     }
 }
 
@@ -634,28 +637,6 @@ void MainWindow::on_a_pumps_connect_triggered() {
     connect(ser_water_.get(), &QSerialPort::readyRead, this,
             &MainWindow::UpdatePumpVals);
 
-    // TODO: delete this if the above Qt class works fine
-#if false
-    // Display the "Connect to Serial" dialog
-    SerialDialog w_serial("USB");
-    w_serial.setModal(true);
-    w_serial.exec();
-
-    // Only continue if "Connect" was successful
-    if (w_serial.result() != QDialog::Accepted) {
-        qWarning() << "[WARN] Failed to connect to serial pump controller!";
-        return;
-    }
-
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Pumps serial dialog returned successfully";
-    }
-
-    // Open a connection to the "SerialWater" Arduino
-    ser_water_ = std::make_shared<Serial>("SerialWater",
-                                          "/dev/" + w_serial.GetDeviceName());
-#endif
-
     // Reflect changes in UI
     ui_->a_pumps_connect->setEnabled(false);
     ui_->a_pumps_disconnect->setEnabled(true);
@@ -707,25 +688,46 @@ void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
  *        Brings up a dialog box of available serial USB devices.
  */
 void MainWindow::on_a_camera_servos_connect_triggered() {
-    // Display the "Connect to Serial" dialog
-    SerialDialog w_serial("USB");
-    w_serial.setModal(true);
-    w_serial.exec();
+    // Check if SerialServo Arduino (COM4) is connected
+    bool found = false;
+    foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
+        if (info.portName() == "COM4") {
+            found = true;
+            break;
+        }
+        if (debug_mode_) {
+            // Enumerate available serial ports
+            qDebug() << "[DEBUG] Found SerialPort with following metadata";
+            qDebug() << "  Port: " << info.portName();
+            qDebug() << "  Description: " << info.description();
+            qDebug() << "  Manufacturer: " << info.manufacturer() << "\n";
+            return;
+        }
+    }
 
-    // Only continue if "Connect" was successful
-    if (w_serial.result() != QDialog::Accepted) {
-        qWarning()
-            << "[WARN] Failed to connect to serial camera servo controller!";
+    if (!found) {
+        qDebug() << "[ERROR] SerialServo (COM4) not found!";
         return;
     }
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Camera serial dialog returned successfully";
+    // Set port options
+    ser_servo_->setPortName("COM4");
+    ser_servo_->setBaudRate(QSerialPort::Baud115200);
+    ser_servo_->setDataBits(QSerialPort::Data8);
+    ser_servo_->setParity(QSerialPort::NoParity);
+    ser_servo_->setStopBits(QSerialPort::OneStop);
+    ser_servo_->setFlowControl(QSerialPort::NoFlowControl);
+
+    // Only continue if "open" was successful
+    if (!ser_servo_->open(QIODevice::ReadOnly)) {
+        qDebug() << "[ERROR] Failed to open port: COM4!";
+        ser_servo_.reset();
+        return;
     }
 
-    // Open a connection to the "SerialServo" Arduino
-    ser_servo_ = std::make_shared<Serial>("SerialServo",
-                                          "/dev/" + w_serial.GetDeviceName());
+    // Ensure data gets processed when it's made available
+    connect(ser_servo_.get(), &QSerialPort::readyRead, this,
+            &MainWindow::UpdateCameraVals);
 
     // Reflect changes in UI
     ui_->a_camera_servos_connect->setEnabled(false);
@@ -1070,6 +1072,18 @@ void MainWindow::on_pb_camera_record_clicked() {
         ui_->pb_camera_record->setStyleSheet("color: black;");
         ui_->pb_camera_record->setText("RECORD");
     }
+}
+
+/**
+ * @brief TODO: description
+ */
+void MainWindow::UpdateCameraVals() {
+    auto data = ser_servo_->readAll();
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Received data from SerialServo:" << data;
+    }
+
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
