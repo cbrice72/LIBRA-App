@@ -16,7 +16,6 @@
 #include "camera_manager.h"
 #include "libra_hebi.h"
 #include "libra_lidar.h"
-#include "serial.h"
 
 #pragma once
 
@@ -69,8 +68,7 @@ class MainThread : public QThread {
 
     std::shared_ptr<LibraHebi> libra_arm_;
     std::shared_ptr<QSerialPort> ser_water_;
-    // std::shared_ptr<Serial> ser_water_;
-    std::shared_ptr<Serial> ser_servo_;
+    std::shared_ptr<QSerialPort> ser_servo_;
 
     // Arm
 

@@ -3,7 +3,6 @@
  * @brief  Control code for LIBRA manipulator Hokuyo LIDAR; header file.
  *
  * @author Christian Brice
- * @date   2024/3/6
  ******************************************************************************/
 
 #pragma once
@@ -12,7 +11,8 @@
 #include <string>
 // Other Libraries' Headers
 //   URG2D
-# include "Urg_driver.h"
+#include "Urg_driver.h"
+
 // Project Headers
 //   (none)
 

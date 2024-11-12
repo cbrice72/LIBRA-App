@@ -4,7 +4,6 @@
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
- * @date   2024/2/22
  ******************************************************************************/
 
 #pragma once
@@ -20,6 +19,7 @@
 #include <trajectory.hpp>
 //   Qt
 #include <QThread>
+
 // Project Headers
 //   (none)
 
@@ -57,7 +57,8 @@ class HebiThread : public QThread {
     void SetDebugMode(bool enabled);
 
   signals:
-    void InformState(std::array<double, 5> target, std::array<double, 5> actual, std::array<double, 5> torque);
+    void InformState(std::array<double, 5> target, std::array<double, 5> actual,
+                     std::array<double, 5> torque);
 
   private:
     /**
@@ -80,6 +81,6 @@ class HebiThread : public QThread {
     std::unique_ptr<hebi::GroupFeedback> feedback_;
     std::shared_ptr<hebi::Group> group_{nullptr};
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
-    
+
     double start_time_;
 };

@@ -3,7 +3,6 @@
  * @brief  Open EPOS device window header file.
  *
  * @author brice.c.aa
- * @date   2024/2/13
  ******************************************************************************/
 
 #pragma once

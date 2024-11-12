@@ -3,7 +3,6 @@
  * @brief  Namespace for convenient, general-use functions; implementation file.
  *
  * @author brice.c.aa
- * @date   2023/7/20
  ******************************************************************************/
 
 // Related Header

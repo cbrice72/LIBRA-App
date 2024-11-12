@@ -3,7 +3,6 @@
 # @brief  LIBRA Hokuyo LIDAR module CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2024/3/6
 ################################################################################
 
 # Specify the Hokuyo URG library directory

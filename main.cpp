@@ -26,7 +26,7 @@
  */
 int main(int argc, char* argv[]) {
     // Initialize the app
-    QApplication app(argc  , argv);
+    QApplication app(argc, argv);
 
     // Display the main app window
     MainWindow w_main;

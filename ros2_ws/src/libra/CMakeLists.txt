@@ -3,7 +3,6 @@
 # @brief  Root CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2024/4/3
 ################################################################################
 
 cmake_minimum_required(VERSION 3.8)

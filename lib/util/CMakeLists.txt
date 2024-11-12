@@ -3,7 +3,6 @@
 # @brief  Utility module CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2023/12/15
 ################################################################################
 
 # Create and configure the module

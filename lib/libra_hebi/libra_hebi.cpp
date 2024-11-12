@@ -4,7 +4,6 @@
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
- * @date   2024/2/22
  ******************************************************************************/
 
 // Related Header
@@ -12,6 +11,7 @@
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
+
 // Other Libraries' Headers
 //   (none)
 // Project Headers

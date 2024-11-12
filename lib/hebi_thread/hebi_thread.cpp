@@ -4,7 +4,6 @@
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
- * @date   2024/2/22
  ******************************************************************************/
 
 // Related Header
@@ -95,7 +94,7 @@ void HebiThread::run() {
         }
 
         QThread::sleep(1);  // TOOD: for testing purposes only
-        //QThread::msleep(20);  // update 50 times/second
+        // QThread::msleep(20);  // update 50 times/second
     }
 }
 
@@ -146,7 +145,7 @@ bool HebiThread::Connect() {
  * @param j3 Desired J3 (arm pitch) angle, in degrees
  */
 void HebiThread::Move(double roll, double pitch, double j1, double j2,
-                     double j3) {
+                      double j3) {
     Eigen::MatrixXd positions(5, 2);
     Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(5, 2);
     Eigen::MatrixXd accelerations = Eigen::MatrixXd::Zero(5, 2);

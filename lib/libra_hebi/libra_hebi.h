@@ -4,7 +4,6 @@
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
- * @date   2024/2/22
  ******************************************************************************/
 
 #pragma once
@@ -18,6 +17,7 @@
 #include <hebi.h>
 #include <lookup.hpp>
 #include <trajectory.hpp>
+
 // Project Headers
 //   (none)
 
@@ -60,7 +60,7 @@ class LibraHebi {
     // --- Helper Functions ---
 
     static std::chrono::system_clock::rep GetCurrentTimeInSec();
-    
+
     void Loop();
 
     // --- Data Members ---
@@ -71,6 +71,6 @@ class LibraHebi {
     std::unique_ptr<hebi::GroupFeedback> feedback_;
     std::shared_ptr<hebi::Group> group_{nullptr};
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
-    
+
     double start_time_;
 };

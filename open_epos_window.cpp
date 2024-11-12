@@ -3,7 +3,6 @@
  * @brief  Open EPOS device window implementation file.
  *
  * @author brice.c.aa
- * @date   2023/7/17
  ******************************************************************************/
 
 // Related Header
