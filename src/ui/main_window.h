@@ -47,7 +47,7 @@ class MainThread : public QThread {
     void SetDebugMode(bool enabled);
 
   public slots:
-    void UpdateArmTarget(const std::array<double, 5>& input);
+    void UpdateArmTarget(const std::array<double, 2>& input);
 
   private:
     void run() override;
@@ -67,14 +67,14 @@ class MainThread : public QThread {
 
     // LIBRA Components
 
-    std::shared_ptr<LibraHebi> libra_arm_;
+    std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<QSerialPort> ser_servo_;
 
     // Arm
 
-    std::array<double, 5> arm_target_{0};
-    std::array<std::array<double, 3>, 5> arm_current_{0};
+    std::array<double, 2> arm_target_{0};
+    std::array<double, 2> arm_current_{0};
 
     // Manipulator
 
@@ -106,7 +106,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
   signals:
-    void CommandArm(std::array<double, 5> target);
+    void CommandArm(std::array<double, 2> target);
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -192,7 +192,7 @@ class MainWindow : public QMainWindow {
 
     MainThread* main_thread_;  // primary control loop
 
-    std::shared_ptr<LibraHebi> libra_arm_;
+    std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<QSerialPort> ser_servo_;
     std::shared_ptr<Lidar> lidar_;  // unused

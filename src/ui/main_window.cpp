@@ -41,7 +41,6 @@
 
 constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
 
-constexpr int kHebiNodeCount = 1;      // total number of HEBI actuators
 constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
 constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
 constexpr int kCameraNodeCount = 3;  // total number of camera servos
@@ -132,7 +131,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Main controller thread
     /*
-    main_thread_ = new MainThread(libra_arm_, ser_water_, ser_servo_);
+    main_thread_ = new MainThread(libra_hebi_, ser_water_, ser_servo_);
 
     connect(this, &MainWindow::CommandArm,  // send arm commands to main thread
             main_thread_, &MainThread::UpdateArmTarget);
@@ -159,15 +158,19 @@ MainWindow::~MainWindow() {
 MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
                        std::shared_ptr<QSerialPort> ser_water,
                        std::shared_ptr<QSerialPort> ser_servo)
-    : libra_arm_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
+    : libra_hebi_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
 /**
  * @brief Standard destructor.
  */
 MainThread::~MainThread() {
     // Ensure data is flushed to log files and close them
-    continuous_log_.close();
-    snapshot_log_.close();
+    if (continuous_log_.is_open()) {
+        continuous_log_.close();
+    }
+    if (snapshot_log_.is_open()) {
+        snapshot_log_.close();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -236,13 +239,12 @@ std::ofstream MainThread::InitializeLog(std::string name) {
  *
  * @param input HEBI actuator target value(s) (order defined in `hebi_thread.h`)
  */
-void MainThread::UpdateArmTarget(const std::array<double, 5>& input) {
+void MainThread::UpdateArmTarget(const std::array<double, 2>& input) {
     arm_target_ = input;
 
     if (debug_mode_) {
-        qDebug() << "[DEBUG] Received the following arm targets:" << input.at(0)
-                 << ", " << input.at(1) << ", " << input.at(2) << ", "
-                 << input.at(3) << ", " << input.at(4);
+        qDebug() << "[DEBUG] Received the following arm targets:"
+                 << input.at(0);
     }
 
     qDebug() << "[WARN] HEBI actuator control unimplemented!";
@@ -269,7 +271,7 @@ void MainThread::run() {
     while (!isInterruptionRequested()) {
         /* ----- CHECK FOR COMPONENT OBJECTS (TEMPORARY) ----- */
 
-        if (libra_arm_ == nullptr) {
+        if (libra_hebi_ == nullptr) {
             qDebug() << "[WARN] HEBI actuators are not connected! Sleeping...";
             QThread::sleep(5);  // check again in 5 seconds
             continue;
@@ -290,15 +292,15 @@ void MainThread::run() {
         // Retrieve HEBI actuator data
         for (auto i = 0; i < kHebiNodeCount; i++) {
             auto joint = static_cast<LibraHebi::Joint>(i);
-            arm_current_.at(i).at(0) = libra_arm_->GetCommandPosition(joint);
-            arm_current_.at(i).at(1) = libra_arm_->GetFeedbackPosition(joint);
-            arm_current_.at(i).at(2) = libra_arm_->GetFeedbackEffort(joint);
+            arm_current_.at(i).at(0) = libra_hebi_->GetCommandPosition(joint);
+            arm_current_.at(i).at(1) = libra_hebi_->GetFeedbackPosition(joint);
+            arm_current_.at(i).at(2) = libra_hebi_->GetFeedbackEffort(joint);
         }
 
         /* ----- MANIPULATOR ----- */
 
         // Keep manipulator level by negating arm pitch angle
-        const double arm_pitch = libra_arm_->GetCommandPosition(
+        const double arm_pitch = libra_hebi_->GetCommandPosition(
             LibraHebi::Joint::kPitch);
         if (arm_pitch <= 30) {
             manip_pos_.at(0) = (arm_pitch <= 0) ? -arm_pitch : 0;
@@ -337,18 +339,18 @@ void MainThread::run() {
         /* ----- ARM and FLUID SYSTEM ----- */
 
         // Send commands to SerialWater Arduino
-        // TODO(brice.c.aa): since LIBRA-II is simpler, refactor this
+        // TODO(brice.c.aa): since LIBRA-II is simpler, this can be refactored
         switch (water_mode_) {
             case kStandby:  // Normal operational mode
                 cmd_water = 0;
 
                 // Excess torque (> 5.0 Nm)
                 if (water_en_
-                    && abs(libra_arm_->GetFeedbackEffort(
+                    && abs(libra_hebi_->GetFeedbackEffort(
                            LibraHebi::Joint::kPitch))
                            > 5.0) {
                     // Pause arm movement
-                    libra_arm_->Stop();
+                    libra_hebi_->Stop();
                     water_mode_ = WaterMode::kAdjust;
                 }
                 break;
@@ -356,11 +358,11 @@ void MainThread::run() {
             case kAdjust:  // Water level adjustment mode
                 // Normal response to torque (2.5-5.0 Nm)
                 if (water_en_
-                    && abs(libra_arm_->GetFeedbackEffort(
+                    && abs(libra_hebi_->GetFeedbackEffort(
                            LibraHebi::Joint::kPitch))
                            >= 2.5) {
                     if (count == 0) {
-                        const double theta = libra_arm_->GetFeedbackEffort(
+                        const double theta = libra_hebi_->GetFeedbackEffort(
                             LibraHebi::Joint::kPitch);
 
                         // Bit field "0b1234":
@@ -380,7 +382,9 @@ void MainThread::run() {
                     cmd_water = 0;
 
                     // Resume arm movement
-                    libra_arm_->Move(arm_target_.at(0));
+                    // TODO: EPOS (Maxon) implementation
+                    // libra_maxon_->Move(arm_target_.at(0));
+                    libra_hebi_->Move(arm_target_.at(1));
                 }
                 break;
 
@@ -389,7 +393,9 @@ void MainThread::run() {
                 cmd_water = 0b0010;
 
                 // Pause arm movement
-                libra_arm_->Stop();
+                // TODO: EPOS (Maxon) implementation
+                // libra_maxon_->Stop();
+                libra_hebi_->Stop();
                 break;
         }
 
@@ -463,8 +469,8 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     if (main_thread_ != nullptr) {
         main_thread_->SetDebugMode(debug_mode_);
     }
-    if (libra_arm_ != nullptr) {
-        libra_arm_->SetDebugMode(debug_mode_);
+    if (libra_hebi_ != nullptr) {
+        libra_hebi_->SetDebugMode(debug_mode_);
     }
     if (ser_water_ != nullptr) {
         // TODO: make new class inheriting from QSerialPort
@@ -513,9 +519,9 @@ void MainWindow::on_a_epos_disconnect_triggered() {
  */
 void MainWindow::on_a_hebi_connect_triggered() {
     // Only continue if "Connect" was successful
-    libra_arm_ = std::make_shared<LibraHebi>();
-    if (!libra_arm_->Connect()) {
-        libra_arm_.reset();
+    libra_hebi_ = std::make_shared<LibraHebi>();
+    if (!libra_hebi_->Connect()) {
+        libra_hebi_.reset();
         return;
     }
 
@@ -536,7 +542,7 @@ void MainWindow::on_a_hebi_connect_triggered() {
  */
 void MainWindow::on_a_hebi_disconnect_triggered() {
     // Clear the LibraHebi object
-    libra_arm_.reset();
+    libra_hebi_.reset();
 
     // Reflect changes in UI
     ui_->a_hebi_connect->setEnabled(true);
@@ -772,14 +778,19 @@ void MainWindow::on_a_lidar_about_triggered() {
  * @brief Starts movement of all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    if (libra_arm_ == nullptr) {
-        qDebug() << "[WARN] HEBI actuators not connected!";
-        return;
+    std::array<double, 2> target{0};
+
+    if (libra_yaw_ != nullptr) {
+        target.at(0) = ui_->sb_arm_yaw->text().toDouble();
+    } else {
+        qDebug() << "[WARN] EPOS (Maxon) actuator not connected!";
     }
 
-    std::array<double, 5> target{0};
-    target.at(0) = ui_->sb_arm_yaw->text().toDouble();
-    target.at(1) = ui_->sb_arm_pitch->text().toDouble();
+    if (libra_yaw_ != nullptr) {
+        target.at(1) = ui_->sb_arm_pitch->text().toDouble();
+    } else {
+        qDebug() << "[WARN] HEBI actuator not connected!";
+    }
 
     emit CommandArm(target);
 }
@@ -788,12 +799,12 @@ void MainWindow::on_pb_arm_start_clicked() {
  * @brief Stops movement of all actuators.
  */
 void MainWindow::on_pb_arm_stop_clicked() {
-    if (libra_arm_ == nullptr) {
+    if (libra_hebi_ == nullptr) {
         qDebug() << "[WARN] HEBI actuators not connected!";
         return;
     }
 
-    libra_arm_->Stop();
+    libra_hebi_->Stop();
 }
 
 //------------------------------------------------------------------------------
