@@ -7,22 +7,22 @@
 
 // Related Header
 //   (none)
+
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   Qt
-#include <QApplication>
+
+// Other Library Headers
+#include <QApplication>  // Qt
+
 // Project Headers
 #include "main_window.h"
 
 /**
  * @brief The designated start of the program.
  *
- * @param argc Argument
- * count
+ * @param argc Argument count
  * @param argv Argument vector
- * @return Return code from `exit()`
- * after the application exits
+ * @return Return `exit()` code after the application exits
  */
 int main(int argc, char* argv[]) {
     // Initialize the app

@@ -8,12 +8,14 @@
 
 // Related Header
 #include "libra_hebi.h"
+
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
 
-// Other Libraries' Headers
+// Other Library Headers
 //   (none)
+
 // Project Headers
 //   (none)
 

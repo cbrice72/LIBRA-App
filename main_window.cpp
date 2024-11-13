@@ -7,15 +7,17 @@
 
 // Related Header
 #include "main_window.h"
+
 // C++ Standard Library Headers
 #include <filesystem>
 #include <iostream>
 #include <sys/stat.h>
-// Other Libraries' Headers
-//   Qt
-#include <QDateTime>
-#include <QMessageBox>
-#include <QSerialPortInfo>
+
+// Other Library Headers
+#include <QDateTime>        // Qt
+#include <QMessageBox>      // Qt
+#include <QSerialPortInfo>  // Qt
+
 // Project Headers
 // #include "open_epos_window.h"  // TODO(brice.c.aa): add EPOS4 motor control
 #include "serial_dialog.h"

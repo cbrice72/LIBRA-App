@@ -7,13 +7,14 @@
 
 // Related Header
 #include "utility.h"
+
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   Maxon
-#include "Definitions.h"
-//   Qt
-#include <QDebug>
+
+// Other Library Headers
+#include "Definitions.h"  // EPOS (Maxon)
+#include <QDebug>         // Qt
+
 // Project Headers
 //   (none)
 
@@ -74,7 +75,7 @@ namespace util {
  * @param node_id [Optional] The EPOS node for which the function failed
  */
 void PrintEPOSErr(std::string func_name, uint err, int node_id) {
-#if defined(QT_VERSION)
+#if defined(QT_VERSION)  // Qt-compatible code
     if (node_id == 0) {
         qCritical() << func_name.c_str()
                     << "failed:" << QString::fromStdString(GetMaxonErrTxt(err));
@@ -82,7 +83,7 @@ void PrintEPOSErr(std::string func_name, uint err, int node_id) {
         qCritical() << func_name.c_str() << "[" << node_id << "] failed:"
                     << QString::fromStdString(GetMaxonErrTxt(err));
     }
-#elif
+#elif  // general-purpose code
     if (node_id == 0) {
         std::cerr << func_name.c_str() << "failed:" << GetMaxonErrTxt(err);
     } else {

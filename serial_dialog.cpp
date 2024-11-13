@@ -7,13 +7,14 @@
 
 // Related Header
 #include "serial_dialog.h"
+
 // C++ Standard Library Headers
 #include <sys/stat.h>
-// Other Libraries' Headers
-//   Qt
-#include <QDebug>
-//   Userspace Devices
-#include <libudev.h>
+
+// Other Library Headers
+#include <libudev.h>  // userspace devices
+#include <QDebug>     // Qt
+
 // Project Headers
 #include "ui_serial_dialog.h"
 

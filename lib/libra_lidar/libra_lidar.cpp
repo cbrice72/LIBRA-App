@@ -7,13 +7,14 @@
 
 // Related Header
 #include "libra_lidar.h"
+
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
 #include <sstream>
-// Other Libraries' Headers
-//   URG2D
-#include "ticks.h"
+
+// Other Library Headers
+#include "ticks.h"  // URG2D (Hokuyo)
 
 // Project Headers
 //   (none)

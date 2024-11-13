@@ -8,12 +8,14 @@
 
 // Related Header
 #include "hebi_thread.h"
+
 // C++ Standard Library Headers
 #include <chrono>
 #include <iostream>
-// Other Libraries' Headers
-//   Qt
-#include <QWidget>
+
+// Other Library Headers
+#include <QWidget>  // Qt
+
 // Project Headers
 //   (none)
 

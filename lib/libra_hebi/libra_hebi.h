@@ -10,13 +10,13 @@
 
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   HEBI Actuators
-#include <group_command.hpp>
-#include <group_feedback.hpp>
-#include <hebi.h>
-#include <lookup.hpp>
-#include <trajectory.hpp>
+
+// Other Library Headers
+#include <group_command.hpp>   // HEBI
+#include <group_feedback.hpp>  // HEBI
+#include <hebi.h>              // HEBI
+#include <lookup.hpp>          // HEBI
+#include <trajectory.hpp>      // HEBI
 
 // Project Headers
 //   (none)

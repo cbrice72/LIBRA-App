@@ -7,12 +7,13 @@
 
 // Related Header
 #include "camera_manager.h"
+
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   Qt
-#include <QDateTime>
-#include <QDir>
+
+// Other Library Headers
+#include <QDateTime>  // Qt
+#include <QDir>       // Qt
 
 // Project Headers
 //   (none)

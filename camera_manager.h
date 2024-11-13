@@ -7,10 +7,11 @@
 
 // C++ Standard Library Headers
 #include <unordered_map>
-// Other Libraries' Headers
-//   Qt
-#include <QtMultimedia>
-#include <QVideoWidget>
+
+// Other Library Headers
+#include <QtMultimedia>  // Qt
+#include <QVideoWidget>  // Qt
+
 // Project Headers
 //   (none)
 

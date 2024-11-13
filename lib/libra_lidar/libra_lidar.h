@@ -9,9 +9,9 @@
 
 // C++ Standard Library Headers
 #include <string>
-// Other Libraries' Headers
-//   URG2D
-#include "Urg_driver.h"
+
+// Other Library Headers
+#include "Urg_driver.h"  // URG2D (Hokuyo)
 
 // Project Headers
 //   (none)

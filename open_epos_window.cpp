@@ -7,11 +7,13 @@
 
 // Related Header
 #include "open_epos_window.h"
+
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   Maxon
-#include "Maxon/Definitions.h"
+
+// Other Library Headers
+#include "Maxon/Definitions.h"  // EPOS (Maxon)
+
 // Project Headers
 #include "ui_open_epos_window.h"
 #include "utility.h"

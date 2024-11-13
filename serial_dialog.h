@@ -9,9 +9,9 @@
 
 // C++ Standard Library Headers
 //   (none)
-// Other Libraries' Headers
-//   Qt
-#include <QDialog>
+
+// Other Library Headers
+#include <QDialog>  // Qt
 
 // Project Headers
 //   (none)

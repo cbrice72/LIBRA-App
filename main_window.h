@@ -7,11 +7,12 @@
 
 // C++ Standard Library Headers
 #include <fstream>
-// Other Libraries' Headers
-//   Qt
-#include <QMainWindow>
-#include <QSerialPort>
-#include <QThread>
+
+// Other Library Headers
+#include <QMainWindow>  // Qt
+#include <QSerialPort>  // Qt
+#include <QThread>      // Qt
+
 // Project Headers
 #include "camera_manager.h"
 #include "libra_hebi.h"
