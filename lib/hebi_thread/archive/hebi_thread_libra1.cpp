@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   hebi_thread.cpp
- * @brief  Control code for LIBRA arm HEBI actuators; implementation file.
+ * @brief  Control code for LIBRA-I arm HEBI actuators; implementation file.
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
@@ -19,7 +19,7 @@
 // Project Headers
 //   (none)
 
-constexpr uint8_t kHebiNodeCount = 5;  // total number of HEBI actuators
+constexpr uint8_t kNodeCount = 5;  // total number of HEBI actuators
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -46,7 +46,7 @@ HebiThread::HebiThread() : start_time_(GetCurrentTimeInSec()) {
 /**
  * @brief Retrieves the current system time (i.e., time since epoch) in seconds.
  *
- * @return std::chrono::system_clock::rep Current system time in seconds
+ * @return Current system time in seconds
  */
 std::chrono::system_clock::rep HebiThread::GetCurrentTimeInSec() {
     auto now = std::chrono::system_clock::now().time_since_epoch();
@@ -84,7 +84,7 @@ void HebiThread::run() {
             group_->getNextFeedback(*feedback_);
 
             // Retrieve HEBI actuator data
-            for (auto i = 0; i < kHebiNodeCount; i++) {
+            for (auto i = 0; i < kNodeCount; i++) {
                 auto joint = static_cast<HebiThread::Joint>(i);
                 target.at(i) = GetCommandPosition(joint);
                 actual.at(i) = GetFeedbackPosition(joint);
@@ -107,8 +107,7 @@ void HebiThread::run() {
 /**
  * @brief Connects to the HEBI actuator group and sets their parameters.
  *
- * @return true If connection and initialization succeeded
- * @return false Otherwise
+ * @return true if connection and initialization succeeded; false Otherwise
  */
 bool HebiThread::Connect() {
     hebi::Lookup lookup;
@@ -196,7 +195,7 @@ void HebiThread::Stop() {
  * @brief Returns the commanded position value for the specified joint.
  *
  * @param joint The LIBRA joint to query
- * @return double The joint's commanded position value, in degrees
+ * @return The joint's commanded position value, in degrees
  */
 double HebiThread::GetCommandPosition(Joint joint) {
     double ret = 0;
@@ -231,7 +230,7 @@ double HebiThread::GetCommandPosition(Joint joint) {
  * @brief Returns the actual position value for the specified joint.
  *
  * @param joint The LIBRA joint to query
- * @return double The joint's actual position value, in degrees
+ * @return The joint's actual position value, in degrees
  */
 double HebiThread::GetFeedbackPosition(Joint joint) {
     double ret = 0;
@@ -266,7 +265,7 @@ double HebiThread::GetFeedbackPosition(Joint joint) {
  * @brief Returns the actual torque value for the specified joint.
  *
  * @param joint The LIBRA joint to query
- * @return double The joint's actual torque value, in Newton-meters
+ * @return The joint's actual torque value, in Newton-meters
  */
 double HebiThread::GetFeedbackEffort(Joint joint) {
     double ret = 0;
@@ -297,7 +296,7 @@ double HebiThread::GetFeedbackEffort(Joint joint) {
 /**
  * @brief Returns the actual torque value for the 2-DoF Joint's "A" actuator.
  *
- * @return double The actuator's actual torque value, in Newton-meters
+ * @return The actuator's actual torque value, in Newton-meters
  */
 double HebiThread::GetFeedbackEffortMA() {
     return feedback_->getEffort()[Act::kHebiMA];
@@ -306,7 +305,7 @@ double HebiThread::GetFeedbackEffortMA() {
 /**
  * @brief Returns the actual torque value for the 2-DoF Joint's "B" actuator.
  *
- * @return double The actuator's actual torque value, in Newton-meters
+ * @return The actuator's actual torque value, in Newton-meters
  */
 double HebiThread::GetFeedbackEffortMB() {
     return feedback_->getEffort()[Act::kHebiMB];
@@ -314,6 +313,7 @@ double HebiThread::GetFeedbackEffortMB() {
 
 /**
  * @brief Sets whether or not verbose debug text is displayed
+ *
  * @param true to enable, false to disable
  */
 void HebiThread::SetDebugMode(bool enabled) {

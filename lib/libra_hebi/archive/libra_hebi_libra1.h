@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   hebi_thread.h
- * @brief  Control code for LIBRA arm HEBI actuators; header file.
+ * @file   libra_hebi.h
+ * @brief  Control code for LIBRA-I arm HEBI actuators; header file.
  *         (adapted from Yuto Goto's work)
  *
  * @author Christian Brice
@@ -16,7 +16,6 @@
 #include <group_feedback.hpp>  // HEBI
 #include <hebi.h>              // HEBI
 #include <lookup.hpp>          // HEBI
-#include <QThread>             // Qt::Core
 #include <trajectory.hpp>      // HEBI
 
 // Project Headers
@@ -25,19 +24,14 @@
 /**
  * @brief TODO: documentation.
  */
-class HebiThread : public QThread {
-    // NOLINTBEGIN: required by Qt
-    Q_OBJECT
-    // NOLINTEND
-
+class LibraHebi {
   public:
+    LibraHebi();
+
     /**
      * @brief LIBRA joint names.
      */
     enum Joint { kRoll = 0, kPitch, kJ1, kJ2, kJ3 };
-
-    HebiThread();
-    ~HebiThread() = default;
 
     // --- Actuator Commands ---
 
@@ -50,27 +44,22 @@ class HebiThread : public QThread {
     double GetCommandPosition(Joint joint);
     double GetFeedbackPosition(Joint joint);
     double GetFeedbackEffort(Joint joint);
-    double GetFeedbackEffortMA();  // used by pumps
-    double GetFeedbackEffortMB();  // used by pumps
+    double GetFeedbackEffortMA();
+    double GetFeedbackEffortMB();
 
     void SetDebugMode(bool enabled);
-
-  signals:
-    void InformState(std::array<double, 5> target, std::array<double, 5> actual,
-                     std::array<double, 5> torque);
 
   private:
     /**
      * @brief HEBI actuator names.
-     * @todo implement `kYaw`.
      */
     enum Act { kHebiMA = 0, kHebiMB, kHebiJ1, kHebiJ2, kHebiJ3 };
-
-    void run() override;
 
     // --- Helper Functions ---
 
     static std::chrono::system_clock::rep GetCurrentTimeInSec();
+
+    void Loop();
 
     // --- Data Members ---
 
