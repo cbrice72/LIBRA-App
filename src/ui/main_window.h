@@ -76,16 +76,16 @@ class MainThread : public QThread {
     std::array<double, 5> arm_target_{0};
     std::array<std::array<double, 3>, 5> arm_current_{0};
 
-    // Counterweight
+    // Manipulator
+
+    std::array<double, 3> manip_pos_{0};
+    std::array<double, 3> manip_setpos_{0};
+    std::array<int, 3> manip_dir_{0};
+
+    // Pumps
 
     bool water_en_{true};
     WaterMode water_mode_{kStandby};
-
-    // Camera
-
-    std::array<double, 3> camera_pos_{0};
-    std::array<double, 3> camera_setpos_{0};
-    std::array<int, 3> camera_dir_{0};
 
     // Logging
 
@@ -128,8 +128,11 @@ class MainWindow : public QMainWindow {
 
     // Pumps Menu
 
-    void on_a_pumps_connect_triggered();
-    void on_a_pumps_disconnect_triggered();
+    void on_a_pump_connect_triggered();
+    void on_a_pump_disconnect_triggered();
+
+    void on_a_pump_set_empty_triggered();
+    void on_a_pump_set_full_triggered();
 
     // Manipulator Menu
 
@@ -157,9 +160,9 @@ class MainWindow : public QMainWindow {
 
     // Pumps
 
-    void on_pb_pumps_enable_clicked();
-    void on_pb_pumps_disable_clicked();
-    void on_pb_pumps_drain_clicked();
+    void on_pb_pump_enable_clicked();
+    void on_pb_pump_disable_clicked();
+    void on_pb_pump_drain_clicked();
 
     // Camera
 
@@ -184,6 +187,7 @@ class MainWindow : public QMainWindow {
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
+
     bool debug_mode_{true};
 
     MainThread* main_thread_;  // primary control loop

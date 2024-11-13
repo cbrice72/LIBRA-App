@@ -53,7 +53,8 @@ constexpr int kCameraNodeCount = 3;  // total number of camera servos
  */
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow),
-      ser_water_(std::make_shared<QSerialPort>(this)) {
+      ser_water_(std::make_shared<QSerialPort>(this)),
+      ser_servo_(std::make_shared<QSerialPort>(this)) {
     ui_->setupUi(this);
 
     // Set UI elements
@@ -104,7 +105,17 @@ MainWindow::MainWindow(QWidget* parent)
         qDebug() << "[DEBUG] No cameras were found";
     }
 
-    // TODO: SerialServo autoconnect
+    // --- Slot Management (non-thread) ---
+
+    // Pumps (FOR TESTING PURPOSES ONLY)
+    connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Fill);      // start filling
+
+    connect(ui_->pb_pump_disable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Stop);       // stop filling
+
+    connect(ui_->pb_pump_drain, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Drain);    // force drain
 
     // --- Thread Management ---
 
@@ -120,6 +131,7 @@ MainWindow::MainWindow(QWidget* parent)
      */
 
     // Main controller thread
+    /*
     main_thread_ = new MainThread(libra_arm_, ser_water_, ser_servo_);
 
     connect(this, &MainWindow::CommandArm,  // send arm commands to main thread
@@ -129,6 +141,7 @@ MainWindow::MainWindow(QWidget* parent)
             main_thread_, &MainThread::deleteLater);
 
     main_thread_->start();
+    */
 }
 
 /**
@@ -288,35 +301,35 @@ void MainThread::run() {
         const double arm_pitch = libra_arm_->GetCommandPosition(
             LibraHebi::Joint::kPitch);
         if (arm_pitch <= 30) {
-            camera_pos_.at(0) = (arm_pitch <= 0) ? -arm_pitch : 0;
+            manip_pos_.at(0) = (arm_pitch <= 0) ? -arm_pitch : 0;
         } else {
-            camera_pos_.at(0) = 180 - arm_pitch;
+            manip_pos_.at(0) = 180 - arm_pitch;
         }
 
         // Retrieve desired camera pan angle
-        if (camera_dir_.at(1) != 0) {
-            camera_pos_.at(1) += camera_dir_.at(1) * 90.0 / (60.0 * 60.0);
-            if ((camera_pos_.at(1) > camera_setpos_.at(1))
-                == (camera_dir_.at(1) == 1)) {
-                camera_pos_.at(1) = camera_setpos_.at(1);
-                camera_dir_.at(1) = 0;
+        if (manip_dir_.at(1) != 0) {
+            manip_pos_.at(1) += manip_dir_.at(1) * 90.0 / (60.0 * 60.0);
+            if ((manip_pos_.at(1) > manip_setpos_.at(1))
+                == (manip_dir_.at(1) == 1)) {
+                manip_pos_.at(1) = manip_setpos_.at(1);
+                manip_dir_.at(1) = 0;
             }
         }
 
         // Retrieve desired camera tilt angle
-        if (camera_dir_.at(2) != 0) {
-            camera_pos_.at(2) += camera_dir_.at(2) * 90.0 / (60.0 * 60.0);
-            if ((camera_pos_.at(2) > camera_setpos_.at(2))
-                == (camera_dir_.at(2) == 1)) {
-                camera_pos_.at(2) = camera_setpos_.at(2);
-                camera_dir_.at(2) = 0;
+        if (manip_dir_.at(2) != 0) {
+            manip_pos_.at(2) += manip_dir_.at(2) * 90.0 / (60.0 * 60.0);
+            if ((manip_pos_.at(2) > manip_setpos_.at(2))
+                == (manip_dir_.at(2) == 1)) {
+                manip_pos_.at(2) = manip_setpos_.at(2);
+                manip_dir_.at(2) = 0;
             }
         }
 
         // Send commands to SerialServo Arduino
         std::stringstream servo_ss;
-        servo_ss << camera_pos_.at(0) << " " << camera_pos_.at(1) << " "
-                 << camera_pos_.at(2) << "\n";
+        servo_ss << manip_pos_.at(0) << " " << manip_pos_.at(1) << " "
+                 << manip_pos_.at(2) << "\n";
         // (create string object to avoid using temporary object in call to write)
         auto cmd_servo = servo_ss.str();
         ser_servo_->write(cmd_servo.c_str());  // send command
@@ -409,8 +422,8 @@ void MainThread::run() {
 
             // Camera actuator info
             // TODO: use kCameraNodeCount
-            continuous_log_ << camera_pos_.at(0) << "," << camera_pos_.at(1)
-                            << "," << camera_pos_.at(2);
+            continuous_log_ << manip_pos_.at(0) << "," << manip_pos_.at(1)
+                            << "," << manip_pos_.at(2);
 
             // Flush the current line
             continuous_log_ << std::endl;
@@ -536,7 +549,7 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
  * @brief Event handler for "Pumps" menu bar action "Connect".
  *        Brings up a dialog box of available serial USB devices.
  */
-void MainWindow::on_a_pumps_connect_triggered() {
+void MainWindow::on_a_pump_connect_triggered() {
     // Check if SerialWater Arduino (COM3) is connected
     bool found = false;
     foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
@@ -579,27 +592,47 @@ void MainWindow::on_a_pumps_connect_triggered() {
             &MainWindow::UpdatePumpVals);
 
     // Reflect changes in UI
-    ui_->a_pumps_connect->setEnabled(false);
-    ui_->a_pumps_disconnect->setEnabled(true);
-    ui_->pb_pumps_enable->setEnabled(true);
-    ui_->pb_pumps_disable->setEnabled(true);
-    ui_->pb_pumps_drain->setEnabled(true);
+    ui_->a_pump_connect->setEnabled(false);
+    ui_->a_pump_disconnect->setEnabled(true);
+    ui_->pb_pump_enable->setEnabled(true);
+    ui_->pb_pump_disable->setEnabled(true);
+    ui_->pb_pump_drain->setEnabled(true);
 }
 
 /**
  * @brief Event handler for "Pumps" menu bar action "Disconnect".
  *        Terminates the connection to the `SerialWater` Arduino, if it exists.
  */
-void MainWindow::on_a_pumps_disconnect_triggered() {
+void MainWindow::on_a_pump_disconnect_triggered() {
     // Clear the Serial object
     ser_water_.reset();
 
     // Reflect changes in UI
-    ui_->a_pumps_connect->setEnabled(true);
-    ui_->a_pumps_disconnect->setEnabled(false);
-    ui_->pb_pumps_enable->setEnabled(false);
-    ui_->pb_pumps_disable->setEnabled(false);
-    ui_->pb_pumps_drain->setEnabled(false);
+    ui_->a_pump_connect->setEnabled(true);
+    ui_->a_pump_disconnect->setEnabled(false);
+    ui_->pb_pump_enable->setEnabled(false);
+    ui_->pb_pump_disable->setEnabled(false);
+    ui_->pb_pump_drain->setEnabled(false);
+}
+
+/**
+ * @brief Event handler for "Pump/Advanced" menu bar action "Set empty (0%)".
+ *        Forces the tank (water bladder) visualization to show as empty.
+ *
+ * @note Only use if there is a discrepancy with the physical water bladders.
+ */
+void MainWindow::on_a_pump_set_empty_triggered() {
+    ui_->w_tank_visual->OverrideLevel(0.0);
+}
+
+/**
+ * @brief Event handler for "Pump/Advanced" menu bar action "Set full (100%)".
+ *        Forces the tank (water bladder) visualization to show as full.
+ *
+ * @note Only use if there is a discrepancy with the physical water bladders.
+ */
+void MainWindow::on_a_pump_set_full_triggered() {
+    ui_->w_tank_visual->OverrideLevel(1.0);
 }
 
 /**
@@ -675,8 +708,8 @@ void MainWindow::on_a_manip_servos_disconnect_triggered() {
  * @brief Event handler for "LIDAR" menu bar action "Connect".
  *        Brings up a dialog box of available serial ACM devices.
  *
- * @note Although the Hokuyo LIDAR is connected via USB, it is listed as ACM.
- *       See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
+ * @note Although the Hokuyo LIDAR is connected via USB, it is listed as
+ * ACM. See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
  */
 void MainWindow::on_a_lidar_connect_triggered() {
     // Display the "Connect to Serial" dialog
@@ -686,8 +719,8 @@ void MainWindow::on_a_lidar_connect_triggered() {
 
     // Only continue if "Connect" was successful
     if (w_serial.result() != QDialog::Accepted) {
-        qWarning()
-            << "[WARN] Failed to connect to serial camera servo controller!";
+        qWarning() << "[WARN] Failed to connect to serial camera servo "
+                      "controller!";
         return;
     }
 
@@ -780,14 +813,14 @@ void MainWindow::on_pb_manip_slow_clicked() {
 
     // TODO: implementation (adapt code below)
     /*
-    camera_setpos_.at(1) = ibox_camera_pan_->GetNum();
-    camera_setpos_.at(2) = ibox_camera_tilt_->GetNum();
-    camera_dir_.at(1) = (camera_setpos_.at(1) > camera_pos_.at(1)) ? 1 :
-                        ((camera_setpos_.at(1) < camera_pos_.at(1)) ? -1 : 0);
-    camera_dir_.at(2) = (camera_setpos_.at(2) > camera_pos_.at(2)) ? 1 :
-                        ((camera_setpos_.at(2) < camera_pos_.at(2)) ? -1 : 0);
-    camera_pos_.at(1) += camera_dir_.at(1) * 90.0 / (60.0 * 60.0);
-    camera_pos_.at(2) += camera_dir_.at(2) * 90.0 / (60.0 * 60.0);
+    manip_setpos_.at(1) = ibox_camera_pan_->GetNum();
+    manip_setpos_.at(2) = ibox_camera_tilt_->GetNum();
+    manip_dir_.at(1) = (manip_setpos_.at(1) > manip_pos_.at(1)) ? 1 :
+                        ((manip_setpos_.at(1) < manip_pos_.at(1)) ? -1 : 0);
+    manip_dir_.at(2) = (manip_setpos_.at(2) > manip_pos_.at(2)) ? 1 :
+                        ((manip_setpos_.at(2) < manip_pos_.at(2)) ? -1 : 0);
+    manip_pos_.at(1) += manip_dir_.at(1) * 90.0 / (60.0 * 60.0);
+    manip_pos_.at(2) += manip_dir_.at(2) * 90.0 / (60.0 * 60.0);
     */
 }
 
@@ -804,9 +837,24 @@ void MainWindow::on_pb_manip_fast_clicked() {
 
     // TODO: implementation (adapt code below)
     /*
-    camera_pos_.at(1) = ibox_camera_pan_->GetNum();
-    camera_pos_.at(2) = ibox_camera_tilt_->GetNum();
+    manip_pos_.at(1) = ibox_camera_pan_->GetNum();
+    manip_pos_.at(2) = ibox_camera_tilt_->GetNum();
     */
+}
+
+/**
+ * @brief Updates camera servo values shown in the UI (from `ser_servo_`
+ * Arduino).
+ */
+void MainWindow::UpdateServoVals() {
+    auto data = ser_servo_->readAll();
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Received data from SerialServo:" << data;
+    }
+
+    qDebug() << "[WARN] Camera servo control not yet implemented!";
+
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
@@ -816,7 +864,7 @@ void MainWindow::on_pb_manip_fast_clicked() {
 /**
  * @brief Enables operation of fluid system pumps.
  */
-void MainWindow::on_pb_pumps_enable_clicked() {
+void MainWindow::on_pb_pump_enable_clicked() {
     if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
@@ -834,12 +882,13 @@ void MainWindow::on_pb_pumps_enable_clicked() {
 /**
  * @brief Disables operation of fluid system pumps.
  *
- * @todo Combine funcitonality with `on_pb_pumps_enable_clicked()` and refactor
- *       the resulting function. Don't forget to rename it to something that
- *       makes more sense, e.g., including the word "toggle". For reference on
- *       changing button text to reflect state, see `on_pb_camera_record_clicked()`.
+ * @todo Combine funcitonality with `on_pb_pump_enable_clicked()` and
+ * refactor the resulting function. Don't forget to rename it to something
+ * that makes more sense, e.g., including the word "toggle". For reference
+ * on changing button text to reflect state, see
+ * `on_pb_camera_record_clicked()`.
  */
-void MainWindow::on_pb_pumps_disable_clicked() {
+void MainWindow::on_pb_pump_disable_clicked() {
     if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
@@ -857,7 +906,7 @@ void MainWindow::on_pb_pumps_disable_clicked() {
 /**
  * @brief Enables fluid system pumps and forces them on.
  */
-void MainWindow::on_pb_pumps_drain_clicked() {
+void MainWindow::on_pb_pump_drain_clicked() {
     if (!ser_water_->isOpen()) {
         qDebug() << "[WARN] SerialWater not connected!";
         return;
@@ -942,20 +991,6 @@ void MainWindow::on_pb_camera_record_clicked() {
         ui_->pb_camera_record->setStyleSheet("color: black;");
         ui_->pb_camera_record->setText("RECORD");
     }
-}
-
-/**
- * @brief Updates camera servo values shown in the UI (from `ser_servo_` Arduino).
- */
-void MainWindow::UpdateServoVals() {
-    auto data = ser_servo_->readAll();
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Received data from SerialServo:" << data;
-    }
-
-    qDebug() << "[WARN] Camera servo control not yet implemented!";
-
-    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------

@@ -7,127 +7,239 @@
 
 #pragma once
 
-#include <QPainter>  // Qt::Gui
-#include <QTimer>    // Qt::Core
-#include <QWidget>   // Qt::Widgets
+#include <QPainter>      // Qt::Gui
+#include <QPainterPath>  // Qt::Gui
+#include <QTimer>        // Qt::Core
+#include <QWidget>       // Qt::Widgets
 
 /**
- * @brief A simple widget to visualize the fluid level of a tank.
+ * @brief A simple widget for visualizing a tank's fluid level.
  *
  * @todo TODO(brice.c.aa): Check for correctness.
  */
 class TankWidget : public QWidget {
+    // NOLINTBEGIN: required by Qt
     Q_OBJECT
-    Q_PROPERTY(double level READ level WRITE setLevel NOTIFY levelChanged)
+    // NOLINTEND
+
+    // Enable animation and styling through Qt's property framework
+    Q_PROPERTY(double level READ level NOTIFY LevelChanged)
 
   public:
+    // Constants for 3L*3 setup (LIBRA-I)
+    /*
+    static constexpr double kFillRate = 0.102;   // L/s
+    static constexpr double kDrainRate = 0.068;  // L/s
+    static constexpr double kCapacity = 99;      // L
+    */
+
+    // Constants for 3L + 6L + 10L setup (LIBRA-II)
+    static constexpr double kFillRate = 0.129;   // L/s
+    static constexpr double kDrainRate = 0.061;  // L/s
+    static constexpr double kCapacity = 19;      // L
+
+    // Constants for 3L + 6L*2 + 10L*2 setup (LIBRA-II)
+    /*
+    static constexpr double kFillRate = ???;   // L/s
+    static constexpr double kDrainRate = ???;  // L/s
+    static constexpr double kCapacity = 35;      // L
+    */
+
+    /**
+     * @brief Standard constructor.
+     */
     explicit TankWidget(QWidget* parent = nullptr)
-        : QWidget(parent), m_level(0.0), m_animationTimer(new QTimer(this)),
-          m_targetLevel(0.0) {
-        setMinimumSize(100, 200);
+        : QWidget(parent), level_(0.0), animation_timer_(new QTimer(this)) {
+        setMinimumSize(100, 100);
         setSizePolicy(QSizePolicy::MinimumExpanding,
                       QSizePolicy::MinimumExpanding);
 
-        // Setup animation timer
-        m_animationTimer->setInterval(16);  // 60 FPS
-        connect(m_animationTimer, &QTimer::timeout, this,
-                &TankWidget::updateAnimation);
+        // Configure animation timer
+        animation_timer_->setInterval(33);  // 30 FPS (1000ms / 30fps ≈ 33ms)
+        connect(animation_timer_, &QTimer::timeout,   // Every timer timeout...
+                this, &TankWidget::UpdateAnimation);  // ... trigger animation
     }
 
+    /**
+     * @brief Getter for current fluid level.
+     *
+     * @return Current fluid level as a fraction in the range [0.0, 1.0].
+     */
     double level() const {
-        return m_level;
+        return level_;
+    }
+
+    /**
+     * @brief Getter for current fluid volume.
+     *
+     * @return Current fluid volume (in L).
+     */
+    double volume() const {
+        return level_ * kCapacity;
+    }
+
+    /**
+     * @brief Setter for overriding the current fluid level (WARNING: see note).
+     *
+     * @param new_level A fraction in the range [0.0, 1.0]
+     *
+     * @note ONLY USE IF INACCURACIES ARE NOTICED IN REAL TIME!!!
+     */
+    void OverrideLevel(double new_level) {
+        // Validate input
+        new_level = qBound(0.0, new_level, 1.0);
+
+        // Override current level
+        level_ = new_level;
+        update();
     }
 
   public slots:
 
-    void setLevel(double newLevel) {
-        newLevel = qBound(0.0, newLevel, 1.0);
-        if (qFuzzyCompare(m_targetLevel, newLevel))
-            return;
+    /**
+     * @brief Start filling the tank.
+     *
+     * @note Stops filling when full or upon StopFlow().
+     */
+    void Fill() {
+        flow_mode_ = FlowMode::Filling;
+        if (!animation_timer_->isActive()) {
+            animation_timer_->start();
+        }
+    }
 
-        m_targetLevel = newLevel;
-        if (!m_animationTimer->isActive())
-            m_animationTimer->start();
+    /**
+     * @brief Start draining the tank continuously.
+     *
+     * @note Stops filling when empty or upon StopFlow().
+     */
+    void Drain() {
+        flow_mode_ = FlowMode::Draining;
+        if (!animation_timer_->isActive()) {
+            animation_timer_->start();
+        }
+    }
 
-        emit levelChanged(m_level);
+    /**
+     * @brief Stop any ongoing fill/drain operation.
+     */
+    void Stop() {
+        flow_mode_ = FlowMode::Stopped;
+        animation_timer_->stop();
     }
 
   signals:
-    void levelChanged(double level);
+    void LevelChanged(double level);
+    void TankFull();
+    void TankEmpty();
 
   protected:
+
+    /**
+     * @brief Override `paintEvent()` to handle this widget's custom drawing.
+     */
     void paintEvent(QPaintEvent*) override {
         QPainter painter(this);
         painter.setRenderHint(QPainter::Antialiasing);
 
-        // Draw tank outline
+        // Common constants
         const int margin = 10;
-        const int borderWidth = 4;
-        QRectF tankRect = rect().adjusted(margin, margin, -margin, -margin);
+        const int border_thickness = 2;
+        const int corner_radius = 10;
 
-        // Draw tank border
-        painter.setPen(QPen(Qt::black, borderWidth));
+        // Define and draw tank
+        QRectF tank = rect().adjusted(margin, margin, -margin, -margin);
+
+        painter.setPen(QPen(Qt::darkGray, border_thickness));
         painter.setBrush(Qt::white);
-        painter.drawRoundedRect(tankRect, 10, 10);
+        painter.drawRoundedRect(tank, corner_radius, corner_radius);
 
-        // Draw fluid
-        const double fluidHeight = tankRect.height() * m_level;
-        QRectF fluidRect = tankRect.adjusted(borderWidth,
-                                             tankRect.height() - fluidHeight,
-                                             -borderWidth, -borderWidth);
+        // Define and draw fluid
+        const double fluid_height = tank.height() * level_;
+        const double fluid_top = tank.bottom() - fluid_height;
 
-        // Create gradient for fluid
-        QLinearGradient gradient(fluidRect.topLeft(), fluidRect.topRight());
+        QRectF fluid = tank.adjusted(border_thickness,
+                                     tank.height() - fluid_height,
+                                     //- (border_thickness * 4),
+                                     -border_thickness, -border_thickness);
+
+        // - Transparent blue gradient to symbolize water
+        QLinearGradient gradient(fluid.topLeft(), fluid.topRight());
         gradient.setColorAt(0, QColor(0, 120, 255, 200));
         gradient.setColorAt(1, QColor(0, 160, 255, 200));
 
         painter.setPen(Qt::NoPen);
         painter.setBrush(gradient);
-        painter.drawRect(fluidRect);
+        painter.drawRoundedRect(fluid, corner_radius, corner_radius);
 
-        // Draw level percentage
+        // Draw level percentage (middle of tank)
         painter.setPen(Qt::black);
         QFont font = painter.font();
         font.setPixelSize(16);
         painter.setFont(font);
-        painter.drawText(tankRect, Qt::AlignCenter,
-                         QString("%1%").arg(qRound(m_level * 100)));
 
-        // Draw level markers
-        const int markerWidth = 20;
-        const int numMarkers = 10;
-        painter.setPen(QPen(Qt::black, 2));
-        for (int i = 0; i <= numMarkers; ++i) {
-            double y = tankRect.top() + (tankRect.height() * i / numMarkers);
-            painter.drawLine(tankRect.left() - margin / 2, y,
-                             tankRect.left() + markerWidth, y);
+        painter.drawText(tank, Qt::AlignCenter,
+                         QString("%1%").arg(qRound(level_ * 100)));
 
-            // Draw marker text
-            if (i % 2 == 0) {  // Draw every other marker
-                painter.drawText(QRectF(tankRect.left() - margin * 3,
-                                        y - margin, margin * 2, margin * 2),
-                                 Qt::AlignRight | Qt::AlignVCenter,
-                                 QString("%1%").arg(100 - i * 10));
-            }
+        // Draw level markers (left of tank)
+        const int marker_width = 10;
+        const int num_markers = 5;
+        painter.setPen(QPen(Qt::black, 1));
+
+        for (int i = 0; i <= num_markers; ++i) {
+            double y = tank.top() + (tank.height() * i / num_markers);
+            painter.drawLine(tank.left() - margin / 2, y,
+                             tank.left() + marker_width, y);
         }
     }
 
   private slots:
 
-    void updateAnimation() {
-        const double step = 0.02;  // Animation speed
-        if (m_level < m_targetLevel) {
-            m_level = qMin(m_level + step, m_targetLevel);
-        } else if (m_level > m_targetLevel) {
-            m_level = qMax(m_level - step, m_targetLevel);
-        } else {
-            m_animationTimer->stop();
+    /**
+     * @brief Controls the animated filling/draining of the tank.
+     */
+    void UpdateAnimation() {
+        double old_level = level_;
+        const double time_step = animation_timer_->interval()
+                                 / 1000.0;  // convert ms to s
+
+        // Calculate step size based on flow rate and frame time
+        switch (flow_mode_) {
+            case FlowMode::Filling:
+                level_ = qMin(level_ + (kFillRate / kCapacity) * time_step, 1.0);
+
+                // Check if we've hit the upper limit
+                if (qFuzzyCompare(level_, 1.0)) {
+                    Stop();
+                    emit TankFull();
+                }
+                break;
+
+            case FlowMode::Draining:
+                level_ = qMax(level_ - (kDrainRate / kCapacity) * time_step,
+                              0.0);
+
+                // Check if we've hit the lower limit
+                if (qFuzzyCompare(level_, 0.0)) {
+                    Stop();
+                    emit TankEmpty();
+                }
+                break;
+        }
+
+        if (!qFuzzyCompare(old_level, level_)) {
+            emit LevelChanged(level_);
         }
         update();
     }
 
   private:
-    double m_level;
-    double m_targetLevel;
-    QTimer* m_animationTimer;
+    /**
+     * @brief Fluid system state.
+     */
+    enum class FlowMode { Stopped = 0, Filling, Draining };
+
+    double level_{0.0};
+    FlowMode flow_mode_{FlowMode::Stopped};
+    QTimer* animation_timer_;
 };
