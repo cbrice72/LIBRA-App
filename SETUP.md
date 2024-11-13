@@ -135,8 +135,8 @@ If you get a permissions error, it hasn't taken effect yet.
 
 The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
 
-If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](external/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf).
-All driver installation files are located in `external/epos-6.8.1.0/driver/`.
+If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf).
+All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
 
 ## Project Software
 
@@ -207,10 +207,10 @@ See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt
 
 ### *Maxon EPOS Library (system-wide install)*
 
-The necessary header file is already included in this project (see `external/epos-6.8.1.0/`).
+The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`).
 However, for ease of compilation (specifically, using the `-lEposCmd` flag), follow the instructions below to install the EPOS library files on your system.
 
-1. Open a terminal in the `external/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice.
+1. Open a terminal in the `thirdparty/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice.
 Navigate to the extracted directory.
     ```bash
     unzip EPOS-Linux-Library-En.zip -d ~/Downloads
@@ -258,10 +258,10 @@ If you're prompted to "unlock a keyring" (by entering your Linux password) every
     session optional        pam_gnome_keyring.so auto_start
     ```
 
-### **Hokuyo URG (LIDAR) Windows Driver**
+### *Hokuyo URG (LIDAR) Windows Driver*
 
-To test the sample URG library apps (available [here](https://sourceforge.net/projects/urgnetwork/files/urg_library/)), which are Windows-only, you'll need to install the URG driver for Windows. The `URG_USB_Driver.inf` setup file can be found in `external/urg-cpp-1.2.7/driver/`.
+To test the sample URG library apps (available [here](https://sourceforge.net/projects/urgnetwork/files/urg_library/)), which are Windows-only, you'll need to install the URG driver for Windows. The `URG_USB_Driver.inf` setup file can be found in `thirdparty/urg-cpp-1.2.7/driver/`.
 
 To install, simply right-click the file in Windows and select "Install".
-Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](external/urg-cpp-1.2.7/driver/README.md) for instructions.
+Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](thirdparty/urg-cpp-1.2.7/driver/README.md) for instructions.
 For further troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).

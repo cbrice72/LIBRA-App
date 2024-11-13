@@ -7,7 +7,7 @@
 ################################################################################
 
 # Specify the HEBI library directory
-set(HEBI_DIR ${CMAKE_SOURCE_DIR}/external/hebi-cpp-3.7.0/hebi-cpp)
+set(HEBI_DIR ${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.7.0/hebi-cpp)
 
 # Collect all HEBI source files (see comment in `qt_add_library` call below)
 file(GLOB HEBI_SOURCE_FILES "${HEBI_DIR}/src/*.cpp")

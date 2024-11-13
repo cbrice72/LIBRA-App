@@ -16,7 +16,7 @@ qt_add_library(
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
-set(MAXON_DIR ${CMAKE_SOURCE_DIR}/external/epos-6.8.1.0)
+set(MAXON_DIR ${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0)
 
 target_include_directories(
     util

@@ -119,12 +119,12 @@ bool HebiThread::Connect() {
         return false;
     }
 
-    if (!command_->readSafetyParameters("params/safety.xml")) {
+    if (!command_->readSafetyParameters("shared/hebi/safety.xml")) {
         std::cerr << "[ERROR] HEBI - Failed to load safety parameters!\n";
         return false;
     }
 
-    if (!command_->readGains("params/gain.xml")) {
+    if (!command_->readGains("shared/hebi/gain.xml")) {
         std::cerr << "[ERROR] HEBI - Failed to load gain parameters!\n";
         return false;
     }

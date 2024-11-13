@@ -84,7 +84,7 @@ qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCES})
 add_custom_command(
     TARGET LIBRA-App-v2
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/params
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shared
             ${CMAKE_INSTALL_BINDIR}/gains
 )
 

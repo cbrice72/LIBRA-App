@@ -6,7 +6,7 @@
 ################################################################################
 
 # Specify the Hokuyo URG library directory
-set(URG_DIR ${CMAKE_SOURCE_DIR}/external/urg-1.2.7)
+set(URG_DIR ${CMAKE_SOURCE_DIR}/thirdparty/urg-1.2.7)
 
 # Create and configure the module
 qt_add_library(

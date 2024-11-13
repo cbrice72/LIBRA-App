@@ -191,7 +191,7 @@ adobe/*
 **/docs/*
 
 # Don't exclude the 3rd-party libraries
-!external/**
+!thirdparty/**
 # ... but do exclude any symlinks in hebi/lib/, as these are created at build
 **/hebi/lib/
 !/hebi/lib/libhebi.so.2.9
