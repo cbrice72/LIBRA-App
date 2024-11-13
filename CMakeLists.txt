@@ -101,7 +101,7 @@ target_link_libraries(
     # Project
     # ~~~
     # TODO(brice.c.aa): add EPOS actuator
-    PRIVATE libra_hebi libra_lidar
+    PRIVATE libra_hebi lidar
     # ~~~
     # Qt
     PRIVATE Qt6::Core Qt6::Multimedia Qt6::MultimediaWidgets Qt6::SerialPort Qt6::Widgets

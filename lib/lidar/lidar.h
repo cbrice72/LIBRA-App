@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   libra_lidar.h
- * @brief  Control code for LIBRA manipulator Hokuyo LIDAR; header file.
+ * @file   lidar.h
+ * @brief  Control code for a Hokuyo LIDAR; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -19,10 +19,10 @@
 /**
  * @brief TODO: documentation
  */
-class LibraLidar {
+class Lidar {
   public:
-    explicit LibraLidar(const std::string& device_name);
-    ~LibraLidar();
+    explicit Lidar(const std::string& device_name);
+    ~Lidar();
 
     // --- Sensor Commands ---
 

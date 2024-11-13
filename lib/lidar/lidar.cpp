@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file   libra_lidar.cpp
- * @brief  Control code for LIBRA manipulator Hokuyo LIDAR; implementation file.
+ * @file   lidar.cpp
+ * @brief  Control code for a Hokuyo LIDAR; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
 
 // Related Header
-#include "libra_lidar.h"
+#include "lidar.h"
 
 // C++ Standard Library Headers
 #include <chrono>
@@ -30,7 +30,7 @@
  *
  * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
  */
-LibraLidar::LibraLidar(const std::string& device_name) {
+Lidar::Lidar(const std::string& device_name) {
     // --- Connection ---
 
     if (device_name.empty()) {
@@ -84,7 +84,7 @@ LibraLidar::LibraLidar(const std::string& device_name) {
 /**
  * @brief Standard destructor.
  */
-LibraLidar::~LibraLidar() {
+Lidar::~Lidar() {
     // Gracefully close sensor connection
     if (urg_.is_open()) {
         urg_.close();
@@ -98,7 +98,7 @@ LibraLidar::~LibraLidar() {
 /**
  * @brief Prints current PC and LIDAR timestamps (in ms), for comparison
  */
-void LibraLidar::PrintTimestamp() {
+void Lidar::PrintTimestamp() {
     urg_.start_time_stamp_mode();
 
     auto pc_time_stamp = std::chrono::time_point_cast<std::chrono::milliseconds>(
@@ -124,7 +124,7 @@ void LibraLidar::PrintTimestamp() {
  *
  * @return Newline-delimited string of metadata in the format "Category: Value"
  */
-std::string LibraLidar::GetMetadata() {
+std::string Lidar::GetMetadata() {
     std::stringstream ret;
 
     if (urg_.is_open()) {
@@ -147,7 +147,7 @@ std::string LibraLidar::GetMetadata() {
  *       In this case, `urg.get_distance()` only accepts a reference to a
  *       vector of Windows `long` (Linux alternative would be `uint64_t`).
  */
-std::vector<long> LibraLidar::GetData() {
+std::vector<long> Lidar::GetData() {
     std::vector<long> data;
     long timestamp;
 
@@ -165,8 +165,8 @@ std::vector<long> LibraLidar::GetData() {
  *
  * @param true to enable, false to disable
  *
- * @note This setting only affects `LibraLidar` functions.
+ * @note This setting only affects `Lidar` functions.
  */
-void LibraLidar::SetDebugMode(bool enabled) {
+void Lidar::SetDebugMode(bool enabled) {
     debug_mode_ = enabled;
 }

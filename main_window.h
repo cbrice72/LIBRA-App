@@ -16,7 +16,7 @@
 // Project Headers
 #include "camera_manager.h"
 #include "libra_hebi.h"
-#include "libra_lidar.h"  // unused
+#include "lidar.h"  // unused
 
 #pragma once
 
@@ -189,7 +189,7 @@ class MainWindow : public QMainWindow {
     std::shared_ptr<LibraHebi> libra_arm_;
     std::shared_ptr<QSerialPort> ser_water_;
     std::shared_ptr<QSerialPort> ser_servo_;
-    std::shared_ptr<LibraLidar> lidar_;  // unused
+    std::shared_ptr<Lidar> lidar_;  // unused
 
     std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;

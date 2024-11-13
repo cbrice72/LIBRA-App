@@ -10,19 +10,19 @@ set(URG_DIR ${CMAKE_SOURCE_DIR}/thirdparty/urg-1.2.7)
 
 # Create and configure the module
 qt_add_library(
-    libra_lidar
+    lidar
     STATIC
     # Header
-    libra_lidar.h
+    lidar.h
     # Source
-    libra_lidar.cpp
+    lidar.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
 set(URG_INCLUDE_DIRS "${URG_DIR}/include/c" "${URG_DIR}/include/cpp")
 
 target_include_directories(
-    libra_lidar
+    lidar
     # Hokuyo URG
     PUBLIC ${URG_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
@@ -38,7 +38,7 @@ set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_LIB})
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    libra_lidar
+    lidar
     # Hokuyo URG
     PRIVATE urg_cpp # -lurg_cpp
 )

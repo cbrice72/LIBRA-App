@@ -7,5 +7,5 @@
 
 # Add module subdirectories
 add_subdirectory(libra_hebi)
-add_subdirectory(libra_lidar)
+add_subdirectory(lidar)
 #add_subdirectory(util)  # TODO(brice.c.aa): add EPOS actuator

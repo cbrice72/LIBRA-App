@@ -762,7 +762,7 @@ void MainWindow::on_a_lidar_connect_triggered() {
     }
 
     // Open a connection to the Hokuyo LIDAR
-    lidar_ = std::make_shared<LibraLidar>(w_serial.GetDeviceName());
+    lidar_ = std::make_shared<Lidar>(w_serial.GetDeviceName());
 }
 
 /**
@@ -770,7 +770,7 @@ void MainWindow::on_a_lidar_connect_triggered() {
  *        Terminates the connection to the LIDAR, if it exists.
  */
 void MainWindow::on_a_lidar_disconnect_triggered() {
-    // Clear the LibraLidar object
+    // Clear the Lidar object
     lidar_.reset();
 
     // Reflect changes in UI
