@@ -73,6 +73,8 @@ add_custom_command(
 # Add all libraries directly used by this project to the include path
 target_include_directories(
     LIBRA-App-v2
+    # Project
+    PRIVATE ${CMAKE_SOURCE_DIR}/src
     # Boost
     PRIVATE ${Boost_INCLUDE_DIRS}
     # Maxon
