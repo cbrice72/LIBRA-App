@@ -12,8 +12,8 @@
 //   (none)
 
 // Other Library Headers
-#include <QDateTime>  // Qt
-#include <QDir>       // Qt
+#include <QDateTime>  // Qt::Core
+#include <QDir>       // Qt::Core
 
 // Project Headers
 //   (none)

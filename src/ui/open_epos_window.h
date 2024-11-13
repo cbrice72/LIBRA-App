@@ -11,7 +11,7 @@
 //   (none)
 
 // Other Library Headers
-#include <QDialog>  // Qt
+#include <QDialog>  // Qt::Widgets
 
 // Project Headers
 //   (none)

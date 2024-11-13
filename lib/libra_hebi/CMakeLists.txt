@@ -42,7 +42,7 @@ target_include_directories(
 
 # Import the HEBI library packaged with this project
 # ~~~
-# Note: if the versioned library in the set_target_properties() call below is
+# NOTE: if the versioned library in the set_target_properties() call below is
 # changed (e.g., updated), make sure to update the .gitignore entry too!
 # ~~~
 add_library(hebi SHARED IMPORTED GLOBAL)

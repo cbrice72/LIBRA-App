@@ -50,28 +50,10 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 
 # Add project subdirectories
 add_subdirectory(lib)
-
-# Specify project files
-set(PROJECT_SOURCES
-    # Header
-    main_window.h
-    serial_dialog.h
-    camera_manager.h
-    # Source
-    main.cpp
-    main_window.cpp
-    serial_dialog.cpp
-    camera_manager.cpp
-    # Qt
-    # TODO(brice.c.aa): no plans to use LIBRA-I version, so archive it
-    #main_window_libra-i.ui
-    main_window_libra-ii.ui
-    serial_dialog.ui
-    resources.qrc
-)
+add_subdirectory(src)
 
 # Add target executable
-qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCES})
+qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SRC})
 
 # ~~~
 # Define target properties for Android with Qt 6 as:
@@ -88,25 +70,35 @@ add_custom_command(
             ${CMAKE_INSTALL_BINDIR}/gains
 )
 
-# Add all 3rd-party libraries packaged with this project to the include path
+# Add all libraries directly used by this project to the include path
 target_include_directories(
     LIBRA-App-v2
     # Boost
     PRIVATE ${Boost_INCLUDE_DIRS}
+    # Maxon
+    PRIVATE ${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0/include
 )
 
 # Tell the linker which libraries to link against
 target_link_libraries(
     LIBRA-App-v2
     # Project
-    # ~~~
-    # TODO(brice.c.aa): add EPOS actuator
-    PRIVATE libra_hebi lidar
-    # ~~~
+    PRIVATE camera_manager libra_hebi lidar util
     # Qt
-    PRIVATE Qt6::Core Qt6::Multimedia Qt6::MultimediaWidgets Qt6::SerialPort Qt6::Widgets
-    # Other
-    PRIVATE udev
+    # ~~~
+    # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
+    # the main executable, even though they're only needed by camera_manager.
+    # Why does this happen? I don't know. I'm tired.
+    # ~~~
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core
+    PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia
+    PRIVATE Qt${QT_VERSION_MAJOR}::MultimediaWidgets
+    PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort
+    PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
+    # Maxon
+    PRIVATE -lEposCmd
+    # Linux
+    PRIVATE udev  # TODO(brice.c.aa): is this necessary?
 )
 
 # Specify platform-specific properties

@@ -89,7 +89,7 @@
            <property name="sizeConstraint">
             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
-           <item alignment="">
+           <item>
             <widget class="QPushButton" name="pb_pumps_enable">
              <property name="enabled">
               <bool>false</bool>
@@ -120,7 +120,7 @@
              </property>
             </widget>
            </item>
-           <item alignment="">
+           <item>
             <widget class="QPushButton" name="pb_pumps_disable">
              <property name="enabled">
               <bool>false</bool>
@@ -148,7 +148,7 @@
              </property>
             </widget>
            </item>
-           <item alignment="">
+           <item>
             <widget class="QPushButton" name="pb_pumps_drain">
              <property name="enabled">
               <bool>false</bool>
@@ -536,7 +536,10 @@
          </font>
         </property>
         <property name="text">
-         <string>  LIBRA-II App</string>
+         <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;LIBRA-II&lt;br/&gt;App&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+        </property>
+        <property name="margin">
+         <number>20</number>
         </property>
        </widget>
       </item>

@@ -9,9 +9,9 @@
 #include <fstream>
 
 // Other Library Headers
-#include <QMainWindow>  // Qt
-#include <QSerialPort>  // Qt
-#include <QThread>      // Qt
+#include <QMainWindow>  // Qt::Widgets
+#include <QSerialPort>  // Qt::SerialPort
+#include <QThread>      // Qt::Core
 
 // Project Headers
 #include "camera_manager.h"

@@ -1,0 +1,13 @@
+################################################################################
+# @file   CMakeLists.txt
+# @brief  Project widgets CMakeLists file.
+#
+# @author brice.c.aa
+################################################################################
+
+# Specify subdirectory files for use by parent CMakeLists.txt
+set(WIDGET_SRC
+    # Fluid Tank Visualization
+    ${CMAKE_CURRENT_SOURCE_DIR}/tank_widget.h
+    PARENT_SCOPE
+)

@@ -14,7 +14,7 @@
 #include <iostream>
 
 // Other Library Headers
-#include <QWidget>  // Qt
+#include <QWidget>  // Qt::Widgets
 
 // Project Headers
 //   (none)

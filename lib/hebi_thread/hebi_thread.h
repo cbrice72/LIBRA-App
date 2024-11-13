@@ -16,7 +16,7 @@
 #include <group_feedback.hpp>  // HEBI
 #include <hebi.h>              // HEBI
 #include <lookup.hpp>          // HEBI
-#include <QThread>             // Qt
+#include <QThread>             // Qt::Core
 #include <trajectory.hpp>      // HEBI
 
 // Project Headers

@@ -12,10 +12,10 @@
 //   (none)
 
 // Other Library Headers
-#include <QApplication>  // Qt
+#include <QApplication>  // Qt::Widgets
 
 // Project Headers
-#include "main_window.h"
+#include "ui/main_window.h"
 
 /**
  * @brief The designated start of the program.

@@ -9,8 +9,8 @@
 #include <unordered_map>
 
 // Other Library Headers
-#include <QtMultimedia>  // Qt
-#include <QVideoWidget>  // Qt
+#include <QtMultimedia>  // Qt::Multimedia
+#include <QVideoWidget>  // Qt::MultimediaWidgets
 
 // Project Headers
 //   (none)
