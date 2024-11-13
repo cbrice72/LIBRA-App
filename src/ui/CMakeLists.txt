@@ -12,7 +12,7 @@ set(UI_SRC
     # Main Window
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/main_window_libra-ii.ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/main_window_libra.ui
     # Serial (USB) Selection Dialog
     ${CMAKE_CURRENT_SOURCE_DIR}/serial_dialog.h
     ${CMAKE_CURRENT_SOURCE_DIR}/serial_dialog.cpp
