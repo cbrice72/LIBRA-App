@@ -61,7 +61,7 @@
         <layout class="QGridLayout" name="gridLayout">
          <item row="1" column="0">
           <layout class="QHBoxLayout" name="hl_manip_servo_control">
-           <item alignment="Qt::AlignmentFlag::Qt::AlignmentFlag::AlignVCenter">
+           <item alignment="Qt::AlignmentFlag::AlignVCenter">
             <widget class="QPushButton" name="pb_manip_slow">
              <property name="enabled">
               <bool>false</bool>
@@ -89,7 +89,7 @@
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignmentFlag::Qt::AlignmentFlag::AlignVCenter">
+           <item alignment="Qt::AlignmentFlag::AlignVCenter">
             <widget class="QPushButton" name="pb_manip_fast">
              <property name="enabled">
               <bool>false</bool>
@@ -630,7 +630,7 @@
            <property name="sizeConstraint">
             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
-           <item>
+           <item alignment="">
             <widget class="QPushButton" name="pb_pumps_enable">
              <property name="enabled">
               <bool>false</bool>
@@ -661,7 +661,7 @@
              </property>
             </widget>
            </item>
-           <item>
+           <item alignment="">
             <widget class="QPushButton" name="pb_pumps_disable">
              <property name="enabled">
               <bool>false</bool>
@@ -689,7 +689,7 @@
              </property>
             </widget>
            </item>
-           <item>
+           <item alignment="">
             <widget class="QPushButton" name="pb_pumps_drain">
              <property name="enabled">
               <bool>false</bool>
@@ -721,23 +721,8 @@
          </item>
          <item row="0" column="0">
           <layout class="QGridLayout" name="gl_pump_status">
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_pump_a">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>A (L?)</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
            <item row="1" column="0">
-            <widget class="QLabel" name="l_pump_a_status">
+            <widget class="QLabel" name="l_pump_status">
              <property name="text">
               <string>...</string>
              </property>
@@ -746,25 +731,15 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1">
-            <widget class="QLabel" name="l_pump_b_status">
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QLabel" name="static_l_pump_b">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_status">
              <property name="font">
               <font>
                <bold>true</bold>
               </font>
              </property>
              <property name="text">
-              <string>B (R?)</string>
+              <string>Status</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -812,7 +787,7 @@
           </widget>
          </item>
          <item row="0" column="3">
-          <widget class="QLabel" name="l_target">
+          <widget class="QLabel" name="static_l_target">
            <property name="text">
             <string>Target Pos.</string>
            </property>
@@ -1246,14 +1221,14 @@
           </widget>
          </item>
          <item row="0" column="5">
-          <widget class="QLabel" name="l_torque">
+          <widget class="QLabel" name="static_l_torque">
            <property name="text">
             <string>Actual Torque</string>
            </property>
           </widget>
          </item>
          <item row="0" column="4">
-          <widget class="QLabel" name="l_actual">
+          <widget class="QLabel" name="static_l_actual">
            <property name="text">
             <string>Actual Pos.</string>
            </property>
@@ -1459,7 +1434,7 @@
          </item>
          <item row="1" column="0">
           <layout class="QHBoxLayout" name="horizontalLayout">
-           <item alignment="Qt::AlignmentFlag::Qt::AlignmentFlag::AlignVCenter">
+           <item alignment="Qt::AlignmentFlag::AlignVCenter">
             <widget class="QPushButton" name="pb_camera_capture">
              <property name="enabled">
               <bool>false</bool>
@@ -1487,7 +1462,7 @@
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignmentFlag::Qt::AlignmentFlag::AlignVCenter">
+           <item alignment="Qt::AlignmentFlag::AlignVCenter">
             <widget class="QPushButton" name="pb_camera_record">
              <property name="enabled">
               <bool>false</bool>

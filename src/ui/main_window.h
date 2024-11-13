@@ -131,10 +131,10 @@ class MainWindow : public QMainWindow {
     void on_a_pumps_connect_triggered();
     void on_a_pumps_disconnect_triggered();
 
-    // Camera Menu
+    // Manipulator Menu
 
-    void on_a_camera_servos_connect_triggered();
-    void on_a_camera_servos_disconnect_triggered();
+    void on_a_manip_servos_connect_triggered();
+    void on_a_manip_servos_disconnect_triggered();
 
     // LIDAR Menu
 
@@ -145,10 +145,15 @@ class MainWindow : public QMainWindow {
 
     // --- Main Window ---
 
-    // Input
+    // Arm
 
     void on_pb_arm_start_clicked();
     void on_pb_arm_stop_clicked();
+
+    // Manipulator
+
+    void on_pb_manip_slow_clicked();
+    void on_pb_manip_fast_clicked();
 
     // Pumps
 
@@ -157,9 +162,6 @@ class MainWindow : public QMainWindow {
     void on_pb_pumps_drain_clicked();
 
     // Camera
-
-    void on_pb_camera_slow_clicked();
-    void on_pb_camera_fast_clicked();
 
     void on_cb_camera_id_currentTextChanged(const QString& sel);
     void on_pb_camera_capture_clicked();
@@ -177,7 +179,7 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions ---
 
     void UpdatePumpVals();
-    void UpdateCameraVals();
+    void UpdateServoVals();
 
     // --- Data Members ---
 
