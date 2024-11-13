@@ -73,7 +73,7 @@ bool SerialDialog::isRunningOnWSL() {
  * @brief Searches the Linux `tty` serial list and returns all devices that
  *        match `device_type_`.
  *
- * @return List of available serial devices.
+ * @return List of available serial devices
  */
 QStringList SerialDialog::GetDeviceList() {
     QStringList device_list;

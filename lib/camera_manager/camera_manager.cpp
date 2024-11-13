@@ -140,7 +140,7 @@ namespace {
 /**
  * @brief Provides a filename-safe string of the current date and time.
  *
- * @return std::string Formatted as "yyyy-MM-ddTHH-mm-ss"
+ * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
  */
 std::string GetDateTimeStr() {
     auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
@@ -199,7 +199,7 @@ void CameraManager::Capture() {
 /**
  * @brief Toggles video recording of the current feed.
  *
- * @return true if recording is active, false otherwise
+ * @return true if recording is active; false otherwise
  */
 bool CameraManager::Record() {
     if (!is_recording_) {

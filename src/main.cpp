@@ -22,7 +22,7 @@
  *
  * @param argc Argument count
  * @param argv Argument vector
- * @return Return `exit()` code after the application exits
+ * @return The `exit()` code after the application exits
  */
 int main(int argc, char* argv[]) {
     // Initialize the app
