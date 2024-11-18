@@ -37,7 +37,7 @@ class MainThread : public QThread {
     // NOLINTEND
 
   public:
-    MainThread(std::shared_ptr<LibraHebi> libra_arm,
+    MainThread(std::shared_ptr<LibraHebi> libra_hebi_,
                std::shared_ptr<QSerialPort> ser_water,
                std::shared_ptr<QSerialPort> ser_servo);
     ~MainThread();

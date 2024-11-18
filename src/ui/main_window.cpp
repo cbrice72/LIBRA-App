@@ -290,18 +290,17 @@ void MainThread::run() {
         /* ----- START ----- */
 
         // Retrieve HEBI actuator data
-        for (auto i = 0; i < kHebiNodeCount; i++) {
-            auto joint = static_cast<LibraHebi::Joint>(i);
-            arm_current_.at(i).at(0) = libra_hebi_->GetCommandPosition(joint);
-            arm_current_.at(i).at(1) = libra_hebi_->GetFeedbackPosition(joint);
-            arm_current_.at(i).at(2) = libra_hebi_->GetFeedbackEffort(joint);
-        }
+        arm_current_.at(0) = libra_hebi_->GetCommandPosition(
+            LibraHebi::Joint::kPitch);
+        arm_current_.at(1) = libra_hebi_->GetFeedbackPosition(
+            LibraHebi::Joint::kPitch);
+        arm_current_.at(2) = libra_hebi_->GetFeedbackEffort(
+            LibraHebi::Joint::kPitch);
 
         /* ----- MANIPULATOR ----- */
 
         // Keep manipulator level by negating arm pitch angle
-        const double arm_pitch = libra_hebi_->GetCommandPosition(
-            LibraHebi::Joint::kPitch);
+        const double arm_pitch = arm_current_.at(0);
         if (arm_pitch <= 30) {
             manip_pos_.at(0) = (arm_pitch <= 0) ? -arm_pitch : 0;
         } else {
@@ -413,10 +412,7 @@ void MainThread::run() {
 
             // Actuator info
             for (auto i = 0; i < kHebiFeedbackCount; i++) {
-                for (auto j = 0; j < kHebiNodeCount; j++) {
-                    continuous_log_ << arm_current_.at(j).at(i) << ",";
-                }
-                continuous_log_ << ",";
+                continuous_log_ << arm_current_.at(i) << ",,";
             }
 
             // Fluid system info
@@ -780,13 +776,13 @@ void MainWindow::on_a_lidar_about_triggered() {
 void MainWindow::on_pb_arm_start_clicked() {
     std::array<double, 2> target{0};
 
-    if (libra_yaw_ != nullptr) {
+    if (libra_hebi_ != nullptr) {
         target.at(0) = ui_->sb_arm_yaw->text().toDouble();
     } else {
         qDebug() << "[WARN] EPOS (Maxon) actuator not connected!";
     }
 
-    if (libra_yaw_ != nullptr) {
+    if (libra_hebi_ != nullptr) {
         target.at(1) = ui_->sb_arm_pitch->text().toDouble();
     } else {
         qDebug() << "[WARN] HEBI actuator not connected!";
@@ -1019,10 +1015,7 @@ void MainWindow::on_pb_logshot_clicked() {
     const std::string dts = GetTimestampStr();
     snapshot_log_ << dts << ",,";
     for (auto i = 0; i < kHebiFeedbackCount; i++) {
-        for (auto j = 0; j < kHebiNodeCount; j++) {
-            snapshot_log_ << arm_current_.at(j).at(i) << ",";
-        }
-        snapshot_log_ << ",";
+        snapshot_log_ << arm_current_.at(i) << ",,";
     }
     snapshot_log_ << ibox_voltage_->GetNum() << ","
                   << ibox_current_->GetNum() << "\n";
