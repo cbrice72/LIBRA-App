@@ -52,8 +52,7 @@ constexpr int kCameraNodeCount = 3;  // total number of camera servos
  */
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow),
-      ser_water_(std::make_shared<QSerialPort>(this)),
-      ser_servo_(std::make_shared<QSerialPort>(this)) {
+      ser_water_(new QSerialPort(this)), ser_servo_(new QSerialPort(this)) {
     ui_->setupUi(this);
 
     // Set UI elements
@@ -156,8 +155,7 @@ MainWindow::~MainWindow() {
  * @brief Standard constructor.
  */
 MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
-                       std::shared_ptr<QSerialPort> ser_water,
-                       std::shared_ptr<QSerialPort> ser_servo)
+                       QSerialPort* ser_water, QSerialPort* ser_servo)
     : libra_hebi_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
 
 /**
@@ -170,6 +168,14 @@ MainThread::~MainThread() {
     }
     if (snapshot_log_.is_open()) {
         snapshot_log_.close();
+    }
+
+    // Close any open serial connections to the arduinos
+    if (ser_water_->isOpen()) {
+        ser_water_->close();
+    }
+    if (ser_servo_->isOpen()) {
+        ser_servo_->close();
     }
 }
 
@@ -583,14 +589,14 @@ void MainWindow::on_a_pump_connect_triggered() {
     ser_water_->setFlowControl(QSerialPort::NoFlowControl);
 
     // Only continue if "open" was successful
-    if (!ser_water_->open(QIODevice::ReadOnly)) {
+    if (!ser_water_->open(QIODevice::ReadWrite)) {
         qDebug() << "[ERROR] Failed to open port: COM3!";
-        ser_water_.reset();
+        QMessageBox::critical(this, tr("Error"), ser_water_->errorString());
         return;
     }
 
     // Ensure data gets processed when it's made available
-    connect(ser_water_.get(), &QSerialPort::readyRead, this,
+    connect(ser_water_, &QSerialPort::readyRead, this,
             &MainWindow::UpdatePumpVals);
 
     // Reflect changes in UI
@@ -607,7 +613,9 @@ void MainWindow::on_a_pump_connect_triggered() {
  */
 void MainWindow::on_a_pump_disconnect_triggered() {
     // Clear the Serial object
-    ser_water_.reset();
+    if (ser_water_->isOpen()) {
+        ser_water_->close();
+    }
 
     // Reflect changes in UI
     ui_->a_pump_connect->setEnabled(true);
@@ -673,14 +681,14 @@ void MainWindow::on_a_manip_servos_connect_triggered() {
     ser_servo_->setFlowControl(QSerialPort::NoFlowControl);
 
     // Only continue if "open" was successful
-    if (!ser_servo_->open(QIODevice::ReadOnly)) {
+    if (!ser_servo_->open(QIODevice::ReadWrite)) {
         qDebug() << "[ERROR] Failed to open port: COM4!";
-        ser_servo_.reset();
+        QMessageBox::critical(this, tr("Error"), ser_servo_->errorString());
         return;
     }
 
     // Ensure data gets processed when it's made available
-    connect(ser_servo_.get(), &QSerialPort::readyRead, this,
+    connect(ser_servo_, &QSerialPort::readyRead, this,
             &MainWindow::UpdateServoVals);
 
     // Reflect changes in UI
@@ -696,7 +704,9 @@ void MainWindow::on_a_manip_servos_connect_triggered() {
  */
 void MainWindow::on_a_manip_servos_disconnect_triggered() {
     // Clear the Serial and CameraManager objects
-    ser_servo_.reset();
+    if (ser_servo_->isOpen()) {
+        ser_servo_->close();
+    }
     camera_manager_.reset();
 
     // Reflect changes in UI

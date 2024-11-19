@@ -37,9 +37,8 @@ class MainThread : public QThread {
     // NOLINTEND
 
   public:
-    MainThread(std::shared_ptr<LibraHebi> libra_hebi_,
-               std::shared_ptr<QSerialPort> ser_water,
-               std::shared_ptr<QSerialPort> ser_servo);
+    MainThread(std::shared_ptr<LibraHebi> libra_hebi_, QSerialPort* ser_water,
+               QSerialPort* ser_servo);
     ~MainThread();
 
     // --- Getters & Setters ---
@@ -68,8 +67,8 @@ class MainThread : public QThread {
     // LIBRA Components
 
     std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
-    std::shared_ptr<QSerialPort> ser_water_;
-    std::shared_ptr<QSerialPort> ser_servo_;
+    QSerialPort* ser_water_;
+    QSerialPort* ser_servo_;
 
     // Arm
 
@@ -192,10 +191,11 @@ class MainWindow : public QMainWindow {
 
     MainThread* main_thread_;  // primary control loop
 
+    QSerialPort* ser_water_;
+    QSerialPort* ser_servo_;
+
     std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
-    std::shared_ptr<QSerialPort> ser_water_;
-    std::shared_ptr<QSerialPort> ser_servo_;
-    std::shared_ptr<Lidar> lidar_;  // unused
+    std::shared_ptr<Lidar> lidar_;           // unused
 
     std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;
