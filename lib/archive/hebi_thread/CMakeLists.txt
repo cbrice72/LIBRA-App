@@ -3,7 +3,6 @@
 # @brief  LIBRA HEBI actuators module CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2024/2/22
 ################################################################################
 
 # Collect all HEBI source files (see comment in `qt_add_library` call below)

@@ -3,7 +3,6 @@
 # @brief  LIBRA arm actuators module CMakeLists file.
 #
 # @author brice.c.aa
-# @date   2024/2/22
 ################################################################################
 
 # TODO: add EPOS actuators
