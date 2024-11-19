@@ -225,6 +225,11 @@ class TankWidget : public QWidget {
                     emit TankEmpty();
                 }
                 break;
+
+            case FlowMode::Stopped:
+            default:
+                // Do nothing
+                break;
         }
 
         if (!qFuzzyCompare(old_level, level_)) {
