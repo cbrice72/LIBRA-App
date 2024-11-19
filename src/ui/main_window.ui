@@ -1469,7 +1469,11 @@
           </layout>
          </item>
          <item row="0" column="0">
-          <widget class="TankWidget" name="w_tank_visual" native="true"/>
+          <widget class="TankWidget" name="w_tank_visual" native="true">
+           <property name="enabled">
+            <bool>true</bool>
+           </property>
+          </widget>
          </item>
         </layout>
        </widget>
