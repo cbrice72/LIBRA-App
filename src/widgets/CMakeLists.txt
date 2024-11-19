@@ -9,5 +9,6 @@
 set(WIDGET_SRC
     # Fluid Tank Visualization
     ${CMAKE_CURRENT_SOURCE_DIR}/tank_widget.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/tank_widget.cpp
     PARENT_SCOPE
 )
