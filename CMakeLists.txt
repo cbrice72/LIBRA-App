@@ -25,8 +25,9 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Qt packages
+# Dependencies (installed on system)
 find_package(Qt6 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPort Widgets)
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 # ROS packages
 # ~~~
@@ -45,8 +46,10 @@ find_package(Qt6 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPor
 # find_package(epos_interfaces REQUIRED)
 # ~~~
 
-# Other packages
-find_package(Boost REQUIRED COMPONENTS system thread)
+# Dependencies (packaged with this project)
+set(HEBI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+    CACHE PATH "Path to the latest HEBI API" FORCE)  # used in other CMakeLists
+add_subdirectory(${HEBI_DIR})
 
 # Add project subdirectories
 add_subdirectory(lib)
