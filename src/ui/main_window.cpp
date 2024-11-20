@@ -147,8 +147,10 @@ MainWindow::MainWindow(QWidget* parent)
  */
 MainWindow::~MainWindow() {
     // Wrap up the worker thread(s) gracefully
-    main_thread_->requestInterruption();  // signal thread to stop looping
-    main_thread_->wait();                 // wait for thread cleanup to finish
+    if (main_thread_ != nullptr && main_thread_->isRunning()) {
+        main_thread_->requestInterruption();  // signal thread to stop looping
+        main_thread_->wait();  // wait for thread cleanup to finish
+    }
 }
 
 /**
