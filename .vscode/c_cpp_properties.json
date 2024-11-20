@@ -1,9 +1,11 @@
 {
     "configurations": [
         {
-            "name": "Win32",
+            "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "/usr/include/x86_64-linux-gnu/qt6/**",
+                "~/repos/build/**/include/**"
             ],
             "defines": [
                 "_DEBUG",
@@ -11,8 +13,8 @@
                 "_UNICODE"
             ],
             "windowsSdkVersion": "10.0.22621.0",
-            "compilerPath": "cl.exe",
-            "intelliSenseMode": "windows-msvc-x64"
+            "compilerPath": "/usr/bin/clang",
+            "intelliSenseMode": "linux-clang-x64"
         }
     ],
     "version": 4
