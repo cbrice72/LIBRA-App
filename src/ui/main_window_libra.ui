@@ -1694,11 +1694,6 @@
     <string>Connect (camera)</string>
    </property>
   </action>
-  <action name="actionSet_level_full_100">
-   <property name="text">
-    <string>Set full (100%)</string>
-   </property>
-  </action>
   <action name="a_pump_set_empty">
    <property name="text">
     <string>Set empty (0%)</string>
