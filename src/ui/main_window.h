@@ -67,8 +67,8 @@ class MainThread : public QThread {
     // LIBRA Components
 
     std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
-    QSerialPort* ser_water_;
-    QSerialPort* ser_servo_;
+    QSerialPort* ser_water_{nullptr};
+    QSerialPort* ser_servo_{nullptr};
 
     // Arm
 
@@ -189,10 +189,10 @@ class MainWindow : public QMainWindow {
 
     bool debug_mode_{true};
 
-    MainThread* main_thread_;  // primary control loop
+    MainThread* main_thread_{nullptr};  // primary control loop
 
-    QSerialPort* ser_water_;
-    QSerialPort* ser_servo_;
+    QSerialPort* ser_water_{nullptr};
+    QSerialPort* ser_servo_{nullptr};
 
     std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
     std::shared_ptr<Lidar> lidar_;           // unused
