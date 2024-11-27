@@ -61,7 +61,7 @@ PROJECT_BRIEF          = "The LIBRA robotic arm project is being developed for t
 # pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
 # the logo to the output directory.
 
-PROJECT_LOGO           = res/LIBRA-II_Docs_55x55.png
+PROJECT_LOGO           = src/ui/res/LIBRA-II_Docs_55x55.png
 
 # The OUTPUT_DIRECTORY tag is used to specify the (relative or absolute) path
 # into which the generated documentation will be written. If a relative path is

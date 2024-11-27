@@ -5,6 +5,8 @@
  * @author brice.c.aa
  ******************************************************************************/
 
+#pragma once
+
 // C++ Standard Library Headers
 #include <unordered_map>
 
@@ -14,8 +16,6 @@
 
 // Project Headers
 //   (none)
-
-#pragma once
 
 class CameraManager : public QObject {
     // NOLINTBEGIN: required by Qt

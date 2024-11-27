@@ -151,6 +151,8 @@ MainWindow::~MainWindow() {
         main_thread_->requestInterruption();  // signal thread to stop looping
         main_thread_->wait();  // wait for thread cleanup to finish
     }
+
+    delete ui_;
 }
 
 /**

@@ -5,6 +5,8 @@
  * @author brice.c.aa
  ******************************************************************************/
 
+#pragma once
+
 // C++ Standard Library Headers
 #include <fstream>
 
@@ -17,8 +19,6 @@
 #include "camera_manager.h"
 #include "libra_hebi.h"
 #include "lidar.h"  // unused
-
-#pragma once
 
 QT_BEGIN_NAMESPACE
 

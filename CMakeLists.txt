@@ -5,7 +5,7 @@
 # @author brice.c.aa
 ################################################################################
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.16)
 
 project(
     LIBRA-App-v2
@@ -26,7 +26,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies (installed on system)
-find_package(Qt6 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPort Widgets)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPort Widgets)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Multimedia MultimediaWidgets SerialPort Widgets)
 find_package(Boost REQUIRED COMPONENTS system thread)
 
 # ROS packages
