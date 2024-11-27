@@ -57,7 +57,7 @@ add_subdirectory(lib)
 add_subdirectory(src)
 
 # Add target executable
-qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SRC})
+qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # ~~~
 # Define target properties for Android with Qt 6 as:

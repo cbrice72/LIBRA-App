@@ -6,13 +6,13 @@
 ################################################################################
 
 # Collect project source files
-add_subdirectory(ui)       # UI_SRC
-add_subdirectory(widgets)  # WIDGET_SRC
+add_subdirectory(ui)       # UI_SOURCE
+add_subdirectory(widgets)  # WIDGET_SOURCE
 
 # Define project sources for use by root CMakeLists.txt
-set(PROJECT_SRC
+set(PROJECT_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-    ${UI_SRC}
-    ${WIDGET_SRC}
+    ${UI_SOURCE}
+    ${WIDGET_SOURCE}
     PARENT_SCOPE
 )

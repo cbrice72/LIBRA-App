@@ -6,7 +6,7 @@
 ################################################################################
 
 # Specify subdirectory files for use by parent CMakeLists.txt
-set(UI_SRC
+set(UI_SOURCE
     # UI Resources (icons, etc.)
     ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc
     # Main Window
