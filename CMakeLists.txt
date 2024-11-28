@@ -13,6 +13,12 @@ project(
     LANGUAGES CXX
 )
 
+# Project options
+set(EPOS_DIR "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
+    CACHE PATH "Path to the latest EPOS API" FORCE)  # used in other CMakeLists
+set(HEBI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+    CACHE PATH "Path to the latest HEBI API" FORCE)  # used in other CMakeLists
+
 # CMake options
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
 
@@ -48,8 +54,6 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 # ~~~
 
 # Dependencies (packaged with this project)
-set(HEBI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
-    CACHE PATH "Path to the latest HEBI API" FORCE)  # used in other CMakeLists
 add_subdirectory(${HEBI_DIR})
 
 # Add project subdirectories

@@ -161,7 +161,7 @@ std::vector<long> Lidar::GetData() {
 }
 
 /**
- * @brief Sets whether or not verbose debug text is displayed
+ * @brief Controls the output of verbose debug text.
  *
  * @param true to enable, false to disable
  *
