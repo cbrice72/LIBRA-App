@@ -58,7 +58,7 @@ add_subdirectory(${HEBI_DIR})
 
 # Add project subdirectories
 add_subdirectory(lib)
-add_subdirectory(src)
+add_subdirectory(src)  # PROJECT_SOURCE
 
 # Add target executable
 qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCE})

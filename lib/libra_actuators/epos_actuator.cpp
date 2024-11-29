@@ -27,8 +27,8 @@
  * @brief Standard constructor.
  *
  */
-EposActuator::EposActuator() {
-    std::cout << "TODO" << std::endl;
+EposActuator::EposActuator(bool debug_mode) : AbstractActuator(debug_mode) {
+    std::cout << "TODO - EposActuator::EposActuator()" << std::endl;
 
     // TODO: implementation
 }
@@ -38,7 +38,7 @@ EposActuator::EposActuator() {
  *
  */
 EposActuator::~EposActuator() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::~EposActuator()" << std::endl;
 
     // TODO: implementation
 }
@@ -52,25 +52,27 @@ EposActuator::~EposActuator() {
 //------------------------------------------------------------------------------
 
 bool EposActuator::Connect() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::Connect()" << std::endl;
+    return false;
 
     // TODO: implementation
 }
 
 bool EposActuator::Disconnect() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::Disconnect()" << std::endl;
+    return false;
 
     // TODO: implementation
 }
 
 void EposActuator::Move(double deg) {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::Move()" << std::endl;
 
     // TODO: implementation
 }
 
 void EposActuator::Stop() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::Stop()" << std::endl;
 
     // TODO: implementation
 }
@@ -80,25 +82,29 @@ void EposActuator::Stop() {
 //------------------------------------------------------------------------------
 
 std::string EposActuator::GetStatus() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::GetStatus()" << std::endl;
+    return "";
 
     // TODO: implementation
 }
 
 double EposActuator::GetTargetPos() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::GetTargetPos()" << std::endl;
+    return 0.0;
 
     // TODO: implementation
 }
 
 double EposActuator::GetActualPos() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::GetActualPos()" << std::endl;
+    return 0.0;
 
     // TODO: implementation
 }
 
 double EposActuator::GetActualTorque() {
-    std::cout << "TODO" << std::endl;
+    std::cout << "TODO - EposActuator::GetActualTorque()" << std::endl;
+    return 0.0;
 
     // TODO: implementation
 }

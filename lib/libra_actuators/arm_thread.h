@@ -23,7 +23,7 @@
  *       It just provides a more intuitive interface for controlling the whole
  *       arm via one class, rather than by individually addressing each actuator.
  */
-class ArmThread : QThread {
+class ArmThread : public QThread {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
@@ -32,41 +32,52 @@ class ArmThread : QThread {
     /**
      * @brief LIBRA joint names.
      */
-    enum Joint { kYaw = 0, kPitch };
+    enum Joint {
+        kYaw = 0,
+        kPitch,
+        kJointCount  // KEEP THIS LAST!
+    };
 
-    ArmThread();
-    ~ArmThread();
+    explicit ArmThread(QObject* parent = nullptr, bool debug_mode_ = false);
+    ~ArmThread() override = default;
+
+  public slots:
+    void SetDebugMode(bool enabled);
 
     // --- Arm Commands ---
 
-    bool ConnectActuators();
-    bool DisconnectActuators();
+    void ConnectActuator(const Joint& joint);
+    void DisconnectActuator(const Joint& joint);
 
-    void Move(double yaw, double pitch);
+    void ConnectAllActuators();
+    void DisconnectAllActuators();
+
+    void Move(const Joint& joint, const double& val);
+    void MoveAll(const std::vector<double>& vals);
     void Stop();
 
-    // --- Getters & Setters ---
+  signals:
+    // --- Arm Updates ---
 
-    std::string GetStatus();
-
-    std::vector<double> GetAllTargetPos();
-    std::vector<double> GetAllActualPos();
-    std::vector<double> GetAllActualTorque();
-
-    double GetTargetPos(Joint joint);
-    double GetActualPos(Joint joint);
-    double GetActualTorque(Joint joint);
-
-    void SetDebugMode(bool enabled);
+    void StatusChanged(const QString& status);
+    void ErrorThrown(const QString& err);
 
   private:
     void run() override;
 
     // --- Helper Functions ---
 
+    double GetTargetPos(Joint joint);
+    double GetActualPos(Joint joint);
+    double GetActualTorque(Joint joint);
+
+    std::vector<double> GetAllTargetPos();
+    std::vector<double> GetAllActualPos();
+    std::vector<double> GetAllActualTorque();
+
     // --- Data Members ---
 
-    bool debug_mode_{false};
+    bool debug_mode_;
 
-    std::vector<AbstractActuator> actuators_;
+    std::array<std::unique_ptr<AbstractActuator>, Joint::kJointCount> actuators_;
 };

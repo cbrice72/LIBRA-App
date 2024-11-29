@@ -22,9 +22,9 @@
  *
  * @note See `abstract_actuator.h`.
  */
-class HebiActuator : AbstractActuator {
+class HebiActuator : public AbstractActuator {
   public:
-    HebiActuator();
+    explicit HebiActuator(bool debug_mode = false);
     ~HebiActuator();
 
     // --- Actuator Commands ---

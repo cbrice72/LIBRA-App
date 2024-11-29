@@ -22,9 +22,9 @@
  *
  * @note See `abstract_actuator.h`.
  */
-class EposActuator : AbstractActuator {
+class EposActuator : public AbstractActuator {
   public:
-    EposActuator();
+    explicit EposActuator(bool debug_mode = false);
     ~EposActuator();
 
     // --- Actuator Commands ---

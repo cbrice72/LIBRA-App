@@ -8,6 +8,40 @@
 # @author brice.c.aa
 ################################################################################
 
+# Only set up the example project if this CMakeLists.txt was directly invoked
+# (i.e., this CMakeLists.txt was not called as a result of `add_subdirectory()`)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    cmake_minimum_required(VERSION 3.16)
+
+    project(
+        LIBRA-Actuators-Example
+        VERSION 0.1
+        LANGUAGES CXX
+    )
+
+    # Project options
+    set(EPOS_DIR "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
+        CACHE PATH "Path to the latest EPOS API" FORCE)
+    set(HEBI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+        CACHE PATH "Path to the latest HEBI API" FORCE)
+
+    # CMake options
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
+
+    # Tell CMake to automatically handle Qt code generators and preprocessors
+    set(CMAKE_AUTOUIC ON)
+    set(CMAKE_AUTOMOC ON)
+    set(CMAKE_AUTORCC ON)
+
+    # Specify C++ standard to define available features
+    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+    # Dependencies (installed on system)
+    find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
+    find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+endif()
+
 # ---
 # LIBRA Actuators
 # ---
@@ -97,3 +131,79 @@ target_link_libraries(
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
 )
+
+# ---
+# Example
+# ---
+
+# Only build the example if this CMakeLists.txt was directly invoked
+# (i.e., this CMakeLists.txt was not called as a result of `add_subdirectory()`)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    # Add project subdirectories
+    add_subdirectory(example-src)  # PROJECT_SOURCE
+
+    # Add target executable
+    if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
+        qt_add_executable(LIBRA-Actuators-Example MANUAL_FINALIZATION ${PROJECT_SOURCE})
+        # Define target properties for Android with Qt 6 as:
+        #    set_property(TARGET LIBRA-Actuators-Example APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+        #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
+        # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+    else()
+        if(ANDROID)
+            add_library(LIBRA-Actuators-Example SHARED ${PROJECT_SOURCE})
+            # Define properties for Android with Qt 5 after find_package() calls as:
+            #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+        else()
+            add_executable(LIBRA-Actuators-Example ${PROJECT_SOURCE})
+        endif()
+    endif()
+
+    # Add all libraries directly used by this project to the include path
+    target_include_directories(
+        LIBRA-Actuators-Example
+        # Project
+        PRIVATE ${CMAKE_SOURCE_DIR}
+        PRIVATE ${CMAKE_SOURCE_DIR}/src
+    )
+
+    # Tell the linker which libraries to link against
+    target_link_libraries(
+        LIBRA-Actuators-Example
+        # Qt
+        PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
+        # Project
+        arm_thread)
+
+    # Specify platform-specific properties
+    # ~~~
+    if(${QT_VERSION} VERSION_LESS 6.1.0)
+        # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
+        # If you are developing for iOS or macOS you should consider setting an
+        # explicit, fixed bundle identifier manually though.
+        set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.LIBRA-Actuators-Example)
+    endif()
+    set_target_properties(LIBRA-Actuators-Example PROPERTIES
+        ${BUNDLE_ID_OPTION}
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+        MACOSX_BUNDLE TRUE
+        WIN32_EXECUTABLE TRUE
+    )
+    # ~~~
+
+    # Auto-included by Qt
+    include(GNUInstallDirs)
+
+    # Specify installation settings
+    install(TARGETS LIBRA-Actuators-Example
+        BUNDLE DESTINATION .
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+
+    # Generate proper deployment settings for the target
+    if(QT_VERSION_MAJOR EQUAL 6)
+        qt_finalize_executable(LIBRA-Actuators-Example)
+    endif()
+endif()

@@ -29,6 +29,8 @@
  */
 class AbstractActuator {
   public:
+    AbstractActuator() = default;
+    AbstractActuator(bool debug_mode) : debug_mode_(debug_mode){};
     ~AbstractActuator() = default;
 
     // --- Actuator Commands ---
@@ -51,7 +53,7 @@ class AbstractActuator {
         debug_mode_ = enabled;
     };
 
-  private:
+  protected:
     // --- Helper Functions ---
 
     // --- Data Members ---
