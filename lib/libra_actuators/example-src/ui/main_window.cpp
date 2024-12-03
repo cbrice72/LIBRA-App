@@ -25,6 +25,11 @@
  * !Uncategorized
  */
 
+/**
+ * @brief Standard constructor.
+ *
+ * @param parent Owning Qt widget (default: nullptr)
+ */
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
@@ -92,6 +97,9 @@ MainWindow::MainWindow(QWidget* parent)
     arm_thread_->start();
 }
 
+/**
+ * @brief Standard destructor.
+ */
 MainWindow::~MainWindow() {
     delete ui_;
 }
