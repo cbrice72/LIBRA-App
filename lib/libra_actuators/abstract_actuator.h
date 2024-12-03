@@ -31,7 +31,7 @@ class AbstractActuator {
   public:
     AbstractActuator() = default;
     AbstractActuator(bool debug_mode) : debug_mode_(debug_mode){};
-    ~AbstractActuator() = default;
+    virtual ~AbstractActuator() = default;
 
     // --- Actuator Commands ---
 

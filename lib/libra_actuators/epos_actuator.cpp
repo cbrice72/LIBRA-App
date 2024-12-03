@@ -55,6 +55,11 @@ namespace {  // local to this file
 // !Actuator Commands
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Attempts to establish a connection.
+ *
+ * @return true if successful, false otherwise
+ */
 bool EposActuator::Connect() {
     std::cout << "TODO - EposActuator::Connect()" << std::endl;
     return false;
@@ -62,6 +67,11 @@ bool EposActuator::Connect() {
     // TODO: implementation
 }
 
+/**
+ * @brief Terminates the active connection.
+ *
+ * @return true if successful, false otherwise
+ */
 bool EposActuator::Disconnect() {
     std::cout << "TODO - EposActuator::Disconnect()" << std::endl;
     return false;
@@ -69,12 +79,23 @@ bool EposActuator::Disconnect() {
     // TODO: implementation
 }
 
+/**
+ * @brief Sends an actuator movement command.
+ *
+ * @param deg Target angle (absolute)
+ *
+ * @note If this actuator doesn't directly accept degrees as part of its
+ *       movement command, the translation should be done within this function.
+ */
 void EposActuator::Move(double deg) {
     std::cout << "TODO - EposActuator::Move()" << std::endl;
 
     // TODO: implementation
 }
 
+/**
+ * @brief Sends an actuator stop command.
+ */
 void EposActuator::Stop() {
     std::cout << "TODO - EposActuator::Stop()" << std::endl;
 
