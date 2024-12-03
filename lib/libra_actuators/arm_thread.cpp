@@ -25,9 +25,9 @@
 /**
  * @brief Standard constructor.
  *
- * @param parent
- * @param actuators
- * @param debug_mode
+ * @param parent Owning Qt widget
+ * @param actuators Vector of actuators to be constructed (see `actuator_defs.h`)
+ * @param debug_mode Whether verbose debug text should be output
  *
  * @todo --------------------------------------
  *       THIS IS WHERE I LEFT OFF ON 2024/12/02
