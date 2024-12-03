@@ -47,4 +47,7 @@ class HebiActuator : public AbstractActuator {
     // --- Helper Functions ---
 
     // --- Data Members ---
+
+    std::string name_family_;
+    std::string name_module_;
 };

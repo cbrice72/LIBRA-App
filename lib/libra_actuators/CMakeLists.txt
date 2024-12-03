@@ -113,6 +113,7 @@ qt_add_library(
     STATIC
     # Header
     arm_thread.h
+    actuator_defs.h
     # Source
     arm_thread.cpp
 )

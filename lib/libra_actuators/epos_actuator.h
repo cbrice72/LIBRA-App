@@ -47,4 +47,10 @@ class EposActuator : public AbstractActuator {
     // --- Helper Functions ---
 
     // --- Data Members ---
+
+    std::string device_name_;
+    std::string protocol_name_;
+    std::string interface_name_;
+    std::string port_name_;
+    uint baud_rate_;
 };

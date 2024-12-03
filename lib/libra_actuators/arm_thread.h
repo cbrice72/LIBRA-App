@@ -15,6 +15,7 @@
 
 // Project Headers
 #include "abstract_actuator.h"
+#include "actuator_defs.h"
 
 /**
  * @brief Actuator control class for the LIBRA-II.
@@ -29,16 +30,8 @@ class ArmThread : public QThread {
     // NOLINTEND
 
   public:
-    /**
-     * @brief LIBRA joint names.
-     */
-    enum Joint {
-        kYaw = 0,
-        kPitch,
-        kJointCount  // KEEP THIS LAST!
-    };
-
-    explicit ArmThread(QObject* parent = nullptr, bool debug_mode_ = false);
+    explicit ArmThread(QObject* parent, std::vector<ActuatorDef> actuators,
+                       bool debug_mode_ = false);
     ~ArmThread() override = default;
 
   public slots:

@@ -12,10 +12,14 @@
 #include <iostream>
 
 // Other Library Headers
-//   (none)
+#include "lookup.hpp"  // HEBI
 
 // Project Headers
 //   (none)
+
+// Constants
+
+constexpr long kTimeout = 4000;  // ms
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -45,6 +49,10 @@ HebiActuator::~HebiActuator() {
 // !Helper Functions
 //------------------------------------------------------------------------------
 
+namespace {  // local to this file
+
+}  // namespace
+
 //------------------------------------------------------------------------------
 // !Actuator Commands
 //------------------------------------------------------------------------------
@@ -54,7 +62,40 @@ bool HebiActuator::Connect() {
     return false;
 
     // TODO: implementation
+
+    // Create the lookup object
+    hebi::Lookup lookup;
+
+    // Wait for the module list to populate, and print out its contents
+    std::this_thread::sleep_for(std::chrono::seconds(2));
+    {
+        std::cout << "Modules found on network (Family|Name):" << std::endl;
+        std::shared_ptr<hebi::Lookup::EntryList> entry_list =
+            lookup.getEntryList();
+        for (auto entry : *entry_list) {
+            std::cout << entry.family_ << " | " << entry.name_ << std::endl;
+        }
+        std::cout << std::endl;
+    }
+    std::cout << std::endl;
+
+    // Define module names/addresses:
+    std::vector<std::string> families;
+    families.push_back("CommsTest");
+
+    std::vector<std::string> names;
+    names.push_back("One");
+    names.push_back("Two");
+
+    std::cout << "Looking up group by name." << std::endl;
+    group = lookup.getGroupFromNames(families, names, timeout_ms);
+    checkGroup(group ? group->size() : -1);
+
+    std::cout << "Looking up group by family." << std::endl;
+    group = lookup.getGroupFromFamily(families[0], timeout_ms);
+    checkGroup(group ? group->size() : -1);
 }
+}  // namespace
 
 bool HebiActuator::Disconnect() {
     std::cout << "TODO - HebiActuator::Disconnect()" << std::endl;

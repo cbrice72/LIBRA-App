@@ -25,19 +25,25 @@
 /**
  * @brief Standard constructor.
  *
+ * @param parent
+ * @param actuators
+ * @param debug_mode
+ *
  * @todo --------------------------------------
- *       THIS IS WHERE I LEFT OFF ON 2024/11/29
+ *       THIS IS WHERE I LEFT OFF ON 2024/12/02
  *       --------------------------------------
- *       Add parameter(s) to the constructor. We need to be able to infer the 1)
- *       number of actuators and 2) which actuator class to make instances of.
- *       This might mean moving the `Joint` enum out of `ArmThread` and defining
- *       it at the application level (i.e., in the `MainWindow` class).
+ *       Using the `actuators` parameter we need to be able to infer:
+ *         1) the number of actuators
+ *         2) which actuator class to make instances of
  */
-ArmThread::ArmThread(QObject* parent, bool debug_mode)
+ArmThread::ArmThread(QObject* parent, std::vector<ActuatorDef> actuators,
+                     bool debug_mode)
     : QThread(parent), debug_mode_(debug_mode) {
     qDebug() << "TODO - ArmThread::ArmThread()";
 
-    // TODO: implementation
+    for (auto actuator : actuators) {
+        // TODO: implementation
+    }
 }
 
 /**
@@ -69,6 +75,10 @@ void ArmThread::run() {
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
+
+namespace {  // local to this file
+
+}  // namespace
 
 /**
  * @brief TODO: description.

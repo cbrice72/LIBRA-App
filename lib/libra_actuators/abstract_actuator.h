@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   abstract_actuator.h
- * @brief  Abstract control class for LIBRA actuators; header file only.
+ * @brief  Abstract control class for LIBRA actuators; header-only.
  *
  * @author Christian Brice
  ******************************************************************************/
