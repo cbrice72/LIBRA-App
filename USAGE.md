@@ -39,13 +39,13 @@ Before setting a static IP, ensure that the actuator is powered on and connected
 Then, in Settings, navigate to "Network & Internet" and find the actuator's network based on your connection method.
 - **Ethernet (Directly)**: in the main window, it may show up as "Unidentified Network" or something similar.
 - **USB Adapter (Indirectly)**: go to "Advanced network settings" and find your adapter (look at the description for your adapter brand), then click "View additional properties".
+
 Under "IP assignment", click "Edit" and manually assign IPv4 settings according to the table below.
 
 | Setting | Value | Notes |
 |---|---|---|
-| IP assignment | Manual |  |
 | IP address | `10.11.12.___` | `___` can be anything (e.g., `2`) as long as it doesn't clash with the default actuator address (`10.11.12.13`) or other user-assigned actuator addresses |
-| Subnet prefix length | 24 | i.e., `255.255.255.0` |
+| Subnet mask | `255.255.255.0` | If instead you see "Subnet prefix length", enter `24` |
 | Gateway | `10.11.12.1` | Doesn't matter, but required |
 
 ## Resetting Misaligned Actuators
