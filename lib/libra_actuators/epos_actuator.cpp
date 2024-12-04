@@ -119,6 +119,11 @@ void EposActuator::Stop() {
 // !Getters & Setters
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Returns the current status of the actuator.
+ *
+ * @return std::string Semicolon-delimited status messages
+ */
 std::string EposActuator::GetStatus() {
     std::cout << "TODO - EposActuator::GetStatus()\n";
     return "";
@@ -126,6 +131,11 @@ std::string EposActuator::GetStatus() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the target position commanded to the actuator.
+ *
+ * @return double Target position, in degrees
+ */
 double EposActuator::GetTargetPos() {
     std::cout << "TODO - EposActuator::GetTargetPos()\n";
     return 0.0;
@@ -133,6 +143,11 @@ double EposActuator::GetTargetPos() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the current position of the actuator.
+ *
+ * @return double Actual position, in degrees
+ */
 double EposActuator::GetActualPos() {
     std::cout << "TODO - EposActuator::GetActualPos()\n";
     return 0.0;
@@ -140,6 +155,11 @@ double EposActuator::GetActualPos() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the current effort (torque) of the actuator.
+ *
+ * @return double Actual torque, in Newtons
+ */
 double EposActuator::GetActualTorque() {
     std::cout << "TODO - EposActuator::GetActualTorque()\n";
     return 0.0;

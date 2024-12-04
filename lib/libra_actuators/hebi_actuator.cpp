@@ -200,6 +200,11 @@ void HebiActuator::Stop() {
 // !Getters & Setters
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Returns the current status of the actuator.
+ *
+ * @return std::string Semicolon-delimited status messages
+ */
 std::string HebiActuator::GetStatus() {
     std::cout << "TODO - HebiActuator::GetStatus()\n";
     return "";
@@ -207,6 +212,11 @@ std::string HebiActuator::GetStatus() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the target position commanded to the actuator.
+ *
+ * @return double Target position, in degrees
+ */
 double HebiActuator::GetTargetPos() {
     std::cout << "TODO - HebiActuator::GetTargetPos()\n";
     return 0.0;
@@ -214,6 +224,11 @@ double HebiActuator::GetTargetPos() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the current position of the actuator.
+ *
+ * @return double Actual position, in degrees
+ */
 double HebiActuator::GetActualPos() {
     std::cout << "TODO - HebiActuator::GetActualPos()\n";
     return 0.0;
@@ -221,6 +236,11 @@ double HebiActuator::GetActualPos() {
     // TODO: implementation
 }
 
+/**
+ * @brief Returns the current effort (torque) of the actuator.
+ *
+ * @return double Actual torque, in Newtons
+ */
 double HebiActuator::GetActualTorque() {
     std::cout << "TODO - HebiActuator::GetActualTorque()\n";
     return 0.0;
