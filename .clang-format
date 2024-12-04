@@ -147,7 +147,7 @@ ObjCBreakBeforeNestedBlockParam: true
 ObjCSpaceAfterProperty: false
 ObjCSpaceBeforeProtocolList: true
 
-PackConstructorInitializers: BinPack
+PackConstructorInitializers: NextLine
 
 PenaltyBreakAssignment: 150
 PenaltyBreakBeforeFirstCallParameter: 300
