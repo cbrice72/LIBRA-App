@@ -74,12 +74,8 @@ set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
 if(NOT DEFINED HEBI_DIR)
     message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
 endif()
-# - Collect all HEBI source files (see comment in `qt_add_library` call below)
-file(GLOB_RECURSE HEBI_SOURCE_FILES "${HEBI_DIR}/src/*.hpp" "${HEBI_DIR}/src/*.cpp")
-# - Include headers from all libraries used by HEBI (TODO: is this overkill?)
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
-                      "${HEBI_DIR}/Eigen" "${HEBI_DIR}/rapidyaml" 
-)
+# - Include headers from all libraries used by HEBI
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include")
 
 foreach(TEST ${HEBI_SOURCE_FILES})
     message(STATUS "FILE: ${TEST}")
@@ -96,9 +92,6 @@ qt_add_library(
     # Source
     ${CMAKE_CURRENT_SOURCE_DIR}/epos_actuator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_actuator.cpp
-    # HEBI src/ folder needs to be passed in during compilation/linking process
-    # (see HEBI C++ API docs: https://files.hebi.us/docs/cpp/cpp-3.11.1/)
-    ${HEBI_SOURCE_FILES}
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
