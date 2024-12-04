@@ -1002,6 +1002,7 @@ RECURSIVE              = YES
 # run.
 
 EXCLUDE                = packages \
+                         thirdparty \
                          x64
 
 # The EXCLUDE_SYMLINKS tag can be used to select whether or not files or
@@ -1375,7 +1376,7 @@ HTML_EXTRA_FILES       =
 # The default value is: AUTO_LIGHT.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_COLORSTYLE        = AUTO_LIGHT
+HTML_COLORSTYLE        = DARK
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to
