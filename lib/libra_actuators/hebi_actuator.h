@@ -57,12 +57,4 @@ class HebiActuator : public AbstractActuator {
     std::vector<std::string> names_;
 
     std::shared_ptr<hebi::Group> group_;
-
-    std::array<double, 3> current_pos_;  // position
-    std::array<double, 3> current_vel_;  // velocity
-    std::array<double, 3> current_trq_;  // torque (effort)
-    std::array<double, 3> current_deflection_;
-    std::array<double, 3> current_voltage_;
-    std::array<double, 3> current_current_;
-    std::array<double, 3> current_temp_;
 };

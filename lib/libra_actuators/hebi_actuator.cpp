@@ -45,14 +45,7 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
     : AbstractActuator(debug_mode),
       families_(std::move(families)),
       names_(std::move(names)),
-      group_(nullptr),
-      current_pos_{0.0, 0.0, 0.0},
-      current_vel_{0.0, 0.0, 0.0},
-      current_trq_{0.0, 0.0, 0.0},
-      current_deflection_{0.0, 0.0, 0.0},
-      current_voltage_{0.0, 0.0, 0.0},
-      current_current_{0.0, 0.0, 0.0},
-      current_temp_{0.0, 0.0, 0.0} {
+      group_(nullptr) {
     if (debug_mode_) {
         std::string families_str;
         for (const auto& family : families_) {
