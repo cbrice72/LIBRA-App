@@ -1,15 +1,14 @@
-# ROS2 Nodes leveraging the Intel RealSense Camera
+# Intel RealSense Camera + ROS2
 
-## Official Intel RealSense Wrapper
+This document lists the necessary steps to set up and use the `realsense2_camera` ROS2 nodes in a Linux environment.
 
-GitHub repo: [realsense-ros](https://github.com/IntelRealSense/realsense-ros)
+## Before You Start
 
-### *Installation*
+Follow the instructions in the [realsense-ros](https://github.com/IntelRealSense/realsense-ros) git repo to download and build the project.
 
-Just follow the instructions in the repo.
-I didn't run into any particular problems.
+## Usage
 
-### *Usage*
+### *ROS Nodes*
 
 #### **Terminal 1**
 
@@ -25,3 +24,11 @@ ros2 launch realsense2_camera rs_launch.py pointcloud.enable:=true enable_gyro:=
 # Run RViz and configure to show Image, DepthCloud, PointCloud2 visualizations.
 rviz2
 ```
+
+## Troubleshooting
+
+(none)
+
+## Optional Items
+
+(none)

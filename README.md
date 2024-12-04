@@ -5,12 +5,18 @@ This control application targets the first-generation LIBRA prototype: *LIBRA-I*
 
 Project link: https://github.com/christian-brice/LIBRA-App
 
-1. [Requirements](#requirements)
-2. [Usage](#usage)
-3. [Documentation](#documentation)
-4. [About Us](#about-us)
-5. [Acknowledgements](#acknowledgements)
-6. [Contributing](#contributing)
+- [Requirements](#requirements)
+- [Optional](#optional)
+    - [*VS Code Extensions*](#vs-code-extensions)
+- [Usage](#usage)
+    - [*LIBRA-I Control App*](#libra-i-control-app)
+    - [*LIBRA-II Control App*](#libra-ii-control-app)
+    - [*Code Formatting*](#code-formatting)
+    - [*Code Linting*](#code-linting)
+- [Documentation](#documentation)
+- [About Us](#about-us)
+- [Acknowledgements](#acknowledgements)
+- [Contributing](#contributing)
 
 ## Requirements
 
@@ -20,7 +26,9 @@ Project link: https://github.com/christian-brice/LIBRA-App
 | **C++ Standard** | C++17 | C++17 |
 | **Qt** | 6.1.0 | 6.7.2 |
 
-### *Optional - VS Code Extensions*
+## Optional
+
+### *VS Code Extensions*
 
 #### **Syntax Highlighting, Intellisense, Debugging**
 
@@ -31,21 +39,27 @@ Project link: https://github.com/christian-brice/LIBRA-App
 - [Error Lens](vscode:extension/usernamehw.errorlens) by Alexander
 
 #### **Formatting and Linting**
+
 - [Clang-Format](vscode:extension/xaver.clang-format) by Xaver Hellauer
 - [cmake-format](vscode:extension/cheshirekow.cmake-format) by cheshirekow
 
 #### **Convenience**
+
 - [Doxygen Documentation Generator](vscode:extension/cschlosser.doxdocgen) by Christoph Schlosser
 - [Doxygen Runner](vscode:extension/betwo.vscode-doxygen-runner) by betwo
 - [Markdown All in One](vscode:extension/yzhang.markdown-all-in-one) by Yu Zhang
 
 ## Usage
 
-### *LIBRA Control App*
+### *LIBRA-I Control App*
 
 Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
 
 For detailed operation instructions, see [USAGE.md](/USAGE.md) in this directory.
+
+### *LIBRA-II Control App*
+
+TODO
 
 ### *Code Formatting*
 

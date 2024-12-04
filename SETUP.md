@@ -3,19 +3,18 @@
 This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App on a Windows 11 machine.
 Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with any questions or revision suggestions.
 
-## Table of Contents
-
-1. [Setting Up](#setting-up)
-    - [VM](#vm)
-    - [WSL](#wsl)
-2. [Preparing Your Development Environment](#preparing-your-development-environment)
-    - [Proxy Settings](#proxy-settings)
-    - [System Updates and Required Packages](#system-updates-and-required-packages)
-    - [Required Drivers and Permissions](#required-drivers-and-permissions)
-3. [Project Software](#project-software)
-    - [Qt Creator](#qt-creator)
-    - [Maxon EPOS Library (system-wide install)](#maxon-epos-library-system-wide-install)
-4. [Optional Items](#optional-items)
+- [Setting Up](#setting-up)
+    - [*VM*](#vm)
+    - [*WSL*](#wsl)
+- [Preparing Your Development Environment](#preparing-your-development-environment)
+    - [*Proxy Settings*](#proxy-settings)
+    - [*System Updates and Required Packages*](#system-updates-and-required-packages)
+    - [*Required Drivers and Permissions*](#required-drivers-and-permissions)
+- [Project Software](#project-software)
+    - [*Qt Creator*](#qt-creator)
+    - [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install)
+- [Optional Items](#optional-items)
+    - [*VS Code*](#vs-code)
 
 ## Setting Up
 
@@ -98,38 +97,18 @@ Package notes:
 
 - `build-essential`: programs and libraries necessary for basic software development.
 - `libboost-all-dev`: collection of useful C++ libraries ([link](https://www.boost.org/)).
-- (TODO: necessary?) `clang` & `libclang-dev`: C/C++ compiler ([link](https://clang.llvm.org/)).
+- `clang` & `libclang-dev`: C/C++ compiler ([link](https://clang.llvm.org/)).
 - `clang-format`: clang-based C++ formatter ([link](https://clang.llvm.org/docs/ClangFormat.html)).
 - `clang-tidy`: clang-based C++ linter ([link](https://clang.llvm.org/extra/clang-tidy/)).
 - `cmake`: cross-platform C++ build tool ([link](https://cmake.org/)).
 - `cmake-format`: CMake formatter ([link](https://github.com/cheshirekow/cmake_format)).
 - `doxygen`: C++ documentation generator ([link](https://www.doxygen.nl/)).
 - `git`: popular open-source version control system ([link](https://git-scm.com)).
-- (TODO: necessary?) `libgl1-mesa-dev`: open-source graphics library, used by Qt ([link](https://www.mesa3d.org/)).
-- (TODO: necessary?) `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
+- `libgl1-mesa-dev`: open-source graphics library, used by Qt ([link](https://www.mesa3d.org/)).
+- `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
 - `libudev-dev`: C++ library for enumerating local devices([link](https://www.freedesktop.org/software/systemd/man/latest/libudev.html)).
 
 ### *Required Drivers and Permissions*
-
-#### **Hokuyo URG (LIDAR) Port Access**
-
-In order for the app to open ports on your behalf *without sudo*, you need to add yourself to the `dialout` system group.
-
-```bash
-sudo adduser $USER dialout
-```
-
-Then, reboot in order for this to take effect.
-
-To check whether this worked, first try the `groups` command in the terminal.
-If you see `dialout` listed, then try connecting to the port while the LIDAR is running.
-
-```bash
-od /dev/ttyACM0
-```
-
-If there is no output (i.e., only a blank line), then it worked.
-If you get a permissions error, it hasn't taken effect yet.
 
 #### **Maxon EPOS**
 
@@ -137,6 +116,12 @@ The driver should be automatically installed when connecting an EPOS controller 
 
 If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf).
 All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
+
+#### **HEBI**
+
+While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [notes/HEBI.md](notes/HEBI.md)).
+
+Other than that, you do not need to download or install anything yourself since the HEBI C++ API included with this project is automatically built when CMake is run.
 
 ## Project Software
 
@@ -229,9 +214,7 @@ Navigate to the extracted directory.
 
 <br><hr><br>
 
-# Optional Items
-
-## Project Software
+## Optional Items
 
 ### *VS Code*
 
@@ -257,11 +240,3 @@ If you're prompted to "unlock a keyring" (by entering your Linux password) every
     @include common-session
     session optional        pam_gnome_keyring.so auto_start
     ```
-
-### *Hokuyo URG (LIDAR) Windows Driver*
-
-To test the sample URG library apps (available [here](https://sourceforge.net/projects/urgnetwork/files/urg_library/)), which are Windows-only, you'll need to install the URG driver for Windows. The `URG_USB_Driver.inf` setup file can be found in `thirdparty/urg-cpp-1.2.7/driver/`.
-
-To install, simply right-click the file in Windows and select "Install".
-Note that you may need to disable digital signature checking in Windows - see the [README in the driver directory](thirdparty/urg-cpp-1.2.7/driver/README.md) for instructions.
-For further troubleshooting, see the [official Microsoft docs](https://learn.microsoft.com/en-us/windows-hardware/drivers/ifs/using-an-inf-file-to-install-a-file-system-filter-driver).
