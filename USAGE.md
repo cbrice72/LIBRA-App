@@ -47,6 +47,7 @@ Under "IP assignment", click "Edit" and manually assign IPv4 settings according 
 | IP address | `10.11.12.___` | `___` can be anything (e.g., `2`) as long as it doesn't clash with the default actuator address (`10.11.12.13`) or other user-assigned actuator addresses |
 | Subnet mask | `255.255.255.0` | If instead you see "Subnet prefix length", enter `24` |
 | Gateway | `10.11.12.1` | Doesn't matter, but required |
+| Preferred DNS | `8.8.8.8` | Default Google-provided DNS |
 
 ## Resetting Misaligned Actuators
 
