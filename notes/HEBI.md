@@ -21,6 +21,8 @@ Then, simply extract it to your directory of choice.
 
 ### *Networking*
 
+> **_NOTE:_** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [SETUP.md](../SETUP.md) "WSL" -> "Networking Mode" for more information.
+
 It is recommended that you use HEBI actuators via IP addressing as Windows and Linux do not come with DHCP server capabilities by default.
 The following instructions will help you set up your environment for IP addressing.
 

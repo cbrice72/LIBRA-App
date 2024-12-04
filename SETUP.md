@@ -45,6 +45,8 @@ I also recommend you allocate more cores and RAM to your VM; this can be done in
 
 ### *WSL*
 
+#### **Installation**
+
 1. Open a PowerShell terminal and install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
     ```bash
     wsl --install -d Ubuntu-22.04
@@ -53,6 +55,28 @@ I also recommend you allocate more cores and RAM to your VM; this can be done in
 > **_NOTE:_** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
 
 2. Once the installation is finished, enter the username and password you want to use when logging into the Ubuntu shell.
+
+#### **Networking Mode**
+
+It is recommended that you change your WSL networking mode from the default `NAT` to `mirrored`, as this allows WSL to seamlessly integrate Windows network adapters (e.g., as required to use HEBI actuators via IP addressing).
+
+1. Ensure WSL isn't running.
+    ```ps
+    # In a PowerShell window
+    wsl.exe --shutdown
+    ```
+2. In your user folder (`C:\Users\<Username>`), create or edit the `.wslconfig` file. Add the following.
+    ```txt
+    [wsl2]
+    networkingMode=mirrored
+    ```
+3. Restart WSL.
+    ```ps
+    # In a PowerShell window
+    wsl.exe
+    ```
+
+See the relevant [Microsoft docs page](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) for more information.
 
 ## Preparing Your Development Environment
 
@@ -119,7 +143,7 @@ All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
 
 #### **HEBI**
 
-While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [notes/HEBI.md](notes/HEBI.md)).
+While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [notes/HEBI.md](notes/HEBI.md) "Before You Start" -> "Networking).
 
 Other than that, you do not need to download or install anything yourself since the HEBI C++ API included with this project is automatically built when CMake is run.
 
