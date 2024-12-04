@@ -41,7 +41,7 @@ ArmThread::ArmThread(QObject* parent, std::vector<ActuatorDef> actuator_defs,
             case Actuator::Type::kEpos:
                 {
                     // Access EPOS version of std::variant member
-                    auto epos_p = std::get<EposParams>(def.params);
+                    const auto epos_p = std::get<EposParams>(def.params);
 
                     actuator =
                         std::make_unique<EposActuator>(epos_p.device_name,
@@ -55,7 +55,7 @@ ArmThread::ArmThread(QObject* parent, std::vector<ActuatorDef> actuator_defs,
             case Actuator::Type::kHebi:
                 {
                     // Access HEBI version of std::variant member
-                    auto hebi_p = std::get<HebiParams>(def.params);
+                    const auto hebi_p = std::get<HebiParams>(def.params);
 
                     actuator = std::make_unique<HebiActuator>(hebi_p.families,
                                                               hebi_p.names,
@@ -190,8 +190,13 @@ std::vector<double> ArmThread::GetAllActualTorque() {
  * @brief Controls the output of verbose debug text
  * @param true to enable, false to disable
  */
-void ArmThread::SetDebugMode(bool enabled) {
+void ArmThread::SetDebugMode(const bool& enabled) {
     debug_mode_ = enabled;
+
+    // Don't forget to update to all actuator objects
+    for (const auto& actuator : actuators_) {
+        actuator->SetDebugMode(enabled);
+    }
 }
 
 /**

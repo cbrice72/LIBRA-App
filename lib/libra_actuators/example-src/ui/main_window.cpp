@@ -51,12 +51,12 @@ MainWindow::MainWindow(QWidget* parent)
     ui_->a_debug_mode->setChecked(debug_mode_);
 
     // Define actuators and initialization parameters
-    ActuatorDef yaw_def{
+    const ActuatorDef yaw_def{
         Actuator::Joint::kYaw, Actuator::Type::kEpos,
         EposParams{"?", "?", "?", "?", 0}
     };
 
-    ActuatorDef pitch_def{
+    const ActuatorDef pitch_def{
         Actuator::Joint::kPitch, Actuator::Type::kHebi,
         HebiParams{{"LIBRA"}, {"Pitch"}}
     };
@@ -78,6 +78,9 @@ MainWindow::MainWindow(QWidget* parent)
     arm_thread_ = new ArmThread(this, actuator_defs, debug_mode_);
 
     // - MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            arm_thread_, &ArmThread::SetDebugMode);
+
     connect(this, &MainWindow::TryConnect,  // connect a specific actuator
             arm_thread_, &ArmThread::ConnectActuator);
     connect(this, &MainWindow::TryDisconnect,  // disconnect a specific actuator
@@ -114,6 +117,12 @@ MainWindow::MainWindow(QWidget* parent)
  * @brief Standard destructor.
  */
 MainWindow::~MainWindow() {
+    // Wrap up the worker thread(s) gracefully
+    if (arm_thread_ != nullptr && arm_thread_->isRunning()) {
+        arm_thread_->requestInterruption();  // signal thread to stop looping
+        arm_thread_->wait();  // wait for thread cleanup to finish
+    }
+
     delete ui_;
 }
 
@@ -153,6 +162,8 @@ void MainWindow::HandleErrorMsg(const QString& err) {
  */
 void MainWindow::on_a_debug_mode_toggled(bool checked) {
     debug_mode_ = checked;
+
+    emit UpdateDebugMode(checked);
 
     if (debug_mode_) {
         qDebug() << "[DEBUG] Debug mode enabled";

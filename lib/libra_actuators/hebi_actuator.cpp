@@ -45,19 +45,35 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
     : AbstractActuator(debug_mode),
       families_(std::move(families)),
       names_(std::move(names)),
+      group_(nullptr),
       current_pos_{0.0, 0.0, 0.0},
       current_vel_{0.0, 0.0, 0.0},
       current_trq_{0.0, 0.0, 0.0},
       current_deflection_{0.0, 0.0, 0.0},
       current_voltage_{0.0, 0.0, 0.0},
       current_current_{0.0, 0.0, 0.0},
-      current_temp_{0.0, 0.0, 0.0} {}
+      current_temp_{0.0, 0.0, 0.0} {
+    if (debug_mode_) {
+        std::string families_str;
+        for (const auto& family : families_) {
+            families_str += family;
+        }
+        std::string names_str;
+        for (const auto& name : names_) {
+            names_str += name;
+        }
+
+        std::cout << "[DEBUG] Creating HEBI actuator with following params:"
+                  << "\n  Families: " << families_str
+                  << "\n  Names: " << names_str << std::endl;
+    }
+}
 
 /**
  * @brief Standard destructor.
  */
 HebiActuator::~HebiActuator() {
-    std::cout << "TODO - HebiActuator::~HebiActuator()" << std::endl;
+    std::cout << "TODO - HebiActuator::~HebiActuator()\n";
 
     // TODO: implementation
 }
@@ -93,8 +109,7 @@ bool HebiActuator::Connect() {
 
         if (entry_list->size() == 0) {
             // Early exit
-            std::cout << "[ERROR] No HEBI actuators found on network!"
-                      << std::endl;
+            std::cout << "[ERROR] No HEBI actuators found on network!\n";
             return false;
         }
 
@@ -114,22 +129,8 @@ bool HebiActuator::Connect() {
     // Filter lookup for relevant module(s)
     group_ = lookup.getGroupFromNames(families_, names_, kLookupTimeout);
     if (!group_) {
-        // Prepare strings for error output
-        std::string families_str;
-        for (const auto& family : families_) {
-            families_str += family;
-        }
-        std::string names_str;
-        for (const auto& name : names_) {
-            names_str += name;
-        }
-
-        // Error and exit
         std::cout
-            << "[ERROR] Given actuator families/names not found on network!\n"
-            << "  Families: " << families_str << "\n"
-            << "  Names: " << names_str << "\n"
-            << std::endl;
+            << "[ERROR] Given actuator families/names not found on network!";
         return false;
     }
 
@@ -181,7 +182,7 @@ bool HebiActuator::Disconnect() {
  *       movement command, the translation should be done within this function.
  */
 void HebiActuator::Move(double deg) {
-    std::cout << "TODO - HebiActuator::Move()" << std::endl;
+    std::cout << "TODO - HebiActuator::Move()\n";
 
     // TODO: implementation
 }
@@ -190,7 +191,7 @@ void HebiActuator::Move(double deg) {
  * @brief Sends an actuator stop command.
  */
 void HebiActuator::Stop() {
-    std::cout << "TODO - HebiActuator::Stop()" << std::endl;
+    std::cout << "TODO - HebiActuator::Stop()\n";
 
     // TODO: implementation
 }
@@ -200,28 +201,28 @@ void HebiActuator::Stop() {
 //------------------------------------------------------------------------------
 
 std::string HebiActuator::GetStatus() {
-    std::cout << "TODO - HebiActuator::GetStatus()" << std::endl;
+    std::cout << "TODO - HebiActuator::GetStatus()\n";
     return "";
 
     // TODO: implementation
 }
 
 double HebiActuator::GetTargetPos() {
-    std::cout << "TODO - HebiActuator::GetTargetPos()" << std::endl;
+    std::cout << "TODO - HebiActuator::GetTargetPos()\n";
     return 0.0;
 
     // TODO: implementation
 }
 
 double HebiActuator::GetActualPos() {
-    std::cout << "TODO - HebiActuator::GetActualPos()" << std::endl;
+    std::cout << "TODO - HebiActuator::GetActualPos()\n";
     return 0.0;
 
     // TODO: implementation
 }
 
 double HebiActuator::GetActualTorque() {
-    std::cout << "TODO - HebiActuator::GetActualTorque()" << std::endl;
+    std::cout << "TODO - HebiActuator::GetActualTorque()\n";
     return 0.0;
 
     // TODO: implementation

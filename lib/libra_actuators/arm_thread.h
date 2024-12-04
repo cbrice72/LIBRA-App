@@ -35,7 +35,7 @@ class ArmThread : public QThread {
     ~ArmThread() override = default;
 
   public slots:
-    void SetDebugMode(bool enabled);
+    void SetDebugMode(const bool& enabled);
 
     // --- Arm Commands ---
 

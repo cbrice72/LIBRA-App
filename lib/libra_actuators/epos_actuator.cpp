@@ -35,14 +35,23 @@ EposActuator::EposActuator(std::string device_name, std::string protocol_name,
       protocol_name_(std::move(protocol_name)),
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
-      baud_rate_(baud_rate) {}
+      baud_rate_(baud_rate) {
+    if (debug_mode_) {
+        std::cout << "[DEBUG] Creating EPOS actuator with following params:"
+                  << "\n  Device: " << device_name_
+                  << "\n  Protocol: " << protocol_name_
+                  << "\n  Interface: " << interface_name_
+                  << "\n  Port: " << port_name_
+                  << "\n  Baud Rate: " << baud_rate_ << std::endl;
+    }
+}
 
 /**
  * @brief Standard destructor.
  *
  */
 EposActuator::~EposActuator() {
-    std::cout << "TODO - EposActuator::~EposActuator()" << std::endl;
+    std::cout << "TODO - EposActuator::~EposActuator()\n";
 
     // TODO: implementation
 }
@@ -65,7 +74,7 @@ namespace {  // local to this file
  * @return true if successful, false otherwise
  */
 bool EposActuator::Connect() {
-    std::cout << "TODO - EposActuator::Connect()" << std::endl;
+    std::cout << "TODO - EposActuator::Connect()\n";
     return false;
 
     // TODO: implementation
@@ -77,7 +86,7 @@ bool EposActuator::Connect() {
  * @return true if successful, false otherwise
  */
 bool EposActuator::Disconnect() {
-    std::cout << "TODO - EposActuator::Disconnect()" << std::endl;
+    std::cout << "TODO - EposActuator::Disconnect()\n";
     return false;
 
     // TODO: implementation
@@ -92,7 +101,7 @@ bool EposActuator::Disconnect() {
  *       movement command, the translation should be done within this function.
  */
 void EposActuator::Move(double deg) {
-    std::cout << "TODO - EposActuator::Move()" << std::endl;
+    std::cout << "TODO - EposActuator::Move()\n";
 
     // TODO: implementation
 }
@@ -101,7 +110,7 @@ void EposActuator::Move(double deg) {
  * @brief Sends an actuator stop command.
  */
 void EposActuator::Stop() {
-    std::cout << "TODO - EposActuator::Stop()" << std::endl;
+    std::cout << "TODO - EposActuator::Stop()\n";
 
     // TODO: implementation
 }
@@ -111,28 +120,28 @@ void EposActuator::Stop() {
 //------------------------------------------------------------------------------
 
 std::string EposActuator::GetStatus() {
-    std::cout << "TODO - EposActuator::GetStatus()" << std::endl;
+    std::cout << "TODO - EposActuator::GetStatus()\n";
     return "";
 
     // TODO: implementation
 }
 
 double EposActuator::GetTargetPos() {
-    std::cout << "TODO - EposActuator::GetTargetPos()" << std::endl;
+    std::cout << "TODO - EposActuator::GetTargetPos()\n";
     return 0.0;
 
     // TODO: implementation
 }
 
 double EposActuator::GetActualPos() {
-    std::cout << "TODO - EposActuator::GetActualPos()" << std::endl;
+    std::cout << "TODO - EposActuator::GetActualPos()\n";
     return 0.0;
 
     // TODO: implementation
 }
 
 double EposActuator::GetActualTorque() {
-    std::cout << "TODO - EposActuator::GetActualTorque()" << std::endl;
+    std::cout << "TODO - EposActuator::GetActualTorque()\n";
     return 0.0;
 
     // TODO: implementation

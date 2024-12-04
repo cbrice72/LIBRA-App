@@ -41,6 +41,8 @@ class MainWindow : public QMainWindow {
     void HandleErrorMsg(const QString& err);
 
   signals:
+    void UpdateDebugMode(const bool& enabled);
+
     void TryConnect(const Actuator::Joint& joint);
     void TryDisconnect(const Actuator::Joint& joint);
 
@@ -84,5 +86,5 @@ class MainWindow : public QMainWindow {
     Ui::MainWindow* ui_;
     ArmThread* arm_thread_;
 
-    bool debug_mode_{false};
+    bool debug_mode_{true};
 };
