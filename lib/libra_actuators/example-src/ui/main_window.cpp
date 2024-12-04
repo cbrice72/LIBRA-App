@@ -50,6 +50,19 @@ MainWindow::MainWindow(QWidget* parent)
     // Set initial state UI of elements
     ui_->a_debug_mode->setChecked(debug_mode_);
 
+    // Define actuators and initialization parameters
+    ActuatorDef yaw_def{
+        Actuator::Joint::kYaw, Actuator::Type::kEpos,
+        EposParams{"?", "?", "?", "?", 0}
+    };
+
+    ActuatorDef pitch_def{
+        Actuator::Joint::kPitch, Actuator::Type::kHebi,
+        HebiParams{{"LIBRA"}, {"Pitch"}}
+    };
+
+    const auto actuator_defs = {yaw_def, pitch_def};  // passed to arm_thread_
+
     // --- Thread Management ---
 
     /* In Qt, thread management for subclassed QThreads generally has 4 steps:
@@ -62,7 +75,7 @@ MainWindow::MainWindow(QWidget* parent)
      */
 
     // Arm thread
-    ArmThread* arm_thread_ = new ArmThread(this, debug_mode_);
+    arm_thread_ = new ArmThread(this, actuator_defs, debug_mode_);
 
     // - MainWindow signals
     connect(this, &MainWindow::TryConnect,  // connect a specific actuator
@@ -151,7 +164,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
  *        Sends a request to open a connection to the EPOS-based yaw joint.
  */
 void MainWindow::on_a_epos_connect_triggered() {
-    emit TryConnect(ArmThread::Joint::kYaw);
+    emit TryConnect(Actuator::Joint::kYaw);
 }
 
 /**
@@ -159,7 +172,7 @@ void MainWindow::on_a_epos_connect_triggered() {
  *        Sends a request to close the connection to the EPOS-based yaw joint.
  */
 void MainWindow::on_a_epos_disconnect_triggered() {
-    emit TryDisconnect(ArmThread::Joint::kYaw);
+    emit TryDisconnect(Actuator::Joint::kYaw);
 }
 
 /**
@@ -167,7 +180,7 @@ void MainWindow::on_a_epos_disconnect_triggered() {
  *        Sends a request to open a connection to the HEBI-based pitch joint.
  */
 void MainWindow::on_a_hebi_connect_triggered() {
-    emit TryConnect(ArmThread::Joint::kPitch);
+    emit TryConnect(Actuator::Joint::kPitch);
 }
 
 /**
@@ -175,7 +188,7 @@ void MainWindow::on_a_hebi_connect_triggered() {
  *        Sends a request to close the connection to the HEBI-based pitch joint.
  */
 void MainWindow::on_a_hebi_disconnect_triggered() {
-    emit TryDisconnect(ArmThread::Joint::kPitch);
+    emit TryDisconnect(Actuator::Joint::kPitch);
 }
 
 //------------------------------------------------------------------------------
@@ -188,7 +201,7 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
 void MainWindow::on_pb_yaw_start_clicked() {
     auto val = ui_->sb_arm_yaw->value();
 
-    emit CommandOne(ArmThread::Joint::kYaw, val);
+    emit CommandOne(Actuator::Joint::kYaw, val);
 }
 
 /**
@@ -197,7 +210,7 @@ void MainWindow::on_pb_yaw_start_clicked() {
 void MainWindow::on_pb_pitch_start_clicked() {
     auto val = ui_->sb_arm_pitch->value();
 
-    emit CommandOne(ArmThread::Joint::kPitch, val);
+    emit CommandOne(Actuator::Joint::kPitch, val);
 }
 
 /**

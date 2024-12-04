@@ -15,7 +15,8 @@
 #include <QDebug>  // Qt::Core
 
 // Project Headers
-//   (none)
+#include "epos_actuator.h"
+#include "hebi_actuator.h"
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -28,21 +29,47 @@
  * @param parent Owning Qt widget
  * @param actuators Vector of actuators to be constructed (see `actuator_defs.h`)
  * @param debug_mode Whether verbose debug text should be output
- *
- * @todo --------------------------------------
- *       THIS IS WHERE I LEFT OFF ON 2024/12/02
- *       --------------------------------------
- *       Using the `actuators` parameter we need to be able to infer:
- *         1) the number of actuators
- *         2) which actuator class to make instances of
  */
-ArmThread::ArmThread(QObject* parent, std::vector<ActuatorDef> actuators,
+ArmThread::ArmThread(QObject* parent, std::vector<ActuatorDef> actuator_defs,
                      bool debug_mode)
     : QThread(parent), debug_mode_(debug_mode) {
-    qDebug() << "TODO - ArmThread::ArmThread()";
+    // Initialize each actuator according to its type
+    for (const auto& def : actuator_defs) {
+        std::unique_ptr<AbstractActuator> actuator;
 
-    for (auto actuator : actuators) {
-        // TODO: implementation
+        switch (def.type) {
+            case Actuator::Type::kEpos:
+                {
+                    // Access EPOS version of std::variant member
+                    auto epos_p = std::get<EposParams>(def.params);
+
+                    actuator =
+                        std::make_unique<EposActuator>(epos_p.device_name,
+                                                       epos_p.protocol_name,
+                                                       epos_p.interface_name,
+                                                       epos_p.port_name,
+                                                       epos_p.baud_rate,
+                                                       debug_mode_);
+                    break;
+                }
+            case Actuator::Type::kHebi:
+                {
+                    // Access HEBI version of std::variant member
+                    auto hebi_p = std::get<HebiParams>(def.params);
+
+                    actuator = std::make_unique<HebiActuator>(hebi_p.families,
+                                                              hebi_p.names,
+                                                              debug_mode_);
+                    break;
+                }
+            default:
+                qCritical()
+                    << "[ERROR] Cannot create actuator of undefined type!";
+                continue;  // skip adding this entry to actuator array
+        }
+
+        // Save initialized actuator in joint order
+        actuators_.at(def.joint) = std::move(actuator);
     }
 }
 
@@ -86,7 +113,7 @@ namespace {  // local to this file
  * @param joint
  * @return double
  */
-double ArmThread::GetTargetPos(Joint joint) {
+double ArmThread::GetTargetPos(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetTargetPos()";
     return 0.0;
 
@@ -99,7 +126,7 @@ double ArmThread::GetTargetPos(Joint joint) {
  * @param joint
  * @return double
  */
-double ArmThread::GetActualPos(Joint joint) {
+double ArmThread::GetActualPos(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetActualPos()";
     return 0.0;
 
@@ -112,7 +139,7 @@ double ArmThread::GetActualPos(Joint joint) {
  * @param joint
  * @return double
  */
-double ArmThread::GetActualTorque(Joint joint) {
+double ArmThread::GetActualTorque(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetActualTorque()";
     return 0.0;
 
@@ -170,45 +197,39 @@ void ArmThread::SetDebugMode(bool enabled) {
 /**
  * @brief Opens a connection with a specific actuator.
  *
+ * @param joint Actuator to connect
  * @return true if successful, false otherwise
  */
-void ArmThread::ConnectActuator(const Joint& joint) {
-    qDebug() << "TODO - ArmThread::ConnectActuator()";
-
-    // TODO: implementation
+void ArmThread::ConnectActuator(const Actuator::Joint& joint) {
+    actuators_.at(joint)->Connect();
 }
 
 /**
  * @brief Closes the active connection to a specific actuator.
  *
+ * @param joint Actuator to disconnect
  * @return true if successful, false otherwise
  */
-void ArmThread::DisconnectActuator(const Joint& joint) {
-    qDebug() << "TODO - ArmThread::DisconnectActuator()";
-
-    // TODO: implementation
+void ArmThread::DisconnectActuator(const Actuator::Joint& joint) {
+    actuators_.at(joint)->Disconnect();
 }
 
 /**
  * @brief Opens a connection with every actuator.
- *
- * @return true if successful (for all actuators), false otherwise
  */
 void ArmThread::ConnectAllActuators() {
-    qDebug() << "TODO - ArmThread::ConnectAllActuators()";
-
-    // TODO: implementation
+    for (const auto& actuator : actuators_) {
+        actuator->Connect();
+    }
 }
 
 /**
  * @brief Closes each active connection to an actuator.
- *
- * @return true if successful (for all actuators), false otherwise
  */
 void ArmThread::DisconnectAllActuators() {
-    qDebug() << "TODO - ArmThread::DisconnectAllActuators()";
-
-    // TODO: implementation
+    for (const auto& actuator : actuators_) {
+        actuator->Disconnect();
+    }
 }
 
 /**
@@ -217,14 +238,14 @@ void ArmThread::DisconnectAllActuators() {
  * @param joint Actuator to command
  * @param val Target value for actuator, in degrees
  */
-void ArmThread::Move(const Joint& joint, const double& val) {
+void ArmThread::Move(const Actuator::Joint& joint, const double& val) {
     actuators_.at(joint)->Move(val);
 }
 
 /**
  * @brief Commands all connected actuators to start moving.
  *
- * @param vals Target value for all actuators (in `Joint` enum order), in degrees
+ * @param vals Target values for all actuators (in `Joint` enum order), in degrees
  */
 void ArmThread::MoveAll(const std::vector<double>& vals) {
     if (actuators_.size() != vals.size()) {

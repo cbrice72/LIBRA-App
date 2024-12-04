@@ -24,7 +24,9 @@
  */
 class EposActuator : public AbstractActuator {
   public:
-    explicit EposActuator(bool debug_mode = false);
+    explicit EposActuator(std::string device_name, std::string protocol_name,
+                          std::string interface_name, std::string port_name,
+                          uint baud_rate, const bool& debug_mode = false);
     ~EposActuator();
 
     // --- Actuator Commands ---

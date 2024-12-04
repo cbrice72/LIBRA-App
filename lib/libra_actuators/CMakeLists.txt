@@ -19,11 +19,23 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         LANGUAGES CXX
     )
 
+    # Define the actual LIBRA project root, for convenience
+    set(ROOT_DIR ${CMAKE_SOURCE_DIR}/../..)
+    get_filename_component(ROOT_DIR "${ROOT_DIR}" REALPATH)
+
     # Project options
-    set(EPOS_DIR "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
+    set(EPOS_DIR "${ROOT_DIR}/thirdparty/epos-6.8.1.0"
         CACHE PATH "Path to the latest EPOS API" FORCE)
-    set(HEBI_DIR "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+    set(HEBI_DIR "${ROOT_DIR}/thirdparty/hebi-cpp-3.11.1"
         CACHE PATH "Path to the latest HEBI API" FORCE)
+
+    # ~~~
+    # - NOTE: the following is necessary since HEBI_DIR is an out-of-tree source
+    #         ("out-of-tree" as in HEBI_DIR is not a subdir of CMAKE_SOURCE_DIR)
+    # ~~~
+    set(hebi_cpp_build_dir hebi-cpp-${CMAKE_BUILD_TYPE})
+    string(TOLOWER ${hebi_cpp_build_dir} hebi_cpp_build_dir)
+    get_filename_component(hebi_cpp_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${hebi_cpp_build_dir}" REALPATH)
 
     # CMake options
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
@@ -40,6 +52,9 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Dependencies (installed on system)
     find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
     find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
+
+    # Dependencies (packaged with this project)
+    add_subdirectory(${HEBI_DIR} ${hebi_cpp_build_dir})
 endif()
 
 # ---
@@ -60,23 +75,27 @@ if(NOT DEFINED HEBI_DIR)
     message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
 endif()
 # - Collect all HEBI source files (see comment in `qt_add_library` call below)
-file(GLOB HEBI_SOURCE_FILES "${HEBI_DIR}/src/*.cpp")
+file(GLOB_RECURSE HEBI_SOURCE_FILES "${HEBI_DIR}/src/*.hpp" "${HEBI_DIR}/src/*.cpp")
 # - Include headers from all libraries used by HEBI (TODO: is this overkill?)
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/Eigen" "${HEBI_DIR}/hebi/include"
-                      "${HEBI_DIR}/rapidyaml" "${HEBI_DIR}/src"
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
+                      "${HEBI_DIR}/Eigen" "${HEBI_DIR}/rapidyaml" 
 )
+
+foreach(TEST ${HEBI_SOURCE_FILES})
+    message(STATUS "FILE: ${TEST}")
+endforeach()
 
 # Create and configure the module
 qt_add_library(
     libra_actuators
     STATIC
     # Header
-    abstract_actuator.h
-    epos_actuator.h
-    hebi_actuator.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/epos_actuator.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_actuator.h
     # Source
-    epos_actuator.cpp
-    hebi_actuator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/epos_actuator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_actuator.cpp
     # HEBI src/ folder needs to be passed in during compilation/linking process
     # (see HEBI C++ API docs: https://files.hebi.us/docs/cpp/cpp-3.11.1/)
     ${HEBI_SOURCE_FILES}
@@ -86,7 +105,7 @@ qt_add_library(
 target_include_directories(
     libra_actuators
     # EPOS (Maxon)
-    PUBLIC ${EPOS_INCLUDE_DIRS}
+    PRIVATE ${EPOS_INCLUDE_DIRS}
     # HEBI
     PUBLIC ${HEBI_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
@@ -100,7 +119,7 @@ target_link_libraries(
     # EPOS (Maxon)
     PRIVATE -lEposCmd
     # HEBI
-    PRIVATE pthread hebic++
+    PUBLIC hebi hebic++ m pthread
 )
 
 # ---
@@ -131,6 +150,8 @@ target_link_libraries(
     arm_thread
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
+    # Project
+    PRIVATE libra_actuators
 )
 
 # ---
@@ -174,7 +195,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         # Qt
         PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
         # Project
-        arm_thread)
+        arm_thread
+    )
 
     # Specify platform-specific properties
     # ~~~

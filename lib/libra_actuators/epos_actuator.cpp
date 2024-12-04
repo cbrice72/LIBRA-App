@@ -27,11 +27,15 @@
  * @brief Standard constructor.
  *
  */
-EposActuator::EposActuator(bool debug_mode) : AbstractActuator(debug_mode) {
-    std::cout << "TODO - EposActuator::EposActuator()" << std::endl;
-
-    // TODO: implementation
-}
+EposActuator::EposActuator(std::string device_name, std::string protocol_name,
+                           std::string interface_name, std::string port_name,
+                           uint baud_rate, const bool& debug_mode)
+    : AbstractActuator(debug_mode),
+      device_name_(std::move(device_name)),
+      protocol_name_(std::move(protocol_name)),
+      interface_name_(std::move(interface_name)),
+      port_name_(std::move(port_name)),
+      baud_rate_(baud_rate) {}
 
 /**
  * @brief Standard destructor.

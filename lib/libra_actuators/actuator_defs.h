@@ -7,12 +7,16 @@
 
 #pragma once
 
+#include <string>
+#include <variant>
+#include <vector>
+
 namespace Actuator {  // place enums in this namespace to improve readability
 
 /**
  * @brief LIBRA-II joint names.
  */
-static enum Joint {
+enum Joint {
     kYaw = 0,
     kPitch,
     kJointCount  // KEEP THIS LAST!
@@ -23,7 +27,7 @@ static enum Joint {
  *
  * @note See `abstract_actuator.h`.
  */
-static enum Type {
+enum Type {
     kEpos = 0,  // EPOS4 (Maxon), see `epos_actuator[.h,.cpp]`
     kHebi       // HEBI, see `hebi_actuator[.h,.cpp]`
 };
@@ -31,13 +35,39 @@ static enum Type {
 }  // namespace Actuator
 
 /**
+ * @brief Parameters necessary for initializing EPOS4 (Maxon) actuators.
+ *        One possible variant of `ActuatorDef.params`.
+ *
+ * @note Access using `std::get<EposParams>()`.
+ */
+struct EposParams {
+    std::string device_name;
+    std::string protocol_name;
+    std::string interface_name;
+    std::string port_name;
+    uint baud_rate;
+};
+
+/**
+ * @brief Parameters necessary for initializing HEBI actuators.
+ *        One possible variant of `ActuatorDef.params`.
+ *
+ * @note Access using `std::get<HebiParams>()`.
+ */
+struct HebiParams {
+    std::vector<std::string> families;
+    std::vector<std::string> names;
+};
+
+/**
  * @brief Container for defining a LIBRA actuator.
  *
- * @note Initialization parameters (`params`) are implementation-dependent.
- * @note See `ArmThread::ArmThread()`.
+ * @note Initialization parameters (`params`) are implementation-defined, so we
+ *       use a std::variant as a union.
+ * @note See use in `ArmThread::ArmThread()`.
  */
 struct ActuatorDef {
-    Actuator::Joint joint;            // joint number
-    Actuator::Type type;              // actuator make
-    std::vector<std::string> params;  // initialization parameters
-}
+    Actuator::Joint joint;                        // joint number
+    Actuator::Type type;                          // actuator make
+    std::variant<EposParams, HebiParams> params;  // union for parameters
+};

@@ -9,10 +9,12 @@
 
 // C++ Standard Library Headers
 #include <array>
+#include <memory>
 #include <string>
+#include <vector>
 
 // Other Library Headers
-//   (none)
+#include "group.hpp"  // HEBI
 
 // Project Headers
 #include "abstract_actuator.h"
@@ -25,7 +27,9 @@
  */
 class HebiActuator : public AbstractActuator {
   public:
-    explicit HebiActuator(bool debug_mode = false);
+    explicit HebiActuator(std::vector<std::string> families,
+                          std::vector<std::string> names,
+                          const bool& debug_mode = false);
     ~HebiActuator();
 
     // --- Actuator Commands ---
@@ -49,8 +53,9 @@ class HebiActuator : public AbstractActuator {
 
     // --- Data Members ---
 
-    std::string name_family_;
-    std::string name_module_;
+    std::vector<std::string> families_;
+    std::vector<std::string> names_;
+
     std::shared_ptr<hebi::Group> group_;
 
     std::array<double, 3> current_pos_;  // position

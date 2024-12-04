@@ -34,12 +34,24 @@ constexpr int32_t kLookupTimeout = 4000;  // ms
 
 /**
  * @brief Standard constructor.
+ *
+ * @param families Families of actuators to search for names in
+ * @param names Names of actuators to connect to
+ * @param debug_mode Whether verbose debug text should be output
  */
-HebiActuator::HebiActuator(bool debug_mode) : AbstractActuator(debug_mode) {
-    std::cout << "TODO - HebiActuator::HebiActuator()" << std::endl;
-
-    // TODO: implementation
-}
+HebiActuator::HebiActuator(std::vector<std::string> families,
+                           std::vector<std::string> names,
+                           const bool& debug_mode)
+    : AbstractActuator(debug_mode),
+      families_(std::move(families)),
+      names_(std::move(names)),
+      current_pos_{0.0, 0.0, 0.0},
+      current_vel_{0.0, 0.0, 0.0},
+      current_trq_{0.0, 0.0, 0.0},
+      current_deflection_{0.0, 0.0, 0.0},
+      current_voltage_{0.0, 0.0, 0.0},
+      current_current_{0.0, 0.0, 0.0},
+      current_temp_{0.0, 0.0, 0.0} {}
 
 /**
  * @brief Standard destructor.
@@ -77,41 +89,48 @@ bool HebiActuator::Connect() {
 
     // Check if any modules were found
     {
-        std::shared_ptr<hebi::Lookup::EntryList> entry_list =
-            lookup.getEntryList();
+        const auto entry_list = lookup.getEntryList();
 
         if (entry_list->size() == 0) {
             // Early exit
-            std::cout << "[WARN] No HEBI actuators found on network!"
+            std::cout << "[ERROR] No HEBI actuators found on network!"
                       << std::endl;
             return false;
         }
 
         if (debug_mode_) {
             // Print out any modules we found
-            std::cout << "[DEBUG] HEBI modules found on network (Family|Name):"
-                      << std::endl;
+            std::cout
+                << "[DEBUG] HEBI modules found on network (Family|Name):\n";
 
             for (auto entry : *entry_list) {
                 std::cout << "  " << entry.family_ << " | " << entry.name_
-                          << std::endl;
+                          << "\n";
             }
+            std::cout << std::endl;
         }
     }
 
-    // Define module names/addresses
-    // TODO: parse these from constructor args + define as member variables
-    std::vector<std::string> families;
-    families.push_back("CommsTest");
-
-    std::vector<std::string> names;
-    names.push_back("One");
-    names.push_back("Two");
-
     // Filter lookup for relevant module(s)
-    group_ = lookup.getGroupFromNames(families, names, kLookupTimeout);
-    if (group_ ? group_->size() : -1) {
-        std::cout << "[WARN] Group not found on network." << std::endl;
+    group_ = lookup.getGroupFromNames(families_, names_, kLookupTimeout);
+    if (!group_) {
+        // Prepare strings for error output
+        std::string families_str;
+        for (const auto& family : families_) {
+            families_str += family;
+        }
+        std::string names_str;
+        for (const auto& name : names_) {
+            names_str += name;
+        }
+
+        // Error and exit
+        std::cout
+            << "[ERROR] Given actuator families/names not found on network!\n"
+            << "  Families: " << families_str << "\n"
+            << "  Names: " << names_str << "\n"
+            << std::endl;
+        return false;
     }
 
     // Add a callback to save feedback in a background thread
@@ -138,7 +157,6 @@ bool HebiActuator::Connect() {
 
     return true;
 }
-}  // namespace
 
 /**
  * @brief Terminates the active connection.

@@ -41,10 +41,10 @@ class MainWindow : public QMainWindow {
     void HandleErrorMsg(const QString& err);
 
   signals:
-    void TryConnect(const ArmThread::Joint& joint);
-    void TryDisconnect(const ArmThread::Joint& joint);
+    void TryConnect(const Actuator::Joint& joint);
+    void TryDisconnect(const Actuator::Joint& joint);
 
-    void CommandOne(const ArmThread::Joint& joint, const double& val);
+    void CommandOne(const Actuator::Joint& joint, const double& val);
     void CommandAll(const std::vector<double>& vals);
 
     // NOLINTBEGIN: Qt-generated

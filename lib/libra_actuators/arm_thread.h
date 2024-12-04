@@ -30,7 +30,7 @@ class ArmThread : public QThread {
     // NOLINTEND
 
   public:
-    explicit ArmThread(QObject* parent, std::vector<ActuatorDef> actuators,
+    explicit ArmThread(QObject* parent, std::vector<ActuatorDef> actuator_defs,
                        bool debug_mode_ = false);
     ~ArmThread() override = default;
 
@@ -39,13 +39,13 @@ class ArmThread : public QThread {
 
     // --- Arm Commands ---
 
-    void ConnectActuator(const Joint& joint);
-    void DisconnectActuator(const Joint& joint);
+    void ConnectActuator(const Actuator::Joint& joint);
+    void DisconnectActuator(const Actuator::Joint& joint);
 
     void ConnectAllActuators();
     void DisconnectAllActuators();
 
-    void Move(const Joint& joint, const double& val);
+    void Move(const Actuator::Joint& joint, const double& val);
     void MoveAll(const std::vector<double>& vals);
     void Stop();
 
@@ -60,9 +60,9 @@ class ArmThread : public QThread {
 
     // --- Helper Functions ---
 
-    double GetTargetPos(Joint joint);
-    double GetActualPos(Joint joint);
-    double GetActualTorque(Joint joint);
+    double GetTargetPos(Actuator::Joint joint);
+    double GetActualPos(Actuator::Joint joint);
+    double GetActualTorque(Actuator::Joint joint);
 
     std::vector<double> GetAllTargetPos();
     std::vector<double> GetAllActualPos();
@@ -72,5 +72,6 @@ class ArmThread : public QThread {
 
     bool debug_mode_;
 
-    std::array<std::unique_ptr<AbstractActuator>, Joint::kJointCount> actuators_;
+    std::array<std::unique_ptr<AbstractActuator>, Actuator::Joint::kJointCount>
+        actuators_;
 };
