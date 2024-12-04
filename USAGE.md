@@ -35,9 +35,11 @@ If the actuator does not show up or is inaccessible, follow the instructions [he
 
 ### *Windows*
 
-Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet.
-Then, in Settings, navigate to "Network & Internet" -> "Ethernet" and select the actuator's network (may show up as "Unidentified Network" or something similar).
-Under "IP settings", click "Edit" and manually assign a static IP according to the table below.
+Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet (an Ethernet-to-USB adaptor also works).
+Then, in Settings, navigate to "Network & Internet" and find the actuator's network based on your connection method.
+- **Ethernet (Directly)**: in the main window, it may show up as "Unidentified Network" or something similar.
+- **USB Adapter (Indirectly)**: go to "Advanced network settings" and find your adapter (look at the description for your adapter brand), then click "View additional properties".
+Under "IP assignment", click "Edit" and manually assign IPv4 settings according to the table below.
 
 | Setting | Value | Notes |
 |---|---|---|
