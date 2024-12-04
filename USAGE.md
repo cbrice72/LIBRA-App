@@ -2,8 +2,8 @@
 
 A collection of detailed instructions and lessons learned from operating the LIBRA robot.
 
-1. [Extending the Arm in Kikura Lab (North Lab Bldg. 1)](#extending-the-arm-in-kikura-lab-north-lab-bldg-1)
-2. [Networking / Connecting to Actuators](#networking--connecting-to-actuators)
+- [Extending the Arm in Kikura Lab (North Lab Bldg. 1)](#extending-the-arm-in-kikura-lab-north-lab-bldg-1)
+- [Networking / Connecting to Actuators](#networking--connecting-to-actuators)
 
 ## Extending the Arm in Kikura Lab (North Lab Bldg. 1)
 
