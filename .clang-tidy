@@ -21,6 +21,7 @@ FormatStyle: file
 # - misc-include-cleaner: project preference
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
+# - performance-avoid-endl: endl is essentially required for cout/cerr in threads
 
 # List the checks we will run
 Checks: -*,
@@ -44,7 +45,8 @@ Checks: -*,
     -hicpp-vararg,
     -misc-include-cleaner,
     -misc-non-private-member-variables-in-classes,
-    -modernize-use-trailing-return-type
+    -modernize-use-trailing-return-type,
+    -performance-avoid-endl
 
 # Don't turn all the warnings from the above checks into errors
 # (since this project was inherited filled with outdated/legacy code practices,
