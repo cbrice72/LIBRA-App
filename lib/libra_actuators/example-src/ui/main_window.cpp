@@ -36,6 +36,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Check if app is running in Windows Subsystem for Linux (WSL2)
     {
+        // NOLINTBEGIN
         const char* wsl_path = "/run/WSL";
 
         struct stat buf {};
@@ -45,6 +46,7 @@ MainWindow::MainWindow(QWidget* parent)
                 << "[WARN] You seem to be running this on WSL2. Please ensure "
                    "you have properly forwarded your USB connections.";
         }
+        // NOLINTEND
     }
 
     // Set initial state UI of elements
@@ -62,6 +64,18 @@ MainWindow::MainWindow(QWidget* parent)
     };
 
     const auto actuator_defs = {yaw_def, pitch_def};  // passed to arm_thread_
+
+    // --- Internal Slots ---
+
+    connect(ui_->hs_arm_yaw, &QSlider::sliderMoved,  // slider visual feedback
+            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
+    // NOTE: we don't also connect them the other way around since
+    //       they'd become stuck in an endless feedback loop
+
+    connect(ui_->hs_arm_pitch, &QSlider::sliderMoved,  // slider visual feedback
+            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
+    // NOTE: we don't also connect them the other way around since
+    //       they'd become stuck in an endless feedback loop
 
     // --- Thread Management ---
 
@@ -145,6 +159,20 @@ namespace {  // local to this file
  *                 joint order
  */
 void MainWindow::HandleStatusMsg(const std::vector<QString>& statuses) {
+    // Handle EPOS status
+    /*
+    l_target_yaw
+    l_actual_yaw
+    l_torque_yaw
+    */
+
+    // Handle HEBI status
+    /*
+    l_target_pitch
+    l_actual_pitch
+    l_torque_pitch
+    */
+
     ui_->l_yaw_status->setText(statuses.at(Actuator::Joint::kYaw));
     ui_->l_pitch_status->setText(statuses.at(Actuator::Joint::kPitch));
 }
@@ -218,6 +246,11 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
 void MainWindow::on_pb_yaw_start_clicked() {
     auto val = ui_->sb_arm_yaw->value();
 
+    if (ui_->hs_arm_yaw->value() != val) {
+        // If value was entered via the SpinBox, update the slider
+        ui_->hs_arm_yaw->setValue(val);
+    }
+
     emit CommandOne(Actuator::Joint::kYaw, val);
 }
 
@@ -226,6 +259,11 @@ void MainWindow::on_pb_yaw_start_clicked() {
  */
 void MainWindow::on_pb_pitch_start_clicked() {
     auto val = ui_->sb_arm_pitch->value();
+
+    if (ui_->hs_arm_pitch->value() != val) {
+        // If value was entered via the SpinBox, update the slider
+        ui_->hs_arm_pitch->setValue(val);
+    }
 
     emit CommandOne(Actuator::Joint::kPitch, val);
 }
@@ -236,8 +274,17 @@ void MainWindow::on_pb_pitch_start_clicked() {
 void MainWindow::on_pb_arm_start_clicked() {
     auto yaw = ui_->sb_arm_yaw->value();
     auto pitch = ui_->sb_arm_pitch->value();
-    std::vector<double> vals = {yaw, pitch};
 
+    if (ui_->hs_arm_yaw->value() != yaw) {
+        // If yaw value was entered via the SpinBox, update its slider
+        ui_->hs_arm_yaw->setValue(yaw);
+    }
+    if (ui_->hs_arm_pitch->value() != pitch) {
+        // If pitch value was entered via the SpinBox, update its slider
+        ui_->hs_arm_pitch->setValue(pitch);
+    }
+
+    std::vector<double> vals = {yaw, pitch};
     emit CommandAll(vals);
 }
 
