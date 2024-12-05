@@ -10,9 +10,9 @@ qt_add_library(
     util
     STATIC
     # Header
-    utility.h
+    util.h
     # Source
-    utility.cpp
+    util.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries

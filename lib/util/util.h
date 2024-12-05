@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   utility.h
+ * @file   util.h
  * @brief  Namespace for convenient, general-use functions; header file.
  *
  * @author brice.c.aa
@@ -17,6 +17,9 @@
 //   (none)
 
 namespace util {
+
+std::string GetDateTimeStr();
+std::string GetTimestampStr();
 
 void PrintEPOSErr(std::string func_name, uint err, int node_id = 0);
 

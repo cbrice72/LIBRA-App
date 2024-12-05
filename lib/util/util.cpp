@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file   utility.h
+ * @file   util.cpp
  * @brief  Namespace for convenient, general-use functions; implementation file.
  *
  * @author brice.c.aa
  ******************************************************************************/
 
 // Related Header
-#include "utility.h"
+#include "util.h"
 
 // C++ Standard Library Headers
 //   (none)
@@ -57,6 +57,27 @@ std::string GetMaxonErrTxt(uint err) {
 //------------------------------------------------------------------------------
 
 namespace util {
+
+/**
+ * @brief Provides a filename-safe string of the current date and time.
+ *
+ * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
+ */
+std::string GetDateTimeStr() {
+    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+    dts.replace(":", "-");         // replace colons (invalid in filenames)
+    dts = dts.section('.', 0, 0);  // remove milliseconds
+    return dts.toStdString();
+}
+
+/**
+ * @brief Provides an Excel-friendly string of the current time.
+ *
+ * @return String formatted as "HH-mm-ss.zzz"
+ */
+std::string GetTimestampStr() {
+    return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();
+}
 
 /**
  * Note concerning EPOS system units (from Application Notes Collection, 1.7)
