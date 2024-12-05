@@ -46,7 +46,7 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     set(CMAKE_AUTORCC ON)
 
     # Specify C++ standard to define available features
-    set(CMAKE_CXX_STANDARD 17)
+    set(CMAKE_CXX_STANDARD 20)
     set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
     # Dependencies (installed on system)
@@ -173,6 +173,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
             add_executable(LIBRA-Actuators-Example ${PROJECT_SOURCE})
         endif()
     endif()
+
+    # Copy app and actuator configurations to the executable directory
+    add_custom_command(
+        TARGET LIBRA-Actuators-Example
+        POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${ROOT_DIR}/shared/libra-2
+                ${CMAKE_INSTALL_BINDIR}/shared
+    )
 
     # Add all libraries directly used by this project to the include path
     target_include_directories(

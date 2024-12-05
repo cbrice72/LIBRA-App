@@ -28,7 +28,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 # Specify C++ standard to define available features
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies (installed on system)
@@ -70,12 +70,12 @@ qt_add_executable(LIBRA-App-v2 MANUAL_FINALIZATION ${PROJECT_SOURCE})
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 # ~~~
 
-# Copy HEBI actuator configurations to the executable directory
+# Copy app and actuator configurations to the executable directory
 add_custom_command(
     TARGET LIBRA-App-v2
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shared
-            ${CMAKE_INSTALL_BINDIR}/gains
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shared/libra-2
+            ${CMAKE_INSTALL_BINDIR}/shared
 )
 
 # Add all libraries directly used by this project to the include path
