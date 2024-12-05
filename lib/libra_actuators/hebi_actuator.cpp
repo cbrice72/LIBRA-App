@@ -9,12 +9,15 @@
 #include "hebi_actuator.h"
 
 // C++ Standard Library Headers
+#include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <thread>
 
 // Other Library Headers
-#include "lookup.hpp"  // HEBI
+#include "log_file.hpp"    // HEBI
+#include "lookup.hpp"      // HEBI
+#include "trajectory.hpp"  // HEBI
 
 // Project Headers
 //   (none)
@@ -32,9 +35,12 @@
 constexpr double kSecondsPerMin = 60;
 constexpr double kRadPerRevolution = 2 * M_PI;
 
+constexpr double kDegToRad = M_PI / 180;
+constexpr double kRadToDeg = 180 / M_PI;
+
 // HEBI Functions
 
-constexpr int32_t kLookupTimeout = 4000;  // ms
+constexpr int32_t kTimeout = 3000;  // ms
 
 /**
  * @brief Standard constructor.
@@ -50,6 +56,7 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
+      num_actuators_(names_.size()),
       command_(nullptr),
       feedback_(nullptr) {
     // Sanity check inputs since expected use of this object is through an
@@ -70,17 +77,18 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
     }
 
     // Initialize HEBI objects
-    command_ = std::make_unique<hebi::GroupCommand>(names_.size());
-    feedback_ = std::make_unique<hebi::GroupFeedback>(names_.size());
+    command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
+    feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
 }
 
 /**
  * @brief Standard destructor.
  */
 HebiActuator::~HebiActuator() {
-    std::cout << "TODO - HebiActuator::~HebiActuator()" << std::endl;
-
-    // TODO: implementation
+    if (group_ != nullptr) {
+        // Stop logging
+        group_->stopLog();
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -88,6 +96,25 @@ HebiActuator::~HebiActuator() {
 //------------------------------------------------------------------------------
 
 namespace {  // local to this file
+
+// Helper function to run actuator trajectory in a separate thread
+/**
+ * @brief
+ *
+ * @param trajectory
+ */
+void RunActuatorTrajectory(const std::vector<double>& trajectory) {
+    std::thread trajectory_thread([trajectory]() {
+        /*
+        while () {
+            // TODO
+        }
+        */
+    });
+
+    // Detach the thread to run independently
+    trajectory_thread.detach();
+}
 
 }  // namespace
 
@@ -114,8 +141,7 @@ bool HebiActuator::Connect() {
 
         if (entry_list->size() == 0) {
             // Early exit
-            std::cout << "[ERROR] HEBI - No actuators found on network!"
-                      << std::endl;
+            std::cerr << "[ERROR] HEBI - No actuators found on network!\n";
             return false;
         }
 
@@ -133,29 +159,44 @@ bool HebiActuator::Connect() {
     }
 
     // Filter lookup for relevant actuator(s)
-    group_ = lookup.getGroupFromNames(families_, names_, kLookupTimeout);
+    group_ = lookup.getGroupFromNames(families_, names_, kTimeout);
     if (group_ == nullptr) {
-        std::cout
-            << "[ERROR] HEBI - Requested actuator families/names not found!";
+        std::cerr
+            << "[ERROR] HEBI - Requested actuator families/names not found!\n";
         return false;
     }
 
     // Load safety parameters
     if (!command_->readSafetyParameters("bin/shared/hebi/safety.xml")) {
-        std::cout << "[ERROR] HEBI - Failed to load safety parameters!"
-                  << std::endl;
+        std::cerr << "[ERROR] HEBI - Failed to load safety parameters!\n";
         return false;
     }
 
     // Load gains
     if (!command_->readGains("bin/shared/hebi/gains.xml")) {
-        std::cout << "[ERROR] HEBI - Failed to load gain parameters!"
-                  << std::endl;
+        std::cerr << "[ERROR] HEBI - Failed to load gain parameters!\n";
         return false;
     }
 
+    // Start logging
+    const std::string log_path = group_->startLog("./log");
+    if (log_path.empty()) {
+        std::cerr
+            << "[ERROR] HEBI - Log directory (log/) does not exist in CWD!\n";
+        return false;
+    }
+
+    if (debug_mode_) {
+        std::cout << "[DEBUG] HEBI - Creating log file at " << log_path
+                  << std::endl;
+    }
+
     // Initialize actuator(s) with above parameters
-    group_->sendCommand(*command_);
+    if (!group_->sendCommandWithAcknowledgement(*command_, kTimeout)) {
+        std::cerr << "[ERROR] HEBI - Didn't receive acknowledgement from "
+                     "actuator initialization!\n";
+        return false;
+    }
     command_->clear();
 
     // Command actuator(s) to hold current position
@@ -172,6 +213,9 @@ bool HebiActuator::Connect() {
  */
 bool HebiActuator::Disconnect() {
     if (group_) {
+        // Stop logging
+        group_->stopLog();
+
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
     }
@@ -189,13 +233,58 @@ bool HebiActuator::Disconnect() {
  */
 void HebiActuator::Move(double deg) {
     if (group_ == nullptr) {
-        std::cout << "[ERROR] HEBI - Can't move actuators; not connected!";
+        std::cerr << "[ERROR] HEBI - Can't move actuators; not connected!\n";
         return;
     }
 
-    std::cout << "TODO - HebiActuator::Move()" << std::endl;
+    // Make command vectors of two points: current -> target
+    Eigen::MatrixXd positions(num_actuators_, 2);
 
-    // TODO: implementation
+    // Populate positions vector
+    positions.col(0) = command_->getPosition();  // current (start)
+    positions(0, 1) = deg;                       // target (finish)
+    positions.col(1) *= kDegToRad;
+
+    // Determine greatest change in position for calculating trajectory time
+    // NOTE: this is just future-proofing; LIBRA-II only has one HEBI actuator
+    double max_difference = 0;
+    for (auto i = 0; i < num_actuators_; i++) {
+        max_difference = std::max(abs(positions(i, 1) - positions(i, 0)),
+                                  max_difference);
+    }
+
+    // Calculate trajectory start and end times
+    Eigen::VectorXd time(2);
+    time << 0, max_difference * 12 / M_PI;  // 12 is arbitrary - change at will
+
+    // Log start time and create trajectory
+    auto start = std::chrono::system_clock::now();
+    auto trajectory =
+        hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions);
+
+    // --- TODO: This should be part of a HebiThread run() loop when implemented ---
+
+    // Follow trajectory
+    const double duration = trajectory->getDuration();
+    Eigen::VectorXd pos_cmd(num_actuators_);
+    Eigen::VectorXd vel_cmd(num_actuators_);
+
+    std::chrono::duration<double> t(std::chrono::system_clock::now() - start);
+    while (t.count() < duration) {
+        // `getNextFeedback()` rate limits loop without having to call sleep
+        group_->getNextFeedback(*feedback_);
+
+        // Update trajectory time
+        t = std::chrono::system_clock::now() - start;
+
+        // Get command values for current point in time (relative to trajectory)
+        trajectory->getState(t.count(), &pos_cmd, &vel_cmd, nullptr);
+        command_->setPosition(pos_cmd);
+        command_->setVelocity(vel_cmd);
+
+        // Send movement command
+        group_->sendCommand(*command_);
+    }
 }
 
 /**
@@ -203,7 +292,7 @@ void HebiActuator::Move(double deg) {
  */
 void HebiActuator::Stop() {
     if (group_ == nullptr) {
-        std::cout << "[ERROR] HEBI - Can't stop actuators; not connected!";
+        std::cerr << "[ERROR] HEBI - Can't stop actuators; not connected!\n";
         return;
     }
 
@@ -221,12 +310,14 @@ void HebiActuator::Stop() {
  *
  * @return std::string Comma-delimited status messages
  *
- * @note See following HEBI C++ API page for full list of available feedback:
+ * @note See following HEBI C++ API page for full list of available
+ * feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
  *
  * @todo Currently, values are only retrieved for the first actuator in the
- *       group. This is fine with LIBRA-II (since only a single HEBI actuator is
- *       used), but for LIBRA-I we need a more programmatic way of sending the data.
+ *       group. This is fine with LIBRA-II (since only a single HEBI
+ * actuator is used), but for LIBRA-I we need a more programmatic way of
+ * sending the data.
  */
 std::string HebiActuator::GetStatus() {
     if (group_ == nullptr) {
@@ -248,8 +339,8 @@ std::string HebiActuator::GetStatus() {
     // alternatively, getBoardTemperature() for electronics
 
     // Perform conversions
-    target_pos *= 180 / M_PI;                          // to deg
-    actual_pos *= 180 / M_PI;                          // to deg
+    target_pos *= kRadToDeg;
+    actual_pos *= kRadToDeg;
     actual_vel *= kSecondsPerMin / kRadPerRevolution;  // to rpm
 
     std::stringstream status_ss;
@@ -285,7 +376,7 @@ std::string HebiActuator::GetStatus() {
  */
 double HebiActuator::GetTargetPos() {
     if (group_ == nullptr) {
-        std::cout << "[ERROR] HEBI - Can't get position; not connected!";
+        std::cerr << "[ERROR] HEBI - Can't get position; not connected!\n";
         return 0.0;
     }
 
@@ -302,7 +393,7 @@ double HebiActuator::GetTargetPos() {
  */
 double HebiActuator::GetActualPos() {
     if (group_ == nullptr) {
-        std::cout << "[ERROR] HEBI - Can't get position; not connected!";
+        std::cerr << "[ERROR] HEBI - Can't get position; not connected!\n";
         return 0.0;
     }
 
@@ -319,7 +410,7 @@ double HebiActuator::GetActualPos() {
  */
 double HebiActuator::GetActualTorque() {
     if (group_ == nullptr) {
-        std::cout << "[ERROR] HEBI - Can't get torque; not connected!";
+        std::cerr << "[ERROR] HEBI - Can't get torque; not connected!\n";
         return 0.0;
     }
 

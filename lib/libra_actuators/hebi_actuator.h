@@ -59,8 +59,9 @@ class HebiActuator : public AbstractActuator {
     std::vector<std::string> names_;
 
     std::shared_ptr<hebi::Group> group_;
+    const int num_actuators_;  // set in constructor initializer
 
-    std::unique_ptr<hebi::GroupCommand> command_;
-    std::unique_ptr<hebi::GroupFeedback> feedback_;
+    std::shared_ptr<hebi::GroupCommand> command_;
+    std::shared_ptr<hebi::GroupFeedback> feedback_;
     // std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
 };
