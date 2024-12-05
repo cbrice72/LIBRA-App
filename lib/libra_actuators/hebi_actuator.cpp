@@ -56,7 +56,7 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
             names_str += name;
         }
 
-        std::cout << "[DEBUG] Creating HEBI actuator with following params:"
+        std::cout << "[DEBUG] HEBI - Creating actuator with following params:"
                   << "\n  Families: " << families_str
                   << "\n  Names: " << names_str << std::endl;
     }
@@ -92,24 +92,24 @@ namespace {  // local to this file
  *       https://github.com/HebiRobotics/hebi-cpp-examples/blob/master/advanced/lookup/lookup_example.cpp
  */
 bool HebiActuator::Connect() {
-    // Create the lookup object and wait for module list to populate
+    // Create the lookup object and wait for actuator list to populate
     hebi::Lookup lookup;
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    // Check if any modules were found
+    // Check if any actuators were found
     {
         const auto entry_list = lookup.getEntryList();
 
         if (entry_list->size() == 0) {
             // Early exit
-            std::cout << "[ERROR] No HEBI actuators found on network!\n";
+            std::cerr << "[ERROR] HEBI - No actuators found on network!\n";
             return false;
         }
 
         if (debug_mode_) {
-            // Print out any modules we found
+            // Print out any actuators we found
             std::cout
-                << "[DEBUG] HEBI modules found on network (Family|Name):\n";
+                << "[DEBUG] HEBI - Found following actuators (Family|Name):\n";
 
             for (auto entry : *entry_list) {
                 std::cout << "  " << entry.family_ << " | " << entry.name_
@@ -119,11 +119,13 @@ bool HebiActuator::Connect() {
         }
     }
 
-    // Filter lookup for relevant module(s)
+    // Filter lookup for relevant actuator(s)
     group_ = lookup.getGroupFromNames(families_, names_, kLookupTimeout);
-    if (!group_) {
-        std::cout
-            << "[ERROR] Given actuator families/names not found on network!";
+    if (group_ == nullptr) {
+        std::cerr
+            << "[ERROR] HEBI - Requested actuator families/names not found!";
+        return false;
+    }
         return false;
     }
 
@@ -197,6 +199,13 @@ void HebiActuator::Stop() {
  * @brief Returns the current status of the actuator.
  *
  * @return std::string Semicolon-delimited status messages
+ *
+ * @note See following HEBI C++ API page for full list of available feedback:
+ *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
+ *
+ * @todo Currently, values are only retrieved for the first actuator in the
+ *       group. This is fine with LIBRA-II (since only a single HEBI actuator is
+ *       used), but for LIBRA-I we need a more programmatic way of sending the data.
  */
 std::string HebiActuator::GetStatus() {
     std::cout << "TODO - HebiActuator::GetStatus()\n";

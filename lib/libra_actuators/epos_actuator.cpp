@@ -26,6 +26,12 @@
 /**
  * @brief Standard constructor.
  *
+ * @param device_name Maxon device to connect to
+ * @param protocol_name Communication protocol to use
+ * @param interface_name Interface to communicate through
+ * @param port_name Specific interface port where device is located
+ * @param baud_rate Rate at which information will be transferred
+ * @param debug_mode Whether verbose debug text should be output
  */
 EposActuator::EposActuator(std::string device_name, std::string protocol_name,
                            std::string interface_name, std::string port_name,
@@ -36,8 +42,10 @@ EposActuator::EposActuator(std::string device_name, std::string protocol_name,
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
       baud_rate_(baud_rate) {
+    // Sanity check inputs since expected use of this object is through an
+    // abstract class managed by a non-main thread
     if (debug_mode_) {
-        std::cout << "[DEBUG] Creating EPOS actuator with following params:"
+        std::cout << "[DEBUG] EPOS - Creating actuator with following params:"
                   << "\n  Device: " << device_name_
                   << "\n  Protocol: " << protocol_name_
                   << "\n  Interface: " << interface_name_
