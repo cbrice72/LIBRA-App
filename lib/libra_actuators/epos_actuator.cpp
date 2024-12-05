@@ -59,7 +59,7 @@ EposActuator::EposActuator(std::string device_name, std::string protocol_name,
  *
  */
 EposActuator::~EposActuator() {
-    std::cout << "TODO - EposActuator::~EposActuator()\n";
+    std::cout << "TODO - EposActuator::~EposActuator()" << std::endl;
 
     // TODO: implementation
 }
@@ -82,7 +82,7 @@ namespace {  // local to this file
  * @return true if successful, false otherwise
  */
 bool EposActuator::Connect() {
-    std::cout << "TODO - EposActuator::Connect()\n";
+    std::cout << "TODO - EposActuator::Connect()" << std::endl;
     return false;
 
     // TODO: implementation
@@ -94,7 +94,7 @@ bool EposActuator::Connect() {
  * @return true if successful, false otherwise
  */
 bool EposActuator::Disconnect() {
-    std::cout << "TODO - EposActuator::Disconnect()\n";
+    std::cout << "TODO - EposActuator::Disconnect()" << std::endl;
     return false;
 
     // TODO: implementation
@@ -109,7 +109,7 @@ bool EposActuator::Disconnect() {
  *       movement command, the translation should be done within this function.
  */
 void EposActuator::Move(double deg) {
-    std::cout << "TODO - EposActuator::Move()\n";
+    std::cout << "TODO - EposActuator::Move()" << std::endl;
 
     // TODO: implementation
 }
@@ -118,7 +118,7 @@ void EposActuator::Move(double deg) {
  * @brief Sends an actuator stop command.
  */
 void EposActuator::Stop() {
-    std::cout << "TODO - EposActuator::Stop()\n";
+    std::cout << "TODO - EposActuator::Stop()" << std::endl;
 
     // TODO: implementation
 }
@@ -130,11 +130,10 @@ void EposActuator::Stop() {
 /**
  * @brief Returns the current status of the actuator.
  *
- * @return std::string Semicolon-delimited status messages
+ * @return std::string Comma-delimited status messages
  */
 std::string EposActuator::GetStatus() {
-    std::cout << "TODO - EposActuator::GetStatus()\n";
-    return "";
+    return "TODO - EposActuator::GetStatus()";
 
     // TODO: implementation
 }
@@ -145,7 +144,7 @@ std::string EposActuator::GetStatus() {
  * @return double Target position, in degrees
  */
 double EposActuator::GetTargetPos() {
-    std::cout << "TODO - EposActuator::GetTargetPos()\n";
+    std::cout << "TODO - EposActuator::GetTargetPos()" << std::endl;
     return 0.0;
 
     // TODO: implementation
@@ -157,7 +156,7 @@ double EposActuator::GetTargetPos() {
  * @return double Actual position, in degrees
  */
 double EposActuator::GetActualPos() {
-    std::cout << "TODO - EposActuator::GetActualPos()\n";
+    std::cout << "TODO - EposActuator::GetActualPos()" << std::endl;
     return 0.0;
 
     // TODO: implementation
@@ -169,7 +168,7 @@ double EposActuator::GetActualPos() {
  * @return double Actual torque, in Newtons
  */
 double EposActuator::GetActualTorque() {
-    std::cout << "TODO - EposActuator::GetActualTorque()\n";
+    std::cout << "TODO - EposActuator::GetActualTorque()" << std::endl;
     return 0.0;
 
     // TODO: implementation

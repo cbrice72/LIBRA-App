@@ -101,10 +101,10 @@ MainWindow::MainWindow(QWidget* parent)
             arm_thread_, &ArmThread::Stop);
 
     // - MainWindow slots
-    connect(arm_thread_, &ArmThread::finished,  // receive status updates
-            this, &MainWindow::deleteLater);
-    connect(arm_thread_, &ArmThread::finished,  // handle error messages
-            this, &MainWindow::deleteLater);
+    connect(arm_thread_, &ArmThread::StatusChanged,  // receive status updates
+            this, &MainWindow::HandleStatusMsg);
+    connect(arm_thread_, &ArmThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
 
     // - Thread cleanup
     connect(arm_thread_, &ArmThread::finished,      // when thread exits
@@ -139,14 +139,20 @@ namespace {  // local to this file
 //------------------------------------------------------------------------------
 
 /**
- * @brief Parses messages from ArmThread.
+ * @brief Parses status updates from ArmThread.
+ *
+ * @param statuses Comma-delimited status messages from each actuator, in
+ *                 joint order
  */
-void MainWindow::HandleStatusMsg(const QString& status) {
-    qDebug() << "[INFO] Arm status changed:" << status;
+void MainWindow::HandleStatusMsg(const std::vector<QString>& statuses) {
+    ui_->l_yaw_status->setText(statuses.at(Actuator::Joint::kYaw));
+    ui_->l_pitch_status->setText(statuses.at(Actuator::Joint::kPitch));
 }
 
 /**
  * @brief Handles errors from ArmThread.
+ *
+ * @param err Fatal error message from an actuator
  */
 void MainWindow::HandleErrorMsg(const QString& err) {
     QMessageBox::critical(this, tr("Error"), err);

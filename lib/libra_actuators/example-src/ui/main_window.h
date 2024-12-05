@@ -37,7 +37,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
   public slots:
-    void HandleStatusMsg(const QString& status);
+    void HandleStatusMsg(const std::vector<QString>& statuses);
     void HandleErrorMsg(const QString& err);
 
   signals:

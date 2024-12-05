@@ -10,18 +10,14 @@
 
 // C++ Standard Library Headers
 #include <iostream>
+#include <sstream>
 #include <thread>
 
 // Other Library Headers
-#include "group_feedback.hpp"  // HEBI
-#include "lookup.hpp"          // HEBI
+#include "lookup.hpp"  // HEBI
 
 // Project Headers
 //   (none)
-
-// Constants
-
-constexpr long kTimeout = 4000;  // ms
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -30,6 +26,14 @@ constexpr long kTimeout = 4000;  // ms
  */
 
 /* Constants */
+
+// Improving Readability of Conversions
+
+constexpr double kSecondsPerMin = 60;
+constexpr double kRadPerRevolution = 2 * M_PI;
+
+// HEBI Functions
+
 constexpr int32_t kLookupTimeout = 4000;  // ms
 
 /**
@@ -45,7 +49,11 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
     : AbstractActuator(debug_mode),
       families_(std::move(families)),
       names_(std::move(names)),
-      group_(nullptr) {
+      group_(nullptr),
+      command_(nullptr),
+      feedback_(nullptr) {
+    // Sanity check inputs since expected use of this object is through an
+    // abstract class managed by a non-main thread
     if (debug_mode_) {
         std::string families_str;
         for (const auto& family : families_) {
@@ -60,13 +68,17 @@ HebiActuator::HebiActuator(std::vector<std::string> families,
                   << "\n  Families: " << families_str
                   << "\n  Names: " << names_str << std::endl;
     }
+
+    // Initialize HEBI objects
+    command_ = std::make_unique<hebi::GroupCommand>(names_.size());
+    feedback_ = std::make_unique<hebi::GroupFeedback>(names_.size());
 }
 
 /**
  * @brief Standard destructor.
  */
 HebiActuator::~HebiActuator() {
-    std::cout << "TODO - HebiActuator::~HebiActuator()\n";
+    std::cout << "TODO - HebiActuator::~HebiActuator()" << std::endl;
 
     // TODO: implementation
 }
@@ -102,7 +114,8 @@ bool HebiActuator::Connect() {
 
         if (entry_list->size() == 0) {
             // Early exit
-            std::cerr << "[ERROR] HEBI - No actuators found on network!\n";
+            std::cout << "[ERROR] HEBI - No actuators found on network!"
+                      << std::endl;
             return false;
         }
 
@@ -122,34 +135,32 @@ bool HebiActuator::Connect() {
     // Filter lookup for relevant actuator(s)
     group_ = lookup.getGroupFromNames(families_, names_, kLookupTimeout);
     if (group_ == nullptr) {
-        std::cerr
+        std::cout
             << "[ERROR] HEBI - Requested actuator families/names not found!";
         return false;
     }
+
+    // Load safety parameters
+    if (!command_->readSafetyParameters("bin/shared/hebi/safety.xml")) {
+        std::cout << "[ERROR] HEBI - Failed to load safety parameters!"
+                  << std::endl;
         return false;
     }
 
-    // Add a callback to save feedback in a background thread
-    // NOTE: This C++11 "lambda function" allows us to locally define a function
-    //       in the addFeedbackHandler() parameter list. For more information,
-    //       see: https://en.cppreference.com/w/cpp/language/lambda
-    group_->addFeedbackHandler([this](const hebi::GroupFeedback& feedback) {
-        auto pos = feedback.getPosition();
-        current_pos_ = {pos(0, 0), pos(0, 1), pos(0, 2)};
-        auto vel = feedback.getVelocity();
-        current_vel_ = {vel(0, 0), vel(0, 1), vel(0, 2)};
-        auto trq = feedback.getEffort();
-        current_trq_ = {trq(0, 0), trq(0, 1), trq(0, 2)};
-        auto defl = feedback.getDeflection();
-        current_deflection_ = {defl(0, 0), defl(0, 1), defl(0, 2)};
+    // Load gains
+    if (!command_->readGains("bin/shared/hebi/gains.xml")) {
+        std::cout << "[ERROR] HEBI - Failed to load gain parameters!"
+                  << std::endl;
+        return false;
+    }
 
-        auto volt = feedback.getVoltage();
-        current_voltage_ = {volt(0, 0), volt(0, 1), volt(0, 2)};
-        auto curr = feedback.getMotorCurrent();
-        current_current_ = {curr(0, 0), curr(0, 1), curr(0, 2)};
-        auto temp = feedback.getMotorHousingTemperature();
-        current_temp_ = {temp(0, 0), temp(0, 1), temp(0, 2)};
-    });
+    // Initialize actuator(s) with above parameters
+    group_->sendCommand(*command_);
+    command_->clear();
+
+    // Command actuator(s) to hold current position
+    group_->getNextFeedback(*feedback_);
+    command_->setPosition(feedback_->getPosition());
 
     return true;
 }
@@ -177,7 +188,12 @@ bool HebiActuator::Disconnect() {
  *       movement command, the translation should be done within this function.
  */
 void HebiActuator::Move(double deg) {
-    std::cout << "TODO - HebiActuator::Move()\n";
+    if (group_ == nullptr) {
+        std::cout << "[ERROR] HEBI - Can't move actuators; not connected!";
+        return;
+    }
+
+    std::cout << "TODO - HebiActuator::Move()" << std::endl;
 
     // TODO: implementation
 }
@@ -186,7 +202,12 @@ void HebiActuator::Move(double deg) {
  * @brief Sends an actuator stop command.
  */
 void HebiActuator::Stop() {
-    std::cout << "TODO - HebiActuator::Stop()\n";
+    if (group_ == nullptr) {
+        std::cout << "[ERROR] HEBI - Can't stop actuators; not connected!";
+        return;
+    }
+
+    std::cout << "TODO - HebiActuator::Stop()" << std::endl;
 
     // TODO: implementation
 }
@@ -198,7 +219,7 @@ void HebiActuator::Stop() {
 /**
  * @brief Returns the current status of the actuator.
  *
- * @return std::string Semicolon-delimited status messages
+ * @return std::string Comma-delimited status messages
  *
  * @note See following HEBI C++ API page for full list of available feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
@@ -208,10 +229,53 @@ void HebiActuator::Stop() {
  *       used), but for LIBRA-I we need a more programmatic way of sending the data.
  */
 std::string HebiActuator::GetStatus() {
-    std::cout << "TODO - HebiActuator::GetStatus()\n";
-    return "";
+    if (group_ == nullptr) {
+        return "Not Connected";
+    }
 
-    // TODO: implementation
+    // Get values
+    auto target_pos = feedback_->getPositionCommand()[0];  // rad
+    auto actual_pos = feedback_->getPosition()[0];         // rad
+    auto actual_vel = feedback_->getVelocity()[0];         // rad/s
+    auto actual_trq = feedback_->getEffort()[0];           // Nm
+
+    auto defl = feedback_->getDeflection()[0];              // mm?
+    auto defl_vel = feedback_->getDeflectionVelocity()[0];  // mms?
+
+    auto volt = feedback_->getVoltage()[0];                  // V
+    auto curr = feedback_->getMotorCurrent()[0];             // A
+    auto temp = feedback_->getMotorWindingTemperature()[0];  // C
+    // alternatively, getBoardTemperature() for electronics
+
+    // Perform conversions
+    target_pos *= 180 / M_PI;                          // to deg
+    actual_pos *= 180 / M_PI;                          // to deg
+    actual_vel *= kSecondsPerMin / kRadPerRevolution;  // to rpm
+
+    std::stringstream status_ss;
+    status_ss << "Target Position (deg): " << target_pos
+              << "\nActual Position (deg): " << actual_pos
+              << "\nActual Velocity (rpm): " << actual_vel
+              << "\nActual Torque (Nm): " << actual_trq
+              << "\nDeflection (mm): " << defl
+              << "\nDeflection Velocity (mm/s): " << defl_vel
+              << "\nVoltage (V): " << volt << "\nCurrent (A): " << curr
+              << "\nTemperature (C): " << temp;
+
+    return status_ss.str();
+
+    // TODO: if the development environment is ever upgraded to Ubuntu 24.04,
+    //       use gcc-13 and set CMAKE_CXX_STANDARD to 20 so we can use <format>
+    //       (since Ubuntu 22.04's package provider only goes up to gcc-12)
+    /*
+    return std::format(
+        "Target Position (deg): {};Actual Position (deg): "
+        "{};Actual Velocity (rpm): {};Actual Torque (Nm): {};Deflection (mm): "
+        "{};Deflection Velocity (mm/s): {};Voltage (V): "
+        "{};Current (A): {};Temperature (C): {}"\n
+        target_pos, actual_pos, actual_vel, actual_trq, defl, defl_vel, volt,
+        curr, temp);
+    */
 }
 
 /**
@@ -220,7 +284,12 @@ std::string HebiActuator::GetStatus() {
  * @return double Target position, in degrees
  */
 double HebiActuator::GetTargetPos() {
-    std::cout << "TODO - HebiActuator::GetTargetPos()\n";
+    if (group_ == nullptr) {
+        std::cout << "[ERROR] HEBI - Can't get position; not connected!";
+        return 0.0;
+    }
+
+    std::cout << "TODO - HebiActuator::GetTargetPos()" << std::endl;
     return 0.0;
 
     // TODO: implementation
@@ -232,7 +301,12 @@ double HebiActuator::GetTargetPos() {
  * @return double Actual position, in degrees
  */
 double HebiActuator::GetActualPos() {
-    std::cout << "TODO - HebiActuator::GetActualPos()\n";
+    if (group_ == nullptr) {
+        std::cout << "[ERROR] HEBI - Can't get position; not connected!";
+        return 0.0;
+    }
+
+    std::cout << "TODO - HebiActuator::GetActualPos()" << std::endl;
     return 0.0;
 
     // TODO: implementation
@@ -244,7 +318,12 @@ double HebiActuator::GetActualPos() {
  * @return double Actual torque, in Newtons
  */
 double HebiActuator::GetActualTorque() {
-    std::cout << "TODO - HebiActuator::GetActualTorque()\n";
+    if (group_ == nullptr) {
+        std::cout << "[ERROR] HEBI - Can't get torque; not connected!";
+        return 0.0;
+    }
+
+    std::cout << "TODO - HebiActuator::GetActualTorque()" << std::endl;
     return 0.0;
 
     // TODO: implementation

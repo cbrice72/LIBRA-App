@@ -52,7 +52,7 @@ class ArmThread : public QThread {
   signals:
     // --- Arm Updates ---
 
-    void StatusChanged(const QString& status);
+    void StatusChanged(const std::vector<QString>& statuses);
     void ErrorThrown(const QString& err);
 
   private:

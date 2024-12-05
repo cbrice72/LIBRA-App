@@ -91,9 +91,17 @@ ArmThread::~ArmThread() {
  * @brief TODO: description.
  */
 void ArmThread::run() {
+    // Initialize these variables outside loop for efficiency
+    std::vector<QString> statuses;
+
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
-        // TODO: implementation
+        // Send status updates from actuators
+        for (const auto& actuator : actuators_) {
+            statuses.push_back(QString::fromStdString(actuator->GetStatus()));
+        }
+        emit StatusChanged(statuses);
+        statuses.clear();
 
         QThread::msleep(20);  // update 50 times/second
     }
@@ -108,10 +116,10 @@ namespace {  // local to this file
 }  // namespace
 
 /**
- * @brief TODO: description.
+ * @brief Returns the target position commanded to the actuator.
  *
- * @param joint
- * @return double
+ * @param joint Actuator to query
+ * @return double Commanded position, in degrees
  */
 double ArmThread::GetTargetPos(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetTargetPos()";
@@ -121,10 +129,10 @@ double ArmThread::GetTargetPos(Actuator::Joint joint) {
 }
 
 /**
- * @brief TODO: description.
+ * @brief Returns the actual position of the actuator.
  *
- * @param joint
- * @return double
+ * @param joint Actuator to query
+ * @return double Actual position, in degrees
  */
 double ArmThread::GetActualPos(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetActualPos()";
@@ -134,10 +142,10 @@ double ArmThread::GetActualPos(Actuator::Joint joint) {
 }
 
 /**
- * @brief TODO: description.
+ * @brief Returns the actual effort (torque) of the actuator.
  *
- * @param joint
- * @return double
+ * @param joint Actuator to query
+ * @return double Actual torque, in Newton-meters
  */
 double ArmThread::GetActualTorque(Actuator::Joint joint) {
     qDebug() << "TODO - ArmThread::GetActualTorque()";
@@ -147,9 +155,9 @@ double ArmThread::GetActualTorque(Actuator::Joint joint) {
 }
 
 /**
- * @brief TODO: description.
+ * @brief Returns the target positions commanded to all actuators.
  *
- * @return std::vector<double>
+ * @return std::vector<double> Commanded positions, in degrees
  */
 std::vector<double> ArmThread::GetAllTargetPos() {
     qDebug() << "TODO - ArmThread::GetAllTargetPos()";
@@ -159,9 +167,9 @@ std::vector<double> ArmThread::GetAllTargetPos() {
 }
 
 /**
- * @brief TODO: description.
+ * @brief Returns the current positions of all actuators.
  *
- * @return std::vector<double>
+ * @return std::vector<double> Actual positions, in degrees
  */
 std::vector<double> ArmThread::GetAllActualPos() {
     qDebug() << "TODO - ArmThread::GetAllActualPos()";
@@ -171,9 +179,9 @@ std::vector<double> ArmThread::GetAllActualPos() {
 }
 
 /**
- * @brief TODO: description.
+ * @brief Returns the actual effort (torque) experienced by all actuators.
  *
- * @return std::vector<double>
+ * @return std::vector<double> Actual torques, in Newton-meters
  */
 std::vector<double> ArmThread::GetAllActualTorque() {
     qDebug() << "TODO - ArmThread::GetAllActualTorque()";

@@ -14,7 +14,9 @@
 #include <vector>
 
 // Other Library Headers
-#include "group.hpp"  // HEBI
+#include "group.hpp"           // HEBI
+#include "group_command.hpp"   // HEBI
+#include "group_feedback.hpp"  // HEBI
 
 // Project Headers
 #include "abstract_actuator.h"
@@ -57,4 +59,8 @@ class HebiActuator : public AbstractActuator {
     std::vector<std::string> names_;
 
     std::shared_ptr<hebi::Group> group_;
+
+    std::unique_ptr<hebi::GroupCommand> command_;
+    std::unique_ptr<hebi::GroupFeedback> feedback_;
+    // std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
 };
