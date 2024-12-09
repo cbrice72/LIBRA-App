@@ -88,43 +88,81 @@ MainWindow::MainWindow(QWidget* parent)
      *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
      */
 
-    // Arm thread
-    arm_thread_ = new ArmThread(this, actuator_defs, debug_mode_);
+    // EPOS thread
+    epos_thread_ = new EposThread(this, actuator_defs, debug_mode_);
 
     // - MainWindow signals
     connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            arm_thread_, &ArmThread::SetDebugMode);
+            epos_thread_, &EposThread::SetDebugMode);
 
     connect(this, &MainWindow::TryConnect,  // connect a specific actuator
-            arm_thread_, &ArmThread::ConnectActuator);
+            epos_thread_, &EposThread::ConnectActuator);
     connect(this, &MainWindow::TryDisconnect,  // disconnect a specific actuator
-            arm_thread_, &ArmThread::DisconnectActuator);
+            epos_thread_, &EposThread::DisconnectActuator);
 
     connect(ui_->pb_connect_all,
             &QPushButton::clicked,  // connect all actuators
-            arm_thread_, &ArmThread::ConnectAllActuators);
+            epos_thread_, &EposThread::ConnectAllActuators);
     connect(ui_->pb_disconnect_all,
             &QPushButton::clicked,  // disconnect all actuators
-            arm_thread_, &ArmThread::DisconnectAllActuators);
+            epos_thread_, &EposThread::DisconnectAllActuators);
 
     connect(this, &MainWindow::CommandOne,  // move a specific actuator
-            arm_thread_, &ArmThread::Move);
+            epos_thread_, &EposThread::Move);
     connect(this, &MainWindow::CommandAll,  // move all actuators
-            arm_thread_, &ArmThread::MoveAll);
+            epos_thread_, &EposThread::MoveAll);
     connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop all actuators
-            arm_thread_, &ArmThread::Stop);
+            epos_thread_, &EposThread::Stop);
 
     // - MainWindow slots
-    connect(arm_thread_, &ArmThread::StatusChanged,  // receive status updates
+    connect(epos_thread_, &EposThread::StatusChanged,  // receive status updates
             this, &MainWindow::HandleStatusMsg);
-    connect(arm_thread_, &ArmThread::ErrorThrown,  // handle error messages
+    connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
             this, &MainWindow::HandleErrorMsg);
 
     // - Thread cleanup
-    connect(arm_thread_, &ArmThread::finished,      // when thread exits
-            arm_thread_, &ArmThread::deleteLater);  // ... deallocate
+    connect(epos_thread_, &EposThread::finished,      // when thread exits
+            epos_thread_, &EposThread::deleteLater);  // ... deallocate
 
-    arm_thread_->start();
+    epos_thread_->start();
+
+    // HEBI thread
+    hebi_thread_ = new HebiThread(this, actuator_defs, debug_mode_);
+
+    // - MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            hebi_thread_, &HebiThread::SetDebugMode);
+
+    connect(this, &MainWindow::TryConnect,  // connect a specific actuator
+            hebi_thread_, &HebiThread::ConnectActuator);
+    connect(this, &MainWindow::TryDisconnect,  // disconnect a specific actuator
+            hebi_thread_, &HebiThread::DisconnectActuator);
+
+    connect(ui_->pb_connect_all,
+            &QPushButton::clicked,  // connect all actuators
+            hebi_thread_, &HebiThread::ConnectAllActuators);
+    connect(ui_->pb_disconnect_all,
+            &QPushButton::clicked,  // disconnect all actuators
+            hebi_thread_, &HebiThread::DisconnectAllActuators);
+
+    connect(this, &MainWindow::CommandOne,  // move a specific actuator
+            hebi_thread_, &HebiThread::Move);
+    connect(this, &MainWindow::CommandAll,  // move all actuators
+            hebi_thread_, &HebiThread::MoveAll);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop all actuators
+            hebi_thread_, &HebiThread::Stop);
+
+    // - MainWindow slots
+    connect(hebi_thread_, &HebiThread::StatusChanged,  // receive status updates
+            this, &MainWindow::HandleStatusMsg);
+    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
+
+    // - Thread cleanup
+    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
+            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
+
+    hebi_thread_->start();
 }
 
 /**
@@ -132,9 +170,13 @@ MainWindow::MainWindow(QWidget* parent)
  */
 MainWindow::~MainWindow() {
     // Wrap up the worker thread(s) gracefully
-    if (arm_thread_ != nullptr && arm_thread_->isRunning()) {
-        arm_thread_->requestInterruption();  // signal thread to stop looping
-        arm_thread_->wait();  // wait for thread cleanup to finish
+    if (epos_thread_ != nullptr && epos_thread_->isRunning()) {
+        epos_thread_->requestInterruption();  // signal thread to stop looping
+        epos_thread_->wait();  // wait for thread cleanup to finish
+    }
+    if (hebi_thread_ != nullptr && hebi_thread_->isRunning()) {
+        hebi_thread_->requestInterruption();
+        hebi_thread_->wait();
     }
 
     delete ui_;

@@ -28,8 +28,8 @@ enum Joint {
  * @note See `abstract_actuator.h`.
  */
 enum Type {
-    kEpos = 0,  // EPOS4 (Maxon), see `epos_actuator[.h,.cpp]`
-    kHebi       // HEBI, see `hebi_actuator[.h,.cpp]`
+    kEpos = 0,  // EPOS4 (Maxon), see `epos_thread[.h,.cpp]`
+    kHebi       // HEBI, see `hebi_thread[.h,.cpp]`
 };
 
 }  // namespace Actuator

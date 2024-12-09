@@ -1,9 +1,6 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  Arm control thread module CMakeLists file.
-#         Of the two libraries: `libra_actuators` defines types of actuators as
-#         derivatives of a common template, and `arm_thread` implements them as
-#         an interactive QThread object.
+# @brief  Actuator control thread modules CMakeLists file.
 #
 # @author brice.c.aa
 ################################################################################
@@ -58,47 +55,73 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 endif()
 
 # ---
-# LIBRA Actuators
+# EPOS (Maxon) Thread
 # ---
 
-# EPOS Setup
-# - Check whether the EPOS directory was defined
+# Check whether the EPOS directory is defined
 if(NOT DEFINED EPOS_DIR)
     message(FATAL_ERROR "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
 endif()
-# - Include EPOS headers
-set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
 
-# HEBI Setup
-# - Check whether the HEBI directory was defined
+# Create and configure the module
+qt_add_library(
+    epos_thread
+    STATIC
+    # Header
+    ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.h
+    # Source
+    ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.cpp
+)
+
+# Ensure this module has access to the necessary 3rd-party libraries
+set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+target_include_directories(
+    epos_thread
+    # EPOS (Maxon)
+    PUBLIC ${EPOS_INCLUDE_DIRS}
+    # Make sure the path to this directory is automatically added as an include
+    # path to all targets using this library
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    epos_thread
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core
+    # EPOS (Maxon)
+    PRIVATE -lEposCmd
+)
+
+# ---
+# HEBI Thread
+# ---
+
+# Check whether the HEBI directory is defined
 if(NOT DEFINED HEBI_DIR)
     message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
 endif()
 # - Include headers from all libraries used by HEBI
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include")
 
-foreach(TEST ${HEBI_SOURCE_FILES})
-    message(STATUS "FILE: ${TEST}")
-endforeach()
 
 # Create and configure the module
 qt_add_library(
-    libra_actuators
+    hebi_thread
     STATIC
     # Header
     ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/epos_actuator.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_actuator.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.h
     # Source
-    ${CMAKE_CURRENT_SOURCE_DIR}/epos_actuator.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_actuator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/Eigen")
 target_include_directories(
-    libra_actuators
-    # EPOS (Maxon)
-    PRIVATE ${EPOS_INCLUDE_DIRS}
+    hebi_thread
     # HEBI
     PUBLIC ${HEBI_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
@@ -108,43 +131,11 @@ target_include_directories(
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    libra_actuators
-    # EPOS (Maxon)
-    PRIVATE -lEposCmd
-    # HEBI
-    PUBLIC hebi hebic++ m pthread
-)
-
-# ---
-# Arm Thread
-# ---
-
-# Create and configure the module
-qt_add_library(
-    arm_thread
-    STATIC
-    # Header
-    arm_thread.h
-    actuator_defs.h
-    # Source
-    arm_thread.cpp
-)
-
-# Ensure this module has access to the necessary 3rd-party libraries
-target_include_directories(
-    arm_thread
-    # Make sure the path to this directory is automatically added as an include
-    # path to all targets using this library
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Tell the linker which libraries to link against
-target_link_libraries(
-    arm_thread
+    hebi_thread
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
-    # Project
-    PRIVATE libra_actuators
+    # HEBI
+    PRIVATE hebi hebic++ m pthread
 )
 
 # ---
@@ -153,7 +144,8 @@ target_link_libraries(
 
 # Only build the example if this CMakeLists.txt was directly invoked
 # (i.e., this CMakeLists.txt was not called as a result of `add_subdirectory()`)
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(FALSE)
+#if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Add project subdirectories
     add_subdirectory(example-src)  # PROJECT_SOURCE
 
@@ -196,7 +188,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
         # Qt
         PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
         # Project
-        arm_thread
+        PRIVATE epos_thread
+        PRIVATE hebi_thread
     )
 
     # Specify platform-specific properties

@@ -84,7 +84,8 @@ class MainWindow : public QMainWindow {
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
-    ArmThread* arm_thread_;
+    EposThread* epos_thread_;
+    HebiThread* hebi_thread_;
 
     bool debug_mode_{true};
 };

@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   epos_actuator.h
+ * @file   epos_thread.h
  * @brief  Control class for LIBRA EPOS (Maxon) actuators; header file.
  *
  * @author Christian Brice
@@ -22,30 +22,31 @@
  *
  * @note See `abstract_actuator.h`.
  */
-class EposActuator : public AbstractActuator {
+class EposThread : public AbstractActuatorThread {
   public:
-    explicit EposActuator(std::string device_name, std::string protocol_name,
-                          std::string interface_name, std::string port_name,
-                          uint baud_rate, const bool& debug_mode = false);
-    ~EposActuator();
+    explicit EposThread(QObject* parent, std::string device_name,
+                        std::string protocol_name, std::string interface_name,
+                        std::string port_name, uint baud_rate,
+                        const bool& debug_mode = false);
+    ~EposThread() override;
 
+  public slots:
     // --- Actuator Commands ---
 
-    bool Connect() override;
-    bool Disconnect() override;
+    void Connect() override;
+    void Disconnect() override;
 
-    void Move(double deg) override;
+    void SetTarget(const std::vector<double>& deg) override;
     void Stop() override;
 
-    // --- Getters & Setters ---
+  signals:
+    // --- Actuator Updates ---
 
-    std::string GetStatus() override;
-
-    double GetTargetPos() override;
-    double GetActualPos() override;
-    double GetActualTorque() override;
+    // NOTE: see `AbstractActuator`
 
   private:
+    void run() override;
+
     // --- Helper Functions ---
 
     // --- Data Members ---

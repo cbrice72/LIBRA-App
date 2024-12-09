@@ -11,7 +11,7 @@
 #include <string>
 
 // Other Library Headers
-//   (none)
+#include <QThread>  // Qt::Core
 
 // Project Headers
 //   (none)
@@ -27,31 +27,40 @@
  *       the compiler that it shouldn't allow a derivative class to compile if
  *       it doesn't first define those pure virtual functions (using `override`).
  */
-class AbstractActuator {
+class AbstractActuatorThread : public QThread {
+    // NOLINTBEGIN: required by Qt
+    Q_OBJECT
+    // NOLINTEND
+
   public:
-    AbstractActuator() = default;
-    AbstractActuator(bool debug_mode) : debug_mode_(debug_mode){};
-    virtual ~AbstractActuator() = default;
+    AbstractActuatorThread() = default;
+    AbstractActuatorThread(QObject* parent, bool debug_mode)
+        : QThread(parent), debug_mode_(debug_mode){};
+    ~AbstractActuatorThread() override = default;
+
+  public slots:
+
+    void SetDebugMode(const bool& enabled) {
+        debug_mode_ = enabled;
+    };
 
     // --- Actuator Commands ---
 
-    virtual bool Connect() = 0;
-    virtual bool Disconnect() = 0;
+    virtual void Connect() = 0;
+    virtual void Disconnect() = 0;
 
-    virtual void Move(double deg) = 0;
+    virtual void SetTarget(const std::vector<double>& deg) = 0;
     virtual void Stop() = 0;
 
-    // --- Getters & Setters ---
+  signals:
+    // --- Actuator Updates ---
 
-    virtual std::string GetStatus() = 0;
+    void ReportTargetPos(const std::vector<double>& target_position);
+    void ReportActualPos(const std::vector<double>& actual_position);
+    void ReportActualTorque(const std::vector<double>& actual_torque);
 
-    virtual double GetTargetPos() = 0;
-    virtual double GetActualPos() = 0;
-    virtual double GetActualTorque() = 0;
-
-    void SetDebugMode(bool enabled) {
-        debug_mode_ = enabled;
-    };
+    void ReportStatus(const std::vector<QString>& statuses);
+    void ErrorThrown(const QString& err);
 
   protected:
     // --- Helper Functions ---

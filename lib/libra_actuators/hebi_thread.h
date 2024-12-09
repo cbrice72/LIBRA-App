@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   hebi_actuator.h
+ * @file   hebi_thread.h
  * @brief  Control class for LIBRA HEBI actuators; header file.
  *
  * @author Christian Brice
@@ -9,6 +9,7 @@
 
 // C++ Standard Library Headers
 #include <array>
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,6 +18,7 @@
 #include "group.hpp"           // HEBI
 #include "group_command.hpp"   // HEBI
 #include "group_feedback.hpp"  // HEBI
+#include "trajectory.hpp"      // HEBI
 
 // Project Headers
 #include "abstract_actuator.h"
@@ -27,31 +29,33 @@
  *
  * @note See `abstract_actuator.h`.
  */
-class HebiActuator : public AbstractActuator {
+class HebiThread : public AbstractActuatorThread {
   public:
-    explicit HebiActuator(std::vector<std::string> families,
-                          std::vector<std::string> names,
-                          const bool& debug_mode = false);
-    ~HebiActuator();
+    explicit HebiThread(QObject* parent, std::vector<std::string> families,
+                        std::vector<std::string> names,
+                        const bool& debug_mode = false);
+    ~HebiThread() override;
 
+  public slots:
     // --- Actuator Commands ---
 
-    bool Connect() override;
-    bool Disconnect() override;
+    void Connect() override;
+    void Disconnect() override;
 
-    void Move(double deg) override;
+    void SetTarget(const std::vector<double>& deg) override;
     void Stop() override;
 
-    // --- Getters & Setters ---
+  signals:
+    // --- Actuator Updates ---
 
-    std::string GetStatus() override;
-
-    double GetTargetPos() override;
-    double GetActualPos() override;
-    double GetActualTorque() override;
+    // NOTE: see `AbstractActuator`
 
   private:
+    void run() override;
+
     // --- Helper Functions ---
+
+    std::vector<QString> GetStatus();
 
     // --- Data Members ---
 
@@ -59,9 +63,11 @@ class HebiActuator : public AbstractActuator {
     std::vector<std::string> names_;
 
     std::shared_ptr<hebi::Group> group_;
-    const int num_actuators_;  // set in constructor initializer
+    const int num_actuators_;  // set in constructor initializer list
 
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
-    // std::shared_ptr<hebi::trajectory::Trajectory> trajectory_{nullptr};
+
+    std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
+    std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;
 };

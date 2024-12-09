@@ -15,8 +15,8 @@
 #include <QDebug>  // Qt::Core
 
 // Project Headers
-#include "epos_actuator.h"
-#include "hebi_actuator.h"
+#include "epos_thread.h"
+#include "hebi_thread.h"
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -88,7 +88,7 @@ ArmThread::~ArmThread() {
 */
 
 /**
- * @brief TODO: description.
+ * @brief Main arm command loop.
  */
 void ArmThread::run() {
     // Initialize these variables outside loop for efficiency
