@@ -165,7 +165,7 @@
             </size>
            </property>
            <property name="statusTip">
-            <string>Range: -50,50  |  Step: 10</string>
+            <string>Range: -80,80  |  Step: 10</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -174,10 +174,10 @@
             <number>0</number>
            </property>
            <property name="minimum">
-            <double>-50.000000000000000</double>
+            <double>-80.000000000000000</double>
            </property>
            <property name="maximum">
-            <double>50.000000000000000</double>
+            <double>80.000000000000000</double>
            </property>
            <property name="singleStep">
             <double>10.000000000000000</double>
@@ -316,16 +316,16 @@
          <item row="5" column="0" colspan="4">
           <widget class="QSlider" name="hs_arm_pitch">
            <property name="statusTip">
-            <string>Range: -50,50  |  Step: 10</string>
+            <string>Range: -80,80  |  Step: 10</string>
            </property>
            <property name="autoFillBackground">
             <bool>true</bool>
            </property>
            <property name="minimum">
-            <number>-50</number>
+            <number>-80</number>
            </property>
            <property name="maximum">
-            <number>50</number>
+            <number>80</number>
            </property>
            <property name="singleStep">
             <number>10</number>
