@@ -70,7 +70,11 @@ It is recommended that you change your WSL networking mode from the default `NAT
     [wsl2]
     networkingMode=mirrored
     ```
-3. Restart WSL.
+3. Configure HyperV (the WSL virtual machine manager) so that it allows all inbound connections (see the [Microsoft docs](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) for more information).
+    ```ps
+    Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow
+    ```
+4. Restart WSL.
     ```ps
     # In a PowerShell window
     wsl.exe
