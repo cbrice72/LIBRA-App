@@ -103,13 +103,13 @@ std::vector<QString> HebiThread::GetStatus() {
         // Get values
         auto actual_vel = feedback_->getVelocity()[i];  // rad/s
 
-        auto defl = feedback_->getDeflection()[i];              // mm?
-        auto defl_vel = feedback_->getDeflectionVelocity()[i];  // mms?
+        auto defl = feedback_->getDeflection()[i];              // rad
+        auto defl_vel = feedback_->getDeflectionVelocity()[i];  // rad/s
 
         auto volt = feedback_->getVoltage()[i];                  // V
         auto curr = feedback_->getMotorCurrent()[i];             // A
         auto temp = feedback_->getMotorWindingTemperature()[i];  // C
-        // alternatively, getBoardTemperature() for electronics
+        // (alternatively, `getBoardTemperature()` for electronics)
 
         // Perform conversions
         actual_vel *= kSecondsPerMin / kRadPerRevolution;  // to rpm
