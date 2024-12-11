@@ -25,9 +25,8 @@
 
 /**
  * @brief Control class for HEBI actuators.
- *        Derived from `AbstractActuator` to provide a common interface.
  *
- * @note See `abstract_actuator.h`.
+ * @see abstract_actuator.h
  */
 class HebiThread : public AbstractActuatorThread {
   public:
@@ -48,14 +47,16 @@ class HebiThread : public AbstractActuatorThread {
   signals:
     // --- Actuator Updates ---
 
-    // NOTE: see `AbstractActuator`
+    // NOTE: see `AbstractActuatorThread`
 
   private:
     void run() override;
 
     // --- Helper Functions ---
 
-    std::vector<QString> GetStatus();
+    std::unordered_map<Actuator::Joint, double> GetFeedbackMap(
+        const std::vector<double>& feedback);
+    QString GetStatus();
 
     // --- Data Members ---
 
@@ -67,6 +68,7 @@ class HebiThread : public AbstractActuatorThread {
 
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
+    std::vector<Actuator::Joint> joint_order_;  // NOTE: should match `names_`
 
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;

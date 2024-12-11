@@ -334,7 +334,7 @@
             <number>0</number>
            </property>
            <property name="tracking">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -371,7 +371,7 @@
             <number>0</number>
            </property>
            <property name="tracking">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>

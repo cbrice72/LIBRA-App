@@ -10,6 +10,7 @@
 
 // C++ Standard Library Headers
 #include <algorithm>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -33,15 +34,13 @@
 
 // Improving Readability of Conversions
 
-constexpr double kSecondsPerMin = 60;
-constexpr double kRadPerRevolution = 2 * M_PI;
-
 constexpr double kDegToRad = M_PI / 180;
 constexpr double kRadToDeg = 180 / M_PI;
 
 // HEBI Functions
 
 constexpr int32_t kTimeout = 3000;  // ms
+constexpr double kMaxVel = 0.1;     // rad/s, arbitrary
 
 /**
  * @brief Standard constructor.
@@ -53,7 +52,7 @@ constexpr int32_t kTimeout = 3000;  // ms
  */
 HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)
-    : AbstractActuatorThread(parent, debug_mode),
+    : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kHebi),
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
@@ -61,6 +60,17 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
+
+    // Define joint order for organizing feedback
+    // NOTE: ideally, this shouldn't be defined here since it defeats the purpose
+    //       of generalizing actuator control code. It should be inferred/provided
+    //       by the user, somehow (but I don't have time to make it pretty, so...)
+    /*
+    joint_order_ = {Actuator::Joint::kMA, Actuator::Joint::kMB,
+                    Actuator::Joint::kJ1, Actuator::Joint::kJ2,
+                    Actuator::Joint::kJ3};     // LIBRA-I
+    */
+    joint_order_ = {Actuator::Joint::kPitch};  // LIBRA-II
 }
 
 /**
@@ -82,6 +92,28 @@ namespace {  // local to this file
 }  // namespace
 
 /**
+ * @brief Convenience function for matching individual actuator feedback to the
+ *        corresponding `Actuator::Joint`. Facilitates reporting to `MainWindow`.
+ *
+ * @param feedback Actuator values (ideally, already converted to desired units)
+ * @return std::unordered_map<Actuator::Joint, double>
+ *
+ * @note The enum vector `joint_order_`, defined in the constructor, should have
+ *       the same order as the strings in `names_`. Otherwise, this function
+ *       will almost certainly obfuscate debugging efforts!
+ *
+ * @see MainWindow::HandleActuatorFeedback
+ */
+std::unordered_map<Actuator::Joint, double> HebiThread::GetFeedbackMap(
+    const std::vector<double>& feedback) {
+    std::unordered_map<Actuator::Joint, double> feedback_map;
+    for (auto i = 0; i < joint_order_.size(); i++) {
+        feedback_map[joint_order_[i]] = feedback[i];
+    }
+    return feedback_map;
+}
+
+/**
  * @brief Returns minor status information for all connected actuators.
  *        Target position, actual position, and actual torque (effort) are
  *        provided separately as signals.
@@ -92,19 +124,21 @@ namespace {  // local to this file
  * feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
  */
-std::vector<QString> HebiThread::GetStatus() {
+QString HebiThread::GetStatus() {
     if (group_ == nullptr) {
         return {QString("Not Connected")};
     }
 
-    std::vector<QString> statuses;
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(2);  // 0.01
+    ss << std::right;                          // right-align numbers
 
     for (auto i = 0; i < num_actuators_; i++) {
         // Get values
-        auto actual_vel = feedback_->getVelocity()[i];  // rad/s
+        auto a_vel = feedback_->getVelocity()[i];  // rad/s
 
-        auto defl = feedback_->getDeflection()[i];              // mm?
-        auto defl_vel = feedback_->getDeflectionVelocity()[i];  // mms?
+        auto defl = feedback_->getDeflection()[i];              // rad
+        auto defl_vel = feedback_->getDeflectionVelocity()[i];  // rad/s
 
         auto volt = feedback_->getVoltage()[i];                  // V
         auto curr = feedback_->getMotorCurrent()[i];             // A
@@ -112,21 +146,22 @@ std::vector<QString> HebiThread::GetStatus() {
         // alternatively, getBoardTemperature() for electronics
 
         // Perform conversions
-        actual_vel *= kSecondsPerMin / kRadPerRevolution;  // to rpm
+        a_vel *= defl_vel;      // to deg/s
+        defl *= kRadToDeg;      // to deg
+        defl_vel *= kRadToDeg;  // to deg/s
 
         // Create "entry" in stringstream
-        std::stringstream status_ss;
-        status_ss << "[" << i << "]"
-                  << "\n  Actual Velocity (rpm): " << actual_vel
-                  << "\n  Deflection (mm): " << defl
-                  << "\n  Deflection Velocity (mm/s): " << defl_vel
-                  << "\n  Voltage (V): " << volt << "\nCurrent (A): " << curr
-                  << "\n  Temperature (C): " << temp;
-
-        statuses.push_back(QString::fromStdString(status_ss.str()));
+        ss << "[" << i << "]"
+           << "\n  Actual Velocity (deg/s):     " << std::setw(7) << a_vel
+           << "\n  Deflection (deg):            " << std::setw(7) << defl
+           << "\n  Deflection Velocity (deg/s): " << std::setw(7) << defl_vel
+           << "\n  Voltage (V):                 " << std::setw(7) << volt
+           << "\n  Current (A):                 " << std::setw(7) << curr
+           << "\n  Temperature (C):             " << std::setw(7) << temp
+           << "\n";  // std::setw(7) to account for -> [sign][#,3][.][#,2]
     }
 
-    return statuses;
+    return QString::fromStdString(ss.str());
 }
 
 //------------------------------------------------------------------------------
@@ -142,6 +177,9 @@ void HebiThread::run() {
     }
 
     // Initialize thread variables for efficiency
+    Eigen::VectorXd pos_cmd(num_actuators_);
+    Eigen::VectorXd vel_cmd(num_actuators_);
+
     std::vector<double> t_pos(num_actuators_);
     std::vector<double> a_pos(num_actuators_);
     std::vector<double> a_trq(num_actuators_);
@@ -155,8 +193,6 @@ void HebiThread::run() {
         if (trajectory_ != nullptr) {
             time = std::chrono::system_clock::now() - trajectory_start_time_;
             if (time.count() < trajectory_->getDuration()) {
-                Eigen::VectorXd pos_cmd(num_actuators_);
-                Eigen::VectorXd vel_cmd(num_actuators_);
                 trajectory_->getState(time.count(), &pos_cmd, &vel_cmd, nullptr);
                 command_->setPosition(pos_cmd);
                 command_->setVelocity(vel_cmd);
@@ -170,26 +206,29 @@ void HebiThread::run() {
         }
 
         // Report important statuses individually
-        // NOTE: we want vectors of doubles, but GroupFeedback's `get` functions
-        //       return Eigen types. We use Eigen's `Map` to convert its
-        //       `VectorXd` to a `std::vector` without copying.
+        // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
+        //       `get` functions return Eigen types. We use Eigen's `Map` to
+        //       convert its `VectorXd` to a `std::vector` without copying.
         Eigen::Map<Eigen::VectorXd>(t_pos.data(), t_pos.size()) =
-            feedback_->getPositionCommand() *= kRadToDeg;
-        emit ReportTargetPos(t_pos);
+            feedback_->getPositionCommand() *= kRadToDeg;  // also convert to deg
+        emit ReportFeedback(GetFeedbackMap(t_pos),
+                            Actuator::Feedback::kTargetPos);
 
         Eigen::Map<Eigen::VectorXd>(a_pos.data(), a_pos.size()) =
-            feedback_->getPosition() *= kRadToDeg;
-        emit ReportActualPos(a_pos);
+            feedback_->getPosition() *= kRadToDeg;  // also convert to deg
+        emit ReportFeedback(GetFeedbackMap(a_pos),
+                            Actuator::Feedback::kActualPos);
 
         Eigen::Map<Eigen::VectorXd>(a_trq.data(),
                                     a_trq.size()) = feedback_->getEffort();
-        emit ReportActualTorque(a_trq);
+        emit ReportFeedback(GetFeedbackMap(a_trq),
+                            Actuator::Feedback::kActualTorque);
 
         // Report minor statuses all together
-        emit ReportStatus(GetStatus());
+        emit ReportStatus(GetStatus(), type_);
 
         // Don't overwhelm network
-        QThread::msleep(100);  // update 10 times/second
+        QThread::msleep(10);  // update 100 times/second
     }
 }
 
@@ -202,8 +241,8 @@ void HebiThread::run() {
  *
  * @return true if successful, false otherwise
  *
- * @note For a complete example, see HEBI `hebi-cpp-examples` GitHub:
- *       https://github.com/HebiRobotics/hebi-cpp-examples/blob/master/advanced/lookup/lookup_example.cpp
+ * @see
+ * https://github.com/HebiRobotics/hebi-cpp-examples/blob/master/advanced/lookup/lookup_example.cpp
  */
 void HebiThread::Connect() {
     // Create lookup object and wait for actuator list to populate
@@ -222,7 +261,7 @@ void HebiThread::Connect() {
 
         if (debug_mode_) {
             qDebug()
-                << "[DEBUG] HEBI - Found following actuators (Family|Name):\n";
+                << "[DEBUG] HEBI - Found following actuators (Family|Name):";
 
             for (auto entry : *entry_list) {
                 qDebug() << " " << entry.family_ << "|" << entry.name_;
@@ -250,18 +289,6 @@ void HebiThread::Connect() {
         return;
     }
 
-    // Start logging
-    const std::string log_path = group_->startLog("./log");
-    if (log_path.empty()) {
-        emit ErrorThrown(
-            "[ERROR] HEBI - Log directory (log/) does not exist in CWD!");
-        return;
-    }
-
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI - Creating log file at" << log_path;
-    }
-
     // Initialize actuator(s) with above parameters
     if (!group_->sendCommandWithAcknowledgement(*command_, kTimeout)) {
         emit ErrorThrown("[ERROR] HEBI - Didn't receive acknowledgement from "
@@ -273,6 +300,18 @@ void HebiThread::Connect() {
     // Command actuator(s) to hold current position
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());
+
+    // Start logging
+    const std::string log_path = group_->startLog("./log");
+    if (log_path.empty()) {
+        emit ErrorThrown(
+            "[ERROR] HEBI - Log directory (log/) does not exist in CWD!");
+        return;
+    }
+
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] HEBI - Creating log file at" << log_path;
+    }
 }
 
 /**
@@ -293,48 +332,48 @@ void HebiThread::Disconnect() {
 /**
  * @brief Sends movement commands to all connected actuators.
  *
- * @param deg Target angles (absolute) for all actuators
- *
- * @note If an actuator doesn't directly accept degrees as part of its
- *       movement command (i.e., if two actuators work together to effect two
- *       axes), the translation should be done before calling this function.
+ * @param target Target angles (absolute) for all actuators, in degrees
  */
-void HebiThread::SetTarget(const std::vector<double>& deg) {
+void HebiThread::SetTarget(const std::vector<double>& target) {
     if (group_ == nullptr) {
         emit ErrorThrown("[ERROR] HEBI - Can't move actuators; not connected!");
         return;
     }
 
-    // Make command vectors of two points: current -> target
-    Eigen::MatrixXd positions(num_actuators_, 2);
-    Eigen::MatrixXd velocities = Eigen::MatrixXd::Zero(num_actuators_, 2);
-    Eigen::MatrixXd accelerations = Eigen::MatrixXd::Zero(num_actuators_, 2);
-
-    // Populate positions vector
-    positions.col(0) = command_->getPosition();  // current (start)
-    for (auto i = 0; i < deg.size(); i++) {
-        positions(i, 1) = deg.at(i);  // target (finish)
+    // Validate input
+    if (target.size() != num_actuators_) {
+        emit ErrorThrown("[ERROR] HEBI - Size of command vector != number of "
+                         "connected actuators!");
+        return;
     }
-    positions.col(1) *= kDegToRad;
 
-    // Determine greatest change in position for calculating trajectory time
-    // NOTE: this is just future-proofing; LIBRA-II only has one HEBI actuator
+    // Make position, velocity, and acceleration commands for start & end points
+    Eigen::MatrixXd pos(num_actuators_, 2);
+    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
+    Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
+    Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
+
+    // Populate positions
+    pos.col(0) = command_->getPosition();  // start (current value)
+    for (auto i = 0; i < target.size(); i++) {
+        pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
+    }
+
+    // Determine greatest change in position for calculating trajectory times
     double max_difference = 0;
     for (auto i = 0; i < num_actuators_; i++) {
-        max_difference = std::max(abs(positions(i, 1) - positions(i, 0)),
-                                  max_difference);
+        max_difference = std::max(abs(pos(i, 1) - pos(i, 0)), max_difference);
     }
 
     // Calculate trajectory start and end times
     Eigen::VectorXd time(2);
-    time << 0, max_difference * 12 / M_PI;  // 12 is arbitrary - change at will
+    time << 0, max_difference / kMaxVel;
 
     // Log start time and create trajectory
     trajectory_start_time_ = std::chrono::system_clock::now();
-    trajectory_ =
-        hebi::trajectory::Trajectory::createUnconstrainedQp(time, positions,
-                                                            &velocities,
-                                                            &accelerations);
+    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
+                                                                      &vel,
+                                                                      &accel);
 }
 
 /**

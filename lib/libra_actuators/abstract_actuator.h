@@ -9,12 +9,13 @@
 
 // C++ Standard Library Headers
 #include <string>
+#include <unordered_map>
 
 // Other Library Headers
 #include <QThread>  // Qt::Core
 
 // Project Headers
-//   (none)
+#include "actuator_defs.h"
 
 /**
  * @brief Provides a common interface for a heterogeneous mix of actuators.
@@ -34,8 +35,8 @@ class AbstractActuatorThread : public QThread {
 
   public:
     AbstractActuatorThread() = default;
-    AbstractActuatorThread(QObject* parent, bool debug_mode)
-        : QThread(parent), debug_mode_(debug_mode){};
+    AbstractActuatorThread(QObject* parent, bool debug_mode, Actuator::Type type)
+        : QThread(parent), debug_mode_(debug_mode), type_(type){};
     ~AbstractActuatorThread() override = default;
 
   public slots:
@@ -55,11 +56,11 @@ class AbstractActuatorThread : public QThread {
   signals:
     // --- Actuator Updates ---
 
-    void ReportTargetPos(const std::vector<double>& target_position);
-    void ReportActualPos(const std::vector<double>& actual_position);
-    void ReportActualTorque(const std::vector<double>& actual_torque);
+    void ReportFeedback(
+        const std::unordered_map<Actuator::Joint, double>& feedbacks,
+        const Actuator::Feedback feedback_type);
+    void ReportStatus(const QString& status, const Actuator::Type type);
 
-    void ReportStatus(const std::vector<QString>& statuses);
     void ErrorThrown(const QString& err);
 
   protected:
@@ -68,4 +69,6 @@ class AbstractActuatorThread : public QThread {
     // --- Data Members ---
 
     bool debug_mode_{true};
+
+    const Actuator::Type type_;
 };

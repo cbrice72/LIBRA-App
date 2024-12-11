@@ -144,8 +144,7 @@ target_link_libraries(
 
 # Only build the example if this CMakeLists.txt was directly invoked
 # (i.e., this CMakeLists.txt was not called as a result of `add_subdirectory()`)
-if(FALSE)
-#if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Add project subdirectories
     add_subdirectory(example-src)  # PROJECT_SOURCE
 

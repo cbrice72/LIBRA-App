@@ -1,13 +1,16 @@
 <?xml version="1.0"?>
 <group_safety version="1.0.0">
   <mstop />
-  <position />
+  <position>
+    <min_limit>-90</min_limit>
+    <max_limit>90</max_limit>
+  </position>
   <velocity>
     <min_limit>-0.5</min_limit>
     <max_limit>0.5</max_limit>
   </velocity>
   <effort>
-    <min_limit>-20</min_limit>
-    <max_limit>20</max_limit>
+    <min_limit>-30</min_limit>
+    <max_limit>30</max_limit>
   </effort>
 </group_safety>

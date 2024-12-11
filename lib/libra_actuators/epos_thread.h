@@ -18,9 +18,8 @@
 
 /**
  * @brief Control class for EPOS (Maxon) actuators.
- *        Derived from `AbstractActuator` to provide a common interface.
  *
- * @note See `abstract_actuator.h`.
+ * @see abstract_actuator.h
  */
 class EposThread : public AbstractActuatorThread {
   public:
@@ -42,7 +41,7 @@ class EposThread : public AbstractActuatorThread {
   signals:
     // --- Actuator Updates ---
 
-    // NOTE: see `AbstractActuator`
+    // NOTE: see `AbstractActuatorThread`
 
   private:
     void run() override;

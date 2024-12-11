@@ -11,10 +11,12 @@
 //   (none)
 
 // Other Library Headers
+#include <QLabel>       // Qt::Widgets
 #include <QMainWindow>  // Qt::Widgets
 
 // Project Headers
-#include "arm_thread.h"
+#include "epos_thread.h"
+#include "hebi_thread.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -23,6 +25,11 @@ class MainWindow;
 }  // namespace Ui
 
 QT_END_NAMESPACE
+
+// Type alias for conveniently accessing a feedback label, where rows are
+// actuators and columns are feedback types (identical to MainWindow UI)
+using FeedbackElementMapOfMaps = std::unordered_map<
+    Actuator::Joint, std::unordered_map<Actuator::Feedback, QLabel*>>;
 
 /**
  * @brief The main command app window.
@@ -37,17 +44,22 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
   public slots:
-    void HandleStatusMsg(const std::vector<QString>& statuses);
     void HandleErrorMsg(const QString& err);
+
+    // --- Actuator Updates ---
+
+    void HandleActuatorFeedback(
+        const std::unordered_map<Actuator::Joint, double>& feedbacks,
+        const Actuator::Feedback feedback_type);
+    void HandleActuatorStatus(const QString& status, const Actuator::Type type);
 
   signals:
     void UpdateDebugMode(const bool& enabled);
 
-    void TryConnect(const Actuator::Joint& joint);
-    void TryDisconnect(const Actuator::Joint& joint);
+    // --- Menu Bar ---
 
-    void CommandOne(const Actuator::Joint& joint, const double& val);
-    void CommandAll(const std::vector<double>& vals);
+    void CommandEpos(const std::vector<double>& deg);
+    void CommandHebi(const std::vector<double>& deg);
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -59,20 +71,22 @@ class MainWindow : public QMainWindow {
 
     // EPOS menu
 
-    void on_a_epos_connect_triggered();
-    void on_a_epos_disconnect_triggered();
+    // NOTE: signals connected directly to thread slots
 
     // HEBI menu
 
-    void on_a_hebi_connect_triggered();
-    void on_a_hebi_disconnect_triggered();
+    // NOTE: signals connected directly to thread slots
 
     // --- Main Window ---
+
+    void on_pb_connect_all_clicked();
+    void on_pb_disconnect_all_clicked();
 
     void on_pb_yaw_start_clicked();
     void on_pb_pitch_start_clicked();
 
     void on_pb_arm_start_clicked();
+    void on_pb_arm_stop_clicked();
 
     // --- Uncategorized ---
 
@@ -81,6 +95,8 @@ class MainWindow : public QMainWindow {
 
     // --- Helper Functions ---
 
+    void InitializeFeedbackElementMap();
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
@@ -88,4 +104,6 @@ class MainWindow : public QMainWindow {
     HebiThread* hebi_thread_;
 
     bool debug_mode_{true};
+
+    FeedbackElementMapOfMaps feedback_element_map_;
 };

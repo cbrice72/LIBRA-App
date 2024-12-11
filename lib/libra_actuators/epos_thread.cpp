@@ -38,7 +38,7 @@ EposThread::EposThread(QObject* parent, std::string device_name,
                        std::string protocol_name, std::string interface_name,
                        std::string port_name, uint baud_rate,
                        const bool& debug_mode)
-    : AbstractActuatorThread(parent, debug_mode),
+    : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kEpos),
       device_name_(std::move(device_name)),
       protocol_name_(std::move(protocol_name)),
       interface_name_(std::move(interface_name)),
@@ -115,11 +115,7 @@ void EposThread::Disconnect() {
 /**
  * @brief Sends movement commands to all connected actuators.
  *
- * @param deg Target angles (absolute) for all actuators
- *
- * @note If an actuator doesn't directly accept degrees as part of its
- *       movement command (i.e., if two actuators work together to effect two
- *       axes), the translation should be done before calling this function.
+ * @param deg Target angles (absolute) for all actuators, in degrees
  */
 void EposThread::SetTarget(const std::vector<double>& deg) {
     qWarning() << "TODO - EposThread::Move()";

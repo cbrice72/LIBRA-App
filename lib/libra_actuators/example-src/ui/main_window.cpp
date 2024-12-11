@@ -52,30 +52,18 @@ MainWindow::MainWindow(QWidget* parent)
     // Set initial state UI of elements
     ui_->a_debug_mode->setChecked(debug_mode_);
 
-    // Define actuators and initialization parameters
-    const ActuatorDef yaw_def{
-        Actuator::Joint::kYaw, Actuator::Type::kEpos,
-        EposParams{"?", "?", "?", "?", 0}
-    };
-
-    const ActuatorDef pitch_def{
-        Actuator::Joint::kPitch, Actuator::Type::kHebi,
-        HebiParams{{"LIBRA"}, {"Pitch"}}
-    };
-
-    const auto actuator_defs = {yaw_def, pitch_def};  // passed to arm_thread_
+    // Initialize a map-of-maps that we will use to access certain label elements
+    // for displaying actuator feedback, similar to how they are laid out in the UI
+    InitializeFeedbackElementMap();
 
     // --- Internal Slots ---
 
-    connect(ui_->hs_arm_yaw, &QSlider::sliderMoved,  // slider visual feedback
+    // Connect the sliders to their respective spinboxes, but not the other way
+    // around since they'd become stuck in an endless feedback loop
+    connect(ui_->hs_arm_yaw, &QSlider::valueChanged,  // yaw visual parity
             ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
-    // NOTE: we don't also connect them the other way around since
-    //       they'd become stuck in an endless feedback loop
-
-    connect(ui_->hs_arm_pitch, &QSlider::sliderMoved,  // slider visual feedback
+    connect(ui_->hs_arm_pitch, &QSlider::valueChanged,  // pitch visual parity
             ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
-    // NOTE: we don't also connect them the other way around since
-    //       they'd become stuck in an endless feedback loop
 
     // --- Thread Management ---
 
@@ -89,34 +77,29 @@ MainWindow::MainWindow(QWidget* parent)
      */
 
     // EPOS thread
-    epos_thread_ = new EposThread(this, actuator_defs, debug_mode_);
+    epos_thread_ = new EposThread(this, "?", "?", "?", "?", 0,
+                                  debug_mode_);  // TODO: parameters
 
     // - MainWindow signals
     connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
             epos_thread_, &EposThread::SetDebugMode);
 
-    connect(this, &MainWindow::TryConnect,  // connect a specific actuator
-            epos_thread_, &EposThread::ConnectActuator);
-    connect(this, &MainWindow::TryDisconnect,  // disconnect a specific actuator
-            epos_thread_, &EposThread::DisconnectActuator);
+    connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
+            epos_thread_, &EposThread::Connect);
+    connect(ui_->a_epos_disconnect, &QAction::triggered,  // disconnect EPOS
+            epos_thread_, &EposThread::Disconnect);
 
-    connect(ui_->pb_connect_all,
-            &QPushButton::clicked,  // connect all actuators
-            epos_thread_, &EposThread::ConnectAllActuators);
-    connect(ui_->pb_disconnect_all,
-            &QPushButton::clicked,  // disconnect all actuators
-            epos_thread_, &EposThread::DisconnectAllActuators);
-
-    connect(this, &MainWindow::CommandOne,  // move a specific actuator
-            epos_thread_, &EposThread::Move);
-    connect(this, &MainWindow::CommandAll,  // move all actuators
-            epos_thread_, &EposThread::MoveAll);
-    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop all actuators
+    connect(this, &MainWindow::CommandEpos,  // update EPOS target(s)
+            epos_thread_, &EposThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
             epos_thread_, &EposThread::Stop);
 
     // - MainWindow slots
-    connect(epos_thread_, &EposThread::StatusChanged,  // receive status updates
-            this, &MainWindow::HandleStatusMsg);
+    connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
     connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
             this, &MainWindow::HandleErrorMsg);
 
@@ -127,34 +110,28 @@ MainWindow::MainWindow(QWidget* parent)
     epos_thread_->start();
 
     // HEBI thread
-    hebi_thread_ = new HebiThread(this, actuator_defs, debug_mode_);
+    hebi_thread_ = new HebiThread(this, {"LIBRA"}, {"Pitch"}, debug_mode_);
 
     // - MainWindow signals
     connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
             hebi_thread_, &HebiThread::SetDebugMode);
 
-    connect(this, &MainWindow::TryConnect,  // connect a specific actuator
-            hebi_thread_, &HebiThread::ConnectActuator);
-    connect(this, &MainWindow::TryDisconnect,  // disconnect a specific actuator
-            hebi_thread_, &HebiThread::DisconnectActuator);
+    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
+            hebi_thread_, &HebiThread::Connect);
+    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
+            hebi_thread_, &HebiThread::Disconnect);
 
-    connect(ui_->pb_connect_all,
-            &QPushButton::clicked,  // connect all actuators
-            hebi_thread_, &HebiThread::ConnectAllActuators);
-    connect(ui_->pb_disconnect_all,
-            &QPushButton::clicked,  // disconnect all actuators
-            hebi_thread_, &HebiThread::DisconnectAllActuators);
-
-    connect(this, &MainWindow::CommandOne,  // move a specific actuator
-            hebi_thread_, &HebiThread::Move);
-    connect(this, &MainWindow::CommandAll,  // move all actuators
-            hebi_thread_, &HebiThread::MoveAll);
-    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop all actuators
+    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
+            hebi_thread_, &HebiThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
             hebi_thread_, &HebiThread::Stop);
 
     // - MainWindow slots
-    connect(hebi_thread_, &HebiThread::StatusChanged,  // receive status updates
-            this, &MainWindow::HandleStatusMsg);
+    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
             this, &MainWindow::HandleErrorMsg);
 
@@ -190,37 +167,84 @@ namespace {  // local to this file
 
 }  // namespace
 
+/**
+ * @brief Populates a map-of-maps with UI label elements, according to their
+ *        corresponding actuator joint names (`Actuator::Joint`) and feedback types
+ *        (`Actuator::Feedback`).
+ *
+ * @see Actuator::Joint Actuator::Feedback
+ */
+void MainWindow::InitializeFeedbackElementMap() {
+    // Yaw joint
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_yaw;
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_yaw;
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_yaw;
+
+    // Pitch joint
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualTorque] =
+                             ui_->l_torque_pitch;
+}
+
 //------------------------------------------------------------------------------
 // !Thread Handlers
 //------------------------------------------------------------------------------
 
 /**
- * @brief Parses status updates from ArmThread.
+ * @brief Sorts important actuator information into individual UI elements.
  *
- * @param statuses Comma-delimited status messages from each actuator, in
- *                 joint order
+ * @param feedbacks Unordered map of joint(s) and their corresponding feedback
+ * @param feedback_type The type of primary feedback provided
  */
-void MainWindow::HandleStatusMsg(const std::vector<QString>& statuses) {
-    // Handle EPOS status
-    /*
-    l_target_yaw
-    l_actual_yaw
-    l_torque_yaw
-    */
-
-    // Handle HEBI status
-    /*
-    l_target_pitch
-    l_actual_pitch
-    l_torque_pitch
-    */
-
-    ui_->l_yaw_status->setText(statuses.at(Actuator::Joint::kYaw));
-    ui_->l_pitch_status->setText(statuses.at(Actuator::Joint::kPitch));
+void MainWindow::HandleActuatorFeedback(
+    const std::unordered_map<Actuator::Joint, double>& feedbacks,
+    const Actuator::Feedback feedback_type) {
+    for (const auto& feedback : feedbacks) {
+        try {
+            // Index into the relevant UI label using the map-of-maps
+            // initialized in the constructor
+            feedback_element_map_.at(feedback.first)
+                .at(feedback_type)
+                ->setText(QString::number(feedback.second, 'f', 1));  // 0.1
+        } catch (const std::out_of_range&) {
+            qCritical() << "[ERROR] No UI element mapped to joint"
+                        << feedback.first << "and feedback type"
+                        << feedback_type;
+        }
+    }
 }
 
 /**
- * @brief Handles errors from ArmThread.
+ * @brief Prints miscellaneous actuator information at the bottom of the UI.
+ *
+ * @param status Newline-delimited status info
+ * @param type The actuator type, for updating the corresponding UI element
+ */
+void MainWindow::HandleActuatorStatus(const QString& status,
+                                      const Actuator::Type type) {
+    switch (type) {
+        case Actuator::Type::kEpos:
+            ui_->l_yaw_status->setText(status);
+            break;
+        case Actuator::Type::kHebi:
+            ui_->l_pitch_status->setText(status);
+            break;
+        default:
+            // Shouldn't be able to get here
+            qCritical() << "[ERROR] Received status from unknown actuator type:"
+                        << type;
+    }
+}
+
+/**
+ * @brief Throws a pop-up error box upon receiving an error signal from a thread.
  *
  * @param err Fatal error message from an actuator
  */
@@ -246,41 +270,25 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     }
 }
 
-/**
- * @brief Event handler for "EPOS" menu bar action "Connect".
- *        Sends a request to open a connection to the EPOS-based yaw joint.
- */
-void MainWindow::on_a_epos_connect_triggered() {
-    emit TryConnect(Actuator::Joint::kYaw);
-}
-
-/**
- * @brief Event handler for "EPOS" menu bar action "Disonnect".
- *        Sends a request to close the connection to the EPOS-based yaw joint.
- */
-void MainWindow::on_a_epos_disconnect_triggered() {
-    emit TryDisconnect(Actuator::Joint::kYaw);
-}
-
-/**
- * @brief Event handler for "HEBI" menu bar action "Connect".
- *        Sends a request to open a connection to the HEBI-based pitch joint.
- */
-void MainWindow::on_a_hebi_connect_triggered() {
-    emit TryConnect(Actuator::Joint::kPitch);
-}
-
-/**
- * @brief Event handler for "HEBI" menu bar action "Disonnect".
- *        Sends a request to close the connection to the HEBI-based pitch joint.
- */
-void MainWindow::on_a_hebi_disconnect_triggered() {
-    emit TryDisconnect(Actuator::Joint::kPitch);
-}
-
 //------------------------------------------------------------------------------
 // !Main Window
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Send a command signal to attempt to connect to all actuators.
+ */
+void MainWindow::on_pb_connect_all_clicked() {
+    ui_->a_epos_connect->trigger();
+    ui_->a_hebi_connect->trigger();
+}
+
+/**
+ * @brief Send a command signal to disconnect all actuators.
+ */
+void MainWindow::on_pb_disconnect_all_clicked() {
+    ui_->a_epos_disconnect->trigger();
+    ui_->a_hebi_disconnect->trigger();
+}
 
 /**
  * @brief Send a command signal for the yaw actuator to move.
@@ -293,7 +301,7 @@ void MainWindow::on_pb_yaw_start_clicked() {
         ui_->hs_arm_yaw->setValue(val);
     }
 
-    emit CommandOne(Actuator::Joint::kYaw, val);
+    emit CommandEpos({val});
 }
 
 /**
@@ -307,27 +315,22 @@ void MainWindow::on_pb_pitch_start_clicked() {
         ui_->hs_arm_pitch->setValue(val);
     }
 
-    emit CommandOne(Actuator::Joint::kPitch, val);
+    emit CommandHebi({val});
 }
 
 /**
  * @brief Send a command signal for all actuators to move.
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    auto yaw = ui_->sb_arm_yaw->value();
-    auto pitch = ui_->sb_arm_pitch->value();
+    ui_->pb_yaw_start->animateClick();
+    ui_->pb_pitch_start->animateClick();
+}
 
-    if (ui_->hs_arm_yaw->value() != yaw) {
-        // If yaw value was entered via the SpinBox, update its slider
-        ui_->hs_arm_yaw->setValue(yaw);
-    }
-    if (ui_->hs_arm_pitch->value() != pitch) {
-        // If pitch value was entered via the SpinBox, update its slider
-        ui_->hs_arm_pitch->setValue(pitch);
-    }
-
-    std::vector<double> vals = {yaw, pitch};
-    emit CommandAll(vals);
+/**
+ * @brief Send a command signal for all actuators to stop.
+ */
+void MainWindow::on_pb_arm_stop_clicked() {
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
