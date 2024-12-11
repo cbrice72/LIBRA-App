@@ -55,4 +55,6 @@ class EposThread : public AbstractActuatorThread {
     std::string interface_name_;
     std::string port_name_;
     uint baud_rate_;
+
+    void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
 };

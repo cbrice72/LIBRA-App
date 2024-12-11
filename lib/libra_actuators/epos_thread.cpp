@@ -12,16 +12,48 @@
 //   (none)
 
 // Other Library Headers
-#include <QDebug>  // Qt::Core
+#include "Definitions.h"  // EPOS (Maxon)
+#include <QDebug>         // Qt::Core
 
 // Project Headers
-//   (none)
+// #include "util.h"  // TODO: integrate with main project
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
  * !Thread Overrides
  * !Actuator Commands (slots)
  */
+
+/* Constants */
+
+// Mechanical Properties
+
+constexpr long kEncoderResolution = 500;  // Maxon part #: 228452
+constexpr long kGearheadReduction = 113;  // Maxon part #: 203126
+
+constexpr long kPinionTeeth = 15;    // KG Gear part #: SG1S15L-1010
+constexpr long kSlewRingTeeth = 48;  // igus part #: PRT-04-50-TI-ST
+/*
+constexpr double kSlewGearReduction = static_cast<double>(kSlewRingTeeth)
+                                      / kPinionTeeth;
+*/
+constexpr double kSlewGearReduction = 1.0;  // FOR TESTING PURPOSES ONLY
+
+// Improving Readability of Conversions
+
+// NOTE: in the following conversion, encoder resolution is multiplied by 4.0
+//       because the EPOS4 Firmware Specification says so (see "Digital
+//       incremental encoder" section, p. 156)
+constexpr double kDegToInc = (kEncoderResolution * 4.0 * kGearheadReduction
+                              * kSlewGearReduction)
+                             / 360;
+constexpr double kIncToDeg = 360
+                             / (kEncoderResolution * 4.0 * kGearheadReduction
+                                * kSlewGearReduction);
+
+// EPOS Functions
+
+constexpr int32_t kTimeout = 3000;  // ms
 
 /**
  * @brief Standard constructor.
@@ -50,9 +82,10 @@ EposThread::EposThread(QObject* parent, std::string device_name,
  *
  */
 EposThread::~EposThread() {
-    qWarning() << "TODO - EposThread::~EposThread()";
-
-    // TODO: implementation
+    // This call to `Disconnect()` does two things:
+    //   1) Ensures actuators come to a complete stop
+    //   2) Ensures the EPOS handle gets cleaned up
+    Disconnect();
 }
 
 //------------------------------------------------------------------------------
@@ -82,7 +115,7 @@ void EposThread::run() {
     while (!isInterruptionRequested()) {
         // TODO: implementation
 
-        QThread::msleep(100);  // update 10 times/second
+        QThread::msleep(10);  // update 100 times/second (theoretically)
     }
 }
 
@@ -96,9 +129,30 @@ void EposThread::run() {
  * @return true if successful, false otherwise
  */
 void EposThread::Connect() {
-    qWarning() << "TODO - EposThread::Connect()";
+    // If there is already an active connection, gracefully terminate it
+    Stop();
+    Disconnect();
 
-    // TODO: implementation
+    // Connect to specified controller
+    uint err_code = 0;
+    handle_ = VCS_OpenDevice(device_name_.data(), protocol_name_.data(),
+                             interface_name_.data(), port_name_.data(),
+                             &err_code);
+
+    if (handle_ == nullptr || err_code != 0) {
+        // emit ErrorThrown(util::GetEPOSErr("VCS_OpenDevice", err_code));
+        qCritical() << "[TEMPORARY]\nEPOS - Couldn't open device!";
+        return;
+    }
+
+    // Set controller baud rate and timeout
+    if (VCS_SetProtocolStackSettings(handle_, baud_rate_, kTimeout, &err_code)
+        <= 0) {
+        // emit ErrorThrown(util::GetEPOSErr("VCS_SetProtocolStackSettings", err_code));
+        qCritical() << "[TEMPORARY]\nEPOS - Couldn't set baud rate!";
+        VCS_CloseDevice(handle_, &err_code);
+        return;
+    }
 }
 
 /**
@@ -107,9 +161,22 @@ void EposThread::Connect() {
  * @return true if successful, false otherwise
  */
 void EposThread::Disconnect() {
-    qWarning() << "TODO - EposThread::Disconnect()";
+    // In case this was called in the middle of a movement, gracefully stop
+    Stop();
 
-    // TODO: implementation
+    if (handle_ != nullptr) {
+        // Close the connection via the EPOS API
+        uint err_code = 0;
+        VCS_CloseDevice(handle_, &err_code);
+        if (err_code != 0) {
+            // emit ErrorThrown(util::GetEPOSErr("VCS_CloseDevice", err_code));
+            qCritical() << "[TEMPORARY]\nEPOS - Problem closing device!";
+            return;
+        }
+
+        // Void our local handle
+        handle_ = nullptr;
+    }
 }
 
 /**
