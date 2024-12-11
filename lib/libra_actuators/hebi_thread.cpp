@@ -143,7 +143,7 @@ QString HebiThread::GetStatus() {
         auto volt = feedback_->getVoltage()[i];                  // V
         auto curr = feedback_->getMotorCurrent()[i];             // A
         auto temp = feedback_->getMotorWindingTemperature()[i];  // C
-        // alternatively, getBoardTemperature() for electronics
+        // (alternatively, `getBoardTemperature()` for electronics)
 
         // Perform conversions
         a_vel *= defl_vel;      // to deg/s
