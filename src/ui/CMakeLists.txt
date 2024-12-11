@@ -13,10 +13,6 @@ set(UI_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
-    # Serial (USB) Selection Dialog
-    ${CMAKE_CURRENT_SOURCE_DIR}/serial_dialog.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/serial_dialog.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/serial_dialog.ui
     # EPOS Connection Dialog
     ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.cpp
