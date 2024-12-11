@@ -77,10 +77,11 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
  * @brief Standard destructor.
  */
 HebiThread::~HebiThread() {
-    if (group_ != nullptr) {
-        // Stop logging
-        group_->stopLog();
-    }
+    // This call to `Disconnect()` does three things:
+    //   1) Ensures actuators come to a complete stop
+    //   2) Finishes logging and saves it to a file
+    //   3) Ensures the main HEBI object gets cleaned up
+    Disconnect();
 }
 
 //------------------------------------------------------------------------------
@@ -229,7 +230,7 @@ void HebiThread::run() {
         emit ReportStatus(GetStatus(), type_);
 
         // Don't overwhelm network
-        QThread::msleep(10);  // update 100 times/second
+        QThread::msleep(10);  // update 100 times/second (theoretically)
     }
 }
 
@@ -246,6 +247,9 @@ void HebiThread::run() {
  * https://github.com/HebiRobotics/hebi-cpp-examples/blob/master/advanced/lookup/lookup_example.cpp
  */
 void HebiThread::Connect() {
+    // In case there is already an active connection, gracefully terminate it
+    Disconnect();
+
     // Create lookup object and wait for actuator list to populate
     hebi::Lookup lookup;
     std::this_thread::sleep_for(std::chrono::seconds(2));
@@ -321,7 +325,10 @@ void HebiThread::Connect() {
  * @return true if successful, false otherwise
  */
 void HebiThread::Disconnect() {
-    if (group_) {
+    // In case this was called in the middle of a movement, gracefully stop
+    Stop();
+
+    if (group_ != nullptr) {
         // Stop logging
         group_->stopLog();
 
@@ -382,7 +389,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
  */
 void HebiThread::Stop() {
     if (group_ == nullptr) {
-        emit ErrorThrown("HEBI - Can't stop actuators; not connected!");
+        qWarning() << "[WARN] HEBI - Not connected";
         return;
     }
 
