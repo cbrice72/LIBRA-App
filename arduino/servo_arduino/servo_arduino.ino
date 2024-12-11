@@ -33,6 +33,8 @@ void setup() {
  * @brief Main Arduino control function; begins running once `setup()` finishes.
  *
  * @note Required Arduino function (called repeatedly).
+ *
+ * @see setup()
  */
 void loop() {
     // Check for incoming commands from LIBRA App

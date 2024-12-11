@@ -165,7 +165,8 @@ std::vector<long> Lidar::GetData() {
  *
  * @param true to enable, false to disable
  *
- * @note This setting only affects `Lidar` functions.
+ * @note This setting only affects this class's functions, and has no effect
+ *       Hokuyo URG functions.
  */
 void Lidar::SetDebugMode(bool enabled) {
     debug_mode_ = enabled;
