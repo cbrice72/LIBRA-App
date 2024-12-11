@@ -707,6 +707,11 @@
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QLabel" name="l_yaw_status">
+         <property name="font">
+          <font>
+           <family>Monospace</family>
+          </font>
+         </property>
          <property name="text">
           <string>...</string>
          </property>
@@ -717,6 +722,11 @@
        </item>
        <item>
         <widget class="QLabel" name="l_pitch_status">
+         <property name="font">
+          <font>
+           <family>Monospace</family>
+          </font>
+         </property>
          <property name="text">
           <string>...</string>
          </property>

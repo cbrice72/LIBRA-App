@@ -151,14 +151,15 @@ QString HebiThread::GetStatus() {
         defl_vel *= kRadToDeg;  // to deg/s
 
         // Create "entry" in stringstream
-        ss << "[" << i << "]"
-           << "\n  Actual Velocity (deg/s):     " << std::setw(7) << a_vel
-           << "\n  Deflection (deg):            " << std::setw(7) << defl
-           << "\n  Deflection Velocity (deg/s): " << std::setw(7) << defl_vel
-           << "\n  Voltage (V):                 " << std::setw(7) << volt
-           << "\n  Current (A):                 " << std::setw(7) << curr
-           << "\n  Temperature (C):             " << std::setw(7) << temp
-           << "\n";  // std::setw(7) to account for -> [sign][#,3][.][#,2]
+        // - std::setw(7) for values to account for [sign][#,3][.][#,2]
+        ss << "[" << i << "]\n"
+           << "  Actual Velocity:     " << std::setw(7) << a_vel << " deg/s\n"
+           << "  Deflection:          " << std::setw(7) << defl << " deg\n"
+           << "  Deflection Velocity: " << std::setw(7) << defl_vel
+           << " deg/s\n"
+           << "  Voltage:             " << std::setw(7) << volt << " V\n"
+           << "  Current:             " << std::setw(7) << curr << " A\n"
+           << "  Temperature:         " << std::setw(7) << temp << " C\n";
     }
 
     return QString::fromStdString(ss.str());
@@ -255,7 +256,7 @@ void HebiThread::Connect() {
 
         if (entry_list->size() == 0) {
             // Early exit
-            emit ErrorThrown("[ERROR] HEBI - No actuators found on network!");
+            emit ErrorThrown("HEBI - No actuators found on network!");
             return;
         }
 
@@ -270,42 +271,42 @@ void HebiThread::Connect() {
     }
 
     // Filter lookup for relevant actuator(s)
-    group_ = lookup.getGroupFromNames(families_, names_, kTimeout);
-    if (group_ == nullptr) {
-        emit ErrorThrown(
-            "[ERROR] HEBI - Requested actuator families/names not found!");
+    // NOTE: don't save to class member `group_` until checks have passed
+    auto group = lookup.getGroupFromNames(families_, names_, kTimeout);
+    if (group == nullptr) {
+        emit ErrorThrown("HEBI - Requested actuator families/names not found!");
         return;
     }
 
     // Load safety parameters
-    if (!command_->readSafetyParameters("bin/shared/hebi/safety.xml")) {
-        emit ErrorThrown("[ERROR] HEBI - Failed to load safety parameters!");
+    if (!command_->readSafetyParameters("./bin/shared/hebi/safety.xml")) {
+        emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
 
     // Load gains
-    if (!command_->readGains("bin/shared/hebi/gains.xml")) {
-        emit ErrorThrown("[ERROR] HEBI - Failed to load gain parameters!");
+    if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
+        emit ErrorThrown("HEBI - Failed to load gain parameters!");
         return;
     }
 
     // Initialize actuator(s) with above parameters
-    if (!group_->sendCommandWithAcknowledgement(*command_, kTimeout)) {
-        emit ErrorThrown("[ERROR] HEBI - Didn't receive acknowledgement from "
+    if (!group->sendCommandWithAcknowledgement(*command_, kTimeout)) {
+        emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
                          "actuator initialization!");
         return;
     }
     command_->clear();
 
     // Command actuator(s) to hold current position
+    group_ = group;
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());
 
     // Start logging
     const std::string log_path = group_->startLog("./log");
     if (log_path.empty()) {
-        emit ErrorThrown(
-            "[ERROR] HEBI - Log directory (log/) does not exist in CWD!");
+        emit ErrorThrown("HEBI - Log directory (log/) does not exist in CWD!");
         return;
     }
 
@@ -336,13 +337,13 @@ void HebiThread::Disconnect() {
  */
 void HebiThread::SetTarget(const std::vector<double>& target) {
     if (group_ == nullptr) {
-        emit ErrorThrown("[ERROR] HEBI - Can't move actuators; not connected!");
+        emit ErrorThrown("HEBI - Can't move actuators; not connected!");
         return;
     }
 
     // Validate input
     if (target.size() != num_actuators_) {
-        emit ErrorThrown("[ERROR] HEBI - Size of command vector != number of "
+        emit ErrorThrown("HEBI - Size of command vector != number of "
                          "connected actuators!");
         return;
     }
@@ -381,7 +382,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
  */
 void HebiThread::Stop() {
     if (group_ == nullptr) {
-        emit ErrorThrown("[ERROR] HEBI - Can't stop actuators; not connected!");
+        emit ErrorThrown("HEBI - Can't stop actuators; not connected!");
         return;
     }
 
