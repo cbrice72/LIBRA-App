@@ -19,6 +19,11 @@
 /**
  * @brief Control class for EPOS (Maxon) actuators.
  *
+ * @note Since I don't see a reason to use `EposThread` outside of the LIBRA
+ *       project in the near future, and I only need at most one EPOS actuator,
+ *       I won't go through the trouble of making full use of the EPOS library
+ *       to match the HEBI API's one-group-to-many-actuators functionality.
+ *
  * @see abstract_actuator.h
  */
 class EposThread : public AbstractActuatorThread {
@@ -35,7 +40,7 @@ class EposThread : public AbstractActuatorThread {
     void Connect() override;
     void Disconnect() override;
 
-    void SetTarget(const std::vector<double>& deg) override;
+    void SetTarget(const std::vector<double>& target) override;
     void Stop() override;
 
   signals:
@@ -48,6 +53,8 @@ class EposThread : public AbstractActuatorThread {
 
     // --- Helper Functions ---
 
+    QString GetStatus();
+
     // --- Data Members ---
 
     std::string device_name_;
@@ -57,4 +64,7 @@ class EposThread : public AbstractActuatorThread {
     uint baud_rate_;
 
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
+
+    int target_{0};  // in inc, not deg
+    int last_target_{0};
 };

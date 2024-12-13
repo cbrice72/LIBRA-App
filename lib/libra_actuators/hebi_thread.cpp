@@ -151,7 +151,7 @@ QString HebiThread::GetStatus() {
         defl *= kRadToDeg;      // to deg
         defl_vel *= kRadToDeg;  // to deg/s
 
-        // Create "entry" in stringstream
+        // Create stringstream entry
         // - std::setw(7) for values to account for [sign][#,3][.][#,2]
         ss << "[" << i << "]\n"
            << "  Actual Velocity:     " << std::setw(7) << a_vel << " deg/s\n"
@@ -338,7 +338,7 @@ void HebiThread::Disconnect() {
 }
 
 /**
- * @brief Sends movement commands to all connected actuators.
+ * @brief Sets movement targets/trajectories for all connected actuators.
  *
  * @param target Target angles (absolute) for all actuators, in degrees
  */
