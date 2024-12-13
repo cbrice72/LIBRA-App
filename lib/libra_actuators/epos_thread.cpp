@@ -234,8 +234,8 @@ void EposThread::run() {
                     "[TEMPORARY]\nEPOS - Failed to retrieve target position!");
             }
             // clang-format off
-        emit ReportFeedback({{Actuator::Joint::kYaw, t_pos * kIncToDeg}},
-                            Actuator::Feedback::kTargetPos);
+            emit ReportFeedback({{Actuator::Joint::kYaw, t_pos * kIncToDeg}},
+                                Actuator::Feedback::kTargetPos);
             // clang-format on
 
             if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) <= 0) {
@@ -245,8 +245,8 @@ void EposThread::run() {
                     "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
             }
             // clang-format off
-        emit ReportFeedback({{Actuator::Joint::kYaw, a_pos * kIncToDeg}},
-                            Actuator::Feedback::kActualPos);
+            emit ReportFeedback({{Actuator::Joint::kYaw, a_pos * kIncToDeg}},
+                                Actuator::Feedback::kActualPos);
             // clang-format on
         }
 
@@ -273,9 +273,9 @@ void EposThread::Connect() {
 
     // Connect to specified controller
     uint err_code = 0;
-    auto handle = VCS_OpenDevice(device_name_.data(), protocol_name_.data(),
-                                 interface_name_.data(), port_name_.data(),
-                                 &err_code);
+    auto* handle = VCS_OpenDevice(device_name_.data(), protocol_name_.data(),
+                                  interface_name_.data(), port_name_.data(),
+                                  &err_code);
 
     if (handle == nullptr || err_code != 0) {
         // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_OpenDevice", err_code));
