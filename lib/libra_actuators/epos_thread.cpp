@@ -46,8 +46,8 @@ constexpr long kDegPerRotation = 360;
 constexpr long kSecPerMin = 60;
 
 // NOTE: in the following conversions, encoder resolution is multiplied by 4
-//       because the EPOS4 Firmware Specification says so (see "Digital
-//       incremental encoder" section, p. 156)
+//       because it is a quadrature encoder (see EPOS4 Firmware Specification
+//       "Digital incremental encoder" section, p. 156)
 constexpr double kDegToInc = (kEncoderResolution * 4.0 * kGearheadReduction
                               * kSlewGearReduction)
                              / kDegPerRotation;
