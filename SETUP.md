@@ -218,6 +218,11 @@ sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-i
 
 See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt6-qt-qpa-plugin-could-not-load-the-qt-platform-plugin-xcb-in-even-thou) for more details.
 
+##### *Running CMake gives "Unknown CMake command "qt_xxx""*
+
+Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely have an older version of Qt installed.
+You can check what version you have by opening QtCreator, opening the "Help" tab at the top, and clicking "System Information".
+
 ### *Maxon EPOS Library (system-wide install)*
 
 The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`).
