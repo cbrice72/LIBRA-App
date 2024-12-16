@@ -18,7 +18,6 @@
 // Project Headers
 #include "camera_manager.h"
 #include "libra_hebi.h"
-#include "lidar.h"  // unused
 
 QT_BEGIN_NAMESPACE
 
@@ -195,7 +194,6 @@ class MainWindow : public QMainWindow {
     QSerialPort* ser_servo_{nullptr};
 
     std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
-    std::shared_ptr<Lidar> lidar_;           // unused
 
     std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;

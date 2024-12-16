@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   lidar.h
- * @brief  Control code for a Hokuyo LIDAR; header file.
+ * @file   lidar_hokuyo.h
+ * @brief  Control code for a Hokuyo (URG) LIDAR; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -19,10 +19,10 @@
 /**
  * @brief TODO: documentation
  */
-class Lidar {
+class LidarHokuyo {
   public:
-    explicit Lidar(const std::string& device_name);
-    ~Lidar();
+    explicit LidarHokuyo(const std::string& device_name);
+    ~LidarHokuyo();
 
     // --- Sensor Commands ---
 

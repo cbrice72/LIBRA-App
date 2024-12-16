@@ -1,6 +1,6 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  LIBRA Hokuyo LIDAR module CMakeLists file.
+# @brief  Hokuyo (URG) LIDAR module CMakeLists file.
 #
 # @author brice.c.aa
 ################################################################################
@@ -10,19 +10,19 @@ set(URG_DIR ${CMAKE_SOURCE_DIR}/thirdparty/urg-1.2.7)
 
 # Create and configure the module
 qt_add_library(
-    lidar
+    lidar_hokuyo
     STATIC
     # Header
-    lidar.h
+    lidar_hokuyo.h
     # Source
-    lidar.cpp
+    lidar_hokuyo.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
 set(URG_INCLUDE_DIRS "${URG_DIR}/include/c" "${URG_DIR}/include/cpp")
 
 target_include_directories(
-    lidar
+    lidar_hokuyo
     # Hokuyo URG
     PUBLIC ${URG_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
@@ -38,7 +38,7 @@ set_target_properties(urg_cpp PROPERTIES IMPORTED_LOCATION ${URG_LIB})
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    lidar
+    lidar_hokuyo
     # Hokuyo URG
     PRIVATE urg_cpp # -lurg_cpp
 )

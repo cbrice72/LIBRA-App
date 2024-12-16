@@ -1,6 +1,6 @@
-# Hokuyo URG (LIDAR)
+# Hokuyo (URG) LIDAR
 
-This document lists the necessary steps to set up and use a Hokuyo URG LIDAR in a Linux environment.
+This document lists the necessary steps to set up and use a Hokuyo (URG) LIDAR in a Linux environment.
 
 - [Before You Start](#before-you-start)
     - [*Enabling Port Access*](#enabling-port-access)

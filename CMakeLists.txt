@@ -93,7 +93,7 @@ target_include_directories(
 target_link_libraries(
     LIBRA-App-v2
     # Project
-    PRIVATE camera_manager libra_hebi lidar util
+    PRIVATE camera_manager libra_hebi util
     # Qt
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
