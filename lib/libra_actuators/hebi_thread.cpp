@@ -302,6 +302,10 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
+    if (debug_mode_) {
+        qDebug() << "HEBI - Connection successful";
+    }
+
     // Command actuator(s) to hold current position
     group_ = group;
     group_->getNextFeedback(*feedback_);
@@ -334,6 +338,10 @@ void HebiThread::Disconnect() {
 
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
+
+        if (debug_mode_) {
+            qDebug() << "HEBI - Gracefully disconnected from actuator(s)";
+        }
     }
 }
 
@@ -361,10 +369,15 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
     Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
 
+    std::stringstream trajectory_ss;  // for debug only
+
     // Populate positions
     pos.col(0) = command_->getPosition();  // start (current value)
     for (auto i = 0; i < target.size(); i++) {
         pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
+        if (debug_mode_) {
+            trajectory_ss << std::to_string(pos(i, 1)) << "";
+        }
     }
 
     // Determine greatest change in position for calculating trajectory times
@@ -382,6 +395,11 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
                                                                       &vel,
                                                                       &accel);
+
+    if (debug_mode_) {
+        qDebug() << "HEBI - Set trajectory target(s) to" << trajectory_ss.str()
+                 << "rad";
+    }
 }
 
 /**
@@ -393,4 +411,8 @@ void HebiThread::Stop() {
     }
 
     trajectory_ = nullptr;
+
+    if (debug_mode_) {
+        qDebug() << "HEBI - Trajectory reset";
+    }
 }

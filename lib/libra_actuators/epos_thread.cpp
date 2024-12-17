@@ -211,6 +211,10 @@ void EposThread::run() {
         if (handle_ != nullptr) {
             // Send movement command
             if (target_ != last_target_) {
+                if (debug_mode_) {
+                    qDebug() << "EPOS - Sending move command";
+                }
+
                 // No complex trajectory-related logic necessary since we only
                 // support ProfilePositionMode (for now)
                 if (VCS_MoveToPosition(handle_, kNodeID, target_, kMoveAbsolute,
@@ -324,6 +328,10 @@ void EposThread::Connect() {
     }
 
     handle_ = handle;  // only set our class handle after successful init
+
+    if (debug_mode_) {
+        qDebug() << "EPOS - Connection successful";
+    }
 }
 
 /**
@@ -347,6 +355,10 @@ void EposThread::Disconnect() {
 
         // Void our class handle
         handle_ = nullptr;
+    }
+
+    if (debug_mode_) {
+        qDebug() << "EPOS - Gracefully disconnected from actuator";
     }
 }
 
@@ -374,6 +386,10 @@ void EposThread::SetTarget(const std::vector<double>& target) {
 
     // Convert and save
     target_ = target.at(0) * kDegToInc;
+
+    if (debug_mode_) {
+        qDebug() << "EPOS - Set target to" << target_ << "inc";
+    }
 }
 
 /**
@@ -401,4 +417,8 @@ void EposThread::Stop() {
             "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
     }
     target_ = last_target_ = current_pos;
+
+    if (debug_mode_) {
+        qDebug() << "EPOS - Actuator stopped";
+    }
 }
