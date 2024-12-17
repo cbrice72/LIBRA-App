@@ -361,6 +361,10 @@ void EposThread::Disconnect() {
  *       to match the HEBI API's one-group-to-many-actuators functionality.
  */
 void EposThread::SetTarget(const std::vector<double>& target) {
+    if (handle_ == nullptr) {
+        return;  // do nothing
+    }
+
     // Validate input
     if (target.size() != 1) {
         emit ErrorThrown("EPOS - Size of command vector != number of "
@@ -376,6 +380,10 @@ void EposThread::SetTarget(const std::vector<double>& target) {
  * @brief Halts the trajectory of the actuator.
  */
 void EposThread::Stop() {
+    if (handle_ == nullptr) {
+        return;  // do nothing
+    }
+
     // Stop the actuator
     uint err_code = 0;
     if (VCS_HaltPositionMovement(handle_, kNodeID, &err_code) <= 0) {

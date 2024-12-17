@@ -389,8 +389,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
  */
 void HebiThread::Stop() {
     if (group_ == nullptr) {
-        qWarning() << "[WARN] HEBI - Not connected";
-        return;
+        return;  // do nothing
     }
 
     trajectory_ = nullptr;
