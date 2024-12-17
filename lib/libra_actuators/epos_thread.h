@@ -65,6 +65,6 @@ class EposThread : public AbstractActuatorThread {
 
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
 
-    int target_{0};  // in inc, not deg
-    int last_target_{0};
+    int target_;  // in inc, not deg
+    int last_target_;
 };

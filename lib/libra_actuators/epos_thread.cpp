@@ -64,8 +64,10 @@ constexpr double kRpmToDegs = kDegPerRotation
 
 // EPOS Functions
 
-constexpr int32_t kTimeout = 3000;  // ms
-constexpr int kNodeID = 1;          // for now, we only support one actuator
+constexpr int kEposTrue = 1;       // TRUE
+constexpr int kEposFalse = 0;      // FALSE
+constexpr int32_t kTimeout = 100;  // ms
+constexpr int kNodeID = 1;         // for now, we only support one actuator
 
 // - For Profile Position/Velocity Modes
 constexpr uint kProfileVel = 1000;  // rpm
@@ -98,7 +100,9 @@ EposThread::EposThread(QObject* parent, std::string device_name,
       protocol_name_(std::move(protocol_name)),
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
-      baud_rate_(baud_rate) {}
+      baud_rate_(baud_rate),
+      target_{0},
+      last_target_{0} {}
 
 /**
  * @brief Standard destructor.
@@ -284,6 +288,48 @@ void EposThread::Connect() {
     if (handle == nullptr || err_code != 0) {
         // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_OpenDevice", err_code));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't open device!");
+        return;
+    }
+
+    // Check if user-supplied baud rate is accepted by controller
+    uint valid_rate = 0;
+    std::stringstream valid_str;
+    int end_of_sel = 0;
+    bool baud_is_valid = false;
+    if (VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
+                                 interface_name_.data(), port_name_.data(),
+                                 kEposTrue, &valid_rate, &end_of_sel, &err_code)
+        > 0) {
+        // Skip the while loop below if we get it on the first try
+        if (baud_rate_ == valid_rate) {
+            baud_is_valid = true;
+        }
+
+        valid_str << std::to_string(valid_rate) << " ";
+
+        // Else, keep getting more values
+        while (!baud_is_valid && end_of_sel == 0) {
+            // Query controller for next rate
+            valid_rate = 0;
+            VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
+                                     interface_name_.data(), port_name_.data(),
+                                     kEposFalse, &valid_rate, &end_of_sel,
+                                     &err_code);
+
+            // In case this check fails, build list of valid rates to output
+            valid_str << std::to_string(valid_rate) << " ";
+
+            // Check last controller-provided rate
+            if (baud_rate_ == valid_rate) {
+                baud_is_valid = true;
+            }
+        }
+    }
+
+    if (!baud_is_valid) {
+        emit ErrorThrown(QString::fromStdString(
+            "EPOS - Unsupported baud rate; expecting: " + valid_str.str()));
+        VCS_CloseDevice(handle, &err_code);
         return;
     }
 

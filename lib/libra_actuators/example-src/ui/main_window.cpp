@@ -78,7 +78,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // EPOS thread
     epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
-                                  "USB0", 115200, debug_mode_);
+                                  "USB0", 1000000, debug_mode_);
 
     // - MainWindow signals
     connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
