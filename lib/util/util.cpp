@@ -39,6 +39,9 @@ constexpr uint kMaxCharBufSize = 100;
  * @note This function is outside the `util` namespace because it is simply a
  *       helper function for `PrintEPOSErr()`; it shouldn't be necessary to use
  *       it outside of this file.
+ *
+ * @see "EPOS Command Library", Section 8 "Error Overview" for more detailed
+ *      descriptions of error messages.
  */
 std::string GetMaxonErrTxt(uint err) {
     if (err != 0) {

@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file   lidar.cpp
- * @brief  Control code for a Hokuyo LIDAR; implementation file.
+ * @file   lidar_hokuyo.cpp
+ * @brief  Control code for a Hokuyo (URG) LIDAR; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
 
 // Related Header
-#include "lidar.h"
+#include "lidar_hokuyo.h"
 
 // C++ Standard Library Headers
 #include <chrono>
@@ -30,7 +30,7 @@
  *
  * @param device_name The device to connect to (e.g., "/dev/ttyASM0")
  */
-Lidar::Lidar(const std::string& device_name) {
+LidarHokuyo::LidarHokuyo(const std::string& device_name) {
     // --- Connection ---
 
     if (device_name.empty()) {
@@ -84,7 +84,7 @@ Lidar::Lidar(const std::string& device_name) {
 /**
  * @brief Standard destructor.
  */
-Lidar::~Lidar() {
+LidarHokuyo::~LidarHokuyo() {
     // Gracefully close sensor connection
     if (urg_.is_open()) {
         urg_.close();
@@ -98,7 +98,7 @@ Lidar::~Lidar() {
 /**
  * @brief Prints current PC and LIDAR timestamps (in ms), for comparison
  */
-void Lidar::PrintTimestamp() {
+void LidarHokuyo::PrintTimestamp() {
     urg_.start_time_stamp_mode();
 
     auto pc_time_stamp = std::chrono::time_point_cast<std::chrono::milliseconds>(
@@ -124,7 +124,7 @@ void Lidar::PrintTimestamp() {
  *
  * @return Newline-delimited string of metadata in the format "Category: Value"
  */
-std::string Lidar::GetMetadata() {
+std::string LidarHokuyo::GetMetadata() {
     std::stringstream ret;
 
     if (urg_.is_open()) {
@@ -147,7 +147,7 @@ std::string Lidar::GetMetadata() {
  *       In this case, `urg.get_distance()` only accepts a reference to a
  *       vector of Windows `long` (Linux alternative would be `uint64_t`).
  */
-std::vector<long> Lidar::GetData() {
+std::vector<long> LidarHokuyo::GetData() {
     std::vector<long> data;
     long timestamp;
 
@@ -168,6 +168,6 @@ std::vector<long> Lidar::GetData() {
  * @note This setting only affects this class's functions, and has no effect
  *       Hokuyo URG functions.
  */
-void Lidar::SetDebugMode(bool enabled) {
+void LidarHokuyo::SetDebugMode(bool enabled) {
     debug_mode_ = enabled;
 }

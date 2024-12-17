@@ -728,6 +728,8 @@ void MainWindow::on_a_manip_servos_disconnect_triggered() {
  * ACM. See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
  */
 void MainWindow::on_a_lidar_connect_triggered() {
+    // TODO: replace with spinning LIDAR implementation
+    /*
     // Display the "Connect to Serial" dialog
     SerialDialog w_serial("ACM", debug_mode_, this);
     w_serial.setModal(true);
@@ -746,6 +748,12 @@ void MainWindow::on_a_lidar_connect_triggered() {
 
     // Open a connection to the Hokuyo LIDAR
     lidar_ = std::make_shared<Lidar>(w_serial.GetDeviceName());
+
+    // Reflect changes in UI
+    ui_->a_lidar_connect->setEnabled(false);
+    ui_->a_lidar_disconnect->setEnabled(true);
+    ui_->a_lidar_about->setEnabled(true);
+    */
 }
 
 /**
@@ -753,12 +761,16 @@ void MainWindow::on_a_lidar_connect_triggered() {
  *        Terminates the connection to the LIDAR, if it exists.
  */
 void MainWindow::on_a_lidar_disconnect_triggered() {
+    // TODO: replace with spinning LIDAR implementation
+    /*
     // Clear the Lidar object
     lidar_.reset();
 
     // Reflect changes in UI
+    ui_->a_lidar_connect->setEnabled(true);
     ui_->a_lidar_disconnect->setEnabled(false);
     ui_->a_lidar_about->setEnabled(false);
+    */
 }
 
 /**
@@ -766,6 +778,8 @@ void MainWindow::on_a_lidar_disconnect_triggered() {
  *        Opens a dialog box with sensor metadata, if connected.
  */
 void MainWindow::on_a_lidar_about_triggered() {
+    // TODO: replace with spinning LIDAR implementation
+    /*
     if (lidar_ != nullptr) {
         QMessageBox::information(this, "LIDAR - About",
                                  QString::fromStdString("<pre>"  // monospace
@@ -774,6 +788,7 @@ void MainWindow::on_a_lidar_about_triggered() {
     } else {
         qWarning() << "[WARN] LIDAR object not yet initialized!";
     }
+    */
 }
 
 //------------------------------------------------------------------------------
