@@ -34,11 +34,8 @@ constexpr long kGearheadReduction = 113;  // Maxon part #: 203126
 
 constexpr long kPinionTeeth = 15;    // KG Gear part #: SG1S15L-1010
 constexpr long kSlewRingTeeth = 48;  // igus part #: PRT-04-50-TI-ST
-/*
 constexpr double kSlewGearReduction = static_cast<double>(kSlewRingTeeth)
                                       / kPinionTeeth;
-*/
-constexpr double kSlewGearReduction = 1.0;  // FOR TESTING PURPOSES ONLY
 
 // Improving Readability of Conversions
 
@@ -73,6 +70,8 @@ constexpr int kNodeID = 1;         // for now, we only support one actuator
 constexpr uint kProfileVel = 1000;  // rpm
 constexpr uint kProfileAcc = 1000;  // rpm/s
 constexpr uint kProfileDec = 100;   // rpm/s
+
+constexpr uint kEmergencyProfileDec = 2000;  // rpm/s
 
 // - For Profile Position Mode (see `VCS_MoveToPosition()`)
 constexpr int kMoveAbsolute = 1;     // `Absolute` = TRUE
@@ -109,12 +108,14 @@ EposThread::EposThread(QObject* parent, std::string device_name,
  *
  */
 EposThread::~EposThread() {
-    // Since the EPOS library provides two "CloseDevice"-type functions, we use
-    // the more general one here to be safe (instead of calling our `Disconnect()`)
-    uint err_code = 0;
-    if (VCS_CloseAllDevices(&err_code) == 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_CloseAllDevices", err_code));
-        emit ErrorThrown("[TEMPORARY]\nEPOS - Failed to close all devices!");
+    // This call to `Disconnect()` does three things:
+    //   1) Ensures actuator comes to a complete stop
+    //   2) Closes any and all EPOS devices on the network (i.e., all ports)
+    //   3) Voids our class handle to the EPOS device
+    Disconnect();
+
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Cleaned up EposThread";
     }
 }
 
@@ -150,7 +151,7 @@ QString EposThread::GetStatus() {
     uint err_code = 0;
     unsigned short int state = 0;
     if (VCS_GetState(handle_, kNodeID, &state, &err_code) == 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_GetState", err_code,
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_GetState", err_code,
         // kNodeID));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't retrieve device state!");
     }
@@ -167,26 +168,29 @@ QString EposThread::GetStatus() {
     }
 
     // Get values
-    int a_vel = 0;
-    if (VCS_GetVelocityIsAveraged(handle_, kNodeID, &a_vel, &err_code) <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+    int a_vel = 0;  // rpm
+    if (VCS_GetVelocityIsAveraged(handle_, kNodeID, &a_vel, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
         // VCS_GetVelocityIsAveraged", err_code, kNodeID));
         emit ErrorThrown(
             "[TEMPORARY]\nEPOS - Couldn't retrieve actual velocity!");
     }
-    a_vel *= kRpmToDegs;
 
-    int curr = 0;
-    if (VCS_GetCurrentIsEx(handle_, kNodeID, &curr, &err_code) <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+    int a_curr = 0;  // mA
+    if (VCS_GetCurrentIsEx(handle_, kNodeID, &a_curr, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
         // VCS_GetCurrentIsEx", err_code, kNodeID));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't retrieve current!");
     }
 
+    // Perform conversions
+    double vel = a_vel * kRpmToDegs;  // to deg/s
+    double curr = a_curr / 1000.0;    // to A
+
     // Create stringstream entry
     // - std::setw(7) for values to account for [sign][#,3][.][#,2]
     ss << "[" << kNodeID << "] - " << state_str << "\n"
-       << "  Actual Velocity: " << std::setw(7) << a_vel << " deg/s\n"
+       << "  Actual Velocity: " << std::setw(7) << vel << " deg/s\n"
        << "  Current:         " << std::setw(7) << curr << " A\n";
 
     return QString::fromStdString(ss.str());
@@ -223,8 +227,8 @@ void EposThread::run() {
                 // support ProfilePositionMode (for now)
                 if (VCS_MoveToPosition(handle_, kNodeID, target_, kMoveAbsolute,
                                        kMoveImmediately, &err_code)
-                    <= 0) {
-                    // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+                    == 0) {
+                    // emit ErrorThrown(util::GetEposErr("EPOS -
                     // VCS_MoveToPosition", err_code, kNodeID));
                     emit ErrorThrown(
                         "[TEMPORARY]\nEPOS - Move command failed!");
@@ -235,19 +239,19 @@ void EposThread::run() {
 
             // Report important statuses individually
             if (VCS_GetTargetPosition(handle_, kNodeID, &t_pos, &err_code)
-                <= 0) {
-                // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+                == 0) {
+                // emit ErrorThrown(util::GetEposErr("EPOS -
                 // VCS_GetTargetPosition", err_code, kNodeID));
                 emit ErrorThrown(
                     "[TEMPORARY]\nEPOS - Failed to retrieve target position!");
             }
             // clang-format off
-            emit ReportFeedback({{Actuator::Joint::kYaw, t_pos * kIncToDeg}},
+            emit ReportFeedback({{Actuator::Joint::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
                                 Actuator::Feedback::kTargetPos);
             // clang-format on
 
-            if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) <= 0) {
-                // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+            if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) == 0) {
+                // emit ErrorThrown(util::GetEposErr("EPOS -
                 // VCS_GetPositionIs", err_code, kNodeID));
                 emit ErrorThrown(
                     "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
@@ -286,7 +290,7 @@ void EposThread::Connect() {
                                   &err_code);
 
     if (handle == nullptr || err_code != 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_OpenDevice", err_code));
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_OpenDevice", err_code));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't open device!");
         return;
     }
@@ -335,8 +339,8 @@ void EposThread::Connect() {
 
     // Set controller baud rate and timeout
     if (VCS_SetProtocolStackSettings(handle, baud_rate_, kTimeout, &err_code)
-        <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+        == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
         // VCS_SetProtocolStackSettings", err_code));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't set baud rate!");
         VCS_CloseDevice(handle, &err_code);
@@ -344,32 +348,56 @@ void EposThread::Connect() {
     }
 
     // Just in case, clear any faults persisting from previous operation
-    if (VCS_ClearFault(handle, kNodeID, &err_code) <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_ClearFault",
+    if (VCS_ClearFault(handle, kNodeID, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_ClearFault",
         // err_code, kNodeID));
         emit ErrorThrown(
             "[TEMPORARY]\nEPOS - Couldn't clear existing fault(s)!");
+        VCS_CloseDevice(handle, &err_code);
         return;
     }
+
+    // Initialize our class target variables to the actuator's initial position
+    int a_pos = 0;
+    if (VCS_GetPositionIs(handle, kNodeID, &a_pos, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
+        // VCS_GetPositionIs", err_code, kNodeID));
+        emit ErrorThrown(
+            "[TEMPORARY]\nEPOS - Failed to retrieve starting position");
+        VCS_CloseDevice(handle, &err_code);
+        return;
+    }
+    target_ = last_target_ = a_pos * kIncToDeg;
 
     // Initialize to Profile Position Mode by default
     if (VCS_SetOperationMode(handle, kNodeID, OMD_PROFILE_POSITION_MODE,
                              &err_code)
-        <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_SetOperationMode",
+        == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_SetOperationMode",
         // err_code, kNodeID));
         emit ErrorThrown(
             "[TEMPORARY]\nEPOS - Couldn't set operational mode to PPM!");
+        VCS_CloseDevice(handle, &err_code);
         return;
     }
 
     // Set position profile parameters
     if (VCS_SetPositionProfile(handle, kNodeID, kProfileVel, kProfileAcc,
                                kProfileDec, &err_code)
-        <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_SetPositionProfile",
+        == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_SetPositionProfile",
         // err_code, kNodeID));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't set movement profile!");
+        VCS_CloseDevice(handle, &err_code);
+        return;
+    }
+
+    // Enable the controller
+    if (VCS_SetEnableState(handle, kNodeID, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_SetEnableState",
+        // err_code, kNodeID));
+        emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't enable controller!");
+        VCS_CloseDevice(handle, &err_code);
         return;
     }
 
@@ -392,8 +420,7 @@ void EposThread::Disconnect() {
     if (handle_ != nullptr) {
         // Close the connection via the EPOS API
         uint err_code = 0;
-        VCS_CloseDevice(handle_, &err_code);
-        if (err_code != 0) {
+        if (VCS_CloseDevice(handle_, &err_code) == 0) {
             // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_CloseDevice", err_code));
             emit ErrorThrown("[TEMPORARY]\nEPOS - Problem closing device!");
             return;
@@ -401,10 +428,10 @@ void EposThread::Disconnect() {
 
         // Void our class handle
         handle_ = nullptr;
-    }
 
-    if (debug_mode_) {
-        qDebug() << "EPOS - Gracefully disconnected from actuator";
+        if (debug_mode_) {
+            qDebug() << "EPOS - Gracefully disconnected from actuator";
+        }
     }
 }
 
@@ -446,23 +473,46 @@ void EposThread::Stop() {
         return;  // do nothing
     }
 
-    // Stop the actuator
-    uint err_code = 0;
-    if (VCS_HaltPositionMovement(handle_, kNodeID, &err_code) <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS -
-        // VCS_HaltPositionMovement", err_code, kNodeID));
-        emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't stop actuator!");
-    }
-
     // Reset class target variables to current position
-    int current_pos = 0;
-    if (VCS_GetPositionIs(handle_, kNodeID, &current_pos, &err_code) <= 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS -
+    uint err_code = 0;
+    if (VCS_GetPositionIs(handle_, kNodeID, &target_, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
         // VCS_GetPositionIs", err_code, kNodeID));
         emit ErrorThrown(
             "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
+        return;
     }
-    target_ = last_target_ = current_pos;
+    last_target_ = target_;  // disables MoveToPosition block in run()
+
+    // Set emergency stop profile deceleration
+    if (VCS_SetPositionProfile(handle_, kNodeID, kProfileVel, kProfileAcc,
+                               kEmergencyProfileDec, &err_code)
+        == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_SetPositionProfile",
+        // err_code, kNodeID));
+        emit ErrorThrown(
+            "[TEMPORARY]\nEPOS - Couldn't set emergency deceleration profile!");
+        return;
+    }
+
+    // Stop the actuator via the EPOS API
+    if (VCS_HaltPositionMovement(handle_, kNodeID, &err_code) == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS -
+        // VCS_HaltPositionMovement", err_code, kNodeID));
+        emit ErrorThrown("[TEMPORARY]\nEPOS - Couldn't stop actuator!");
+        return;
+    }
+
+    // Reset profile deceleration to original value
+    if (VCS_SetPositionProfile(handle_, kNodeID, kProfileVel, kProfileAcc,
+                               kProfileDec, &err_code)
+        == 0) {
+        // emit ErrorThrown(util::GetEposErr("EPOS - VCS_SetPositionProfile",
+        // err_code, kNodeID));
+        emit ErrorThrown(
+            "[TEMPORARY]\nEPOS - Couldn't restore movement profile!");
+        return;
+    }
 
     if (debug_mode_) {
         qDebug() << "EPOS - Actuator stopped";
