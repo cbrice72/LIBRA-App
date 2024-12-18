@@ -82,6 +82,10 @@ HebiThread::~HebiThread() {
     //   2) Finishes logging and saves it to a file
     //   3) Ensures the main HEBI object gets cleaned up
     Disconnect();
+
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Cleaned up HebiThread";
+    }
 }
 
 //------------------------------------------------------------------------------
