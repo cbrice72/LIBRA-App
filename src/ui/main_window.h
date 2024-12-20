@@ -13,11 +13,12 @@
 // Other Library Headers
 #include <QMainWindow>  // Qt::Widgets
 #include <QSerialPort>  // Qt::SerialPort
-#include <QThread>      // Qt::Core
 
 // Project Headers
 #include "camera_manager.h"
-#include "libra_hebi.h"
+#include "epos_thread.h"
+#include "hebi_thread.h"
+#include "log_thread.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -27,69 +28,10 @@ class MainWindow;
 
 QT_END_NAMESPACE
 
-/**
- * @brief The primary control loop.
- */
-class MainThread : public QThread {
-    // NOLINTBEGIN: required by Qt
-    Q_OBJECT
-    // NOLINTEND
-
-  public:
-    MainThread(std::shared_ptr<LibraHebi> libra_hebi_, QSerialPort* ser_water,
-               QSerialPort* ser_servo);
-    ~MainThread();
-
-    // --- Getters & Setters ---
-
-    void SetDebugMode(bool enabled);
-
-  public slots:
-    void UpdateArmTarget(const std::array<double, 2>& input);
-
-  private:
-    void run() override;
-
-    /**
-     * @brief Logical status of the fluid system.
-     */
-    enum WaterMode { kStandby = 0, kAdjust, kDrain };
-
-    // --- Helper Functions ---
-
-    std::ofstream InitializeLog(std::string name);
-
-    // --- Data Members ---
-
-    bool debug_mode_{false};
-
-    // LIBRA Components
-
-    std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
-    QSerialPort* ser_water_{nullptr};
-    QSerialPort* ser_servo_{nullptr};
-
-    // Arm
-
-    std::array<double, 2> arm_target_{0};
-    std::array<double, 2> arm_current_{0};
-
-    // Manipulator
-
-    std::array<double, 3> manip_pos_{0};
-    std::array<double, 3> manip_setpos_{0};
-    std::array<int, 3> manip_dir_{0};
-
-    // Pumps
-
-    bool water_en_{true};
-    WaterMode water_mode_{kStandby};
-
-    // Logging
-
-    std::ofstream continuous_log_;
-    std::ofstream snapshot_log_;
-};
+// Type alias for conveniently accessing a feedback label, where rows are
+// actuators and columns are feedback types (order follows MainWindow UI)
+using FeedbackElementMapOfMaps = std::unordered_map<
+    Actuator::Joint, std::unordered_map<Actuator::Feedback, QLabel*>>;
 
 /**
  * @brief The main command app window.
@@ -103,8 +45,23 @@ class MainWindow : public QMainWindow {
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
+  public slots:
+    void HandleErrorMsg(const QString& err);
+
+    // --- Actuator Updates ---
+
+    void HandleActuatorFeedback(
+        const std::unordered_map<Actuator::Joint, double>& feedbacks,
+        const Actuator::Feedback feedback_type);
+    void HandleActuatorStatus(const QString& status, const Actuator::Type type);
+
   signals:
-    void CommandArm(std::array<double, 2> target);
+    void UpdateDebugMode(const bool& enabled);
+
+    // --- Actuator Commands ---
+
+    void CommandEpos(const std::vector<double>& deg);
+    void CommandHebi(const std::vector<double>& deg);
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -116,13 +73,11 @@ class MainWindow : public QMainWindow {
 
     // EPOS Menu
 
-    void on_a_epos_connect_triggered();
-    void on_a_epos_disconnect_triggered();
+    // void on_a_epos_update_triggered();  // TODO
 
     // HEBI Menu
 
-    void on_a_hebi_connect_triggered();
-    void on_a_hebi_disconnect_triggered();
+    // void on_a_hebi_update_triggered();  // TODO
 
     // Pumps Menu
 
@@ -149,7 +104,6 @@ class MainWindow : public QMainWindow {
     // Arm
 
     void on_pb_arm_start_clicked();
-    void on_pb_arm_stop_clicked();
 
     // Manipulator
 
@@ -170,14 +124,14 @@ class MainWindow : public QMainWindow {
 
     // Misc.
 
-    void on_pb_logshot_clicked();
-
     // --- Uncategorized ---
 
   private:
     // NOLINTEND
 
     // --- Helper Functions ---
+
+    void InitializeFeedbackElementMap();
 
     void UpdatePumpVals();
     void UpdateServoVals();
@@ -188,12 +142,14 @@ class MainWindow : public QMainWindow {
 
     bool debug_mode_{true};
 
-    MainThread* main_thread_{nullptr};  // primary control loop
+    FeedbackElementMapOfMaps feedback_element_map_;
+
+    LogThread* log_thread_{nullptr};    // consolidated logging
+    EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
+    HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
 
     QSerialPort* ser_water_{nullptr};
     QSerialPort* ser_servo_{nullptr};
-
-    std::shared_ptr<LibraHebi> libra_hebi_;  // pitch
 
     std::unordered_map<QString, QString> available_cameras_;
     std::unique_ptr<CameraManager> camera_manager_;

@@ -25,6 +25,7 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
+ * !Thread Handlers (Slots)
  * !Menu Bar
  * !Main Window
  * !Arm
@@ -38,10 +39,6 @@
 /* Constants */
 
 constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
-
-constexpr int kHebiFeedbackCount = 3;  // total number of actuator feedback types
-constexpr int kFluidStateCount = 4;  // number of pumps * number of pump states
-constexpr int kCameraNodeCount = 3;  // total number of camera servos
 
 /**
  * @brief Standard constructor.
@@ -117,8 +114,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Thread Management ---
 
-    // TOOD: is this necessary in the new app?
-
     /* In Qt, thread management for subclassed QThreads generally has 4 steps:
      *   1) Initialize a new QThread object
      *   2) Register a QThread signal to return data to a MainWindow handler
@@ -128,18 +123,79 @@ MainWindow::MainWindow(QWidget* parent)
      *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
      */
 
-    // Main controller thread
-    /*
-    main_thread_ = new MainThread(libra_hebi_, ser_water_, ser_servo_);
+    // Log thread
+    log_thread_ = new LogThread(this, debug_mode_);
 
-    connect(this, &MainWindow::CommandArm,  // send arm commands to main thread
-            main_thread_, &MainThread::UpdateArmTarget);
-    connect(main_thread_,
-            &MainThread::finished,  // when thread exits, deallocate
-            main_thread_, &MainThread::deleteLater);
+    // - MainWindow signals
+    // TODO: implementation
 
-    main_thread_->start();
-    */
+    // - MainWindow slots
+    // TODO: implementation
+
+    // EPOS thread
+    epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
+                                  "USB0", 1000000, debug_mode_);
+
+    // - MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            epos_thread_, &EposThread::SetDebugMode);
+
+    connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
+            epos_thread_, &EposThread::Connect);
+    connect(ui_->a_epos_disconnect, &QAction::triggered,  // disconnect EPOS
+            epos_thread_, &EposThread::Disconnect);
+
+    connect(this, &MainWindow::CommandEpos,  // update EPOS target(s)
+            epos_thread_, &EposThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
+            epos_thread_, &EposThread::Stop);
+
+    // - MainWindow slots
+    connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
+    connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
+
+    // - Thread cleanup
+    connect(epos_thread_, &EposThread::finished,      // when thread exits
+            epos_thread_, &EposThread::deleteLater);  // ... deallocate
+
+    epos_thread_->start();
+
+    // HEBI thread
+    hebi_thread_ = new HebiThread(this, {"LIBRA"}, {"Pitch"}, debug_mode_);
+
+    // - MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            hebi_thread_, &HebiThread::SetDebugMode);
+
+    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
+            hebi_thread_, &HebiThread::Connect);
+    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
+            hebi_thread_, &HebiThread::Disconnect);
+
+    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
+            hebi_thread_, &HebiThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
+            hebi_thread_, &HebiThread::Stop);
+
+    // - MainWindow slots
+    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
+    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
+
+    // - Thread cleanup
+    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
+            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
+
+    hebi_thread_->start();
 }
 
 /**
@@ -147,40 +203,20 @@ MainWindow::MainWindow(QWidget* parent)
  */
 MainWindow::~MainWindow() {
     // Wrap up the worker thread(s) gracefully
-    if (main_thread_ != nullptr && main_thread_->isRunning()) {
-        main_thread_->requestInterruption();  // signal thread to stop looping
-        main_thread_->wait();  // wait for thread cleanup to finish
+    if (log_thread_ != nullptr && log_thread_->isRunning()) {
+        log_thread_->requestInterruption();  // signal thread to stop looping
+        log_thread_->wait();  // wait for thread cleanup to finish
+    }
+    if (epos_thread_ != nullptr && epos_thread_->isRunning()) {
+        epos_thread_->requestInterruption();
+        epos_thread_->wait();
+    }
+    if (hebi_thread_ != nullptr && hebi_thread_->isRunning()) {
+        hebi_thread_->requestInterruption();
+        hebi_thread_->wait();
     }
 
     delete ui_;
-}
-
-/**
- * @brief Standard constructor.
- */
-MainThread::MainThread(std::shared_ptr<LibraHebi> libra_arm,
-                       QSerialPort* ser_water, QSerialPort* ser_servo)
-    : libra_hebi_(libra_arm), ser_water_(ser_water), ser_servo_(ser_servo) {}
-
-/**
- * @brief Standard destructor.
- */
-MainThread::~MainThread() {
-    // Ensure data is flushed to log files and close them
-    if (continuous_log_.is_open()) {
-        continuous_log_.close();
-    }
-    if (snapshot_log_.is_open()) {
-        snapshot_log_.close();
-    }
-
-    // Close any open serial connections to the arduinos
-    if (ser_water_->isOpen()) {
-        ser_water_->close();
-    }
-    if (ser_servo_->isOpen()) {
-        ser_servo_->close();
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -189,272 +225,91 @@ MainThread::~MainThread() {
 
 namespace {  // local to this file
 
-/**
- * @brief Provides a filename-safe string of the current date and time.
- *
- * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
- */
-std::string GetDateTimeStr() {
-    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    dts.replace(":", "-");         // replace colons (invalid in filenames)
-    dts = dts.section('.', 0, 0);  // remove milliseconds
-    return dts.toStdString();
-}
-
-/**
- * @brief Provides an Excel-friendly string of the current time.
- *
- * @return String formatted as "HH-mm-ss.zzz"
- */
-std::string GetTimestampStr() {
-    return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();
-}
-
 }  // namespace
 
-//------------------------------------------------------------------------------
-// !Worker Threads
-//------------------------------------------------------------------------------
-
 /**
- * @brief Initializes a logfile with named columns.
+ * @brief Populates a map-of-maps with UI label elements, according to their
+ *        corresponding actuator joint names (`Actuator::Joint`) and feedback types
+ *        (`Actuator::Feedback`).
  *
- * @param name The identifier to be assigned to the log filename.
+ * @see Actuator::Joint Actuator::Feedback
  */
-std::ofstream MainThread::InitializeLog(std::string name) {
-    // Check if the log directory hasn't been created yet
-    if (std::filesystem::create_directory("log")) {
-        qDebug() << "[INFO] Created log directory";
-    }
+void MainWindow::InitializeFeedbackElementMap() {
+    // Yaw joint
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_yaw;
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_yaw;
+    feedback_element_map_[Actuator::Joint::kYaw]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_yaw;
 
-    // Ensure log directory exists (false returned, no error)
-    assert(!std::filesystem::create_directory("log"));
-
-    // Create log file and populate column headers
-    std::ofstream logfile;
-    logfile.open("log/" + GetDateTimeStr() + "_" + name + ".csv");
-    logfile << "Time,,"
-            << "TP_Yaw (deg),TP_Pitch (deg),,"
-            << "AP_Yaw (deg),AP_Pitch (deg),,"
-            << "AT_Yaw (Nm),AT_Pitch (Nm),,"
-            << "PUMP_IN,PUMP_OUT,,"
-            << "TP_ManipBase (deg),TP_ManipPan (deg),TP_ManipTilt (deg),,"
-            << "Voltage (V),Current (A)" << std::endl;
-
-    return logfile;
+    // Pitch joint
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualTorque] =
+                             ui_->l_torque_pitch;
 }
 
+//------------------------------------------------------------------------------
+// !Thread Handlers
+//------------------------------------------------------------------------------
+
 /**
- * @brief Sends HEBI thread new target values.
+ * @brief Sorts important actuator information into individual UI elements.
  *
- * @param input HEBI actuator target value(s) (order defined in `hebi_thread.h`)
+ * @param feedbacks Unordered map of joint(s) and their corresponding feedback
+ * @param feedback_type The type of primary feedback provided
  */
-void MainThread::UpdateArmTarget(const std::array<double, 2>& input) {
-    arm_target_ = input;
-
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Received the following arm targets:"
-                 << input.at(0);
-    }
-
-    qDebug() << "[WARN] HEBI actuator control unimplemented!";
-
-    // TODO: implementation
-}
-
-/**
- * @brief TODO: Rewrite.
- *        Primary request and response loop for the LIBRA app.
- *        Continuously retrieves actuator and Arduino statuses.
- *        Executed when `start()` is called on the thread.
- */
-void MainThread::run() {
-    // Initialize fluid system runtime variables
-    int count = 0;
-    uint8_t cmd_water = 0;
-
-    // Initialize logging
-    continuous_log_ = InitializeLog("continuous_log");
-    snapshot_log_ = InitializeLog("shot_log");
-
-    // Loop until MainWindow calls QThread::requestInterruption()
-    while (!isInterruptionRequested()) {
-        /* ----- CHECK FOR COMPONENT OBJECTS (TEMPORARY) ----- */
-
-        if (libra_hebi_ == nullptr) {
-            qDebug() << "[WARN] HEBI actuators are not connected! Sleeping...";
-            QThread::sleep(5);  // check again in 5 seconds
-            continue;
-        } else if (ser_water_ == nullptr) {
-            qDebug()
-                << "[WARN] SerialWater Arduino is not connected! Sleeping...";
-            QThread::sleep(5);  // check again in 5 seconds
-            continue;
-        } else if (ser_servo_ == nullptr) {
-            qDebug()
-                << "[WARN] SerialServo Arduino is not connected! Sleeping...";
-            QThread::sleep(5);  // check again in 5 seconds
-            continue;
-        }
-
-        /* ----- START ----- */
-
-        // Retrieve HEBI actuator data
-        arm_current_.at(0) = libra_hebi_->GetCommandPosition(
-            LibraHebi::Joint::kPitch);
-        arm_current_.at(1) = libra_hebi_->GetFeedbackPosition(
-            LibraHebi::Joint::kPitch);
-        arm_current_.at(2) = libra_hebi_->GetFeedbackEffort(
-            LibraHebi::Joint::kPitch);
-
-        /* ----- MANIPULATOR ----- */
-
-        // Keep manipulator level by negating arm pitch angle
-        const double arm_pitch = arm_current_.at(0);
-        if (arm_pitch <= 30) {
-            manip_pos_.at(0) = (arm_pitch <= 0) ? -arm_pitch : 0;
-        } else {
-            manip_pos_.at(0) = 180 - arm_pitch;
-        }
-
-        // Retrieve desired camera pan angle
-        if (manip_dir_.at(1) != 0) {
-            manip_pos_.at(1) += manip_dir_.at(1) * 90.0 / (60.0 * 60.0);
-            if ((manip_pos_.at(1) > manip_setpos_.at(1))
-                == (manip_dir_.at(1) == 1)) {
-                manip_pos_.at(1) = manip_setpos_.at(1);
-                manip_dir_.at(1) = 0;
-            }
-        }
-
-        // Retrieve desired camera tilt angle
-        if (manip_dir_.at(2) != 0) {
-            manip_pos_.at(2) += manip_dir_.at(2) * 90.0 / (60.0 * 60.0);
-            if ((manip_pos_.at(2) > manip_setpos_.at(2))
-                == (manip_dir_.at(2) == 1)) {
-                manip_pos_.at(2) = manip_setpos_.at(2);
-                manip_dir_.at(2) = 0;
-            }
-        }
-
-        // Send commands to SerialServo Arduino
-        std::stringstream servo_ss;
-        servo_ss << manip_pos_.at(0) << " " << manip_pos_.at(1) << " "
-                 << manip_pos_.at(2) << "\n";
-        // (create string object to avoid using temporary object in call to write)
-        auto cmd_servo = servo_ss.str();
-        ser_servo_->write(cmd_servo.c_str());  // send command
-
-        /* ----- ARM and FLUID SYSTEM ----- */
-
-        // Send commands to SerialWater Arduino
-        // TODO(brice.c.aa): since LIBRA-II is simpler, this can be refactored
-        switch (water_mode_) {
-            case kStandby:  // Normal operational mode
-                cmd_water = 0;
-
-                // Excess torque (> 5.0 Nm)
-                if (water_en_
-                    && abs(libra_hebi_->GetFeedbackEffort(
-                           LibraHebi::Joint::kPitch))
-                           > 5.0) {
-                    // Pause arm movement
-                    libra_hebi_->Stop();
-                    water_mode_ = WaterMode::kAdjust;
-                }
-                break;
-
-            case kAdjust:  // Water level adjustment mode
-                // Normal response to torque (2.5-5.0 Nm)
-                if (water_en_
-                    && abs(libra_hebi_->GetFeedbackEffort(
-                           LibraHebi::Joint::kPitch))
-                           >= 2.5) {
-                    if (count == 0) {
-                        const double theta = libra_hebi_->GetFeedbackEffort(
-                            LibraHebi::Joint::kPitch);
-
-                        // Bit field "0b1234":
-                        //   1: PUMP_IN | 2: UNUSED | 3: PUMP_OUT | 4: UNUSED
-                        if (theta > 0) {  // front-heavy
-                            cmd_water = 0b1000;
-                        } else {  // back-heavy
-                            cmd_water = 0b0010;
-                        }
-                    }
-                }
-
-                // If torque subsides (< 2.5 Nm)
-                else if (count == 0) {
-                    // Put fluid system on standby
-                    water_mode_ = WaterMode::kStandby;
-                    cmd_water = 0;
-
-                    // Resume arm movement
-                    // TODO: EPOS (Maxon) implementation
-                    // libra_maxon_->Move(arm_target_.at(0));
-                    libra_hebi_->Move(arm_target_.at(1));
-                }
-                break;
-
-            case kDrain:
-                // Drain until ENABLE or DISABLE are clicked
-                cmd_water = 0b0010;
-
-                // Pause arm movement
-                // TODO: EPOS (Maxon) implementation
-                // libra_maxon_->Stop();
-                libra_hebi_->Stop();
-                break;
-        }
-
-        auto to_write = static_cast<char>(cmd_water);
-        ser_water_->write(&to_write);  // send command
-
-        // TODO: Visualize status of fluid system
-
-        /* ----- LOGGING ----- */
-
-        // Update continuous log
-        if (count == 0) {
-            // Timestamp
-            continuous_log_ << GetTimestampStr() + ",,";
-
-            // Actuator info
-            for (auto i = 0; i < kHebiFeedbackCount; i++) {
-                continuous_log_ << arm_current_.at(i) << ",,";
-            }
-
-            // Fluid system info
-            for (auto i = 0; i < kFluidStateCount; i++) {
-                continuous_log_ << ((cmd_water & (1 << (3 - i))) ? 1 : 0)
-                                << ",";
-            }
-            continuous_log_ << ",";
-
-            // Camera actuator info
-            // TODO: use kCameraNodeCount
-            continuous_log_ << manip_pos_.at(0) << "," << manip_pos_.at(1)
-                            << "," << manip_pos_.at(2);
-
-            // Flush the current line
-            continuous_log_ << std::endl;
-        }
-
-        // TODO: refactor this weird attempt at update limiting
-        count++;
-        if (count == 30) {
-            count = 0;
+void MainWindow::HandleActuatorFeedback(
+    const std::unordered_map<Actuator::Joint, double>& feedbacks,
+    const Actuator::Feedback feedback_type) {
+    for (const auto& feedback : feedbacks) {
+        try {
+            // Index into the relevant UI label using the map-of-maps
+            // initialized in the constructor
+            feedback_element_map_.at(feedback.first)
+                .at(feedback_type)
+                ->setText(QString::number(feedback.second, 'f', 1));  // 0.1
+        } catch (const std::out_of_range&) {
+            qCritical() << "[ERROR] No UI element mapped to joint"
+                        << feedback.first << "and feedback type"
+                        << feedback_type;
         }
     }
 }
 
 /**
- * @brief Controls the output of verbose debug text.
- * @param true to enable, false to disable
+ * @brief Prints miscellaneous actuator information at the bottom of the UI.
+ *
+ * @param status Newline-delimited status info
+ * @param type The actuator type, for updating the corresponding UI element
  */
-void MainThread::SetDebugMode(bool enabled) {
-    debug_mode_ = enabled;
+void MainWindow::HandleActuatorStatus(const QString& status,
+                                      const Actuator::Type type) {
+    switch (type) {
+        case Actuator::Type::kEpos:
+            ui_->l_yaw_status->setText(status);
+            break;
+        case Actuator::Type::kHebi:
+            ui_->l_pitch_status->setText(status);
+            break;
+        default:
+            // Shouldn't be able to get here
+            qCritical() << "[ERROR] Received status from unknown actuator type:"
+                        << type;
+    }
+}
+
+/**
+ * @brief Throws a pop-up error box upon receiving an error signal from a thread.
+ *
+ * @param err Fatal error message from an actuator
+ */
+void MainWindow::HandleErrorMsg(const QString& err) {
+    QMessageBox::critical(this, tr("Error"), err);
 }
 
 //------------------------------------------------------------------------------
@@ -462,7 +317,8 @@ void MainThread::SetDebugMode(bool enabled) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Toggles debug prinouts for this object and all its children.
+ * @brief Event handler for "Preferences" menu action "Debug Mode".
+ *        Toggles debug prinouts for this object and all its children.
  */
 void MainWindow::on_a_debug_mode_toggled(bool checked) {
     debug_mode_ = checked;
@@ -472,93 +328,33 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     }
 
     // Propagate to all children
-    if (main_thread_ != nullptr) {
-        main_thread_->SetDebugMode(debug_mode_);
-    }
-    if (libra_hebi_ != nullptr) {
-        libra_hebi_->SetDebugMode(debug_mode_);
-    }
-    if (ser_water_ != nullptr) {
-        // TODO: make new class inheriting from QSerialPort
-        // ser_water_->SetDebugMode(debug_mode_);
-    }
-    if (ser_servo_ != nullptr) {
-        // TODO: make new class inheriting from QSerialPort
-        // ser_servo_->SetDebugMode(debug_mode_);
-    }
+    emit UpdateDebugMode(checked);
 }
 
 /**
- * @brief Event handler for "EPOS" menu bar action "Connect".
+ * @brief Event handler for "EPOS" menu action "Update".
  *        Brings up a dialog box similar to `VCS_OpenDeviceDlg()`.
  */
-void MainWindow::on_a_epos_connect_triggered() {
-    qDebug() << "[WARN] EPOS not yet implemented!";
+void MainWindow::on_a_epos_update_triggered() {
+    qDebug() << "[WARN] Not yet implemented!";
     return;
 
     // TODO: implementation
-
-    // Reflect changes in UI
-    ui_->a_epos_connect->setEnabled(false);
-    ui_->a_epos_disconnect->setEnabled(true);
-    // TODO: enable relevant MainWindow buttons
 }
 
 /**
- * @brief Event handler for "EPOS" menu bar action "Disonnect".
- *        Terminates the active EPOS controller connection, if any.
+ * @brief Event handler for "HEBI" menu action "Update".
+ *        ???
  */
-void MainWindow::on_a_epos_disconnect_triggered() {
-    qDebug() << "[WARN] EPOS not yet implemented!";
+void MainWindow::on_a_hebi_update_triggered() {
+    qDebug() << "[WARN] Not yet implemented!";
     return;
 
     // TODO: implementation
-
-    // Reflect changes in UI
-    ui_->a_epos_connect->setEnabled(true);
-    ui_->a_epos_disconnect->setEnabled(false);
-    // TODO: disable relevant MainWindow buttons
 }
 
 /**
- * @brief Event handler for "HEBI" menu bar action "Connect".
- */
-void MainWindow::on_a_hebi_connect_triggered() {
-    // Only continue if "Connect" was successful
-    libra_hebi_ = std::make_shared<LibraHebi>();
-    if (!libra_hebi_->Connect()) {
-        libra_hebi_.reset();
-        return;
-    }
-
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI connect returned successfully";
-    }
-
-    // Reflect changes in UI
-    ui_->a_hebi_connect->setEnabled(false);
-    ui_->a_hebi_disconnect->setEnabled(true);
-    ui_->pb_arm_start->setEnabled(true);
-    ui_->pb_arm_stop->setEnabled(true);
-}
-
-/**
- * @brief Event handler for "HEBI" menu bar action "Disconnect".
- *        Terminates all active HEBI actuator connections, if any.
- */
-void MainWindow::on_a_hebi_disconnect_triggered() {
-    // Clear the LibraHebi object
-    libra_hebi_.reset();
-
-    // Reflect changes in UI
-    ui_->a_hebi_connect->setEnabled(true);
-    ui_->a_hebi_disconnect->setEnabled(false);
-    ui_->pb_arm_start->setEnabled(false);
-    ui_->pb_arm_stop->setEnabled(false);
-}
-
-/**
- * @brief Event handler for "Pumps" menu bar action "Connect".
+ * @brief Event handler for "Pumps" menu action "Connect".
  *        Brings up a dialog box of available serial USB devices.
  */
 void MainWindow::on_a_pump_connect_triggered() {
@@ -612,7 +408,7 @@ void MainWindow::on_a_pump_connect_triggered() {
 }
 
 /**
- * @brief Event handler for "Pumps" menu bar action "Disconnect".
+ * @brief Event handler for "Pumps" menu action "Disconnect".
  *        Terminates the connection to the `SerialWater` Arduino, if it exists.
  */
 void MainWindow::on_a_pump_disconnect_triggered() {
@@ -630,7 +426,7 @@ void MainWindow::on_a_pump_disconnect_triggered() {
 }
 
 /**
- * @brief Event handler for "Pump/Advanced" menu bar action "Set empty (0%)".
+ * @brief Event handler for "Pump/Advanced" menu action "Set empty (0%)".
  *        Forces the tank (water bladder) visualization to show as empty.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
@@ -640,7 +436,7 @@ void MainWindow::on_a_pump_set_empty_triggered() {
 }
 
 /**
- * @brief Event handler for "Pump/Advanced" menu bar action "Set full (100%)".
+ * @brief Event handler for "Pump/Advanced" menu action "Set full (100%)".
  *        Forces the tank (water bladder) visualization to show as full.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
@@ -650,7 +446,7 @@ void MainWindow::on_a_pump_set_full_triggered() {
 }
 
 /**
- * @brief Event handler for "Camera" menu bar action "Connect (servos)".
+ * @brief Event handler for "Camera" menu action "Connect (servos)".
  *        Brings up a dialog box of available serial USB devices.
  */
 void MainWindow::on_a_manip_servos_connect_triggered() {
@@ -703,7 +499,7 @@ void MainWindow::on_a_manip_servos_connect_triggered() {
 }
 
 /**
- * @brief Event handler for "Camera" menu bar action "Disconnect".
+ * @brief Event handler for "Camera" menu action "Disconnect".
  *        Terminates the connection to the `SerialServo` Arduino, if it exists.
  */
 void MainWindow::on_a_manip_servos_disconnect_triggered() {
@@ -721,74 +517,27 @@ void MainWindow::on_a_manip_servos_disconnect_triggered() {
 }
 
 /**
- * @brief Event handler for "LIDAR" menu bar action "Connect".
- *        Brings up a dialog box of available serial ACM devices.
- *
- * @note Although the Hokuyo LIDAR is connected via USB, it is listed as
- * ACM. See https://sourceforge.net/p/urgnetwork/wiki/serial_linux_en/
+ * @brief Event handler for "LIDAR" menu action "Connect".
+ *        ???
  */
 void MainWindow::on_a_lidar_connect_triggered() {
-    // TODO: replace with spinning LIDAR implementation
-    /*
-    // Display the "Connect to Serial" dialog
-    SerialDialog w_serial("ACM", debug_mode_, this);
-    w_serial.setModal(true);
-    w_serial.exec();
-
-    // Only continue if "Connect" was successful
-    if (w_serial.result() != QDialog::Accepted) {
-        qWarning() << "[WARN] Failed to connect to serial camera servo "
-                      "controller!";
-        return;
-    }
-
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] LIDAR serial dialog returned successfully";
-    }
-
-    // Open a connection to the Hokuyo LIDAR
-    lidar_ = std::make_shared<Lidar>(w_serial.GetDeviceName());
-
-    // Reflect changes in UI
-    ui_->a_lidar_connect->setEnabled(false);
-    ui_->a_lidar_disconnect->setEnabled(true);
-    ui_->a_lidar_about->setEnabled(true);
-    */
+    // TODO: spinning LIDAR implementation
 }
 
 /**
- * @brief Event handler for "LIDAR" menu bar action "Disconnect".
- *        Terminates the connection to the LIDAR, if it exists.
+ * @brief Event handler for "LIDAR" menu action "Disconnect".
+ *        ???
  */
 void MainWindow::on_a_lidar_disconnect_triggered() {
-    // TODO: replace with spinning LIDAR implementation
-    /*
-    // Clear the Lidar object
-    lidar_.reset();
-
-    // Reflect changes in UI
-    ui_->a_lidar_connect->setEnabled(true);
-    ui_->a_lidar_disconnect->setEnabled(false);
-    ui_->a_lidar_about->setEnabled(false);
-    */
+    // TODO: spinning LIDAR implementation
 }
 
 /**
- * @brief Event handler for "LIDAR" menu bar action "About".
+ * @brief Event handler for "LIDAR" menu action "About".
  *        Opens a dialog box with sensor metadata, if connected.
  */
 void MainWindow::on_a_lidar_about_triggered() {
-    // TODO: replace with spinning LIDAR implementation
-    /*
-    if (lidar_ != nullptr) {
-        QMessageBox::information(this, "LIDAR - About",
-                                 QString::fromStdString("<pre>"  // monospace
-                                                        + lidar_->GetMetadata()
-                                                        + "</pre>"));
-    } else {
-        qWarning() << "[WARN] LIDAR object not yet initialized!";
-    }
-    */
+    // TODO: spinning LIDAR implementation
 }
 
 //------------------------------------------------------------------------------
@@ -800,36 +549,28 @@ void MainWindow::on_a_lidar_about_triggered() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Starts movement of all actuators.
+ * @brief Send movement command signal to all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    std::array<double, 2> target{0};
+    // Yaw
+    auto val = ui_->sb_arm_yaw->value();
 
-    if (libra_hebi_ != nullptr) {
-        target.at(0) = ui_->sb_arm_yaw->text().toDouble();
-    } else {
-        qDebug() << "[WARN] EPOS (Maxon) actuator not connected!";
+    if (ui_->hs_arm_yaw->value() != val) {
+        // If value was entered via the SpinBox, update the slider
+        ui_->hs_arm_yaw->setValue(val);
     }
 
-    if (libra_hebi_ != nullptr) {
-        target.at(1) = ui_->sb_arm_pitch->text().toDouble();
-    } else {
-        qDebug() << "[WARN] HEBI actuator not connected!";
+    emit CommandEpos({val});
+
+    // Pitch
+    auto val = ui_->sb_arm_pitch->value();
+
+    if (ui_->hs_arm_pitch->value() != val) {
+        // If value was entered via the SpinBox, update the slider
+        ui_->hs_arm_pitch->setValue(val);
     }
 
-    emit CommandArm(target);
-}
-
-/**
- * @brief Stops movement of all actuators.
- */
-void MainWindow::on_pb_arm_stop_clicked() {
-    if (libra_hebi_ == nullptr) {
-        qDebug() << "[WARN] HEBI actuators not connected!";
-        return;
-    }
-
-    libra_hebi_->Stop();
+    emit CommandHebi({val});
 }
 
 //------------------------------------------------------------------------------
@@ -840,7 +581,7 @@ void MainWindow::on_pb_arm_stop_clicked() {
  * @brief Moves manipulator servos at a leisurely pace.
  */
 void MainWindow::on_pb_manip_slow_clicked() {
-    if (ser_servo_ == nullptr) {
+    if (!ser_servo_->isOpen()) {
         qDebug() << "[WARN] SerialServo not connected!";
         return;
     }
@@ -864,7 +605,7 @@ void MainWindow::on_pb_manip_slow_clicked() {
  * @brief Moves manipulator servos at maximum speed (near-instant).
  */
 void MainWindow::on_pb_manip_fast_clicked() {
-    if (ser_servo_ == nullptr) {
+    if (!ser_servo_->isOpen()) {
         qDebug() << "[WARN] SerialServo not connected!";
         return;
     }
@@ -879,10 +620,14 @@ void MainWindow::on_pb_manip_fast_clicked() {
 }
 
 /**
- * @brief Updates camera servo values shown in the UI (from `ser_servo_`
- * Arduino).
+ * @brief Updates camera servo values shown in the UI.
  */
 void MainWindow::UpdateServoVals() {
+    if (!ser_servo_->isOpen()) {
+        qDebug() << "[WARN] SerialServo not connected!";
+        return;
+    }
+
     auto data = ser_servo_->readAll();
     if (debug_mode_) {
         qDebug() << "[DEBUG] Received data from SerialServo:" << data;
@@ -919,10 +664,10 @@ void MainWindow::on_pb_pump_enable_clicked() {
  * @brief Disables operation of fluid system pumps.
  *
  * @todo Combine funcitonality with `on_pb_pump_enable_clicked()` and
- * refactor the resulting function. Don't forget to rename it to something
- * that makes more sense, e.g., including the word "toggle". For reference
- * on changing button text to reflect state, see
- * `on_pb_camera_record_clicked()`.
+ *       refactor the resulting function. Don't forget to rename it to something
+ *       that makes more sense, e.g., including the word "toggle". For reference
+ *       on changing button text to reflect state, see
+ *       `on_pb_camera_record_clicked()`.
  */
 void MainWindow::on_pb_pump_disable_clicked() {
     if (!ser_water_->isOpen()) {
@@ -961,6 +706,11 @@ void MainWindow::on_pb_pump_drain_clicked() {
  * @brief Updates pump values shown in the UI (from `ser_water_` Arduino).
  */
 void MainWindow::UpdatePumpVals() {
+    if (!ser_water_->isOpen()) {
+        qDebug() << "[WARN] SerialWater not connected!";
+        return;
+    }
+
     auto data = ser_water_->readAll();
     if (debug_mode_) {
         qDebug() << "[DEBUG] Received data from SerialWater:" << data;
@@ -1032,30 +782,6 @@ void MainWindow::on_pb_camera_record_clicked() {
 //------------------------------------------------------------------------------
 // !Misc.
 //------------------------------------------------------------------------------
-
-/**
- * @brief Records a "screenshot" of loggable data to a separate log file.
- */
-void MainWindow::on_pb_logshot_clicked() {
-    qDebug() << "[WARN] Not yet reimplemented!";
-
-    // TODO: implementation (adapt code below)
-    /*
-    const std::string dts = GetTimestampStr();
-    snapshot_log_ << dts << ",,";
-    for (auto i = 0; i < kHebiFeedbackCount; i++) {
-        snapshot_log_ << arm_current_.at(i) << ",,";
-    }
-    snapshot_log_ << ibox_voltage_->GetNum() << ","
-                  << ibox_current_->GetNum() << "\n";
-
-    colorize::Print("Snapshot - " + dts + " | Voltage: "
-                        + std::to_string(ibox_voltage_->GetNum())
-                        + " V | Current: "
-                        + std::to_string(ibox_current_->GetNum()) + " A\n",
-                    colorize::Level::kInfo);
-    */
-}
 
 //------------------------------------------------------------------------------
 // !Uncategorized
