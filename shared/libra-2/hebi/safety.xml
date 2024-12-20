@@ -2,14 +2,17 @@
 <group_safety version="1.0.0">
   <mstop />
   <position>
-    <min_limit>-90</min_limit>
-    <max_limit>90</max_limit>
+    <!-- 80 deg ~= 1.4 rad -->
+    <min_limit>-1.4</min_limit>
+    <max_limit>1.4</max_limit>
   </position>
   <velocity>
+    <!-- Default (~= 28 deg/s) -->
     <min_limit>-0.5</min_limit>
     <max_limit>0.5</max_limit>
   </velocity>
   <effort>
+    <!-- Cont./Peak Torques: 16/38 Nm -->
     <min_limit>-30</min_limit>
     <max_limit>30</max_limit>
   </effort>

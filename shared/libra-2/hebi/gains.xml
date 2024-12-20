@@ -2,7 +2,7 @@
 <group_gains>
    <control_strategy>4</control_strategy>
    <position>
-      <kp>50</kp>
+      <kp>0.5</kp>
       <ki>0</ki>
       <kd>0</kd>
       <feed_forward>0</feed_forward>
@@ -12,8 +12,8 @@
       <min_target>-inf</min_target>
       <max_target>inf</max_target>
       <target_lowpass>1</target_lowpass>
-      <min_output>-40</min_output>
-      <max_output>40</max_output>
+      <min_output>-1</min_output>
+      <max_output>1</max_output>
       <output_lowpass>1</output_lowpass>
       <d_on_error>1</d_on_error>
    </position>
