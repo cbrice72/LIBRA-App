@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <mutex>
 #include <string>
 
 // Other Library Headers
@@ -64,6 +65,7 @@ class EposThread : public AbstractActuatorThread {
     uint baud_rate_;
 
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
+    std::mutex handle_mutex_;
 
     int target_;  // in inc, not deg
     int last_target_;

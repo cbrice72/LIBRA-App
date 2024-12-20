@@ -215,54 +215,63 @@ void EposThread::run() {
 
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
-        if (handle_ != nullptr) {
-            // Send movement command
-            if (target_ != last_target_) {
-                if (debug_mode_) {
-                    qDebug() << "EPOS - Sending move command";
-                }
+        // To avoid Disconnect() voiding the handle_ in the middle of a loop
+        // (which causes the app to crash), acquire the mutex lock on handle_
+        std::unique_lock<std::mutex> lock(handle_mutex_);
+        if (handle_ == nullptr) {
+            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            lock.unlock();
+            QThread::msleep(10);
+            continue;
+        }
 
-                // No complex trajectory-related logic necessary since we only
-                // support ProfilePositionMode (for now)
-                if (VCS_MoveToPosition(handle_, kNodeID, target_, kMoveAbsolute,
-                                       kMoveImmediately, &err_code)
-                    == 0) {
-                    // emit ErrorThrown(util::GetEposErr("EPOS -
-                    // VCS_MoveToPosition", err_code, kNodeID));
-                    emit ErrorThrown(
-                        "[TEMPORARY]\nEPOS - Move command failed!");
-                }
-
-                last_target_ = target_;  // mark the trajectory as "complete"
+        // Send movement command
+        if (target_ != last_target_) {
+            if (debug_mode_) {
+                qDebug() << "EPOS - Sending move command";
             }
 
-            // Report important statuses individually
-            if (VCS_GetTargetPosition(handle_, kNodeID, &t_pos, &err_code)
+            // No complex trajectory-related logic necessary since we only
+            // support ProfilePositionMode (for now)
+            if (VCS_MoveToPosition(handle_, kNodeID, target_, kMoveAbsolute,
+                                   kMoveImmediately, &err_code)
                 == 0) {
                 // emit ErrorThrown(util::GetEposErr("EPOS -
-                // VCS_GetTargetPosition", err_code, kNodeID));
-                emit ErrorThrown(
-                    "[TEMPORARY]\nEPOS - Failed to retrieve target position!");
+                // VCS_MoveToPosition", err_code, kNodeID));
+                emit ErrorThrown("[TEMPORARY]\nEPOS - Move command failed!");
             }
-            // clang-format off
-            emit ReportFeedback({{Actuator::Joint::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
-                                Actuator::Feedback::kTargetPos);
-            // clang-format on
 
-            if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) == 0) {
-                // emit ErrorThrown(util::GetEposErr("EPOS -
-                // VCS_GetPositionIs", err_code, kNodeID));
-                emit ErrorThrown(
-                    "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
-            }
-            // clang-format off
-            emit ReportFeedback({{Actuator::Joint::kYaw, a_pos * kIncToDeg}},
-                                Actuator::Feedback::kActualPos);
-            // clang-format on
+            last_target_ = target_;  // mark the trajectory as "complete"
         }
+
+        // Report important statuses individually
+        if (VCS_GetTargetPosition(handle_, kNodeID, &t_pos, &err_code) == 0) {
+            // emit ErrorThrown(util::GetEposErr("EPOS -
+            // VCS_GetTargetPosition", err_code, kNodeID));
+            emit ErrorThrown(
+                "[TEMPORARY]\nEPOS - Failed to retrieve target position!");
+        }
+        // clang-format off
+        emit ReportFeedback({{Actuator::Joint::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
+                            Actuator::Feedback::kTargetPos);
+        // clang-format on
+
+        if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) == 0) {
+            // emit ErrorThrown(util::GetEposErr("EPOS -
+            // VCS_GetPositionIs", err_code, kNodeID));
+            emit ErrorThrown(
+                "[TEMPORARY]\nEPOS - Failed to retrieve actual position!");
+        }
+        // clang-format off
+        emit ReportFeedback({{Actuator::Joint::kYaw, a_pos * kIncToDeg}},
+                            Actuator::Feedback::kActualPos);
+        // clang-format on
 
         // Report minor statuses all together
         emit ReportStatus(GetStatus(), type_);
+
+        // Release the mutex lock
+        lock.unlock();
 
         QThread::msleep(10);  // update 100 times/second (theoretically)
     }
@@ -413,24 +422,30 @@ void EposThread::Connect() {
  * @return true if successful, false otherwise
  */
 void EposThread::Disconnect() {
-    // In case this was called in the middle of a movement, gracefully stop
+    if (handle_ == nullptr) {
+        return;  // do nothing
+    }
+
+    // If this was called in the middle of a movement, gracefully stop
     Stop();
 
-    if (handle_ != nullptr) {
-        // Close the connection via the EPOS API
-        uint err_code = 0;
-        if (VCS_CloseDevice(handle_, &err_code) == 0) {
-            // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_CloseDevice", err_code));
-            emit ErrorThrown("[TEMPORARY]\nEPOS - Problem closing device!");
-            return;
-        }
+    // Acquire a mutex lock on handle before doing sensitive operations
+    // (NOTE: automatically unlocked when function ends)
+    std::lock_guard<std::mutex> lock(handle_mutex_);
 
-        // Void our class handle
-        handle_ = nullptr;
+    // Close the connection via the EPOS API
+    uint err_code = 0;
+    if (VCS_CloseDevice(handle_, &err_code) == 0) {
+        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_CloseDevice", err_code));
+        emit ErrorThrown("[TEMPORARY]\nEPOS - Problem closing device!");
+        return;
+    }
 
-        if (debug_mode_) {
-            qDebug() << "EPOS - Gracefully disconnected from actuator";
-        }
+    // Void our class handle
+    handle_ = nullptr;
+
+    if (debug_mode_) {
+        qDebug() << "EPOS - Gracefully disconnected from actuator";
     }
 }
 
