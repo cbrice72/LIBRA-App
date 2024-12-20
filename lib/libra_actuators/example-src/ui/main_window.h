@@ -27,7 +27,7 @@ class MainWindow;
 QT_END_NAMESPACE
 
 // Type alias for conveniently accessing a feedback label, where rows are
-// actuators and columns are feedback types (identical to MainWindow UI)
+// actuators and columns are feedback types (order follows MainWindow UI)
 using FeedbackElementMapOfMaps = std::unordered_map<
     Actuator::Joint, std::unordered_map<Actuator::Feedback, QLabel*>>;
 
@@ -56,8 +56,6 @@ class MainWindow : public QMainWindow {
   signals:
     void UpdateDebugMode(const bool& enabled);
 
-    // --- Menu Bar ---
-
     void CommandEpos(const std::vector<double>& deg);
     void CommandHebi(const std::vector<double>& deg);
 
@@ -84,9 +82,7 @@ class MainWindow : public QMainWindow {
 
     void on_pb_yaw_start_clicked();
     void on_pb_pitch_start_clicked();
-
     void on_pb_arm_start_clicked();
-    void on_pb_arm_stop_clicked();
 
     // --- Uncategorized ---
 

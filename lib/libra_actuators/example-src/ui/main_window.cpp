@@ -326,13 +326,6 @@ void MainWindow::on_pb_arm_start_clicked() {
     ui_->pb_pitch_start->animateClick();
 }
 
-/**
- * @brief Send a command signal for all actuators to stop.
- */
-void MainWindow::on_pb_arm_stop_clicked() {
-    // TODO: implementation
-}
-
 //------------------------------------------------------------------------------
 // !Uncategorized
 //------------------------------------------------------------------------------

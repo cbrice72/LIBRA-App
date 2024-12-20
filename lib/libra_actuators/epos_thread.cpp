@@ -105,7 +105,6 @@ EposThread::EposThread(QObject* parent, std::string device_name,
 
 /**
  * @brief Standard destructor.
- *
  */
 EposThread::~EposThread() {
     // This call to `Disconnect()` does three things:
