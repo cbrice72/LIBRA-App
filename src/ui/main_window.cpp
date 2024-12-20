@@ -127,7 +127,11 @@ MainWindow::MainWindow(QWidget* parent)
     log_thread_ = new LogThread(this, debug_mode_);
 
     // - MainWindow signals
-    // TODO: implementation
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            log_thread_, &LogThread::SetDebugMode);
+
+    connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
+            log_thread_, &LogThread::TakeLogShot);
 
     // - MainWindow slots
     // TODO: implementation
