@@ -188,7 +188,8 @@ __pycache__/
 adobe/*
 
 # Doxygen-generated files
-**/docs/*
+**/docs/html
+**/docs/latex
 
 # Don't exclude the 3rd-party libraries
 !thirdparty/**
