@@ -36,9 +36,7 @@ To connect to HEBI actuators without a DHCP server (i.e., router), a static IP m
 
 ### *Qt-based apps crash on startup*
 
-Your graphics drivers might be outdated or incompatible with the versions of the software we're using.
-Particularly, **Qt-based GUI applications will suffer from frustrating crashes if your graphics drivers aren't up to date**.
-Follow the instructions below to add the right [Mesa](https://www.mesa3d.org/) package repository (PPA) and upgrade your drivers.
+Your graphics drivers might be outdated or incompatible with the versions of the software we're using. Particularly, **Qt-based GUI applications will suffer from frustrating crashes if your graphics drivers aren't up to date**. Follow the instructions below to add the right [Mesa](https://www.mesa3d.org/) package repository (PPA) and upgrade your drivers.
 
 1. Check your current Mesa/OpenGL version using `glxinfo`. Save the output in case you have to revert the update later.
 

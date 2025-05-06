@@ -1,7 +1,6 @@
 # Setup
 
-This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App on a Windows 11 machine.
-Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with any questions or revision suggestions.
+This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App on a Windows 11 machine. Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with any questions or revision suggestions.
 
 - [Setting Up](#setting-up)
     - [*VM*](#vm)
@@ -18,10 +17,9 @@ Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with 
 
 ## Setting Up
 
-You may set up a development environment in either a Virtual Machine (VM) or Windows Subsystem for Linux (WSL).
-There are a few differences you should be aware of.
+You may set up a development environment in either a Virtual Machine (VM) or Windows Subsystem for Linux (WSL). There are a few differences you should be aware of.
 
-| | Ability | Environment | USB Support | Shared Folder Support
+| | Ability | Environment | USB Support | Shared Folder Support |
 |---|---|---|---|---|
 | **VM** | Full-featured | Runs in separate environment | Select PC or VM on plug-in | Non-native; enable in VMWare settings + install [open-vm-tools](https://kb.vmware.com/s/article/2073803) |
 | **WSL** | Lightweight | Runs natively in Windows | Non-native; install [USBIPD](https://learn.microsoft.com/en-us/windows/wsl/connect-usb) + use every time |  Windows `C:\` drive located at `/mnt/c` |
@@ -48,33 +46,41 @@ I also recommend you allocate more cores and RAM to your VM; this can be done in
 #### **Installation**
 
 1. Open a PowerShell terminal and install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
+
     ```bash
     wsl --install -d Ubuntu-22.04
     ```
 
-> **_NOTE:_** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
+> ***NOTE:*** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
 
-2. Once the installation is finished, enter the username and password you want to use when logging into the Ubuntu shell.
+1. Once the installation is finished, enter the username and password you want to use when logging into the Ubuntu shell.
 
 #### **Networking Mode**
 
 It is recommended that you change your WSL networking mode from the default `NAT` to `mirrored`, as this allows WSL to seamlessly integrate Windows network adapters (e.g., as required to use HEBI actuators via IP addressing).
 
 1. Ensure WSL isn't running.
+
     ```ps
     # In a PowerShell window
     wsl.exe --shutdown
     ```
+
 2. In your user folder (`C:\Users\<Username>`), create or edit the `.wslconfig` file. Add the following.
+
     ```txt
     [wsl2]
     networkingMode=mirrored
     ```
+
 3. Configure HyperV (the WSL virtual machine manager) so that it allows all inbound connections (see the [Microsoft docs](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) for more information).
+
     ```ps
     Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow
     ```
+
 4. Restart WSL.
+
     ```ps
     # In a PowerShell window
     wsl.exe
@@ -86,22 +92,22 @@ See the relevant [Microsoft docs page](https://learn.microsoft.com/en-us/windows
 
 ### *Proxy Settings*
 
-Open `/etc/apt/apt.conf` (requires sudo) and add the following line with your proxy details.
-Note that the address *must* include the leading "http://" (e.g., `http://proxy.noc.titech.ac.jp:3128`).
+Open `/etc/apt/apt.conf` (requires sudo) and add the following line with your proxy details. Note that the address *must* include the leading "http://" (e.g., `http://proxy.noc.titech.ac.jp:3128`).
+
 ```txt
 Acquire::http::Proxy "<address>:<port>";
 ```
 
 #### **Git**
 
-If you already have Git installed, go ahead and configure its proxy now.
-If not, remember to do so after the `sudo apt install` step in the next section.
-Note that the address *must* include the leading "http://".
+If you already have Git installed, go ahead and configure its proxy now. If not, remember to do so after the `sudo apt install` step in the next section. Note that the address *must* include the leading "http://".
+
 ```bash
 git config --global http.proxy <address>:<port>
 ```
 
 To download the required submodules (i.e., copy other repositories used as dependencies), run the following.
+
 ```bash
 git submodule init  # only necessary the first time
 git submodule update
@@ -110,6 +116,7 @@ git submodule update
 ### *System Updates and Required Packages*
 
 Update the APT package lists and ensure your system is up to date.
+
 ```bash
 sudo apt update && sudo apt upgrade
 ```
@@ -117,6 +124,7 @@ sudo apt update && sudo apt upgrade
 (TODO: from here to next section)
 
 Install the following packages via the terminal.
+
 ```bash
 sudo apt install -y build-essential libboost-all-dev clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libudev-dev
 ```
@@ -142,8 +150,7 @@ Package notes:
 
 The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
 
-If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf).
-All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
+If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf). All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
 
 #### **HEBI**
 
@@ -157,36 +164,37 @@ Other than that, you do not need to download or install anything yourself since 
 
 Apply for a [Qt educational license](https://www.qt.io/qt-educational-license#application) (make sure to select "Qt Edu for Developers").
 
-Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux".
-To run it, you must first give the `.run` file execution permissions (remember to replace the text in brackets).
+Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux". To run it, you must first give the `.run` file execution permissions (remember to replace the text in brackets).
+
 ```bash
 chmod +x qt-unified-linux-x64-<ver>-online.run
 ./qt-unified-linux-x64-<ver>-online.run
 ```
 
-> **_NOTE:_** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration".
-Enter your proxy settings **without** the preceding `http://` (e.g., HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`).
+> ***NOTE:*** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration". Enter your proxy settings **without** the preceding `http://` (e.g., HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`).
 
 Login and follow the installation procedure, being mindful of the following:
+
 - At the "Installation Folder" step, select "Qt Design Studio" and "Qt 6.x for desktop development".
 
 #### *Add Qt Creator to PATH*
 
 To run the GUI application from the terminal (via the command `qtcreator`), add the following to the end of your `~/.bashrc`.
+
 ```bash
 if [ -d "$HOME/Qt/Tools" ]; then
     PATH="$PATH:$HOME/Qt/Tools/QtCreator/bin"
 fi
 ```
 
-#### **Troubleshooting**
+#### **Troubleshooting: Qt Creator**
 
 ##### *"No valid license available"*
 
-Upon opening Qt Creator, you may get an error that there is no valid license available.
-You can fix this via the Qt Maintenance Tool.
+Upon opening Qt Creator, you may get an error that there is no valid license available. You can fix this via the Qt Maintenance Tool.
 
 1. Open Qt Maintenance Tool as superuser.
+
     ```bash
     sudo /opt/Qt/MaintenanceTool
     ```
@@ -202,45 +210,45 @@ You should now be able to use Qt Creator.
 
 ##### *"Nothing happens/I get errors when I try to run Qt Creator"*
 
-If you are using a non-GNOME desktop environment (e.g., Windows's WSL2 or Mint's "Cinnamon" environment) you may run into problems with the Qt Creator UI.
-This might be because you're missing some display-related packages that Qt expects.
-Try the following catch-all install command for X11 display server protocol libraries.
+If you are using a non-GNOME desktop environment (e.g., Windows's WSL2 or Mint's "Cinnamon" environment) you may run into problems with the Qt Creator UI. This might be because you're missing some display-related packages that Qt expects. Try the following catch-all install command for X11 display server protocol libraries.
+
 ```bash
 sudo apt install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
 ```
 
 If Qt Creator still doesn't run, try explicitly installing the following packages.
+
 ```bash
 sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
 ```
 
-> **_NOTE:_** Might be missing some, will have to check on laptop.
+> ***NOTE:*** Might be missing some, will have to check on laptop.
 
 See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt6-qt-qpa-plugin-could-not-load-the-qt-platform-plugin-xcb-in-even-thou) for more details.
 
 ##### *Running CMake gives "Unknown CMake command "qt_xxx""*
 
-Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely have an older version of Qt installed.
-You can check what version you have by opening QtCreator, opening the "Help" tab at the top, and clicking "System Information".
+Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely have an older version of Qt installed. You can check what version you have by opening QtCreator, opening the "Help" tab at the top, and clicking "System Information".
 
 ### *Maxon EPOS Library (system-wide install)*
 
-The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`).
-However, for ease of compilation (specifically, using the `-lEposCmd` flag), follow the instructions below to install the EPOS library files on your system.
+The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`). However, for ease of compilation (specifically, using the `-lEposCmd` flag), follow the instructions below to install the EPOS library files on your system.
 
-1. Open a terminal in the `thirdparty/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice.
-Navigate to the extracted directory.
+1. Open a terminal in the `thirdparty/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice. Navigate to the extracted directory.
+
     ```bash
     unzip EPOS-Linux-Library-En.zip -d ~/Downloads
     cd ~/Downloads/EPOS_Linux_Library
     ```
 
 2. Run the install script (make sure you give it execution permissions).
+
     ```bash
     chmod +x install.sh && sudo ./install.sh
     ```
 
 3. Once the install script finishes, you can delete the extracted files.
+
     ```bash
     cd .. && rm -rf EPOS_Linux_Library/
     ```
@@ -252,20 +260,23 @@ Navigate to the extracted directory.
 ### *VS Code*
 
 To install, simply [download](https://code.visualstudio.com/download) and run the `.deb`.
+
 ```bash
 sudo dpkg -i <package_name>
 ```
 
-#### **Troubleshooting**
+#### **Troubleshooting: VS Code**
 
 If you're prompted to "unlock a keyring" (by entering your Linux password) every time you start up VS Code, follow these instructions.
 
 1. Open your display manager config file. If you're not sure what that is, look for a file ending in "dm" in the `/etc/pam.d` directory (e.g., `sddm`, `lightdm`).
+
     ```bash
     sudo nano /etc/pam.d/<file ending in "dm">
     ```
 
 2. Check if the following "keyring" lines exist. If they do, simply remove the preceding dashes (`-`). Otherwise, append them to the end of their respective sections as shown below.
+
     ```txt
     @include common-auth
     auth    optional        pam_gnome_keyring.so

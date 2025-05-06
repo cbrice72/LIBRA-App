@@ -1,9 +1,8 @@
 # LIBRA Control App
 
-The LIBRA robotic arm project is being developed for the internal survey of dangerous spaces.
-This control application targets the first-generation LIBRA prototype: *LIBRA-I*.
+The LIBRA robotic arm project is being developed for the internal survey of dangerous spaces. This control application targets the first-generation LIBRA prototype: *LIBRA-I*.
 
-Project link: https://github.com/christian-brice/LIBRA-App
+Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ## Table of Contents
 
@@ -79,15 +78,13 @@ If you installed the optional VS Code extension "C/C++", linting will automatica
 
 This project uses [Doxygen](https://www.doxygen.nl/) to generate documentation from source code using comment tags such as `@brief` and `@param`.
 
-If you installed the optional VS Code extension "Doxygen Runner", simply open the command palette (`CtrlShift+P`) and select "Generate Doxygen documentation".
-The HTML and LaTeX documentation will be output to the `docs` directory.
+If you installed the optional VS Code extension "Doxygen Runner", simply open the command palette (`CtrlShift+P`) and select "Generate Doxygen documentation". The HTML and LaTeX documentation will be output to the `docs` directory.
 
-> **_NOTE:_** The HTML documentation can be viewed by opening `html/index.html`, however the files in the `latex` directory must first be compiled by a LaTeX compiler to generate a PDF.
+> ***NOTE:*** The HTML documentation can be viewed by opening `html/index.html`, however the files in the `latex` directory must first be compiled by a LaTeX compiler to generate a PDF.
 
 ## About Us
 
-**Christian Brice** ([email](mailto:brice.c.aa@m.titech.ac.jp)) is a doctoral student in mechanical engineering at the Institute of Science Tokyo (formerly: Tokyo Institute of Technology).
-The *LIBRA* project is the focus of his doctoral studies.
+**Christian Brice** ([email](mailto:brice.c.aa@m.titech.ac.jp)) is a doctoral student in mechanical engineering at the Institute of Science Tokyo (formerly: Tokyo Institute of Technology). The *LIBRA* project is the focus of his doctoral studies.
 
 The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is affiliated with the Department of Mechanical Engineering at the Institute of Science Tokyo.
 
@@ -98,14 +95,18 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
 ## Contributing
 
 1. Ensure Git is installed.
+
     ```bash
     sudo apt update
     sudo apt install git
     ```
+
     - If you're behind a proxy, you must also add your proxy settings to Git. In a terminal, input the following command (note: the `address` should be entered **with** the `http://` prefix).
+
         ```bash
         # (e.g., http://proxy.noc.titech.ac.jp:3128 for Gen Endo Lab)
         git config --global http.proxy <address>:<port>
         ```
+
 2. In VS Code, open the command palette (`Ctrl+Shift+P`) and select "Git: Clone".
 3. Enter `https://github.com/christian-brice/LIBRA-App.git` and select a directory to clone the project to.
