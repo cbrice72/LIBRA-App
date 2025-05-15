@@ -16,10 +16,9 @@
 #include <thread>
 
 // Other Library Headers
-#include "Eigen/Core"    // Eigen
-#include "log_file.hpp"  // HEBI
-#include "lookup.hpp"    // HEBI
-#include <QDebug>        // Qt::Core
+#include "lookup.hpp"          // HEBI
+#include "util/grav_comp.hpp"  // HEBI
+#include <QDebug>              // Qt::Core
 
 // Project Headers
 //   (none)
@@ -60,6 +59,8 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
+
+    model_.loadHRDF("./bin/shared/hebi/test.hrdf");  // TODO: make libra-2.hrdf
 
     // Define joint order for organizing feedback
     // NOTE: ideally, this shouldn't be defined here since it defeats the purpose
@@ -185,6 +186,7 @@ void HebiThread::run() {
     // Initialize thread variables for efficiency
     Eigen::VectorXd pos_cmd(num_actuators_);
     Eigen::VectorXd vel_cmd(num_actuators_);
+    Eigen::VectorXd trq_cmd(num_actuators_);
 
     std::vector<double> t_pos(num_actuators_);
     std::vector<double> a_pos(num_actuators_);
@@ -193,23 +195,46 @@ void HebiThread::run() {
     std::chrono::duration<double> time(std::chrono::system_clock::now()
                                        - trajectory_start_time_);
 
+    Eigen::VectorXd masses;  // unused by getGravCompEfforts() but must provide
+    model_.getMasses(masses);
+
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
-        // Build next step of trajectory
+        if (group_ == nullptr) {
+            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            QThread::msleep(10);
+            continue;
+        }
+
+        // Update feedback object
+        group_->getNextFeedback(*feedback_);
+
+        // Determine movement command
         if (trajectory_ != nullptr) {
             time = std::chrono::system_clock::now() - trajectory_start_time_;
             if (time.count() < trajectory_->getDuration()) {
+                // Build next step of trajectory
                 trajectory_->getState(time.count(), &pos_cmd, &vel_cmd, nullptr);
                 command_->setPosition(pos_cmd);
                 command_->setVelocity(vel_cmd);
+            } else {
+                // Trajectory is complete, so delete it
+                trajectory_.reset();
+
+                if (debug_mode_) {
+                    qDebug() << "[HEBI] Trajectory complete";
+                }
             }
+        } else {
+            // Counter measured angular velocity and torque
+            vel_cmd = -feedback_->getGyro().col(2);  // z-axis (same as output)
+            trq_cmd = hebi::util::getGravCompEfforts(model_, masses, *feedback_);
+            command_->setVelocity(vel_cmd);
+            command_->setEffort(trq_cmd);
         }
 
-        // Send command and update feedback object
-        if (group_ != nullptr) {
-            group_->sendCommand(*command_);
-            group_->getNextFeedback(*feedback_);
-        }
+        // Send movement command
+        group_->sendCommand(*command_);
 
         // Report important statuses individually
         // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
@@ -369,14 +394,13 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
 
     // Make position, velocity, and acceleration commands for start & end points
     Eigen::MatrixXd pos(num_actuators_, 2);
-    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
     Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
     Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
 
     std::stringstream trajectory_ss;  // for debug only
 
     // Populate positions
-    pos.col(0) = command_->getPosition();  // start (current value)
+    pos.col(0) = feedback_->getPosition();  // start (current value)
     for (auto i = 0; i < target.size(); i++) {
         pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
         if (debug_mode_) {

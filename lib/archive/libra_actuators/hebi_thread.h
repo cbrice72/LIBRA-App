@@ -18,6 +18,7 @@
 #include "group.hpp"           // HEBI
 #include "group_command.hpp"   // HEBI
 #include "group_feedback.hpp"  // HEBI
+#include "robot_model.hpp"     // HEBI
 #include "trajectory.hpp"      // HEBI
 
 // Project Headers
@@ -62,6 +63,8 @@ class HebiThread : public AbstractActuatorThread {
 
     std::vector<std::string> families_;
     std::vector<std::string> names_;
+
+    hebi::robot_model::RobotModel model_;
 
     std::shared_ptr<hebi::Group> group_;
     const int num_actuators_;  // set in constructor initializer list
