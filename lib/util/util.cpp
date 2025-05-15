@@ -13,6 +13,7 @@
 
 // Other Library Headers
 #include "Definitions.h"  // EPOS (Maxon)
+#include <QDateTime>      // Qt:Core
 #include <QDebug>         // Qt::Core
 
 // Project Headers
