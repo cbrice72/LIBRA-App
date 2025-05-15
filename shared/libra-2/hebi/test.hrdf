@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot version="1.4.0">
+  <actuator type="X8-16" tag="pitch"/>
+  <rigid-body mass="0.215" com_trans="0.125 0 0" output_trans="0.250 0 0" tag="link"/>
+  <end-effector type="Custom" mass="0.775" com_trans="25 55 200" output_trans="50 110 320"/>
+</robot>
