@@ -342,6 +342,9 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 void MainWindow::on_a_epos_connect_triggered() {
     ui_->a_epos_connect->setEnabled(false);
     ui_->a_epos_disconnect->setEnabled(true);
+
+    ui_->pb_arm_start->setEnabled(true);
+    ui_->pb_arm_stop->setEnabled(true);
 }
 
 /**
@@ -351,6 +354,8 @@ void MainWindow::on_a_epos_connect_triggered() {
 void MainWindow::on_a_epos_disconnect_triggered() {
     ui_->a_epos_connect->setEnabled(true);
     ui_->a_epos_disconnect->setEnabled(false);
+
+    ui_->pb_arm_start->setEnabled(false);
 }
 
 /**
@@ -360,6 +365,9 @@ void MainWindow::on_a_epos_disconnect_triggered() {
 void MainWindow::on_a_hebi_connect_triggered() {
     ui_->a_hebi_connect->setEnabled(false);
     ui_->a_hebi_disconnect->setEnabled(true);
+
+    ui_->pb_arm_start->setEnabled(true);
+    ui_->pb_arm_stop->setEnabled(true);
 }
 
 /**
@@ -369,6 +377,8 @@ void MainWindow::on_a_hebi_connect_triggered() {
 void MainWindow::on_a_hebi_disconnect_triggered() {
     ui_->a_hebi_connect->setEnabled(true);
     ui_->a_hebi_disconnect->setEnabled(false);
+
+    ui_->pb_arm_start->setEnabled(false);
 }
 
 /**
