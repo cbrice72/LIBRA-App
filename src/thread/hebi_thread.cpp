@@ -195,21 +195,40 @@ void HebiThread::run() {
 
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
-        // Build next step of trajectory
+        if (group_ == nullptr) {
+            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            QThread::msleep(10);
+            continue;
+        }
+
+        // Determine movement command
         if (trajectory_ != nullptr) {
             time = std::chrono::system_clock::now() - trajectory_start_time_;
             if (time.count() < trajectory_->getDuration()) {
+                // Build next step of trajectory
                 trajectory_->getState(time.count(), &pos_cmd, &vel_cmd, nullptr);
                 command_->setPosition(pos_cmd);
                 command_->setVelocity(vel_cmd);
+            } else {
+                // Trajectory is complete: delete it and reset command object
+                trajectory_.reset();
+                command_->clear();
+
+                if (debug_mode_) {
+                    qDebug() << "[HEBI] Trajectory complete";
+                }
             }
+        } else {
+            group_->getNextFeedback(*feedback_);
+
+            // Counter measured angular velocity
+            vel_cmd = -feedback_->getGyro().col(2);  // z-axis
+            command_->setVelocity(vel_cmd);
         }
 
-        // Send command and update feedback object
-        if (group_ != nullptr) {
-            group_->sendCommand(*command_);
-            group_->getNextFeedback(*feedback_);
-        }
+        // Send movement command and update feedback object
+        group_->sendCommand(*command_);
+        group_->getNextFeedback(*feedback_);
 
         // Report important statuses individually
         // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's

@@ -7,6 +7,4 @@
 
 # Add module subdirectories
 add_subdirectory(camera_manager)
-add_subdirectory(libra_actuators)
-#add_subdirectory(lidar_hokuyo)
 add_subdirectory(util)

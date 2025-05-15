@@ -54,7 +54,11 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 # ~~~
 
 # Dependencies (packaged with this project)
+# NOTE: there is no `add_subdirectory()` call for EPOS since it doesn't provide a CMakeLists.txt, only a binary to link against
+set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+
 add_subdirectory(${HEBI_DIR})
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/Eigen")
 
 # Add project subdirectories
 add_subdirectory(lib)
@@ -85,15 +89,17 @@ target_include_directories(
     PRIVATE ${CMAKE_SOURCE_DIR}/src
     # Boost
     PRIVATE ${Boost_INCLUDE_DIRS}
+    # HEBI
+    PRIVATE ${HEBI_INCLUDE_DIRS}
     # Maxon
-    PRIVATE ${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0/include
+    PRIVATE ${EPOS_INCLUDE_DIRS}
 )
 
 # Tell the linker which libraries to link against
 target_link_libraries(
     LIBRA-App-v2
     # Project
-    PRIVATE camera_manager libra_hebi util
+    PRIVATE camera_manager util actuator_thread log_thread
     # Qt
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
@@ -105,6 +111,8 @@ target_link_libraries(
     PRIVATE Qt${QT_VERSION_MAJOR}::MultimediaWidgets
     PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
+    # HEBI
+    PRIVATE hebi hebic++ m pthread
     # Maxon
     PRIVATE -lEposCmd
     # Linux

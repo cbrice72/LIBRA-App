@@ -9,10 +9,11 @@
 #include "log_thread.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <filesystem>
 
 // Other Library Headers
-#include <QDebug>  // Qt::Core
+#include <QDateTime>  // Qt::Core
+#include <QDebug>     // Qt::Core
 
 // Project Headers
 //   (none)

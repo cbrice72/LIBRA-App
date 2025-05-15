@@ -11,6 +11,7 @@
 #include <fstream>
 
 // Other Library Headers
+#include <QLabel>       // Qt::Widgets
 #include <QMainWindow>  // Qt::Widgets
 #include <QSerialPort>  // Qt::SerialPort
 
@@ -71,33 +72,35 @@ class MainWindow : public QMainWindow {
 
     void on_a_debug_mode_toggled(bool checked);
 
-    // EPOS Menu
+    // Actuators Menu
 
-    // void on_a_epos_update_triggered();  // TODO
+    void on_a_epos_connect_triggered();
+    void on_a_epos_disconnect_triggered();
 
-    // HEBI Menu
+    void on_a_hebi_connect_triggered();
+    void on_a_hebi_disconnect_triggered();
 
-    // void on_a_hebi_update_triggered();  // TODO
+    void on_a_serial_servo_connect_triggered();
+    void on_a_serial_servo_disconnect_triggered();
 
-    // Pumps Menu
-
-    void on_a_pump_connect_triggered();
-    void on_a_pump_disconnect_triggered();
-
-    void on_a_pump_set_empty_triggered();
-    void on_a_pump_set_full_triggered();
-
-    // Manipulator Menu
-
-    void on_a_manip_servos_connect_triggered();
-    void on_a_manip_servos_disconnect_triggered();
-
-    // LIDAR Menu
+    // Sensors Menu
+    // (some actions are handed off to signals, and thus don't need functions)
 
     void on_a_lidar_connect_triggered();
     void on_a_lidar_disconnect_triggered();
-
     void on_a_lidar_about_triggered();
+
+    // Pump Menu
+
+    void on_a_pump_connect_triggered();
+    void on_a_pump_disconnect_triggered();
+    void on_a_pump_set_empty_triggered();
+    void on_a_pump_set_full_triggered();
+
+    // Quick Actions Menu
+
+    void on_a_connect_all_triggered();
+    void on_a_disconnect_all_triggered();
 
     // --- Main Window ---
 

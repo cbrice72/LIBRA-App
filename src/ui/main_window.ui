@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>993</width>
-    <height>440</height>
+    <height>501</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -1504,6 +1504,45 @@
       </item>
      </layout>
     </item>
+    <item row="1" column="0">
+     <widget class="QGroupBox" name="gb_status">
+      <property name="title">
+       <string>STATUS</string>
+      </property>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <item>
+        <widget class="QLabel" name="l_yaw_status">
+         <property name="font">
+          <font>
+           <family>Monospace</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="l_pitch_status">
+         <property name="font">
+          <font>
+           <family>Monospace</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>...</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -1515,30 +1554,11 @@
      <height>19</height>
     </rect>
    </property>
-   <widget class="QMenu" name="m_epos">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="title">
-     <string>EPOS</string>
-    </property>
-    <addaction name="a_epos_connect"/>
-    <addaction name="a_epos_disconnect"/>
-    <addaction name="separator"/>
-   </widget>
-   <widget class="QMenu" name="m_hebi">
-    <property name="title">
-     <string>HEBI</string>
-    </property>
-    <addaction name="a_hebi_connect"/>
-    <addaction name="a_hebi_disconnect"/>
-    <addaction name="separator"/>
-   </widget>
    <widget class="QMenu" name="m_pumps">
     <property name="title">
      <string>Pump</string>
     </property>
-    <widget class="QMenu" name="menuAdvanced">
+    <widget class="QMenu" name="m_pumps_advanced">
      <property name="title">
       <string>Advanced</string>
      </property>
@@ -1548,24 +1568,7 @@
     <addaction name="a_pump_connect"/>
     <addaction name="a_pump_disconnect"/>
     <addaction name="separator"/>
-    <addaction name="menuAdvanced"/>
-   </widget>
-   <widget class="QMenu" name="m_Manipulator">
-    <property name="title">
-     <string>Manipulator</string>
-    </property>
-    <addaction name="a_manip_servos_connect"/>
-    <addaction name="a_manip_servos_disconnect"/>
-    <addaction name="separator"/>
-   </widget>
-   <widget class="QMenu" name="m_lidar">
-    <property name="title">
-     <string>LIDAR</string>
-    </property>
-    <addaction name="a_lidar_connect"/>
-    <addaction name="a_lidar_disconnect"/>
-    <addaction name="separator"/>
-    <addaction name="a_lidar_about"/>
+    <addaction name="m_pumps_advanced"/>
    </widget>
    <widget class="QMenu" name="m_preferences">
     <property name="title">
@@ -1573,42 +1576,73 @@
     </property>
     <addaction name="a_debug_mode"/>
    </widget>
+   <widget class="QMenu" name="m_actuators">
+    <property name="title">
+     <string>Actuators</string>
+    </property>
+    <widget class="QMenu" name="m_epos">
+     <property name="title">
+      <string>EPOS</string>
+     </property>
+     <addaction name="a_epos_connect"/>
+     <addaction name="a_epos_disconnect"/>
+     <addaction name="separator"/>
+    </widget>
+    <widget class="QMenu" name="m_hebi">
+     <property name="title">
+      <string>HEBI</string>
+     </property>
+     <addaction name="a_hebi_connect"/>
+     <addaction name="a_hebi_disconnect"/>
+     <addaction name="separator"/>
+    </widget>
+    <widget class="QMenu" name="m_serial_servo">
+     <property name="title">
+      <string>Manip. Servos</string>
+     </property>
+     <addaction name="a_serial_servo_connect"/>
+     <addaction name="a_serial_servo_disconnect"/>
+     <addaction name="separator"/>
+    </widget>
+    <addaction name="m_epos"/>
+    <addaction name="m_hebi"/>
+    <addaction name="m_serial_servo"/>
+   </widget>
+   <widget class="QMenu" name="m_sensors">
+    <property name="title">
+     <string>Sensors</string>
+    </property>
+    <widget class="QMenu" name="m_realsense">
+     <property name="title">
+      <string>RealSense</string>
+     </property>
+    </widget>
+    <widget class="QMenu" name="m_lidar">
+     <property name="title">
+      <string>2D LIDAR</string>
+     </property>
+     <addaction name="a_lidar_connect"/>
+     <addaction name="a_lidar_disconnect"/>
+     <addaction name="separator"/>
+     <addaction name="a_lidar_about"/>
+    </widget>
+    <addaction name="m_realsense"/>
+    <addaction name="m_lidar"/>
+   </widget>
+   <widget class="QMenu" name="m_quick_actions">
+    <property name="title">
+     <string>Quick Actions</string>
+    </property>
+    <addaction name="a_connect_all"/>
+    <addaction name="a_disconnect_all"/>
+   </widget>
    <addaction name="m_preferences"/>
-   <addaction name="m_epos"/>
-   <addaction name="m_hebi"/>
+   <addaction name="m_actuators"/>
+   <addaction name="m_sensors"/>
    <addaction name="m_pumps"/>
-   <addaction name="m_Manipulator"/>
-   <addaction name="m_lidar"/>
+   <addaction name="m_quick_actions"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <action name="a_hebi">
-   <property name="text">
-    <string>HEBI</string>
-   </property>
-  </action>
-  <action name="a_pumps">
-   <property name="text">
-    <string>Pumps</string>
-   </property>
-  </action>
-  <action name="a_epos">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>EPOS</string>
-   </property>
-  </action>
-  <action name="a_camera">
-   <property name="text">
-    <string>Camera</string>
-   </property>
-  </action>
-  <action name="a_lidar">
-   <property name="text">
-    <string>LIDAR</string>
-   </property>
-  </action>
   <action name="a_epos_connect">
    <property name="enabled">
     <bool>true</bool>
@@ -1651,17 +1685,17 @@
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="a_manip_servos_connect">
+  <action name="a_serial_servo_connect">
    <property name="text">
-    <string>Connect (servos)</string>
+    <string>Connect</string>
    </property>
   </action>
-  <action name="a_manip_servos_disconnect">
+  <action name="a_serial_servo_disconnect">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Disconnect (servos)</string>
+    <string>Disconnect</string>
    </property>
   </action>
   <action name="a_lidar_connect">
@@ -1693,11 +1727,6 @@
     <string>Debug Mode</string>
    </property>
   </action>
-  <action name="action">
-   <property name="text">
-    <string>Connect (camera)</string>
-   </property>
-  </action>
   <action name="a_pump_set_empty">
    <property name="text">
     <string>Set empty (0%)</string>
@@ -1706,6 +1735,16 @@
   <action name="a_pump_set_full">
    <property name="text">
     <string>Set full (100%)</string>
+   </property>
+  </action>
+  <action name="a_connect_all">
+   <property name="text">
+    <string>Connect All</string>
+   </property>
+  </action>
+  <action name="a_disconnect_all">
+   <property name="text">
+    <string>Disconnect All</string>
    </property>
   </action>
  </widget>

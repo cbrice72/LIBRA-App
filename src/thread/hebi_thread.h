@@ -8,7 +8,6 @@
 #pragma once
 
 // C++ Standard Library Headers
-#include <array>
 #include <chrono>
 #include <memory>
 #include <string>

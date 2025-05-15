@@ -21,6 +21,7 @@
  *        Creates a CSV file every time the LIBRA App is run.
  */
 class LogThread : public QThread {
+  public:
     explicit LogThread(QObject* parent, const bool& debug_mode);
     ~LogThread() override;
 
@@ -50,4 +51,4 @@ class LogThread : public QThread {
 
     std::ofstream continuous_log_;
     std::ofstream snapshot_log_;
-}
+};

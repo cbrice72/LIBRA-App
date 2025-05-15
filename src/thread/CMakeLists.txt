@@ -5,8 +5,23 @@
 # @author brice.c.aa
 ################################################################################
 
-# Specify subdirectory files for use by parent CMakeLists.txt
-set(THREAD_SOURCE
+# ---
+# Actuator Thread
+# ---
+
+# Check whether the third-party directories are defined
+if(NOT DEFINED EPOS_DIR)
+    message(FATAL_ERROR "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+endif()
+
+if(NOT DEFINED HEBI_DIR)
+    message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+endif()
+
+# Create and configure the module
+qt_add_library(
+    actuator_thread
+    STATIC
     # Actuator Definitions
     ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator_thread.h
@@ -16,8 +31,57 @@ set(THREAD_SOURCE
     # HEBI
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.cpp
-    # Logging
+)
+
+# Ensure this module has access to the necessary 3rd-party libraries
+set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/Eigen")
+
+target_include_directories(
+    actuator_thread
+    # EPOS (Maxon)
+    PUBLIC ${EPOS_INCLUDE_DIRS}
+    # HEBI
+    PUBLIC ${HEBI_INCLUDE_DIRS}
+    # Make sure the path to this directory is automatically added as an include
+    # path to all targets using this library
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    actuator_thread
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core
+    # EPOS (Maxon)
+    PRIVATE -lEposCmd
+    # HEBI
+    PRIVATE hebi hebic++ m pthread
+)
+
+# ---
+# Log Thread
+# ---
+
+# Create and configure the module
+qt_add_library(
+    log_thread
+    STATIC
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.cpp
-    PARENT_SCOPE
+)
+
+# Ensure this module has access to the necessary 3rd-party libraries, if any
+target_include_directories(
+    log_thread
+    # Make sure the path to this directory is automatically added as an include
+    # path to all targets using this library
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    log_thread
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core
 )
