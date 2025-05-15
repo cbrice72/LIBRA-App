@@ -2,9 +2,18 @@
     "configurations": [
         {
             "name": "Linux",
+            "compileCommands": "~/repos/build/compile_commands.json",
+            "compilerPath": "/usr/bin/clang++-17",
+            "intelliSenseMode": "linux-clang-x64",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/include/x86_64-linux-gnu/qt6/**",
+                "/usr/include/c++/11",
+                "/usr/include/x86_64-linux-gnu/c++/11",
+                "/usr/include/c++/11/backward",
+                "/usr/lib/gcc/x86_64-linux-gnu/11/include",
+                "/usr/local/include",
+                "/usr/include",
+                "~/Qt/6.9.0/gcc_64/include",
                 "~/repos/build/**/include/**"
             ],
             "defines": [
@@ -12,10 +21,7 @@
                 "UNICODE",
                 "_UNICODE"
             ],
-            "windowsSdkVersion": "10.0.22621.0",
-            "compilerPath": "/usr/bin/clang",
-            "intelliSenseMode": "linux-clang-x64",
-            "compileCommands": "${workspaceFolder}/lib/libra_actuators/build/compile_commands.json"
+            "windowsSdkVersion": "10.0.22621.0"
         }
     ],
     "version": 4
