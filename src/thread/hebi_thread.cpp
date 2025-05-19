@@ -19,7 +19,8 @@
 #include "Eigen/Core"    // Eigen
 #include "log_file.hpp"  // HEBI
 #include "lookup.hpp"    // HEBI
-#include <QDebug>        // Qt::Core
+// #include "util/grav_comp.hpp"  // HEBI
+#include <QDebug>  // Qt::Core
 
 // Project Headers
 //   (none)
@@ -39,8 +40,10 @@ constexpr double kRadToDeg = 180 / M_PI;
 
 // HEBI Functions
 
-constexpr int32_t kTimeout = 3000;  // ms
-constexpr double kMaxVel = 0.1;     // rad/s, arbitrary
+constexpr int32_t kTimeout = 3000;   // ms
+constexpr double kMaxVel = 0.1;      // rad/s
+constexpr double kStiffness = 10.0;  // Nm/rad
+constexpr double kDamping = 1.0;     // Nm/rad/s
 
 /**
  * @brief Standard constructor.
@@ -60,6 +63,10 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
+
+    // TODO: check if making an HRDF is worth it
+    //       (see lib/archive/libra_actuators/hebi_thread[.h,.cpp] for usage)
+    // model_.loadHRDF("./bin/shared/hebi/libra.hrdf");
 
     // Define joint order for organizing feedback
     // NOTE: ideally, this shouldn't be defined here since it defeats the purpose
@@ -185,6 +192,7 @@ void HebiThread::run() {
     // Initialize thread variables for efficiency
     Eigen::VectorXd pos_cmd(num_actuators_);
     Eigen::VectorXd vel_cmd(num_actuators_);
+    Eigen::VectorXd trq_cmd(num_actuators_);  // not currently used
 
     std::vector<double> t_pos(num_actuators_);
     std::vector<double> a_pos(num_actuators_);
@@ -201,6 +209,9 @@ void HebiThread::run() {
             continue;
         }
 
+        // Update feedback object
+        group_->getNextFeedback(*feedback_);
+
         // Determine movement command
         if (trajectory_ != nullptr) {
             time = std::chrono::system_clock::now() - trajectory_start_time_;
@@ -210,25 +221,45 @@ void HebiThread::run() {
                 command_->setPosition(pos_cmd);
                 command_->setVelocity(vel_cmd);
             } else {
-                // Trajectory is complete: delete it and reset command object
+                // Trajectory is complete
                 trajectory_.reset();
-                command_->clear();
 
                 if (debug_mode_) {
-                    qDebug() << "[HEBI] Trajectory complete";
+                    qDebug() << "[DEBUG] HEBI - Trajectory complete";
                 }
             }
         } else {
-            group_->getNextFeedback(*feedback_);
+            // Add compensating effort/torque to resist external forces
+            Eigen::VectorXd effort = Eigen::VectorXd::Zero(num_actuators_);
+            for (int i = 0; i < num_actuators_; i++) {
+                // Custom virtual spring-damper
+                auto pos_error = command_->getPosition()[i]
+                                 - feedback_->getPosition()[i];
+                auto vel_damping = -feedback_->getVelocity()[i];
+                effort(i) = (kStiffness * pos_error) + (kDamping * vel_damping);
+            }
+            command_->setEffort(effort);
 
+            // NOTE: this is problematic since it counteracts the actuator's
+            //       internal PID controller (see gains.xml)
+            /*
             // Counter measured angular velocity
-            vel_cmd = -feedback_->getGyro().col(2);  // z-axis
+            vel_cmd = -feedback_->getGyro().col(2);  // z-axis (same as output)
             command_->setVelocity(vel_cmd);
+            */
+
+            // TODO: check if making an HRDF is worth it
+            //       (see lib/archive/libra_actuators/hebi_thread[.h,.cpp] for usage)
+            /*
+            // Counter measured torque
+            trq_cmd = hebi::util::getGravCompEfforts(model_, masses,
+            *feedback_);
+            command_->setEffort(trq_cmd);
+            */
         }
 
-        // Send movement command and update feedback object
+        // Send movement command
         group_->sendCommand(*command_);
-        group_->getNextFeedback(*feedback_);
 
         // Report important statuses individually
         // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
@@ -326,7 +357,7 @@ void HebiThread::Connect() {
     command_->clear();
 
     if (debug_mode_) {
-        qDebug() << "HEBI - Connection successful";
+        qDebug() << "[DEBUG] HEBI - Connection successful";
     }
 
     // Command actuator(s) to hold current position
@@ -363,7 +394,8 @@ void HebiThread::Disconnect() {
         group_.reset();
 
         if (debug_mode_) {
-            qDebug() << "HEBI - Gracefully disconnected from actuator(s)";
+            qDebug()
+                << "[DEBUG] HEBI - Gracefully disconnected from actuator(s)";
         }
     }
 }
@@ -395,7 +427,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     std::stringstream trajectory_ss;  // for debug only
 
     // Populate positions
-    pos.col(0) = command_->getPosition();  // start (current value)
+    group_->getNextFeedback(*feedback_);
+    pos.col(0) = feedback_->getPosition();  // start (current value)
     for (auto i = 0; i < target.size(); i++) {
         pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
         if (debug_mode_) {
@@ -420,8 +453,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                                                                       &accel);
 
     if (debug_mode_) {
-        qDebug() << "HEBI - Set trajectory target(s) to" << trajectory_ss.str()
-                 << "rad";
+        qDebug() << "[DEBUG] HEBI - Set trajectory target(s) to"
+                 << trajectory_ss.str() << "rad";
     }
 }
 
@@ -436,6 +469,6 @@ void HebiThread::Stop() {
     trajectory_ = nullptr;
 
     if (debug_mode_) {
-        qDebug() << "HEBI - Trajectory reset";
+        qDebug() << "[DEBUG] HEBI - Trajectory reset";
     }
 }
