@@ -86,6 +86,8 @@ class MainWindow : public QMainWindow {
     // Sensors Menu
     // (some actions are handed off to signals, and thus don't need functions)
 
+    void on_a_refresh_camera_list_triggered();
+
     void on_a_lidar_connect_triggered();
     void on_a_lidar_disconnect_triggered();
     void on_a_lidar_about_triggered();

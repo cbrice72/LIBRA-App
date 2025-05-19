@@ -66,40 +66,6 @@ MainWindow::MainWindow(QWidget* parent)
         }
     }
 
-    // --- Component Connection ---
-
-    InitializeFeedbackElementMap();
-
-    // TODO: EPOS autoconnect
-
-    // TODO: LibraHebi autoconnect
-
-    // TODO: SerialWater autoconnect
-
-    // Camera
-    qDebug() << "[INFO] Checking available video inputs...";
-
-    const auto cameras = QMediaDevices::videoInputs();
-    for (const auto& camera_device : cameras) {
-        auto id = QString(camera_device.id());
-
-        if (debug_mode_) {
-            qDebug() << "[DEBUG] Found camera at " << camera_device.id();
-        }
-
-        // Populate ComboBox (new items are appended to existing list)
-        ui_->cb_camera_id->addItem(id);
-        // Populate internal map (used on ComboBox change)
-        available_cameras_[id] = camera_device.description();
-    }
-
-    if (!available_cameras_.empty()) {
-        ui_->pb_camera_capture->setEnabled(true);
-        ui_->pb_camera_record->setEnabled(true);
-    } else if (debug_mode_) {
-        qDebug() << "[DEBUG] No cameras were found";
-    }
-
     // --- Slot Management (non-thread) ---
 
     // Pumps (FOR TESTING PURPOSES ONLY)
@@ -200,6 +166,18 @@ MainWindow::MainWindow(QWidget* parent)
             hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
 
     hebi_thread_->start();
+
+    // --- Component Connection ---
+
+    InitializeFeedbackElementMap();
+
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(nullptr, "LIBRA App Startup",
+                                  "Automatically connect all components?",
+                                  QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::Yes) {
+        ui_->a_connect_all->trigger();
+    }
 }
 
 /**
@@ -453,6 +431,35 @@ void MainWindow::on_a_serial_servo_disconnect_triggered() {
 }
 
 /**
+ * @brief Event handler for "Sensors/RealSense" menu action "Refresh Camera
+ *        List". Populates the "Camera" tab's ComboBox with all detected cameras.
+ */
+void MainWindow::on_a_refresh_camera_list_triggered() {
+    qDebug() << "[INFO] Checking available video inputs...";
+
+    const auto cameras = QMediaDevices::videoInputs();
+    for (const auto& camera_device : cameras) {
+        auto id = QString(camera_device.id());
+
+        if (debug_mode_) {
+            qDebug() << "[DEBUG] Found camera at " << camera_device.id();
+        }
+
+        // Populate ComboBox (new items are appended to existing list)
+        ui_->cb_camera_id->addItem(id);
+        // Populate internal map (used on ComboBox change)
+        available_cameras_[id] = camera_device.description();
+    }
+
+    if (!available_cameras_.empty()) {
+        ui_->pb_camera_capture->setEnabled(true);
+        ui_->pb_camera_record->setEnabled(true);
+    } else if (debug_mode_) {
+        qDebug() << "[DEBUG] No cameras were found";
+    }
+}
+
+/**
  * @brief Event handler for "Sensors/2D LIDAR" menu action "Connect".
  *        ???
  */
@@ -587,7 +594,15 @@ void MainWindow::on_a_pump_set_full_triggered() {
  *        Connects all peripheral devices (actuators, sensors, etc.).
  */
 void MainWindow::on_a_connect_all_triggered() {
-    // TODO
+    // Actuators
+    ui_->a_epos_connect->trigger();
+    ui_->a_hebi_connect->trigger();
+    ui_->a_serial_servo_connect->trigger();
+    ui_->a_pump_connect->trigger();
+
+    // Sensors
+    ui_->a_refresh_camera_list->trigger();
+    ui_->a_lidar_connect->trigger();
 }
 
 /**
@@ -595,7 +610,14 @@ void MainWindow::on_a_connect_all_triggered() {
  *        Disconnects all peripheral devices (actuators, sensors, etc.).
  */
 void MainWindow::on_a_disconnect_all_triggered() {
-    // TODO
+    // Actuators
+    ui_->a_epos_disconnect->trigger();
+    ui_->a_hebi_disconnect->trigger();
+    ui_->a_serial_servo_disconnect->trigger();
+    ui_->a_pump_disconnect->trigger();
+
+    // Sensors
+    ui_->a_lidar_disconnect->trigger();
 }
 
 //------------------------------------------------------------------------------

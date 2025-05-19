@@ -1616,6 +1616,8 @@
      <property name="title">
       <string>RealSense</string>
      </property>
+     <addaction name="separator"/>
+     <addaction name="a_refresh_camera_list"/>
     </widget>
     <widget class="QMenu" name="m_lidar">
      <property name="title">
@@ -1745,6 +1747,11 @@
   <action name="a_disconnect_all">
    <property name="text">
     <string>Disconnect All</string>
+   </property>
+  </action>
+  <action name="a_refresh_camera_list">
+   <property name="text">
+    <string>Refresh Camera List</string>
    </property>
   </action>
  </widget>
