@@ -479,7 +479,7 @@
             <number>0</number>
            </property>
            <property name="tracking">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -663,6 +663,9 @@
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
            </property>
+           <property name="decimals">
+            <number>0</number>
+           </property>
            <property name="minimum">
             <double>-90.000000000000000</double>
            </property>
@@ -760,6 +763,9 @@
            </property>
            <property name="alignment">
             <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+           <property name="decimals">
+            <number>0</number>
            </property>
            <property name="minimum">
             <double>-90.000000000000000</double>
@@ -952,7 +958,7 @@
             <number>-90</number>
            </property>
            <property name="tracking">
-            <bool>false</bool>
+            <bool>true</bool>
            </property>
            <property name="orientation">
             <enum>Qt::Orientation::Horizontal</enum>
@@ -1554,11 +1560,11 @@
      <height>19</height>
     </rect>
    </property>
-   <widget class="QMenu" name="m_pumps">
+   <widget class="QMenu" name="m_pump">
     <property name="title">
      <string>Pump</string>
     </property>
-    <widget class="QMenu" name="m_pumps_advanced">
+    <widget class="QMenu" name="m_pump_advanced">
      <property name="title">
       <string>Advanced</string>
      </property>
@@ -1568,7 +1574,7 @@
     <addaction name="a_pump_connect"/>
     <addaction name="a_pump_disconnect"/>
     <addaction name="separator"/>
-    <addaction name="m_pumps_advanced"/>
+    <addaction name="m_pump_advanced"/>
    </widget>
    <widget class="QMenu" name="m_preferences">
     <property name="title">
@@ -1641,7 +1647,7 @@
    <addaction name="m_preferences"/>
    <addaction name="m_actuators"/>
    <addaction name="m_sensors"/>
-   <addaction name="m_pumps"/>
+   <addaction name="m_pump"/>
    <addaction name="m_quick_actions"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>

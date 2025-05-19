@@ -115,7 +115,7 @@ class MainWindow : public QMainWindow {
     void on_pb_manip_slow_clicked();
     void on_pb_manip_fast_clicked();
 
-    // Pumps
+    // Pump
 
     void on_pb_pump_enable_clicked();
     void on_pb_pump_disable_clicked();

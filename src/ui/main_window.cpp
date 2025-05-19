@@ -28,7 +28,7 @@
  * !Main Window
  * !Arm
  * !Manipulator
- * !Pumps
+ * !Pump
  * !Camera
  * !Misc.
  * !Uncategorized
@@ -68,7 +68,18 @@ MainWindow::MainWindow(QWidget* parent)
 
     // --- Slot Management (non-thread) ---
 
-    // Pumps (FOR TESTING PURPOSES ONLY)
+    // Arm
+    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // when moved
+            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);     // update display
+    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // when changed
+            ui_->hs_arm_yaw, &QAbstractSlider::setValue);    // update slider
+
+    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved
+            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);     // update display
+    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
+            ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
+
+    // Pump (FOR TESTING PURPOSES ONLY)
     connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
             ui_->w_tank_visual, &TankWidget::Fill);      // start filling
 
@@ -633,24 +644,10 @@ void MainWindow::on_a_disconnect_all_triggered() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
     // Yaw
-    auto val = ui_->sb_arm_yaw->value();
-
-    if (ui_->hs_arm_yaw->value() != val) {
-        // If value was entered via the SpinBox, update the slider
-        ui_->hs_arm_yaw->setValue(val);
-    }
-
-    emit CommandEpos({val});
+    emit CommandEpos({ui_->sb_arm_yaw->value()});
 
     // Pitch
-    val = ui_->sb_arm_pitch->value();
-
-    if (ui_->hs_arm_pitch->value() != val) {
-        // If value was entered via the SpinBox, update the slider
-        ui_->hs_arm_pitch->setValue(val);
-    }
-
-    emit CommandHebi({val});
+    emit CommandHebi({ui_->sb_arm_pitch->value()});
 }
 
 //------------------------------------------------------------------------------
@@ -719,11 +716,11 @@ void MainWindow::UpdateServoVals() {
 }
 
 //------------------------------------------------------------------------------
-// !Pumps
+// !Pump
 //------------------------------------------------------------------------------
 
 /**
- * @brief Enables operation of fluid system pumps.
+ * @brief Enables operation of fluid system pump(s).
  */
 void MainWindow::on_pb_pump_enable_clicked() {
     if (!ser_water_->isOpen()) {
@@ -741,7 +738,7 @@ void MainWindow::on_pb_pump_enable_clicked() {
 }
 
 /**
- * @brief Disables operation of fluid system pumps.
+ * @brief Disables operation of fluid system pump(s).
  *
  * @todo Combine funcitonality with `on_pb_pump_enable_clicked()` and
  *       refactor the resulting function. Don't forget to rename it to something
@@ -765,7 +762,7 @@ void MainWindow::on_pb_pump_disable_clicked() {
 }
 
 /**
- * @brief Enables fluid system pumps and forces them on.
+ * @brief Enables fluid system pump(s) and forces them on.
  */
 void MainWindow::on_pb_pump_drain_clicked() {
     if (!ser_water_->isOpen()) {
