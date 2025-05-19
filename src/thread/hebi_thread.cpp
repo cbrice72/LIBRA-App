@@ -42,7 +42,7 @@ constexpr double kRadToDeg = 180 / M_PI;
 
 constexpr int32_t kTimeout = 3000;   // ms
 constexpr double kMaxVel = 0.1;      // rad/s
-constexpr double kStiffness = 10.0;  // Nm/rad
+constexpr double kStiffness = 50.0;  // Nm/rad
 constexpr double kDamping = 1.0;     // Nm/rad/s
 
 /**
@@ -232,7 +232,7 @@ void HebiThread::run() {
             // Add compensating effort/torque to resist external forces
             Eigen::VectorXd effort = Eigen::VectorXd::Zero(num_actuators_);
             for (int i = 0; i < num_actuators_; i++) {
-                // Custom virtual spring-damper
+                // Virtual spring-damper
                 auto pos_error = command_->getPosition()[i]
                                  - feedback_->getPosition()[i];
                 auto vel_damping = -feedback_->getVelocity()[i];
@@ -246,15 +246,6 @@ void HebiThread::run() {
             // Counter measured angular velocity
             vel_cmd = -feedback_->getGyro().col(2);  // z-axis (same as output)
             command_->setVelocity(vel_cmd);
-            */
-
-            // TODO: check if making an HRDF is worth it
-            //       (see lib/archive/libra_actuators/hebi_thread[.h,.cpp] for usage)
-            /*
-            // Counter measured torque
-            trq_cmd = hebi::util::getGravCompEfforts(model_, masses,
-            *feedback_);
-            command_->setEffort(trq_cmd);
             */
         }
 
@@ -466,7 +457,7 @@ void HebiThread::Stop() {
         return;  // do nothing
     }
 
-    trajectory_ = nullptr;
+    trajectory_.reset();
 
     if (debug_mode_) {
         qDebug() << "[DEBUG] HEBI - Trajectory reset";
