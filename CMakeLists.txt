@@ -175,7 +175,9 @@ target_include_directories(
 
 if(BUILD_WITH_ROS2)
     # Let ament take care of adding headers, libraries, and sub-dependencies
-    ament_target_dependencies(libra_app PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES})
+    ament_target_dependencies(
+        libra_app PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
+    )
 endif()
 
 # Tell the linker which libraries to link against

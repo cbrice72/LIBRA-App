@@ -9,11 +9,17 @@
 
 # Check whether the third-party directories are defined
 if(NOT DEFINED EPOS_DIR)
-    message(FATAL_ERROR "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+    message(
+        FATAL_ERROR
+            "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
+    )
 endif()
 
 if(NOT DEFINED HEBI_DIR)
-    message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+    message(
+        FATAL_ERROR
+            "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
+    )
 endif()
 
 # Create and configure the module
@@ -33,7 +39,9 @@ qt_add_library(
 
 # Ensure this module has access to the necessary 3rd-party libraries
 set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/Eigen")
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
+                      "${HEBI_DIR}/Eigen"
+)
 
 target_include_directories(
     actuator_thread
@@ -46,7 +54,9 @@ target_include_directories(
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-ament_target_dependencies(actuator_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES})
+ament_target_dependencies(
+    actuator_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
+)
 
 # Tell the linker which libraries to link against
 target_link_libraries(
@@ -65,6 +75,7 @@ target_link_libraries(
 qt_add_library(
     log_thread
     STATIC
+    # Logging
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.cpp
 )
@@ -76,8 +87,6 @@ target_include_directories(
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-# ament_target_dependencies(log_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES})
 
 # Tell the linker which libraries to link against
 target_link_libraries(

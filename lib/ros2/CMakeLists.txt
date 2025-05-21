@@ -6,5 +6,5 @@
 ################################################################################
 
 # Register interfaces (e.g., messages) before the nodes that use them
-#add_subdirectory(interfaces) # TODO
+# TODO: add_subdirectory(interfaces)
 add_subdirectory(nodes)

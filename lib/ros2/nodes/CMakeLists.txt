@@ -31,7 +31,7 @@ foreach(PKG ${ROS_MSG_PACKAGES})
     find_package(${PKG} REQUIRED)
 endforeach()
 
-## ========================= MINIMAL PUB/SUB NODE =========================
+# ========================= MINIMAL PUB/SUB NODE =========================
 
 # Create and configure the module
 add_executable(
@@ -58,6 +58,6 @@ install(
     RUNTIME DESTINATION ${ROS2_INSTALL_DIR}
 )
 
-## ========================= PACKAGE END =========================
+# ========================= PACKAGE END =========================
 
 ament_package()

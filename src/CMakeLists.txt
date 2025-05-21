@@ -6,16 +6,14 @@
 ################################################################################
 
 # Add project modules
-add_subdirectory(thread)   # actuator_thread, log_thread
+add_subdirectory(thread) # actuator_thread, log_thread
 
 # Collect project source files
-add_subdirectory(ui)       # UI_SOURCE
-add_subdirectory(widgets)  # WIDGET_SOURCE
+add_subdirectory(ui) # UI_SOURCE
+add_subdirectory(widgets) # WIDGET_SOURCE
 
 # Define project sources for use by root CMakeLists.txt
 set(PROJECT_SOURCE
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
-    ${UI_SOURCE}
-    ${WIDGET_SOURCE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ${UI_SOURCE} ${WIDGET_SOURCE}
     PARENT_SCOPE
 )

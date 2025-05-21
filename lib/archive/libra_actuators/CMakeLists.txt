@@ -21,10 +21,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     get_filename_component(ROOT_DIR "${ROOT_DIR}" REALPATH)
 
     # Project options
-    set(EPOS_DIR "${ROOT_DIR}/thirdparty/epos-6.8.1.0"
-        CACHE PATH "Path to the latest EPOS API" FORCE)
-    set(HEBI_DIR "${ROOT_DIR}/thirdparty/hebi-cpp-3.11.1"
-        CACHE PATH "Path to the latest HEBI API" FORCE)
+    set(EPOS_DIR
+        "${ROOT_DIR}/thirdparty/epos-6.8.1.0"
+        CACHE PATH "Path to the latest EPOS API" FORCE
+    )
+    set(HEBI_DIR
+        "${ROOT_DIR}/thirdparty/hebi-cpp-3.11.1"
+        CACHE PATH "Path to the latest HEBI API" FORCE
+    )
 
     # ~~~
     # - NOTE: the following is necessary since HEBI_DIR is an out-of-tree source
@@ -32,7 +36,10 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # ~~~
     set(hebi_cpp_build_dir hebi-cpp-${CMAKE_BUILD_TYPE})
     string(TOLOWER ${hebi_cpp_build_dir} hebi_cpp_build_dir)
-    get_filename_component(hebi_cpp_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${hebi_cpp_build_dir}" REALPATH)
+    get_filename_component(
+        hebi_cpp_build_dir "${CMAKE_CURRENT_BINARY_DIR}/${hebi_cpp_build_dir}"
+        REALPATH
+    )
 
     # CMake options
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
@@ -54,13 +61,14 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(${HEBI_DIR} ${hebi_cpp_build_dir})
 endif()
 
-# ---
-# EPOS (Maxon) Thread
-# ---
+# --- EPOS (Maxon) Thread ---
 
 # Check whether the EPOS directory is defined
 if(NOT DEFINED EPOS_DIR)
-    message(FATAL_ERROR "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+    message(
+        FATAL_ERROR
+            "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
+    )
 endif()
 
 # Create and configure the module
@@ -95,16 +103,16 @@ target_link_libraries(
     PRIVATE -lEposCmd
 )
 
-# ---
-# HEBI Thread
-# ---
+# --- HEBI Thread ---
 
 # Check whether the HEBI directory is defined
 if(NOT DEFINED HEBI_DIR)
-    message(FATAL_ERROR "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable")
+    message(
+        FATAL_ERROR
+            "HEBI_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
+    )
 endif()
-# - Include headers from all libraries used by HEBI
-
+# * Include headers from all libraries used by HEBI
 
 # Create and configure the module
 qt_add_library(
@@ -119,7 +127,9 @@ qt_add_library(
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
-set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include" "${HEBI_DIR}/Eigen")
+set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
+                      "${HEBI_DIR}/Eigen"
+)
 target_include_directories(
     hebi_thread
     # HEBI
@@ -138,28 +148,29 @@ target_link_libraries(
     PRIVATE hebi hebic++ m pthread
 )
 
-# ---
-# Example
-# ---
+# --- Example ---
 
-# Only build the example if this CMakeLists.txt was directly invoked
-# (i.e., this CMakeLists.txt was not called as a result of `add_subdirectory()`)
+# Only build the example if this CMakeLists.txt was directly invoked (i.e., this
+# CMakeLists.txt was not called as a result of `add_subdirectory()`)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Add project subdirectories
-    add_subdirectory(example-src)  # PROJECT_SOURCE
+    add_subdirectory(example-src) # PROJECT_SOURCE
 
     # Add target executable
     if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
-        qt_add_executable(LIBRA-Actuators-Example MANUAL_FINALIZATION ${PROJECT_SOURCE})
-        # Define target properties for Android with Qt 6 as:
-        #    set_property(TARGET LIBRA-Actuators-Example APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
-        #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
-        # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
+        qt_add_executable(
+            LIBRA-Actuators-Example MANUAL_FINALIZATION ${PROJECT_SOURCE}
+        )
+        # Define target properties for Android with Qt 6 as: set_property(TARGET
+        # LIBRA-Actuators-Example APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+        # ${CMAKE_CURRENT_SOURCE_DIR}/android) For more information, see
+        # https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
     else()
         if(ANDROID)
             add_library(LIBRA-Actuators-Example SHARED ${PROJECT_SOURCE})
-            # Define properties for Android with Qt 5 after find_package() calls as:
-            #    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+            # Define properties for Android with Qt 5 after find_package() calls
+            # as: set(ANDROID_PACKAGE_SOURCE_DIR
+            # "${CMAKE_CURRENT_SOURCE_DIR}/android")
         else()
             add_executable(LIBRA-Actuators-Example ${PROJECT_SOURCE})
         endif()
@@ -194,17 +205,21 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # Specify platform-specific properties
     # ~~~
     if(${QT_VERSION} VERSION_LESS 6.1.0)
-        # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-        # If you are developing for iOS or macOS you should consider setting an
-        # explicit, fixed bundle identifier manually though.
-        set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER com.example.LIBRA-Actuators-Example)
+        # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt
+        # 6.1. If you are developing for iOS or macOS you should consider
+        # setting an explicit, fixed bundle identifier manually though.
+        set(BUNDLE_ID_OPTION MACOSX_BUNDLE_GUI_IDENTIFIER
+                             com.example.LIBRA-Actuators-Example
+        )
     endif()
-    set_target_properties(LIBRA-Actuators-Example PROPERTIES
-        ${BUNDLE_ID_OPTION}
-        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
-        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-        MACOSX_BUNDLE TRUE
-        WIN32_EXECUTABLE TRUE
+    set_target_properties(
+        LIBRA-Actuators-Example
+        PROPERTIES ${BUNDLE_ID_OPTION} MACOSX_BUNDLE_BUNDLE_VERSION
+                   ${PROJECT_VERSION} MACOSX_BUNDLE_SHORT_VERSION_STRING
+                   ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
+                   MACOSX_BUNDLE
+                   TRUE WIN32_EXECUTABLE
+                   TRUE
     )
     # ~~~
 
@@ -212,7 +227,8 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     include(GNUInstallDirs)
 
     # Specify installation settings
-    install(TARGETS LIBRA-Actuators-Example
+    install(
+        TARGETS LIBRA-Actuators-Example
         BUNDLE DESTINATION .
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

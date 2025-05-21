@@ -64,9 +64,11 @@ TODO
 
 ### *Code Formatting*
 
-This project uses [Clang-Format](https://clang.llvm.org/docs/ClangFormat.html) to format header (`.h`) and source (`.cpp`) files based on the parameters in the `.clang-format` file in this directory, and [cmake-format](https://github.com/cheshirekow/cmake_format) to format CMake (`CMakeLists.txt`) files based on the parameters in the `cmake-format.yaml` file in this directory.
+This project uses [Clang-Format](https://clang.llvm.org/docs/ClangFormat.html) to format C++ header (`.h`) and source (`.cpp`) files based on the parameters in the `.clang-format` file in this directory, and [cmake-format](https://github.com/cheshirekow/cmake_format) to format CMake (`CMakeLists.txt`) files based on the parameters in the `cmake-format.yaml` file in this directory.
 
 If you installed the optional VS Code extensions of the same names, formatting will be automatically applied whenever you save a file.
+
+> ***NOTE:*** If your cmake-format extension isn't working, the bash script `tools/cmake-format-all.bash` will recursively run it for you.
 
 ### *Code Linting*
 
