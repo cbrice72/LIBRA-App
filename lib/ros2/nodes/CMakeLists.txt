@@ -13,9 +13,6 @@ project(
     LANGUAGES CXX
 )
 
-# Project options
-set(ROS2_INSTALL_DIR "${CMAKE_SOURCE_DIR}/ros2_ws/install")
-
 # CMake options
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
 
@@ -40,6 +37,10 @@ add_executable(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/minimal_pub_sub.cpp
 )
 
+set_target_properties(minimal_pub_sub PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 # Ensure this module has access to the necessary 3rd-party libraries
 target_include_directories(
     minimal_pub_sub
@@ -51,12 +52,7 @@ target_include_directories(
 ament_target_dependencies(minimal_pub_sub PUBLIC rclcpp std_msgs)
 
 # Specify installation settings
-install(
-    TARGETS minimal_pub_sub
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${ROS2_INSTALL_DIR}
-    RUNTIME DESTINATION ${ROS2_INSTALL_DIR}
-)
+install(TARGETS minimal_pub_sub)
 
 # ========================= PACKAGE END =========================
 
