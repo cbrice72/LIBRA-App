@@ -5,9 +5,7 @@
 # @author brice.c.aa
 ################################################################################
 
-# ---
-# Actuator Thread
-# ---
+# ========================= ACTUATOR THREAD =========================
 
 # Check whether the third-party directories are defined
 if(NOT DEFINED EPOS_DIR)
@@ -48,6 +46,8 @@ target_include_directories(
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+ament_target_dependencies(actuator_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES})
+
 # Tell the linker which libraries to link against
 target_link_libraries(
     actuator_thread
@@ -59,9 +59,7 @@ target_link_libraries(
     PRIVATE hebi hebic++ m pthread
 )
 
-# ---
-# Log Thread
-# ---
+# ========================= LOG THREAD =========================
 
 # Create and configure the module
 qt_add_library(
@@ -78,6 +76,8 @@ target_include_directories(
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# ament_target_dependencies(log_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES})
 
 # Tell the linker which libraries to link against
 target_link_libraries(

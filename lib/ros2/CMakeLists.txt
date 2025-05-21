@@ -1,13 +1,10 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  Project modules root CMakeLists file.
+# @brief  ROS2 workspace CMakeLists file.
 #
 # @author brice.c.aa
 ################################################################################
 
-# Add module subdirectories
-add_subdirectory(camera_manager)
-add_subdirectory(util)
-if(BUILD_WITH_ROS2)
-    add_subdirectory(ros2)
-endif()
+# Register interfaces (e.g., messages) before the nodes that use them
+#add_subdirectory(interfaces) # TODO
+add_subdirectory(nodes)
