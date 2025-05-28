@@ -30,5 +30,3 @@ ament_target_dependencies(minimal_pub_sub PUBLIC rclcpp std_msgs)
 
 # Specify installation settings
 install(TARGETS minimal_pub_sub)
-
-ament_package()
