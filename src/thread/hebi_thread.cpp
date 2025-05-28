@@ -56,6 +56,9 @@ constexpr double kDamping = 1.0;     // Nm/rad/s
 HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kHebi),
+#ifdef BUILD_WITH_ROS2
+      rclcpp::Node("hebi_node"),
+#endif
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
@@ -78,6 +81,11 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
                     Actuator::Joint::kJ3};     // LIBRA-I
     */
     joint_order_ = {Actuator::Joint::kPitch};  // LIBRA-II
+
+#ifdef BUILD_WITH_ROS2
+    // Initialize ROS2 components
+    InitializeROS();
+#endif
 }
 
 /**
@@ -90,9 +98,7 @@ HebiThread::~HebiThread() {
     //   3) Ensures the main HEBI object gets cleaned up
     Disconnect();
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Cleaned up HebiThread";
-    }
+    DebugOut("Cleaned up HebiThread");
 }
 
 //------------------------------------------------------------------------------
@@ -100,6 +106,21 @@ HebiThread::~HebiThread() {
 //------------------------------------------------------------------------------
 
 namespace {  // local to this file
+
+/**
+ * @brief Wrapper around a commonly-used code block, to improve readability.
+ *
+ * @param str Debug message to print
+ */
+void DebugOut(std::string str) {
+#ifdef BUILD_WITH_ROS2
+    util::LogDebug(str);
+#else
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] " << str;
+    }
+#endif
+}
 
 }  // namespace
 
@@ -177,6 +198,118 @@ QString HebiThread::GetStatus() {
     return QString::fromStdString(ss.str());
 }
 
+#ifdef BUILD_WITH_ROS2
+/**
+ * @brief Initialize ROS2 publishers and subscribers. (TODO: documentation)
+ */
+void HebiThread::InitializeROS() {
+    // Create publisher(s)
+    state_pub_ =
+        this->create_publisher<libra_msgs::msg::HebiState>("hebi/state", 10);
+
+    // Initialize message metadata
+    state_msg_.header.frame_id = "hebi_actuators";
+    state_msg_.families = families_;
+    state_msg_.names = names_;
+}
+
+/**
+ * @brief Publish HEBI actuator state(s).
+ *
+ * @note Currently, this function only exists to log actuator information in the
+ *       ROS2 ecosystem (i.e., via rosbag).
+ */
+void HebiThread::PublishState() {
+    if (!state_pub_ || group_ == nullptr) {
+        return;
+    }
+
+    // Update header timestamp
+    state_msg_.header.stamp = this->get_clock()->now();
+
+    // Resize vectors to match number of actuators
+    auto resize_vectors = [this]() {
+        state_msg_.target_position.resize(num_actuators_);
+        state_msg_.actual_position.resize(num_actuators_);
+        state_msg_.target_velocity.resize(num_actuators_);
+        state_msg_.actual_velocity.resize(num_actuators_);
+        state_msg_.target_effort.resize(num_actuators_);
+        state_msg_.actual_effort.resize(num_actuators_);
+        state_msg_.deflection.resize(num_actuators_);
+        state_msg_.deflection_velocity.resize(num_actuators_);
+        state_msg_.voltage.resize(num_actuators_);
+        state_msg_.current.resize(num_actuators_);
+        state_msg_.board_temp.resize(num_actuators_);
+    };
+    resize_vectors();
+
+    // Populate the message and publish it
+    for (int i = 0; i < num_actuators_; ++i) {
+        // Positions (convert from rad to deg)
+        state_msg_.target_position[i] = feedback_->getPositionCommand()[i]
+                                        * kRadToDeg;
+        state_msg_.actual_position[i] = feedback_->getPosition()[i] * kRadToDeg;
+
+        // Velocities (convert from rad/s to deg/s)
+        state_msg_.target_velocity[i] = feedback_->getVelocityCommand()[i]
+                                        * kRadToDeg;
+        state_msg_.actual_velocity[i] = feedback_->getVelocity()[i] * kRadToDeg;
+
+        // Efforts/Torques
+        state_msg_.target_effort[i] = feedback_->getEffortCommand()[i];
+        state_msg_.actual_effort[i] = feedback_->getEffort()[i];
+
+        // Additional sensor data
+        state_msg_.deflection[i] = feedback_->getDeflection()[i] * kRadToDeg;
+        state_msg_.deflection_velocity[i] = feedback_->getDeflectionVelocity()[i]
+                                            * kRadToDeg;
+
+        state_msg_.voltage[i] = feedback_->getVoltage()[i];
+        state_msg_.current[i] = feedback_->getMotorCurrent()[i];
+
+        state_msg_.board_temp[i] = feedback_->getMotorWindingTemperature()[i];
+    }
+
+    state_publisher_->publish(state_msg_);
+}
+
+/**
+ * @brief Convenience wrapper around `rclcpp` DEBUG print. Capturable by rosbag.
+ *
+ * @param message String to print.
+ */
+void HebiThread::LogDebug(const std::string& message) {
+    RCLCPP_DEBUG(this->get_logger(), "%s", message.c_str());
+}
+
+/**
+ * @brief Convenience wrapper around `rclcpp` INFO print. Capturable by rosbag.
+ *
+ * @param message String to print.
+ */
+void HebiThread::LogInfo(const std::string& message) {
+    RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
+}
+
+/**
+ * @brief Convenience wrapper around `rclcpp` WARN print. Capturable by rosbag.
+ *
+ * @param message String to print.
+ */
+void HebiThread::LogWarn(const std::string& message) {
+    RCLCPP_WARN(this->get_logger(), "%s", message.c_str());
+}
+
+/**
+ * @brief Convenience wrapper around `rclcpp` ERROR print. Capturable by rosbag.
+ *
+ * @param message String to print.
+ */
+void HebiThread::LogError(const std::string& message) {
+    RCLCPP_ERROR(this->get_logger(), "%s", message.c_str());
+}
+#endif
+
 //------------------------------------------------------------------------------
 // !Thread Overrides
 //------------------------------------------------------------------------------
@@ -185,18 +318,12 @@ QString HebiThread::GetStatus() {
  * @brief Main command loop.
  */
 void HebiThread::run() {
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Initialized HebiThread";
-    }
+    DebugOut("Initialized HebiThread");
 
     // Initialize thread variables for efficiency
     Eigen::VectorXd pos_cmd(num_actuators_);
     Eigen::VectorXd vel_cmd(num_actuators_);
-    Eigen::VectorXd trq_cmd(num_actuators_);  // not currently used
-
-    std::vector<double> t_pos(num_actuators_);
-    std::vector<double> a_pos(num_actuators_);
-    std::vector<double> a_trq(num_actuators_);
+    // Eigen::VectorXd trq_cmd(num_actuators_);  // not currently used
 
     std::chrono::duration<double> time(std::chrono::system_clock::now()
                                        - trajectory_start_time_);
@@ -204,7 +331,7 @@ void HebiThread::run() {
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
         if (group_ == nullptr) {
-            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            PublishInfo();
             QThread::msleep(10);
             continue;
         }
@@ -224,9 +351,7 @@ void HebiThread::run() {
                 // Trajectory is complete
                 trajectory_.reset();
 
-                if (debug_mode_) {
-                    qDebug() << "[DEBUG] HEBI - Trajectory complete";
-                }
+                DebugOut("HEBI - Trajectory complete");
             }
         } else {
             // Add compensating effort/torque to resist external forces
@@ -252,6 +377,11 @@ void HebiThread::run() {
         // Send movement command
         group_->sendCommand(*command_);
 
+#ifdef BUILD_WITH_ROS2
+        // Make actuator state info available to other ROS2 nodes
+        PublishState();
+#endif
+
         // Report important statuses individually
         // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
         //       `get` functions return Eigen types. We use Eigen's `Map` to
@@ -271,11 +401,11 @@ void HebiThread::run() {
         emit ReportFeedback(GetFeedbackMap(a_trq),
                             Actuator::Feedback::kActualTorque);
 
-        // Report minor statuses all together
+        // Report miscellaneous statuses in one batch
         emit ReportStatus(GetStatus(), type_);
 
         // Don't overwhelm network
-        QThread::msleep(10);  // update 100 times/second (theoretically)
+        QThread::msleep(10);  // 100 Hz
     }
 }
 
@@ -309,13 +439,9 @@ void HebiThread::Connect() {
             return;
         }
 
-        if (debug_mode_) {
-            qDebug()
-                << "[DEBUG] HEBI - Found following actuators (Family|Name):";
-
-            for (auto entry : *entry_list) {
-                qDebug() << " " << entry.family_ << "|" << entry.name_;
-            }
+        DebugOut("HEBI - Found following actuators (Family|Name):");
+        for (auto entry : *entry_list) {
+            DebugOut("  " + entry.family_ + " | " + entry.name_);
         }
     }
 
@@ -347,9 +473,7 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI - Connection successful";
-    }
+    DebugOut("HEBI - Connection successful");
 
     // Command actuator(s) to hold current position
     group_ = group;
@@ -363,9 +487,7 @@ void HebiThread::Connect() {
         return;
     }
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI - Creating log file at" << log_path;
-    }
+    DebugOut("HEBI - Creating log file at" + log_path);
 }
 
 /**
@@ -384,10 +506,7 @@ void HebiThread::Disconnect() {
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
 
-        if (debug_mode_) {
-            qDebug()
-                << "[DEBUG] HEBI - Gracefully disconnected from actuator(s)";
-        }
+        DebugOut("HEBI - Gracefully disconnected from actuator(s)");
     }
 }
 
@@ -443,10 +562,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                                                                       &vel,
                                                                       &accel);
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI - Set trajectory target(s) to"
-                 << trajectory_ss.str() << "rad";
-    }
+    DebugOut("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
+             + " rad");
 }
 
 /**
@@ -459,7 +576,5 @@ void HebiThread::Stop() {
 
     trajectory_.reset();
 
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] HEBI - Trajectory reset";
-    }
+    DebugOut("HEBI - Trajectory reset");
 }

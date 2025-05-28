@@ -14,8 +14,8 @@
 #include <thread>
 
 // Other Library Headers
-#include "rclcpp/rclcpp.hpp"        // rclcpp (ROS2)
-#include "std_msgs/msg/string.hpp"  // std__msgs (ROS2)
+#include "rclcpp/rclcpp.hpp"        // ROS2 Core
+#include "std_msgs/msg/string.hpp"  // ROS2 Messages
 
 // Project Headers
 //   (none)

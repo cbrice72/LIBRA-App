@@ -10,7 +10,7 @@ cmake_minimum_required(VERSION 3.16)
 project(
     libra_app
     VERSION 0.1
-    LANGUAGES CXX
+    LANGUAGES CXX C
 )
 
 # ========================= CONFIG =========================
@@ -109,6 +109,10 @@ find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
+    # Ensure the relevant preprocessor macros are triggered in C++ code
+    add_compile_definitions(BUILD_WITH_ROS2)
+
+    # Find ROS2 packages
     set(ROS_CORE_PACKAGES # used in other CMakeLists
         ament_cmake rclcpp rmw_implementation rosidl_default_generators
         CACHE INTERNAL "Required ROS2 core packages" FORCE
@@ -118,7 +122,7 @@ if(BUILD_WITH_ROS2)
     endforeach()
 
     set(ROS_MSG_PACKAGES # used in other CMakeLists
-        std_msgs sensor_msgs
+        builtin_interfaces std_msgs sensor_msgs
         CACHE INTERNAL "Required ROS2 message packages" FORCE
     )
     foreach(PKG ${ROS_MSG_PACKAGES})
@@ -139,7 +143,7 @@ set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
 # ========================= BUILD =========================
 
 # Add project subdirectories
-add_subdirectory(lib) # camera_manager, util, [ROS2 nodes & interfaces]
+add_subdirectory(lib) # camera_manager, util, [ROS2 interfaces & nodes]
 add_subdirectory(src) # PROJECT_SOURCE, actuator_thread, log_thread
 
 # Add target executable

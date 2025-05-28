@@ -18,6 +18,10 @@
 #include "group_command.hpp"   // HEBI
 #include "group_feedback.hpp"  // HEBI
 #include "trajectory.hpp"      // HEBI
+#ifdef BUILD_WITH_ROS2
+# include <libra_interfaces/msg/hebi_state.hpp>  // libra_interfaces
+# include <rclcpp/rclcpp.hpp>                    // ROS2 Core
+#endif
 
 // Project Headers
 #include "abstract_actuator_thread.h"
@@ -27,7 +31,13 @@
  *
  * @see abstract_actuator_thread.h
  */
-class HebiThread : public AbstractActuatorThread {
+class HebiThread : public AbstractActuatorThread
+#ifdef BUILD_WITH_ROS2
+    ,
+                   public rclcpp::Node
+#endif
+{
+
   public:
     explicit HebiThread(QObject* parent, std::vector<std::string> families,
                         std::vector<std::string> names,
@@ -57,6 +67,16 @@ class HebiThread : public AbstractActuatorThread {
         const std::vector<double>& feedback);
     QString GetStatus();
 
+#ifdef BUILD_WITH_ROS2
+    void InitializeROS();
+    void PublishState();
+
+    void LogDebug(const std::string& message);
+    void LogInfo(const std::string& message);
+    void LogWarn(const std::string& message);
+    void LogError(const std::string& message);
+#endif
+
     // --- Data Members ---
 
     std::vector<std::string> families_;
@@ -71,4 +91,9 @@ class HebiThread : public AbstractActuatorThread {
 
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;
+
+#ifdef BUILD_WITH_ROS2
+    rclcpp::Publisher<libra_msgs::msg::HebiState>::SharedPtr state_pub_;
+    libra_interfaces::msg::HebiState state_msg_;  // reused for efficiency
+#endif
 };

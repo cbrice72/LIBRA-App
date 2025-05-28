@@ -6,5 +6,5 @@
 ################################################################################
 
 # Register interfaces (e.g., messages) before the nodes that use them
-# TODO: add_subdirectory(interfaces)
-add_subdirectory(nodes)
+add_subdirectory(interfaces) # libra_interfaces
+add_subdirectory(nodes) # minimal_pub_sub

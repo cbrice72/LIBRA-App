@@ -5,29 +5,6 @@
 # @author brice.c.aa
 ################################################################################
 
-cmake_minimum_required(VERSION 3.16)
-
-project(
-    libra_nodes
-    VERSION 0.1
-    LANGUAGES CXX
-)
-
-# CMake options
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
-
-# Specify C++ standard to define available features
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Dependencies (installed on system)
-foreach(PKG ${ROS_CORE_PACKAGES})
-    find_package(${PKG} REQUIRED)
-endforeach()
-foreach(PKG ${ROS_MSG_PACKAGES})
-    find_package(${PKG} REQUIRED)
-endforeach()
-
 # ========================= MINIMAL PUB/SUB NODE =========================
 
 # Create and configure the module
@@ -53,7 +30,5 @@ ament_target_dependencies(minimal_pub_sub PUBLIC rclcpp std_msgs)
 
 # Specify installation settings
 install(TARGETS minimal_pub_sub)
-
-# ========================= PACKAGE END =========================
 
 ament_package()

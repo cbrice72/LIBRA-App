@@ -1,19 +1,16 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>libra_interfaces</name>
+  <name>thread</name>
   <version>0.0.0</version>
-  <description>ROS2 interfaces for the LIBRA control app</description>
+  <description>ROS2-enabled threads for the LIBRA app</description>
   <maintainer email="brice.c.67b9@m.isct.ac.jp">Christian Brice</maintainer>
   <license>Please see LICENSE.txt in the project root directory.</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>rclcpp</depend>
-  <depend>std_msgs</depend>
-  
-  <test_depend>ament_lint_auto</test_depend>
-  <test_depend>ament_lint_common</test_depend>
+  <depend>libra_interfaces</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

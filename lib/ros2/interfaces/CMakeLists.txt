@@ -5,33 +5,19 @@
 # @author brice.c.aa
 ################################################################################
 
-cmake_minimum_required(VERSION 3.16)
-
-project(
-    libra_interfaces
-    VERSION 0.1
-    LANGUAGES CXX
+# List necessary files for each interface
+set(actuator_msgs
+    "msg/HebiState.msg"
 )
 
-# CMake options
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
+# Generate all interfaces at once
+rosidl_generate_interfaces(libra_interfaces
+    ${actuator_msgs}
+    DEPENDENCIES ${ROS_MSG_PACKAGES}
+)
 
-# Specify C++ standard to define available features
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# --- The following jankiness seems to be required to use ROS2 objects in pure CMake ---
 
-# Dependencies (installed on system)
-foreach(PKG ${ROS_CORE_PACKAGES})
-    find_package(${PKG} REQUIRED)
-endforeach()
-foreach(PKG ${ROS_MSG_PACKAGES})
-    find_package(${PKG} REQUIRED)
-endforeach()
-
-# ========================= TODO =========================
-
-# ...
-
-# ========================= PACKAGE END =========================
-
-ament_package()
+# Expose typesupport target and base name for linking in parent project
+rosidl_get_typesupport_target(libra_interfaces_cpp_target libra_interfaces "rosidl_typesupport_cpp")
+set(LIBRA_INTERFACES_CPP_TARGET ${libra_interfaces_cpp_target} PARENT_SCOPE)

@@ -54,9 +54,15 @@ target_include_directories(
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-ament_target_dependencies(
-    actuator_thread PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
-)
+if(BUILD_WITH_ROS2)
+    add_dependencies(actuator_thread libra_interfaces)
+    ament_target_dependencies(
+        actuator_thread PUBLIC rclcpp std_msgs
+    )
+
+    # Link against LIBRA-specific interface(s)
+    target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
+endif()
 
 # Tell the linker which libraries to link against
 target_link_libraries(
