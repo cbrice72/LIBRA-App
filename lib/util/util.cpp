@@ -15,9 +15,6 @@
 #include "Definitions.h"  // EPOS (Maxon)
 #include <QDateTime>      // Qt::Core
 #include <QDebug>         // Qt::Core
-#ifdef BUILD_WITH_ROS2
-# include <rclcpp/rclcpp.hpp>  // ROS2 Core
-#endif
 
 // Project Headers
 //   (none)
