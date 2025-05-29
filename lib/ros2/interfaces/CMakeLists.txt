@@ -18,6 +18,13 @@ rosidl_generate_interfaces(libra_interfaces
 
 # --- The following jankiness seems to be required to use ROS2 objects in pure CMake ---
 
-# Expose typesupport target and base name for linking in parent project
+# Expose typesupport target and generator include directory for linking in parent project
 rosidl_get_typesupport_target(libra_interfaces_cpp_target libra_interfaces "rosidl_typesupport_cpp")
-set(LIBRA_INTERFACES_CPP_TARGET ${libra_interfaces_cpp_target} PARENT_SCOPE)
+set(LIBRA_INTERFACES_CPP_TARGET
+    ${libra_interfaces_cpp_target}
+    CACHE STRING "Compilation target for all LIBRA message interfaces" FORCE
+)
+set(LIBRA_INTERFACES_INCLUDE_DIR
+    "${CMAKE_BINARY_DIR}/lib/ros2/interfaces/rosidl_generator_cpp"
+    CACHE PATH "Path to the directory containing generated ROS2 messages" FORCE
+)
