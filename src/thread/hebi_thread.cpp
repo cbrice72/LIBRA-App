@@ -107,22 +107,25 @@ HebiThread::~HebiThread() {
 
 namespace {  // local to this file
 
+}  // namespace
+
 /**
  * @brief Wrapper around a commonly-used code block, to improve readability.
  *
  * @param str Debug message to print
+ *
+ * @note Must be a member of HebiThread because RCLCPP's (ROS2's) logging
+ *       functions reference an `rclcpp::Node` object.
  */
-void DebugOut(std::string str) {
+void HebiThread::DebugOut(std::string str) {
 #ifdef BUILD_WITH_ROS2
-    util::LogDebug(str);
+    LogDebug(str);
 #else
     if (debug_mode_) {
         qDebug() << "[DEBUG] " << str;
     }
 #endif
 }
-
-}  // namespace
 
 /**
  * @brief Convenience function for matching individual actuator feedback to the
@@ -204,8 +207,7 @@ QString HebiThread::GetStatus() {
  */
 void HebiThread::InitializeROS() {
     // Create publisher(s)
-    state_pub_ =
-        this->create_publisher<libra_msgs::msg::HebiState>("hebi/state", 10);
+    state_pub_ = this->create_publisher<msgHebiState>("hebi/state", 10);
 
     // Initialize message metadata
     state_msg_.header.frame_id = "hebi_actuators";
@@ -229,48 +231,48 @@ void HebiThread::PublishState() {
 
     // Resize vectors to match number of actuators
     auto resize_vectors = [this]() {
-        state_msg_.target_position.resize(num_actuators_);
-        state_msg_.actual_position.resize(num_actuators_);
-        state_msg_.target_velocity.resize(num_actuators_);
-        state_msg_.actual_velocity.resize(num_actuators_);
-        state_msg_.target_effort.resize(num_actuators_);
-        state_msg_.actual_effort.resize(num_actuators_);
+        state_msg_.target_pos.resize(num_actuators_);
+        state_msg_.actual_pos.resize(num_actuators_);
+        state_msg_.target_vel.resize(num_actuators_);
+        state_msg_.actual_vel.resize(num_actuators_);
+        state_msg_.target_trq.resize(num_actuators_);
+        state_msg_.actual_trq.resize(num_actuators_);
         state_msg_.deflection.resize(num_actuators_);
-        state_msg_.deflection_velocity.resize(num_actuators_);
+        state_msg_.deflection_vel.resize(num_actuators_);
         state_msg_.voltage.resize(num_actuators_);
         state_msg_.current.resize(num_actuators_);
-        state_msg_.board_temp.resize(num_actuators_);
+        state_msg_.motor_temp.resize(num_actuators_);
     };
     resize_vectors();
 
     // Populate the message and publish it
     for (int i = 0; i < num_actuators_; ++i) {
         // Positions (convert from rad to deg)
-        state_msg_.target_position[i] = feedback_->getPositionCommand()[i]
-                                        * kRadToDeg;
-        state_msg_.actual_position[i] = feedback_->getPosition()[i] * kRadToDeg;
+        state_msg_.target_pos[i] = feedback_->getPositionCommand()[i]
+                                   * kRadToDeg;
+        state_msg_.actual_pos[i] = feedback_->getPosition()[i] * kRadToDeg;
 
         // Velocities (convert from rad/s to deg/s)
-        state_msg_.target_velocity[i] = feedback_->getVelocityCommand()[i]
-                                        * kRadToDeg;
-        state_msg_.actual_velocity[i] = feedback_->getVelocity()[i] * kRadToDeg;
+        state_msg_.target_vel[i] = feedback_->getVelocityCommand()[i]
+                                   * kRadToDeg;
+        state_msg_.actual_vel[i] = feedback_->getVelocity()[i] * kRadToDeg;
 
         // Efforts/Torques
-        state_msg_.target_effort[i] = feedback_->getEffortCommand()[i];
-        state_msg_.actual_effort[i] = feedback_->getEffort()[i];
+        state_msg_.target_trq[i] = feedback_->getEffortCommand()[i];
+        state_msg_.actual_trq[i] = feedback_->getEffort()[i];
 
         // Additional sensor data
         state_msg_.deflection[i] = feedback_->getDeflection()[i] * kRadToDeg;
-        state_msg_.deflection_velocity[i] = feedback_->getDeflectionVelocity()[i]
-                                            * kRadToDeg;
+        state_msg_.deflection_vel[i] = feedback_->getDeflectionVelocity()[i]
+                                       * kRadToDeg;
 
         state_msg_.voltage[i] = feedback_->getVoltage()[i];
         state_msg_.current[i] = feedback_->getMotorCurrent()[i];
 
-        state_msg_.board_temp[i] = feedback_->getMotorWindingTemperature()[i];
+        state_msg_.motor_temp[i] = feedback_->getMotorWindingTemperature()[i];
     }
 
-    state_publisher_->publish(state_msg_);
+    state_pub_->publish(state_msg_);
 }
 
 /**
@@ -325,13 +327,17 @@ void HebiThread::run() {
     Eigen::VectorXd vel_cmd(num_actuators_);
     // Eigen::VectorXd trq_cmd(num_actuators_);  // not currently used
 
+    std::vector<double> t_pos(num_actuators_);
+    std::vector<double> a_pos(num_actuators_);
+    std::vector<double> a_trq(num_actuators_);
+
     std::chrono::duration<double> time(std::chrono::system_clock::now()
                                        - trajectory_start_time_);
 
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
         if (group_ == nullptr) {
-            PublishInfo();
+            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
             QThread::msleep(10);
             continue;
         }

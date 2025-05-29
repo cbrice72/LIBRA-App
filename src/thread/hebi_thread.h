@@ -19,24 +19,25 @@
 #include "group_feedback.hpp"  // HEBI
 #include "trajectory.hpp"      // HEBI
 #ifdef BUILD_WITH_ROS2
-# include <libra_interfaces/msg/hebi_state.hpp>  // libra_interfaces
-# include <rclcpp/rclcpp.hpp>                    // ROS2 Core
+# include <libra_app/msg/hebi_state.hpp>  // libra_interfaces
+# include <rclcpp/rclcpp.hpp>             // ROS2 Core
 #endif
 
 // Project Headers
 #include "abstract_actuator_thread.h"
+
+typedef libra_app::msg::HebiState msgHebiState;
 
 /**
  * @brief Control class for HEBI actuators.
  *
  * @see abstract_actuator_thread.h
  */
-class HebiThread : public AbstractActuatorThread
+class HebiThread :
 #ifdef BUILD_WITH_ROS2
-    ,
-                   public rclcpp::Node
+    public rclcpp::Node,
 #endif
-{
+    public AbstractActuatorThread {
 
   public:
     explicit HebiThread(QObject* parent, std::vector<std::string> families,
@@ -62,6 +63,8 @@ class HebiThread : public AbstractActuatorThread
     void run() override;
 
     // --- Helper Functions ---
+
+    void DebugOut(std::string str);
 
     std::unordered_map<Actuator::Joint, double> GetFeedbackMap(
         const std::vector<double>& feedback);
@@ -93,7 +96,7 @@ class HebiThread : public AbstractActuatorThread
     std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;
 
 #ifdef BUILD_WITH_ROS2
-    rclcpp::Publisher<libra_msgs::msg::HebiState>::SharedPtr state_pub_;
-    libra_interfaces::msg::HebiState state_msg_;  // reused for efficiency
+    rclcpp::Publisher<msgHebiState>::SharedPtr state_pub_;
+    msgHebiState state_msg_;  // reused for efficiency
 #endif
 };
