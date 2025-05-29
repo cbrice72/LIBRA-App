@@ -1,5 +1,6 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/clang",
+    "C_Cpp.default.compileCommands": "~/repos/build/compile_commands.json",
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
     "C_Cpp.default.includePath": [
         "${workspaceFolder}/**",
         "/usr/include/c++/11",
@@ -9,6 +10,7 @@
         "/usr/local/include",
         "/usr/include",
         "~/Qt/6.9.0/gcc_64/include",
-        "~/repos/build/**/include/**"
+        "~/repos/build/**/include/**",
+        "~/repos/build/**/rosidl_generator_cpp/**/msg"
     ]
 }
