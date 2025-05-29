@@ -1,3 +1,14 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/clang"
+    "C_Cpp.default.compilerPath": "/usr/bin/clang",
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}/**",
+        "/usr/include/c++/11",
+        "/usr/include/x86_64-linux-gnu/c++/11",
+        "/usr/include/c++/11/backward",
+        "/usr/lib/gcc/x86_64-linux-gnu/11/include",
+        "/usr/local/include",
+        "/usr/include",
+        "~/Qt/6.9.0/gcc_64/include",
+        "~/repos/build/**/include/**"
+    ]
 }

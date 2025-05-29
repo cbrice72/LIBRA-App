@@ -2,8 +2,10 @@
     "configurations": [
         {
             "name": "Linux",
-            "compileCommands": "~/repos/build/compile_commands.json",
-            "compilerPath": "/usr/bin/clang++-17",
+            "compileCommands": [
+                "~/repos/build/compile_commands.json"
+            ],
+            "compilerPath": "/usr/bin/gcc",
             "intelliSenseMode": "linux-clang-x64",
             "includePath": [
                 "${workspaceFolder}/**",
