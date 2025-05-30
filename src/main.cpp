@@ -13,6 +13,9 @@
 
 // Other Library Headers
 #include <QApplication>  // Qt::Widgets
+#ifdef BUILD_WITH_ROS2
+# include <rclcpp/rclcpp.hpp>  // ROS2 Core
+#endif
 
 // Project Headers
 #include "ui/main_window.h"
@@ -25,11 +28,23 @@
  * @return The `exit()` code after the application exits
  */
 int main(int argc, char* argv[]) {
+#ifdef BUILD_WITH_ROS2
+    // Ensure the ROS context is initialized BEFORE the app
+    rclcpp::init(argc, argv);
+#endif
+
     // Initialize the app
     QApplication app(argc, argv);
 
     // Display the main app window
     MainWindow w_main;
     w_main.show();
-    return app.exec();
+    int result = app.exec();
+
+    // Cleanup
+#ifdef BUILD_WITH_ROS2
+    rclcpp::shutdown();
+#endif
+
+    return result;
 }
