@@ -16,18 +16,28 @@ project(
 # ========================= CONFIG =========================
 
 # Project options
-set(LIBRA_VER
+set(LIBRA_VERSION
     "TWO"
     CACHE
         STRING
-        "Which robot prototype to build for: LIBRA-I (HEBI x5) or LIBRA-II (HEBI x1 + EPOS x1)"
+        "Which prototype to build for: LIBRA-I (HEBI x5) or LIBRA-II (EPOS x1 + HEBI x1)"
 )
-set_property(CACHE LIBRA_VER PROPERTY STRINGS "ONE" "TWO")
+set_property(CACHE LIBRA_VERSION PROPERTY STRINGS "ONE" "TWO")
 
 option(BUILD_WITH_ROS2 "Build LIBRA App with ROS2 functionality" ON)
 
+set(HEBI_DIR
+    "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+    CACHE PATH "Path to the HEBI API" FORCE
+)
+
+set(EPOS_DIR
+    "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
+    CACHE PATH "Path to the EPOS API" FORCE
+)
+
 # Validate project options and set internal vars (invisible to user)
-if(LIBRA_VER STREQUAL "ONE")
+if(LIBRA_VERSION STREQUAL "ONE")
     set(BUILD_LIBRA_ONE
         ON
         CACHE BOOL "" FORCE
@@ -48,28 +58,31 @@ elseif(LIBRA_VERSION STREQUAL "TWO")
 else()
     message(
         FATAL_ERROR
-            "Invalid LIBRA_VER: ${LIBRA_VER} - must be \"ONE\" or \"TWO\"!"
+            "Invalid LIBRA_VERSION: ${LIBRA_VERSION} - must be \"ONE\" or \"TWO\"!"
     )
 endif()
 
-# Project "globals"
-set(EPOS_DIR # used in other CMakeLists
-    "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
-    CACHE PATH "Path to the EPOS API" FORCE
-)
-set(HEBI_DIR # used in other CMakeLists
-    "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
-    CACHE PATH "Path to the HEBI API" FORCE
-)
+if(BUILD_WITH_ROS2)
+    if(NOT DEFINED ENV{AMENT_PREFIX_PATH})
+        message(
+            FATAL_ERROR
+                "It seems a ROS 2 environment has not been sourced (AMENT_PREFIX_PATH is not set). Please run 'source /opt/ros/<distro>/setup.bash' before opening QtCreator."
+        )
+    endif()
 
-# CMake options
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
+    if(NOT "$ENV{ROS_VERSION}" STREQUAL "2")
+        message(
+            FATAL_ERROR
+                "Couldn't find a valid ROS 2 installation (ROS_VERSION is not 2)."
+        )
+    endif()
+endif()
 
 # Check if CMake was called outside of a Qt environment (i.e., QtCreator)
 if(NOT DEFINED QT_DIR)
     message(
         AUTHOR_WARNING
-            "\n[WARNING] QT_DIR is not defined, meaning you may be attempting to run \"colcon build\" outside of QtCreator.\n"
+            "\nQT_DIR is not defined, meaning you may be attempting to run \"colcon build\" outside of QtCreator.\n"
             "Doing so means the necessary Qt CMake modules are not automatically appended to \"CMAKE_PREFIX_PATH\".\n"
             "It is recommended to build this project through QtCreator.\n\n"
             "CMake will now attempt to locate a Qt6 installation...\n"
@@ -127,6 +140,18 @@ if(NOT DEFINED QT_DIR)
     endif()
 endif()
 
+# CMake options and policies
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # used by clang-tidy
+set(BUILD_TESTING OFF)
+
+if(POLICY CMP0148) # ROS2 CMakeLists generate warnings about this
+    cmake_policy(SET CMP0148 OLD)
+endif()
+
+if(POLICY CMP0167) # don't use the older FindBoost module - include it directly
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 # Tell CMake to automatically handle Qt code generators and preprocessors
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -165,15 +190,17 @@ if(BUILD_WITH_ROS2)
     endforeach()
 endif()
 
-# Dependencies (packaged with this project) NOTE: there is no
-# `add_subdirectory()` call for EPOS since it doesn't provide a CMakeLists.txt,
-# only a binary to link against
-set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
-
+# Dependencies (packaged with this project)
 add_subdirectory(${HEBI_DIR})
 set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
                       "${HEBI_DIR}/Eigen"
 )
+
+if(BUILD_LIBRA_TWO)
+    # NOTE: there is no `add_subdirectory()` call for EPOS since it doesn't
+    # provide a CMakeLists.txt, only a binary to link against
+    set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+endif()
 
 # ========================= BUILD =========================
 
@@ -192,11 +219,17 @@ qt_add_executable(libra_app MANUAL_FINALIZATION ${PROJECT_SOURCE})
 # ~~~
 
 # Copy app and actuator configurations to the executable directory
+if(BUILD_LIBRA_ONE)
+    set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-1)
+else() # BUILD_LIBRA_TWO
+    set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-2)
+endif()
+
 add_custom_command(
     TARGET libra_app
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${CMAKE_SOURCE_DIR}/shared/libra-2 ${CMAKE_INSTALL_BINDIR}/shared
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
+            ${CMAKE_INSTALL_BINDIR}/shared
 )
 
 # Add all libraries directly used by this project to the include path
@@ -208,9 +241,15 @@ target_include_directories(
     PRIVATE ${Boost_INCLUDE_DIRS}
     # HEBI
     PRIVATE ${HEBI_INCLUDE_DIRS}
-    # Maxon
-    PRIVATE ${EPOS_INCLUDE_DIRS}
 )
+
+if(BUILD_LIBRA_TWO)
+    target_include_directories(
+        libra_app
+        # EPOS (Maxon)
+        PRIVATE ${EPOS_INCLUDE_DIRS}
+    )
+endif()
 
 if(BUILD_WITH_ROS2)
     # Let ament take care of adding headers, libraries, and sub-dependencies
@@ -237,11 +276,17 @@ target_link_libraries(
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
     # HEBI
     PRIVATE hebi hebic++ m pthread
-    # Maxon
-    PRIVATE -lEposCmd
     # Linux
     PRIVATE udev # TODO(brice.c.aa): is this necessary?
 )
+
+if(BUILD_LIBRA_TWO)
+    target_link_libraries(
+        libra_app
+        # EPOS (Maxon)
+        PRIVATE -lEposCmd
+    )
+endif()
 
 # ========================= INSTALL =========================
 

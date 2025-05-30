@@ -8,7 +8,7 @@
 # ========================= ACTUATOR THREAD =========================
 
 # Check whether the third-party directories are defined
-if(NOT DEFINED EPOS_DIR)
+if(BUILD_LIBRA_TWO AND NOT DEFINED EPOS_DIR)
     message(
         FATAL_ERROR
             "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
@@ -23,36 +23,66 @@ if(NOT DEFINED HEBI_DIR)
 endif()
 
 # Create and configure the module
-qt_add_library(
-    actuator_thread
-    STATIC
+set(SRC_FILES
     # Actuator Definitions
     ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator_thread.h
-    # EPOS (Maxon)
-    ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.cpp
     # HEBI
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.cpp
 )
 
+if(BUILD_LIBRA_TWO)
+    list(
+        APPEND
+        SRC_FILES
+        # EPOS (Maxon)
+        ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/epos_thread.cpp
+    )
+endif()
+
+qt_add_library(actuator_thread STATIC ${SRC_FILES})
+
 # Ensure this module has access to the necessary 3rd-party libraries
-set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
 set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
                       "${HEBI_DIR}/Eigen"
 )
 
 target_include_directories(
     actuator_thread
-    # EPOS (Maxon)
-    PUBLIC ${EPOS_INCLUDE_DIRS}
     # HEBI
     PUBLIC ${HEBI_INCLUDE_DIRS}
     # Make sure the path to this directory is automatically added as an include
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    actuator_thread
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core
+    # HEBI
+    PRIVATE hebi hebic++ m pthread
+)
+
+if(BUILD_LIBRA_TWO)
+    # Additional includes and libraries for the EPOS actuator
+    set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+
+    target_include_directories(
+        actuator_thread
+        # EPOS (Maxon)
+        PUBLIC ${EPOS_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(
+        actuator_thread
+        # EPOS (Maxon)
+        PRIVATE -lEposCmd
+    )
+endif()
 
 if(BUILD_WITH_ROS2)
     # Add standard and LIBRA-specific ROS2 dependencies
@@ -67,17 +97,6 @@ if(BUILD_WITH_ROS2)
     # Link against LIBRA-specific interface(s)
     target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
 endif()
-
-# Tell the linker which libraries to link against
-target_link_libraries(
-    actuator_thread
-    # Qt
-    PUBLIC Qt${QT_VERSION_MAJOR}::Core
-    # EPOS (Maxon)
-    PRIVATE -lEposCmd
-    # HEBI
-    PRIVATE hebi hebic++ m pthread
-)
 
 # ========================= LOG THREAD =========================
 
