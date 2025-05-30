@@ -10,8 +10,8 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 - [Optional](#optional)
     - [*VS Code Extensions*](#vs-code-extensions)
 - [Usage](#usage)
-    - [*LIBRA-I Control App*](#libra-i-control-app)
-    - [*LIBRA-II Control App*](#libra-ii-control-app)
+    - [*Build Options*](#build-options)
+    - [*Running the App*](#running-the-app)
     - [*Code Formatting*](#code-formatting)
     - [*Code Linting*](#code-linting)
 - [Documentation](#documentation)
@@ -21,11 +21,12 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ## Requirements
 
-| | Minimum | Recommended |
-|---|---|---|
-| **Operating System** | Ubuntu 22.04.4<br>(Jammy) | Ubuntu 24.04<br>(Noble) |
-| **C++ Standard** | C++17 | C++17 |
-| **Qt** | 6.1.0 | 6.7.2 |
+| | Minimum | Recommended | Download Link |
+|---|---|---|---|
+| **Operating System** | Ubuntu 22.04.4<br>(Jammy) | Ubuntu 24.04<br>(Noble) | [ubuntu.com](https://ubuntu.com/download/alternative-downloads) |
+| **C++ Standard** | C++17 | C++17 | N/A |
+| **Qt** | 6.1.0 | 6.7.2 | [doc.qt.io](https://doc.qt.io/qt-6/get-and-install-qt.html) |
+| **ROS2** | Humble Hawksbill<br>(humble) | Humble Hawksbill<br>(humble) | [docs.ros.org](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) |
 
 ## Optional
 
@@ -52,23 +53,36 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ## Usage
 
-### *LIBRA-I Control App*
+### *Build Options*
 
-Simply open `LIBRA_App.sln` in Visual Studio, build the solution, and run.
+The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` executable, if you have it installed.
 
-For detailed operation instructions, see [USAGE.md](/USAGE.md) in this directory.
+| Variable | Type | Possible<br>Values | Notes |
+|---|---|---|---|
+| `LIBRA_VERSION` | STRING | `ONE`, `TWO` | `ONE` = **LIBRA-I** (actuators: HEBI x5)<br>`TWO` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1)|
+| `BUILD_WITH_ROS` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
 
-### *LIBRA-II Control App*
+### *Running the App*
 
-TODO
+Open QtCreator (located at `<PATH-TO-QT-INSTALL-DIR>/Tools/QtCreator/bin/qtcreator`) and click the green "run" arrow at the bottom left. If you haven't built the project yet, or have made changes to the source code, this will automatically build it for you.
+
+#### **If ROS2 is enabled**
+
+*Before opening QtCreator*, ensure you've sourced a ROS2 environment in the *same* terminal.
+
+```bash
+. /opt/ros/humble/setup.bash
+```
+
+If you're not sure whether you've done this correctly, my CMake will let you know at build time.
 
 ### *Code Formatting*
 
 This project uses [Clang-Format](https://clang.llvm.org/docs/ClangFormat.html) to format C++ header (`.h`) and source (`.cpp`) files based on the parameters in the `.clang-format` file in this directory, and [cmake-format](https://github.com/cheshirekow/cmake_format) to format CMake (`CMakeLists.txt`) files based on the parameters in the `cmake-format.yaml` file in this directory.
 
-If you installed the optional VS Code extensions of the same names, formatting will be automatically applied whenever you save a file.
+If you installed the optional VS Code extensions of the same names, formatting should be automatically applied whenever you save a file.
 
-> ***NOTE:*** If your cmake-format extension isn't working, the bash script `tools/cmake-format-all.bash` will recursively run it for you.
+> ***NOTE:*** If your cmake-format extension isn't working, the bash script at `tools/cmake-format-all.bash` will run it recursively for you.
 
 ### *Code Linting*
 
@@ -80,7 +94,7 @@ If you installed the optional VS Code extension "C/C++", linting will automatica
 
 This project uses [Doxygen](https://www.doxygen.nl/) to generate documentation from source code using comment tags such as `@brief` and `@param`.
 
-If you installed the optional VS Code extension "Doxygen Runner", simply open the command palette (`CtrlShift+P`) and select "Generate Doxygen documentation". The HTML and LaTeX documentation will be output to the `docs` directory.
+If you installed the optional VS Code extension "Doxygen Runner", simply open the command palette (`Ctrl + Shift + P`) and select "Generate Doxygen documentation". The HTML and LaTeX documentation will be output to the `docs` directory.
 
 > ***NOTE:*** The HTML documentation can be viewed by opening `html/index.html`, however the files in the `latex` directory must first be compiled by a LaTeX compiler to generate a PDF.
 
@@ -110,5 +124,5 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
         git config --global http.proxy <address>:<port>
         ```
 
-2. In VS Code, open the command palette (`Ctrl+Shift+P`) and select "Git: Clone".
+2. In VS Code, open the command palette (`Ctrl + Shift + P`) and select "Git: Clone".
 3. Enter `https://github.com/christian-brice/LIBRA-App.git` and select a directory to clone the project to.
