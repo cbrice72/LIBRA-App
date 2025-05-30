@@ -56,13 +56,13 @@ target_include_directories(
 
 if(BUILD_WITH_ROS2)
     # Add standard and LIBRA-specific ROS2 dependencies
-    ament_target_dependencies(
-        actuator_thread PUBLIC rclcpp
-    )
+    ament_target_dependencies(actuator_thread PUBLIC rclcpp)
     add_dependencies(actuator_thread libra_interfaces)
 
     # Ensure this module has access to the ROS2 message generator's include dir
-    target_include_directories(actuator_thread PUBLIC ${LIBRA_INTERFACES_INCLUDE_DIR})
+    target_include_directories(
+        actuator_thread PUBLIC ${LIBRA_INTERFACES_INCLUDE_DIR}
+    )
 
     # Link against LIBRA-specific interface(s)
     target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})

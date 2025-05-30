@@ -14,8 +14,8 @@ add_executable(
     ${CMAKE_CURRENT_SOURCE_DIR}/src/minimal_pub_sub.cpp
 )
 
-set_target_properties(minimal_pub_sub PROPERTIES
-    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+set_target_properties(
+    minimal_pub_sub PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries

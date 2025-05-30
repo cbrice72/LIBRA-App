@@ -16,15 +16,50 @@ project(
 # ========================= CONFIG =========================
 
 # Project options
+set(LIBRA_VER
+    "TWO"
+    CACHE
+        STRING
+        "Which robot prototype to build for: LIBRA-I (HEBI x5) or LIBRA-II (HEBI x1 + EPOS x1)"
+)
+set_property(CACHE LIBRA_VER PROPERTY STRINGS "ONE" "TWO")
+
 option(BUILD_WITH_ROS2 "Build LIBRA App with ROS2 functionality" ON)
 
+# Validate project options and set internal vars (invisible to user)
+if(LIBRA_VER STREQUAL "ONE")
+    set(BUILD_LIBRA_ONE
+        ON
+        CACHE BOOL "" FORCE
+    )
+    set(BUILD_LIBRA_TWO
+        OFF
+        CACHE BOOL "" FORCE
+    )
+elseif(LIBRA_VERSION STREQUAL "TWO")
+    set(BUILD_LIBRA_ONE
+        OFF
+        CACHE BOOL "" FORCE
+    )
+    set(BUILD_LIBRA_TWO
+        ON
+        CACHE BOOL "" FORCE
+    )
+else()
+    message(
+        FATAL_ERROR
+            "Invalid LIBRA_VER: ${LIBRA_VER} - must be \"ONE\" or \"TWO\"!"
+    )
+endif()
+
+# Project "globals"
 set(EPOS_DIR # used in other CMakeLists
     "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
-    CACHE PATH "Path to the included EPOS API" FORCE
+    CACHE PATH "Path to the EPOS API" FORCE
 )
 set(HEBI_DIR # used in other CMakeLists
     "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
-    CACHE PATH "Path to the included HEBI API" FORCE
+    CACHE PATH "Path to the HEBI API" FORCE
 )
 
 # CMake options
