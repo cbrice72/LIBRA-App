@@ -126,13 +126,12 @@ sudo apt update && sudo apt upgrade
 Install the following packages via the terminal.
 
 ```bash
-sudo apt install -y build-essential libboost-all-dev clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libudev-dev
+sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libudev-dev
 ```
 
 Package notes:
 
 - `build-essential`: programs and libraries necessary for basic software development.
-- `libboost-all-dev`: collection of useful C++ libraries ([link](https://www.boost.org/)).
 - `clang` & `libclang-dev`: C/C++ compiler ([link](https://clang.llvm.org/)).
 - `clang-format`: clang-based C++ formatter ([link](https://clang.llvm.org/docs/ClangFormat.html)).
 - `clang-tidy`: clang-based C++ linter ([link](https://clang.llvm.org/extra/clang-tidy/)).

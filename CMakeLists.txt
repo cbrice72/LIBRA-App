@@ -148,10 +148,6 @@ if(POLICY CMP0148) # ROS2 CMakeLists generate warnings about this
     cmake_policy(SET CMP0148 OLD)
 endif()
 
-if(POLICY CMP0167) # don't use the older FindBoost module - include it directly
-    cmake_policy(SET CMP0167 NEW)
-endif()
-
 # Tell CMake to automatically handle Qt code generators and preprocessors
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -162,8 +158,6 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies (installed on system)
-find_package(Boost REQUIRED COMPONENTS system thread)
-
 set(QT_PACKAGES Core Multimedia MultimediaWidgets SerialPort Widgets)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
@@ -237,8 +231,6 @@ target_include_directories(
     libra_app_gui
     # Project
     PRIVATE ${CMAKE_SOURCE_DIR}/src
-    # Boost
-    PRIVATE ${Boost_INCLUDE_DIRS}
     # HEBI
     PRIVATE ${HEBI_INCLUDE_DIRS}
 )
