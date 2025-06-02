@@ -13,7 +13,7 @@ set(actuator_msgs
 
 # Generate all interfaces at once
 rosidl_generate_interfaces(
-    ${PROJECT_NAME} ${actuator_msgs} DEPENDENCIES ${ROS_MSG_PACKAGES}
+    ${PROJECT_NAME} ${actuator_msgs} DEPENDENCIES builtin_interfaces std_msgs
 )
 
 # --- The following seems to be required to use ROS2 objects in pure CMake ---

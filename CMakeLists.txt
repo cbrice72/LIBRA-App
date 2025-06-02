@@ -152,18 +152,12 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
     # Find ROS2 packages
-    set(ROS_CORE_PACKAGES # used in other CMakeLists
-        ament_cmake rclcpp rmw_implementation rosidl_default_generators
-        CACHE INTERNAL "Required ROS2 core packages" FORCE
-    )
+    set(ROS_CORE_PACKAGES ament_cmake rclcpp rcutils rmw_implementation rosidl_default_generators)
     foreach(PKG ${ROS_CORE_PACKAGES})
         find_package(${PKG} REQUIRED)
     endforeach()
 
-    set(ROS_MSG_PACKAGES # used in other CMakeLists
-        builtin_interfaces std_msgs sensor_msgs
-        CACHE INTERNAL "Required ROS2 message packages" FORCE
-    )
+    set(ROS_MSG_PACKAGES builtin_interfaces std_msgs sensor_msgs)
     foreach(PKG ${ROS_MSG_PACKAGES})
         find_package(${PKG} REQUIRED)
     endforeach()
@@ -213,14 +207,6 @@ add_custom_command(
 
 # Add all libraries directly used by the GUI to the include path
 target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
-
-# TODO: this doesn't seem to be necssary - remove if everything works
-#if(BUILD_WITH_ROS2)
-#    # Let ament take care of adding headers, libraries, and sub-dependencies
-#    ament_target_dependencies(
-#        libra_app_gui PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
-#    )
-#endif()
 
 # Tell the linker which libraries to link against
 target_link_libraries(
