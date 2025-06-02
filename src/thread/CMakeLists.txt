@@ -61,6 +61,8 @@ target_include_directories(
 # Tell the linker which libraries to link against
 target_link_libraries(
     actuator_thread
+    # Project
+    PUBLIC logger util
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
     # HEBI
@@ -91,7 +93,7 @@ if(BUILD_WITH_ROS2)
     )
 
     target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
-    ament_target_dependencies(actuator_thread PUBLIC rclcpp rcutils)
+    ament_target_dependencies(actuator_thread PUBLIC rclcpp)
 endif()
 
 # ========================= LOG THREAD =========================

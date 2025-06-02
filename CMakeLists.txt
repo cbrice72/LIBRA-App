@@ -212,7 +212,7 @@ target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(
     libra_app_gui
     # Project
-    PRIVATE camera_manager util actuator_thread log_thread
+    PRIVATE camera_manager actuator_thread log_thread
     # Qt
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
