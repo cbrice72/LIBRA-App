@@ -276,18 +276,18 @@ namespace {  // local to this file
 void MainWindow::InitializeFeedbackElementMap() {
 #if LIBRA_VERSION == 1
     // 2-Dof joint
-    feedback_element_map_[Actuator::Joint::kRoll]
-                         [Actuator::Feedback::kTargetPos] = ui_->l_target_roll;
-    feedback_element_map_[Actuator::Joint::kRoll]
-                         [Actuator::Feedback::kActualPos] = ui_->l_actual_roll;
-    feedback_element_map_[Actuator::Joint::kRoll]
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_roll;
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_roll;
+    feedback_element_map_[Actuator::Joint::kMA]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_roll;
 
-    feedback_element_map_[Actuator::Joint::kPitch]
-                         [Actuator::Feedback::kTargetPos] = ui_->l_target_pitch;
-    feedback_element_map_[Actuator::Joint::kPitch]
-                         [Actuator::Feedback::kActualPos] = ui_->l_actual_pitch;
-    feedback_element_map_[Actuator::Joint::kPitch]
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_pitch;
+    feedback_element_map_[Actuator::Joint::kMB]
                          [Actuator::Feedback::kActualTorque] =
                              ui_->l_torque_pitch;
 

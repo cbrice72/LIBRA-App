@@ -18,8 +18,8 @@ namespace Actuator {  // place enums in this namespace to improve readability
  * @brief LIBRA-I joint names.
  */
 enum Joint {
-    kRoll = 0,
-    kPitch,
+    kMA = 0,
+    kMB,
     kJ1,
     kJ2,
     kJ3,
