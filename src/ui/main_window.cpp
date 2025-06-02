@@ -69,15 +69,42 @@ MainWindow::MainWindow(QWidget* parent)
     // --- Slot Management (non-thread) ---
 
     // Arm
+#if LIBRA_VERSION == 1
+    connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // when moved
+            ui_->sb_arm_roll, &QDoubleSpinBox::setValue);     // update display
+    connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // when changed
+            ui_->hs_arm_roll, &QAbstractSlider::setValue);    // update slider
+
+    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_pitch, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j1, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j1, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j1, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j1, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j2, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j2, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j2, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j2, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j3, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j3, &QAbstractSlider::setValue);
+#elif LIBRA_VERSION == 2
     connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // when moved
             ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);     // update display
     connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // when changed
             ui_->hs_arm_yaw, &QAbstractSlider::setValue);    // update slider
 
-    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved
-            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);     // update display
-    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
-            ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
+    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_pitch, &QAbstractSlider::setValue);
+#endif
 
     // Pump (FOR TESTING PURPOSES ONLY)
     connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
@@ -115,6 +142,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     log_thread_->start();
 
+#if LIBRA_VERSION == 2
     // EPOS thread
     epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
                                   "USB0", 1000000, debug_mode_);
@@ -147,9 +175,22 @@ MainWindow::MainWindow(QWidget* parent)
             epos_thread_, &EposThread::deleteLater);  // ... deallocate
 
     epos_thread_->start();
+#endif
 
     // HEBI thread
-    hebi_thread_ = new HebiThread(this, {"LIBRA"}, {"Pitch"}, debug_mode_);
+    hebi_thread_ = new HebiThread(this, {"LIBRA"},
+#if LIBRA_VERSION == 1
+                                  {
+                                      "MA",
+                                      "MB",
+                                      "J1",
+                                      "J2",
+                                      "J3",
+                                  },
+#elif LIBRA_VERSION == 2
+                                  {"Pitch"},
+#endif
+                                  debug_mode_);
 
     // - MainWindow signals
     connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
@@ -201,10 +242,14 @@ MainWindow::~MainWindow() {
         log_thread_->requestInterruption();  // signal thread to stop looping
         log_thread_->wait();  // wait for thread cleanup to finish
     }
+
+#if LIBRA_VERSION == 2
     if (epos_thread_ != nullptr && epos_thread_->isRunning()) {
         epos_thread_->requestInterruption();
         epos_thread_->wait();
     }
+#endif
+
     if (hebi_thread_ != nullptr && hebi_thread_->isRunning()) {
         hebi_thread_->requestInterruption();
         hebi_thread_->wait();
@@ -229,6 +274,45 @@ namespace {  // local to this file
  * @see Actuator::Joint Actuator::Feedback
  */
 void MainWindow::InitializeFeedbackElementMap() {
+#if LIBRA_VERSION == 1
+    // 2-Dof joint
+    feedback_element_map_[Actuator::Joint::kRoll]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_roll;
+    feedback_element_map_[Actuator::Joint::kRoll]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_roll;
+    feedback_element_map_[Actuator::Joint::kRoll]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_roll;
+
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kTargetPos] = ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualPos] = ui_->l_actual_pitch;
+    feedback_element_map_[Actuator::Joint::kPitch]
+                         [Actuator::Feedback::kActualTorque] =
+                             ui_->l_torque_pitch;
+
+    // Arm
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j1;
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j1;
+    feedback_element_map_[Actuator::Joint::kJ1]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j1;
+
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j2;
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j2;
+    feedback_element_map_[Actuator::Joint::kJ2]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j2;
+
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j3;
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j3;
+    feedback_element_map_[Actuator::Joint::kJ3]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j3;
+#elif LIBRA_VERSION == 2
     // Yaw joint
     feedback_element_map_[Actuator::Joint::kYaw]
                          [Actuator::Feedback::kTargetPos] = ui_->l_target_yaw;
@@ -245,6 +329,7 @@ void MainWindow::InitializeFeedbackElementMap() {
     feedback_element_map_[Actuator::Joint::kPitch]
                          [Actuator::Feedback::kActualTorque] =
                              ui_->l_torque_pitch;
+#endif
 }
 
 //------------------------------------------------------------------------------
@@ -284,12 +369,14 @@ void MainWindow::HandleActuatorFeedback(
 void MainWindow::HandleActuatorStatus(const QString& status,
                                       const Actuator::Type type) {
     switch (type) {
-        case Actuator::Type::kEpos:
-            ui_->l_yaw_status->setText(status);
-            break;
         case Actuator::Type::kHebi:
-            ui_->l_pitch_status->setText(status);
+            ui_->l_hebi_status->setText(status);
             break;
+#if LIBRA_VERSION == 2
+        case Actuator::Type::kEpos:
+            ui_->l_epos_status->setText(status);
+            break;
+#endif
         default:
             // Shouldn't be able to get here
             qCritical() << "[ERROR] Received status from unknown actuator type:"
@@ -325,6 +412,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     emit UpdateDebugMode(checked);
 }
 
+#if LIBRA_VERSION == 2
 /**
  * @brief Event handler for "Actuators/EPOS" menu action "Connect".
  *        Simply applies UI changes; functionality is covered by signal call.
@@ -346,7 +434,9 @@ void MainWindow::on_a_epos_disconnect_triggered() {
     ui_->a_epos_disconnect->setEnabled(false);
 
     ui_->pb_arm_start->setEnabled(false);
+    // DON'T disable pb_arm_stop as other actuator types may still be connected
 }
+#endif
 
 /**
  * @brief Event handler for "Actuators/HEBI" menu action "Connect".
@@ -369,6 +459,7 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
     ui_->a_hebi_disconnect->setEnabled(false);
 
     ui_->pb_arm_start->setEnabled(false);
+    // DON'T disable pb_arm_stop as other actuator types may still be connected
 }
 
 /**
@@ -607,10 +698,12 @@ void MainWindow::on_a_pump_set_full_triggered() {
  */
 void MainWindow::on_a_connect_all_triggered() {
     // Actuators
-    ui_->a_epos_connect->trigger();
     ui_->a_hebi_connect->trigger();
     ui_->a_serial_servo_connect->trigger();
     ui_->a_pump_connect->trigger();
+#if LIBRA_VERSION == 2
+    ui_->a_epos_connect->trigger();
+#endif
 
     // Sensors
     ui_->a_refresh_camera_list->trigger();
@@ -623,10 +716,12 @@ void MainWindow::on_a_connect_all_triggered() {
  */
 void MainWindow::on_a_disconnect_all_triggered() {
     // Actuators
-    ui_->a_epos_disconnect->trigger();
     ui_->a_hebi_disconnect->trigger();
     ui_->a_serial_servo_disconnect->trigger();
     ui_->a_pump_disconnect->trigger();
+#if LIBRA_VERSION == 2
+    ui_->a_epos_disconnect->trigger();
+#endif
 
     // Sensors
     ui_->a_lidar_disconnect->trigger();
@@ -644,11 +739,18 @@ void MainWindow::on_a_disconnect_all_triggered() {
  * @brief Send movement command signal to all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    // Yaw
+#if LIBRA_VERSION == 1
+    emit CommandHebi({
+        ui_->sb_arm_roll->value(),
+        ui_->sb_arm_pitch->value(),
+        ui_->sb_arm_j1->value(),
+        ui_->sb_arm_j2->value(),
+        ui_->sb_arm_j3->value(),
+    });
+#elif LIBRA_VERSION == 2
     emit CommandEpos({ui_->sb_arm_yaw->value()});
-
-    // Pitch
     emit CommandHebi({ui_->sb_arm_pitch->value()});
+#endif
 }
 
 //------------------------------------------------------------------------------

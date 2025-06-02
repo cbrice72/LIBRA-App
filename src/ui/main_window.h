@@ -17,7 +17,9 @@
 
 // Project Headers
 #include "camera_manager.h"
-#include "epos_thread.h"
+#if LIBRA_VERSION == 2
+# include "epos_thread.h"
+#endif
 #include "hebi_thread.h"
 #include "log_thread.h"
 
@@ -61,8 +63,10 @@ class MainWindow : public QMainWindow {
 
     // --- Actuator Commands ---
 
-    void CommandEpos(const std::vector<double>& deg);
     void CommandHebi(const std::vector<double>& deg);
+#if LIBRA_VERSION == 2
+    void CommandEpos(const std::vector<double>& deg);
+#endif
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -74,8 +78,10 @@ class MainWindow : public QMainWindow {
 
     // Actuators Menu
 
+#if LIBRA_VERSION == 2
     void on_a_epos_connect_triggered();
     void on_a_epos_disconnect_triggered();
+#endif
 
     void on_a_hebi_connect_triggered();
     void on_a_hebi_disconnect_triggered();
@@ -150,8 +156,10 @@ class MainWindow : public QMainWindow {
     FeedbackElementMapOfMaps feedback_element_map_;
 
     LogThread* log_thread_{nullptr};    // consolidated logging
-    EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
     HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
+#if LIBRA_VERSION == 2
+    EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
+#endif
 
     QSerialPort* ser_water_{nullptr};
     QSerialPort* ser_servo_{nullptr};

@@ -1517,7 +1517,7 @@
       </property>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QLabel" name="l_yaw_status">
+        <widget class="QLabel" name="l_epos_status">
          <property name="font">
           <font>
            <family>Monospace</family>
@@ -1532,7 +1532,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="l_pitch_status">
+        <widget class="QLabel" name="l_hebi_status">
          <property name="font">
           <font>
            <family>Monospace</family>
