@@ -91,7 +91,7 @@ if(BUILD_WITH_ROS2)
     )
 
     target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
-    ament_target_dependencies(actuator_thread PUBLIC rclcpp)
+    ament_target_dependencies(actuator_thread PUBLIC rclcpp rcutils)
 endif()
 
 # ========================= LOG THREAD =========================

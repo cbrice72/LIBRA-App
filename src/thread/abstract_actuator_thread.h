@@ -41,7 +41,7 @@ class AbstractActuatorThread : public QThread {
 
   public slots:
 
-    void SetDebugMode(const bool& enabled) {
+    virtual void SetDebugMode(const bool& enabled) {
         debug_mode_ = enabled;
     };
 

@@ -19,8 +19,10 @@
 #include "Eigen/Core"    // Eigen
 #include "log_file.hpp"  // HEBI
 #include "lookup.hpp"    // HEBI
-// #include "util/grav_comp.hpp"  // HEBI
-#include <QDebug>  // Qt::Core
+#include <QDebug>        // Qt::Core
+#ifdef BUILD_WITH_ROS2
+# include "rcutils/logging.h"  // ROS2 Core
+#endif
 
 // Project Headers
 //   (none)
@@ -56,35 +58,44 @@ constexpr double kDamping = 1.0;     // Nm/rad/s
 HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kHebi),
-#ifdef BUILD_WITH_ROS2
-      rclcpp::Node("hebi_node"),
-#endif
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
-      num_actuators_(names_.size()) {
+      num_actuators_(names_.size()),
+      trajectory_start_time_(std::chrono::system_clock::now())
+#ifdef BUILD_WITH_ROS2
+      ,
+      rclcpp::Node("hebi_node")
+#endif
+{
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
-
-    // TODO: check if making an HRDF is worth it
-    //       (see lib/archive/libra_actuators/hebi_thread[.h,.cpp] for usage)
-    // model_.loadHRDF("./bin/shared/hebi/libra.hrdf");
 
     // Define joint order for organizing feedback
     // NOTE: ideally, this shouldn't be defined here since it defeats the purpose
     //       of generalizing actuator control code. It should be inferred/provided
     //       by the user, somehow (but I don't have time to make it pretty, so...)
-    /*
+#if LIBRA_VERSION == 1
     joint_order_ = {Actuator::Joint::kMA, Actuator::Joint::kMB,
                     Actuator::Joint::kJ1, Actuator::Joint::kJ2,
-                    Actuator::Joint::kJ3};     // LIBRA-I
-    */
+                    Actuator::Joint::kJ3};  // LIBRA-I
+#elif LIBRA_VERSION == 2
     joint_order_ = {Actuator::Joint::kPitch};  // LIBRA-II
+#endif
 
 #ifdef BUILD_WITH_ROS2
+    if (debug_mode_) {
+        rcutils_logging_set_logger_level(this->get_logger().get_name(),
+                                         RCUTILS_LOG_SEVERITY_DEBUG);
+    }
+
     // Initialize ROS2 components
-    InitializeROS();
+    state_pub_ = this->create_publisher<msgHebiState>("hebi/state", 10);
+
+    state_msg_.header.frame_id = "hebi_actuators";
+    state_msg_.families = families_;
+    state_msg_.names = names_;
 #endif
 }
 
@@ -117,8 +128,10 @@ namespace {  // local to this file
  * @note Must be a member of HebiThread because RCLCPP's (ROS2's) logging
  *       functions reference an `rclcpp::Node` object.
  */
-void HebiThread::DebugOut(std::string str) {
+void HebiThread::DebugOut(const std::string& str) {
 #ifdef BUILD_WITH_ROS2
+    // NOTE: it isn't necessary to check debug_mode_ here because
+    //       RCLCPP_LOG_LEVEL manages ROS2's logging level
     LogDebug(str);
 #else
     if (debug_mode_) {
@@ -202,19 +215,6 @@ QString HebiThread::GetStatus() {
 }
 
 #ifdef BUILD_WITH_ROS2
-/**
- * @brief Initialize ROS2 publishers and subscribers. (TODO: documentation)
- */
-void HebiThread::InitializeROS() {
-    // Create publisher(s)
-    state_pub_ = this->create_publisher<msgHebiState>("hebi/state", 10);
-
-    // Initialize message metadata
-    state_msg_.header.frame_id = "hebi_actuators";
-    state_msg_.families = families_;
-    state_msg_.names = names_;
-}
-
 /**
  * @brief Publish HEBI actuator state(s).
  *
@@ -418,6 +418,20 @@ void HebiThread::run() {
 //------------------------------------------------------------------------------
 // !Actuator Commands (slots)
 //------------------------------------------------------------------------------
+
+void HebiThread::SetDebugMode(const bool& enabled) {
+#if BUILD_WITH_ROS2
+    if (enabled) {
+        rcutils_logging_set_logger_level(this->get_logger().get_name(),
+                                         RCUTILS_LOG_SEVERITY_DEBUG);
+    } else {
+        rcutils_logging_set_logger_level(this->get_logger().get_name(),
+                                         RCUTILS_LOG_SEVERITY_INFO);  // default
+    }
+#else
+    debug_mode_ = enabled;  // same as AbstractActuatorThread
+#endif
+}
 
 /**
  * @brief Attempts to establish connections to all actuators.
