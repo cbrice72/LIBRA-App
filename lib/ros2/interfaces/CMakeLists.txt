@@ -13,17 +13,17 @@ set(actuator_msgs
 
 # Generate all interfaces at once
 rosidl_generate_interfaces(
-    libra_interfaces ${actuator_msgs} DEPENDENCIES ${ROS_MSG_PACKAGES}
+    ${PROJECT_NAME} ${actuator_msgs} DEPENDENCIES ${ROS_MSG_PACKAGES}
 )
 
 # --- The following seems to be required to use ROS2 objects in pure CMake ---
 
 # Expose typesupport target and generator dir for linking
 rosidl_get_typesupport_target(
-    libra_interfaces_cpp_target libra_interfaces "rosidl_typesupport_cpp"
+    cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp"
 )
 set(LIBRA_INTERFACES_CPP_TARGET
-    ${libra_interfaces_cpp_target}
+    ${cpp_typesupport_target}
     CACHE STRING "Compilation target for all LIBRA message interfaces" FORCE
 )
 set(LIBRA_INTERFACES_INCLUDE_DIR

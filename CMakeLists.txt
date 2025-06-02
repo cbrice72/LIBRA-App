@@ -209,11 +209,11 @@ add_subdirectory(lib) # camera_manager, util, [ROS2 interfaces & nodes]
 add_subdirectory(src) # PROJECT_SOURCE, actuator_thread, log_thread
 
 # Add target executable
-qt_add_executable(libra_app MANUAL_FINALIZATION ${PROJECT_SOURCE})
+qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # ~~~
 # Define target properties for Android with Qt 6 as:
-#    set_property(TARGET libra_app APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
+#    set_property(TARGET libra_app_gui APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 # ~~~
@@ -226,7 +226,7 @@ else() # BUILD_LIBRA_TWO
 endif()
 
 add_custom_command(
-    TARGET libra_app
+    TARGET libra_app_gui
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
             ${CMAKE_INSTALL_BINDIR}/shared
@@ -234,7 +234,7 @@ add_custom_command(
 
 # Add all libraries directly used by this project to the include path
 target_include_directories(
-    libra_app
+    libra_app_gui
     # Project
     PRIVATE ${CMAKE_SOURCE_DIR}/src
     # Boost
@@ -245,7 +245,7 @@ target_include_directories(
 
 if(BUILD_LIBRA_TWO)
     target_include_directories(
-        libra_app
+        libra_app_gui
         # EPOS (Maxon)
         PRIVATE ${EPOS_INCLUDE_DIRS}
     )
@@ -254,13 +254,13 @@ endif()
 if(BUILD_WITH_ROS2)
     # Let ament take care of adding headers, libraries, and sub-dependencies
     ament_target_dependencies(
-        libra_app PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
+        libra_app_gui PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
     )
 endif()
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    libra_app
+    libra_app_gui
     # Project
     PRIVATE camera_manager util actuator_thread log_thread
     # Qt
@@ -282,7 +282,7 @@ target_link_libraries(
 
 if(BUILD_LIBRA_TWO)
     target_link_libraries(
-        libra_app
+        libra_app_gui
         # EPOS (Maxon)
         PRIVATE -lEposCmd
     )
@@ -293,7 +293,7 @@ endif()
 # Specify platform-specific properties
 # ~~~
 set_target_properties(
-    libra_app
+    libra_app_gui
     PROPERTIES ${BUNDLE_ID_OPTION} MACOSX_BUNDLE_BUNDLE_VERSION
                ${PROJECT_VERSION} MACOSX_BUNDLE_SHORT_VERSION_STRING
                ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} MACOSX_BUNDLE
@@ -306,14 +306,14 @@ set_target_properties(
 include(GNUInstallDirs) # auto-included by Qt
 
 install(
-    TARGETS libra_app
+    TARGETS libra_app_gui
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 # Generate proper deployment settings for the target
-qt_finalize_executable(libra_app)
+qt_finalize_executable(libra_app_gui)
 
 if(BUILD_WITH_ROS2)
     # Register the package with ament
