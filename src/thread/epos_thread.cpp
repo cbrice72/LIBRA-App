@@ -148,7 +148,7 @@ QString EposThread::GetStatus() {
 
     // Get device state and convert to string
     uint err_code = 0;
-    unsigned short int state = 0;
+    uint16_t state = 0;
     if (VCS_GetState(handle_, kNodeID, &state, &err_code) == 0) {
         // emit ErrorThrown(util::GetEposErr("EPOS - VCS_GetState", err_code,
         // kNodeID));
@@ -183,8 +183,8 @@ QString EposThread::GetStatus() {
     }
 
     // Perform conversions
-    double vel = a_vel * kRpmToDegs;  // to deg/s
-    double curr = a_curr / 1000.0;    // to A
+    const double vel = a_vel * kRpmToDegs;  // to deg/s
+    const double curr = a_curr / 1000.0;    // to A
 
     // Create stringstream entry
     // - std::setw(7) for values to account for [sign][#,3][.][#,2]

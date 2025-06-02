@@ -164,6 +164,6 @@ class MainWindow : public QMainWindow {
     QSerialPort* ser_water_{nullptr};
     QSerialPort* ser_servo_{nullptr};
 
-    std::unordered_map<QString, QString> available_cameras_;
+    std::unordered_map<QString, QString> available_cameras_;  // ID, desc
     std::unique_ptr<CameraManager> camera_manager_;
 };
