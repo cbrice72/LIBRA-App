@@ -16,6 +16,7 @@
 
 // Project Headers
 #include "actuator_defs.h"
+#include "logger.h"
 
 /**
  * @brief Provides a common interface for a heterogeneous mix of actuators.
@@ -41,8 +42,8 @@ class AbstractActuatorThread : public QThread {
 
   public slots:
 
-    virtual void SetDebugMode(const bool& enabled) {
-        debug_mode_ = enabled;
+    void SetDebugMode(const bool& enabled) {
+        logger_->SetDebugMode(enabled);
     };
 
     // --- Actuator Commands ---
@@ -68,6 +69,7 @@ class AbstractActuatorThread : public QThread {
 
     // --- Data Members ---
 
+    std::unique_ptr<Logger> logger_;
     bool debug_mode_{false};
 
     const Actuator::Type type_;

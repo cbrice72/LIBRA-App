@@ -19,13 +19,9 @@
 #include "Eigen/Core"    // Eigen
 #include "log_file.hpp"  // HEBI
 #include "lookup.hpp"    // HEBI
-#include <QDebug>        // Qt::Core
-#ifdef BUILD_WITH_ROS2
-# include "rcutils/logging.h"  // ROS2 Core
-#endif
 
 // Project Headers
-//   (none)
+#include "ros2_logger.h"
 
 /* --- TABLE OF CONTENTS ---
  * !Helper Functions
@@ -68,6 +64,13 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
       rclcpp::Node("hebi_node")
 #endif
 {
+    // Initialize the logger
+#ifdef BUILD_WITH_ROS2
+    logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
+#else
+    logger_ = std::make_unique<QtLogger>(debug_mode_);
+#endif
+
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
@@ -85,11 +88,6 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #endif
 
 #ifdef BUILD_WITH_ROS2
-    if (debug_mode_) {
-        rcutils_logging_set_logger_level(this->get_logger().get_name(),
-                                         RCUTILS_LOG_SEVERITY_DEBUG);
-    }
-
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgHebiState>("hebi/state", 10);
 
@@ -109,7 +107,7 @@ HebiThread::~HebiThread() {
     //   3) Ensures the main HEBI object gets cleaned up
     Disconnect();
 
-    DebugOut("Cleaned up HebiThread");
+    logger_->Debug("Cleaned up HebiThread");
 }
 
 //------------------------------------------------------------------------------
@@ -119,26 +117,6 @@ HebiThread::~HebiThread() {
 namespace {  // local to this file
 
 }  // namespace
-
-/**
- * @brief Wrapper around a commonly-used code block, to improve readability.
- *
- * @param str Debug message to print
- *
- * @note Must be a member of HebiThread because RCLCPP's (ROS2's) logging
- *       functions reference an `rclcpp::Node` object.
- */
-void HebiThread::DebugOut(const std::string& str) {
-#ifdef BUILD_WITH_ROS2
-    // NOTE: it isn't necessary to check debug_mode_ here because
-    //       RCLCPP_LOG_LEVEL manages ROS2's logging level
-    LogDebug(str);
-#else
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] " << str;
-    }
-#endif
-}
 
 /**
  * @brief Convenience function for matching individual actuator feedback to the
@@ -274,42 +252,6 @@ void HebiThread::PublishState() {
 
     state_pub_->publish(state_msg_);
 }
-
-/**
- * @brief Convenience wrapper around `rclcpp` DEBUG print. Capturable by rosbag.
- *
- * @param message String to print.
- */
-void HebiThread::LogDebug(const std::string& message) {
-    RCLCPP_DEBUG(this->get_logger(), "%s", message.c_str());
-}
-
-/**
- * @brief Convenience wrapper around `rclcpp` INFO print. Capturable by rosbag.
- *
- * @param message String to print.
- */
-void HebiThread::LogInfo(const std::string& message) {
-    RCLCPP_INFO(this->get_logger(), "%s", message.c_str());
-}
-
-/**
- * @brief Convenience wrapper around `rclcpp` WARN print. Capturable by rosbag.
- *
- * @param message String to print.
- */
-void HebiThread::LogWarn(const std::string& message) {
-    RCLCPP_WARN(this->get_logger(), "%s", message.c_str());
-}
-
-/**
- * @brief Convenience wrapper around `rclcpp` ERROR print. Capturable by rosbag.
- *
- * @param message String to print.
- */
-void HebiThread::LogError(const std::string& message) {
-    RCLCPP_ERROR(this->get_logger(), "%s", message.c_str());
-}
 #endif
 
 //------------------------------------------------------------------------------
@@ -320,7 +262,7 @@ void HebiThread::LogError(const std::string& message) {
  * @brief Main command loop.
  */
 void HebiThread::run() {
-    DebugOut("Initialized HebiThread");
+    logger_->Debug("Initialized HebiThread");
 
     // Initialize thread variables for efficiency
     Eigen::VectorXd pos_cmd(num_actuators_);
@@ -357,7 +299,7 @@ void HebiThread::run() {
                 // Trajectory is complete
                 trajectory_.reset();
 
-                DebugOut("HEBI - Trajectory complete");
+                logger_->Debug("Trajectory complete");
             }
         } else {
             // Add compensating effort/torque to resist external forces
@@ -419,20 +361,6 @@ void HebiThread::run() {
 // !Actuator Commands (slots)
 //------------------------------------------------------------------------------
 
-void HebiThread::SetDebugMode(const bool& enabled) {
-#if BUILD_WITH_ROS2
-    if (enabled) {
-        rcutils_logging_set_logger_level(this->get_logger().get_name(),
-                                         RCUTILS_LOG_SEVERITY_DEBUG);
-    } else {
-        rcutils_logging_set_logger_level(this->get_logger().get_name(),
-                                         RCUTILS_LOG_SEVERITY_INFO);  // default
-    }
-#else
-    debug_mode_ = enabled;  // same as AbstractActuatorThread
-#endif
-}
-
 /**
  * @brief Attempts to establish connections to all actuators.
  *
@@ -459,9 +387,9 @@ void HebiThread::Connect() {
             return;
         }
 
-        DebugOut("HEBI - Found following actuators (Family|Name):");
+        logger_->Debug("Found following actuators (Family|Name):");
         for (auto entry : *entry_list) {
-            DebugOut("  " + entry.family_ + " | " + entry.name_);
+            logger_->Debug("  " + entry.family_ + " | " + entry.name_);
         }
     }
 
@@ -493,7 +421,7 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
-    DebugOut("HEBI - Connection successful");
+    logger_->Debug("Connection successful");
 
     // Command actuator(s) to hold current position
     group_ = group;
@@ -507,7 +435,7 @@ void HebiThread::Connect() {
         return;
     }
 
-    DebugOut("HEBI - Creating log file at" + log_path);
+    logger_->Debug("Creating log file at" + log_path);
 }
 
 /**
@@ -526,7 +454,7 @@ void HebiThread::Disconnect() {
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
 
-        DebugOut("HEBI - Gracefully disconnected from actuator(s)");
+        logger_->Debug("Gracefully disconnected from actuator(s)");
     }
 }
 
@@ -582,8 +510,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                                                                       &vel,
                                                                       &accel);
 
-    DebugOut("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
-             + " rad");
+    logger_->Debug("Set trajectory target(s) to " + trajectory_ss.str()
+                   + " rad");
 }
 
 /**
@@ -596,5 +524,5 @@ void HebiThread::Stop() {
 
     trajectory_.reset();
 
-    DebugOut("HEBI - Trajectory reset");
+    logger_->Debug("Trajectory reset");
 }

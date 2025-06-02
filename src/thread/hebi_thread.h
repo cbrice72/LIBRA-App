@@ -46,9 +46,6 @@ class HebiThread :
     ~HebiThread() override;
 
   public slots:
-
-    void SetDebugMode(const bool& enabled) override;
-
     // --- Actuator Commands ---
 
     void Connect() override;
@@ -67,19 +64,12 @@ class HebiThread :
 
     // --- Helper Functions ---
 
-    void DebugOut(const std::string& str);
-
     std::unordered_map<Actuator::Joint, double> GetFeedbackMap(
         const std::vector<double>& feedback);
     QString GetStatus();
 
 #ifdef BUILD_WITH_ROS2
     void PublishState();
-
-    void LogDebug(const std::string& message);
-    void LogInfo(const std::string& message);
-    void LogWarn(const std::string& message);
-    void LogError(const std::string& message);
 #endif
 
     // --- Data Members ---
