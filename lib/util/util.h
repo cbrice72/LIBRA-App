@@ -11,7 +11,7 @@
 #include <string>
 
 // Other Library Headers
-//   (none)
+#include <QString>  // Qt::Core
 
 // Project Headers
 //   (none)
@@ -21,6 +21,9 @@ namespace util {
 std::string GetDateTimeStr();
 std::string GetTimestampStr();
 
-void PrintEPOSErr(std::string func_name, uint err, int node_id = 0);
+#if LIBRA_VERSION == 2
+static QString GetFormattedEposErrTxt(const std::string& func_name,
+                                      const uint& err, const int& node_id = 0);
+#endif
 
 }  // namespace util

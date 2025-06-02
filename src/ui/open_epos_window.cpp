@@ -61,9 +61,12 @@ OpenEPOSWindow::OpenEPOSWindow(QWidget* parent)
 
     // Validation
     if (err_code != 0) {
-        util::PrintEPOSErr("VCS_GetDeviceNameSelection", err_code);
+        qCritical() << util::GetFormattedEposErrTxt(
+            "VCS_GetDeviceNameSelection", err_code);
         return;
-    } else if (devices.empty()) {
+    }
+
+    if (devices.empty()) {
         qWarning() << "No devices found on the network!";
     }
 
@@ -138,9 +141,12 @@ void OpenEPOSWindow::on_cb_device_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        util::PrintEPOSErr("VCS_GetProtocolStackNameSelection", err_code);
+        qCritical() << util::GetFormattedEposErrTxt(
+            "VCS_GetProtocolStackNameSelection", err_code);
         return;
-    } else if (protocols.empty()) {
+    }
+
+    if (protocols.empty()) {
         qWarning() << "No protocols in use by "
                    << QString::fromStdString(device_name_);
         return;
@@ -203,9 +209,12 @@ void OpenEPOSWindow::on_cb_protocol_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        util::PrintEPOSErr("VCS_GetInterfaceNameSelection", err_code);
+        qCritical() << util::GetFormattedEposErrTxt(
+            "VCS_GetInterfaceNameSelection", err_code);
         return;
-    } else if (interfaces.empty()) {
+    }
+
+    if (interfaces.empty()) {
         qWarning() << "No interfaces found running "
                    << QString::fromStdString(protocol_name_);
         return;
@@ -264,9 +273,12 @@ void OpenEPOSWindow::on_cb_interface_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        util::PrintEPOSErr("VCS_GetPortNameSelection", err_code);
+        qCritical() << util::GetFormattedEposErrTxt("VCS_GetPortNameSelection",
+                                                    err_code);
         return;
-    } else if (ports.empty()) {
+    }
+
+    if (ports.empty()) {
         qWarning() << "No ports found on "
                    << QString::fromStdString(interface_name_);
     }
@@ -322,9 +334,12 @@ void OpenEPOSWindow::on_cb_port_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        util::PrintEPOSErr("VCS_GetBaudrateSelection", err_code);
+        qCritical() << util::GetFormattedEposErrTxt("VCS_GetBaudrateSelection",
+                                                    err_code);
         return;
-    } else if (bauds.empty()) {
+    }
+
+    if (bauds.empty()) {
         qWarning() << "No baud rates available for "
                    << QString::fromStdString(port_name_);
     }
@@ -369,7 +384,7 @@ void OpenEPOSWindow::on_pb_connect_clicked() {
 
     // Validation
     if (handle_ == nullptr || err_code != 0) {
-        util::PrintEPOSErr("VCS_OpenDevice", err_code);
+        qCritical() << util::GetFormattedEposErrTxt("VCS_OpenDevice", err_code);
         VCS_CloseDevice(handle_, &err_code);
         return;
     }
@@ -377,7 +392,8 @@ void OpenEPOSWindow::on_pb_connect_clicked() {
     // Set controller baud rate and timeout
     if (VCS_SetProtocolStackSettings(handle_, baud_rate_, kTimeout, &err_code)
         <= 0) {
-        util::PrintEPOSErr("VCS_SetProtocolStackSettings", err_code);
+        qCritical() << util::GetFormattedEposErrTxt(
+            "VCS_SetProtocolStackSettings", err_code);
         VCS_CloseDevice(handle_, &err_code);
         return;
     }

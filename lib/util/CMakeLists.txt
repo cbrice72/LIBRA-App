@@ -6,22 +6,16 @@
 ################################################################################
 
 # Create and configure the module
-qt_add_library(
+add_library(
     util
     STATIC
-    # Header
     util.h
-    # Source
     util.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
-set(MAXON_DIR ${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0)
-
 target_include_directories(
     util
-    # Maxon
-    PRIVATE ${MAXON_DIR}/include
     # Make sure the path to this directory is automatically added as an include
     # path to all targets using this library
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
@@ -32,6 +26,21 @@ target_link_libraries(
     util
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
-    # Maxon
-    PRIVATE -lEposCmd
 )
+
+if(LIBRA_VERSION EQUAL 2)
+    # Additional includes and libraries for the EPOS actuator
+    set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
+
+    target_include_directories(
+        util
+        # EPOS (Maxon)
+        PRIVATE ${EPOS_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(
+        util
+        # EPOS (Maxon)
+        PRIVATE -lEposCmd
+    )
+endif()

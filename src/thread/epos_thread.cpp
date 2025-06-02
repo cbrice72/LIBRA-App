@@ -436,7 +436,7 @@ void EposThread::Disconnect() {
     // Close the connection via the EPOS API
     uint err_code = 0;
     if (VCS_CloseDevice(handle_, &err_code) == 0) {
-        // emit ErrorThrown(util::PrintEPOSErr("EPOS - VCS_CloseDevice", err_code));
+        // emit ErrorThrown(util::GetFormattedEposErrTxt("VCS_CloseDevice", err_code));
         emit ErrorThrown("[TEMPORARY]\nEPOS - Problem closing device!");
         return;
     }
