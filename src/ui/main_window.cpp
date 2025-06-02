@@ -113,6 +113,8 @@ MainWindow::MainWindow(QWidget* parent)
     // - MainWindow slots
     // TODO: implementation
 
+    log_thread_->start();
+
     // EPOS thread
     epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
                                   "USB0", 1000000, debug_mode_);
@@ -182,10 +184,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     InitializeFeedbackElementMap();
 
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(nullptr, "LIBRA App Startup",
-                                  "Automatically connect all components?",
-                                  QMessageBox::Yes | QMessageBox::No);
+    auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
+                                       "Automatically connect all components?",
+                                       QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::Yes) {
         ui_->a_connect_all->trigger();
     }
