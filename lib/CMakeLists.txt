@@ -7,6 +7,7 @@
 
 # Add module subdirectories
 add_subdirectory(camera_manager)
+add_subdirectory(logger)
 add_subdirectory(util)
 if(BUILD_WITH_ROS2)
     add_subdirectory(ros2)
