@@ -8,7 +8,7 @@
 # ========================= ACTUATOR THREAD =========================
 
 # Check whether the third-party directories are defined
-if(BUILD_LIBRA_TWO AND NOT DEFINED EPOS_DIR)
+if(LIBRA_VERSION EQUAL 2 AND NOT DEFINED EPOS_DIR)
     message(
         FATAL_ERROR
             "EPOS_DIR is not defined! Set it in your root CMakeLists.txt as a cached variable"
@@ -32,7 +32,7 @@ set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.cpp
 )
 
-if(BUILD_LIBRA_TWO)
+if(LIBRA_VERSION EQUAL 2)
     list(
         APPEND
         SRC_FILES
@@ -67,7 +67,7 @@ target_link_libraries(
     PRIVATE hebi hebic++ m pthread
 )
 
-if(BUILD_LIBRA_TWO)
+if(LIBRA_VERSION EQUAL 2)
     # Additional includes and libraries for the EPOS actuator
     set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
 

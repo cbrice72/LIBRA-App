@@ -16,49 +16,35 @@ project(
 # ========================= CONFIG =========================
 
 # Project options
+# - Configurable by user
 set(LIBRA_VERSION
-    "TWO"
+    2
     CACHE
         STRING
-        "Which prototype to build for: LIBRA-I (HEBI x5) or LIBRA-II (EPOS x1 + HEBI x1)"
+        "Which prototype to build for: 1 = LIBRA-I (HEBI x5), 2 = LIBRA-II (EPOS x1 + HEBI x1)"
 )
-set_property(CACHE LIBRA_VERSION PROPERTY STRINGS "ONE" "TWO")
+set_property(CACHE LIBRA_VERSION PROPERTY STRINGS 1 2)
 
 option(BUILD_WITH_ROS2 "Build LIBRA App with ROS2 functionality" ON)
 
+# - Internal (shouldn't need to be changed by user)
 set(HEBI_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
-    CACHE PATH "Path to the HEBI API" FORCE
+    CACHE PATH "Path to the HEBI API" FORCE  # included in this project
 )
 
 set(EPOS_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
-    CACHE PATH "Path to the EPOS API" FORCE
+    CACHE PATH "Path to the EPOS API" FORCE  # included in this project
 )
 
-# Validate project options and set internal vars (invisible to user)
-if(LIBRA_VERSION STREQUAL "ONE")
-    set(BUILD_LIBRA_ONE
-        ON
-        CACHE BOOL "" FORCE
-    )
-    set(BUILD_LIBRA_TWO
-        OFF
-        CACHE BOOL "" FORCE
-    )
-elseif(LIBRA_VERSION STREQUAL "TWO")
-    set(BUILD_LIBRA_ONE
-        OFF
-        CACHE BOOL "" FORCE
-    )
-    set(BUILD_LIBRA_TWO
-        ON
-        CACHE BOOL "" FORCE
-    )
+# Validate project options and ensure the relevant preprocessor directives are triggered in C++ code
+if(LIBRA_VERSION EQUAL 1 OR LIBRA_VERSION EQUAL 2)
+    add_compile_definitions(LIBRA_VERSION=${LIBRA_VERSION})
 else()
     message(
         FATAL_ERROR
-            "Invalid LIBRA_VERSION: ${LIBRA_VERSION} - must be \"ONE\" or \"TWO\"!"
+            "Invalid LIBRA_VERSION: ${LIBRA_VERSION} - must be 1 (for LIBRA-I) or 2 (for LIBRA-II)!"
     )
 endif()
 
@@ -76,6 +62,8 @@ if(BUILD_WITH_ROS2)
                 "Couldn't find a valid ROS 2 installation (ROS_VERSION is not 2)."
         )
     endif()
+
+    add_compile_definitions(BUILD_WITH_ROS2)
 endif()
 
 # Check if CMake was called outside of a Qt environment (i.e., QtCreator)
@@ -163,9 +151,6 @@ find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
-    # Ensure the relevant preprocessor macros are triggered in C++ code
-    add_compile_definitions(BUILD_WITH_ROS2)
-
     # Find ROS2 packages
     set(ROS_CORE_PACKAGES # used in other CMakeLists
         ament_cmake rclcpp rmw_implementation rosidl_default_generators
@@ -190,7 +175,7 @@ set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
                       "${HEBI_DIR}/Eigen"
 )
 
-if(BUILD_LIBRA_TWO)
+if(LIBRA_VERSION EQUAL 2)
     # NOTE: there is no `add_subdirectory()` call for EPOS since it doesn't
     # provide a CMakeLists.txt, only a binary to link against
     set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
@@ -202,20 +187,20 @@ endif()
 add_subdirectory(lib) # camera_manager, util, [ROS2 interfaces & nodes]
 add_subdirectory(src) # PROJECT_SOURCE, actuator_thread, log_thread
 
-# Add target executable
+# Add GUI target executable
 qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # ~~~
-# Define target properties for Android with Qt 6 as:
+# Define GUI target properties for Android with Qt 6 as:
 #    set_property(TARGET libra_app_gui APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR
 #                 ${CMAKE_CURRENT_SOURCE_DIR}/android)
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 # ~~~
 
 # Copy app and actuator configurations to the executable directory
-if(BUILD_LIBRA_ONE)
+if(LIBRA_VERSION EQUAL 1)
     set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-1)
-else() # BUILD_LIBRA_TWO
+else() # assume LIBRA_VERSION EQUAL 2
     set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-2)
 endif()
 
@@ -226,29 +211,16 @@ add_custom_command(
             ${CMAKE_INSTALL_BINDIR}/shared
 )
 
-# Add all libraries directly used by this project to the include path
-target_include_directories(
-    libra_app_gui
-    # Project
-    PRIVATE ${CMAKE_SOURCE_DIR}/src
-    # HEBI
-    PRIVATE ${HEBI_INCLUDE_DIRS}
-)
+# Add all libraries directly used by the GUI to the include path
+target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
-if(BUILD_LIBRA_TWO)
-    target_include_directories(
-        libra_app_gui
-        # EPOS (Maxon)
-        PRIVATE ${EPOS_INCLUDE_DIRS}
-    )
-endif()
-
-if(BUILD_WITH_ROS2)
-    # Let ament take care of adding headers, libraries, and sub-dependencies
-    ament_target_dependencies(
-        libra_app_gui PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
-    )
-endif()
+# TODO: this doesn't seem to be necssary - remove if everything works
+#if(BUILD_WITH_ROS2)
+#    # Let ament take care of adding headers, libraries, and sub-dependencies
+#    ament_target_dependencies(
+#        libra_app_gui PUBLIC ${ROS_CORE_PACKAGES} ${ROS_MSG_PACKAGES}
+#    )
+#endif()
 
 # Tell the linker which libraries to link against
 target_link_libraries(
@@ -266,19 +238,9 @@ target_link_libraries(
     PRIVATE Qt${QT_VERSION_MAJOR}::MultimediaWidgets
     PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
-    # HEBI
-    PRIVATE hebi hebic++ m pthread
     # Linux
     PRIVATE udev # TODO(brice.c.aa): is this necessary?
 )
-
-if(BUILD_LIBRA_TWO)
-    target_link_libraries(
-        libra_app_gui
-        # EPOS (Maxon)
-        PRIVATE -lEposCmd
-    )
-endif()
 
 # ========================= INSTALL =========================
 
