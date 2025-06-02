@@ -9,8 +9,8 @@
 add_library(
     util
     STATIC
-    util.h
-    util.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/util.cpp
 )
 
 # Ensure this module has access to the necessary 3rd-party libraries
