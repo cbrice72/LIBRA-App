@@ -19,6 +19,8 @@
 #include "util.h"
 
 /* --- TABLE OF CONTENTS ---
+ * !Local Helpers
+ * !Class Management
  * !Main Window
  * !Getters & Setters
  * !Uncategorized
@@ -28,6 +30,14 @@ constexpr int kMaxonTrue = 1;   // In general Maxon code = TRUE
 constexpr int kMaxonFalse = 0;  // In general Maxon code = FALSE
 constexpr uint kMaxCharBufSize = 100;
 constexpr uint kTimeout = 100;  // ms
+
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
 
 /**
  * @brief Standard constructor.

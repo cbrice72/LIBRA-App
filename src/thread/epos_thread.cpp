@@ -20,12 +20,12 @@
 // #include "util.h"  // TODO: integrate with main project
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
+ * !Local Helpers
+ * !Class Management
+ * !Class Helpers
  * !Thread Overrides
  * !Actuator Commands (slots)
  */
-
-/* Constants */
 
 // Mechanical Properties
 
@@ -79,6 +79,16 @@ constexpr int kMoveRelative = 0;     // `Absolute` = FALSE
 constexpr int kMoveImmediately = 1;  // `Immediately` = TRUE
 constexpr int kMoveWaitForLast = 0;  // `Immediately` = FALSE
 
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+namespace {}  // namespace
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
+
 /**
  * @brief Standard constructor.
  *
@@ -119,12 +129,8 @@ EposThread::~EposThread() {
 }
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
-
-namespace {  // local to this file
-
-}  // namespace
 
 /**
  * @brief Returns minor status information for the connected actuator.

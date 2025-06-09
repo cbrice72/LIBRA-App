@@ -22,13 +22,8 @@
 //   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Utilities
  */
-
-//------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
 
 // For use with EPOS character buffers
 constexpr uint kMaxCharBufSize = 100;

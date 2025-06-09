@@ -16,17 +16,25 @@
 #include <QDebug>     // Qt::Core
 
 // Project Headers
-//   (none)
+#include "util.h"
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
+ * !Local Helpers
+ * !Class Management
+ * !Class Helpers
  * !Thread Overrides
  * !Log Commands (slots)
  */
 
-/* Constants */
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
 
-//   (none)
+namespace {}  // namespace
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
 
 /**
  * @brief Standard constructor.
@@ -55,33 +63,8 @@ LogThread::~LogThread() {
 }
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
-
-namespace {  // local to this file
-
-/**
- * @brief Provides a filename-safe string of the current date and time.
- *
- * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
- */
-std::string GetDateTimeStr() {
-    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    dts.replace(":", "-");         // replace colons (invalid in filenames)
-    dts = dts.section('.', 0, 0);  // remove milliseconds
-    return dts.toStdString();
-}
-
-/**
- * @brief Provides an Excel-friendly string of the current time.
- *
- * @return String formatted as "HH-mm-ss.zzz"
- */
-std::string GetTimestampStr() {
-    return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();
-}
-
-}  // namespace
 
 /**
  * @brief Initializes a logfile with named columns.
@@ -99,7 +82,7 @@ std::ofstream LogThread::InitializeLog(std::string name) {
 
     // Create log file and populate column headers
     std::ofstream logfile;
-    logfile.open("log/" + GetDateTimeStr() + "_" + name + ".csv");
+    logfile.open("log/" + util::GetDateTimeStr() + "_" + name + ".csv");
     logfile << "Time,,"
             << "TP_Yaw (deg),TP_Pitch (deg),,"
             << "AP_Yaw (deg),AP_Pitch (deg),,"
@@ -138,7 +121,7 @@ void LogThread::run() {
         /*
         if (something) {
             // Timestamp
-            continuous_log_ << GetTimestampStr() + ",,";
+            continuous_log_ << util::GetTimestampStr() + ",,";
 
             // Actuator info
             for (auto i = 0; i < kHebiFeedbackCount; i++) {

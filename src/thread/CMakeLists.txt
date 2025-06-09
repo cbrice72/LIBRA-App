@@ -116,6 +116,8 @@ target_include_directories(
 # Tell the linker which libraries to link against
 target_link_libraries(
     log_thread
+    # Project
+    PUBLIC util
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
 )

@@ -18,21 +18,31 @@
 //   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
+ * !Local Helpers
+ * !Class Management
+ * !Class Helpers
  * !Getters & Setters
  * !Slots
  * !QWidget Overrides
  */
 
-/* Constants */
-
 constexpr int kAnimTime = 1000 / 30;  // 1 s -> 1000 ms / 30 FPS animation
+
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
 
 /**
  * @brief Standard constructor.
  */
 TankWidget::TankWidget(QWidget* parent)
-    : QWidget(parent), level_(0.0), flow_mode_(FlowMode::Stopped),
+    : QWidget(parent),
+      level_(0.0),
+      flow_mode_(FlowMode::Stopped),
       animation_timer_(new QTimer(this)) {
     // Configure widget appearance
     setMinimumSize(100, 100);
@@ -53,7 +63,7 @@ TankWidget::~TankWidget() {
 }
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
 
 /**

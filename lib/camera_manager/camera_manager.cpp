@@ -19,9 +19,35 @@
 //   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
+ * !Local Helpers
+ * !Class Management
+ * !Class Helpers
  * !Camera Commands
  */
+
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+namespace {
+
+/**
+ * @brief Provides a filename-safe string of the current date and time.
+ *
+ * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
+ */
+std::string GetDateTimeStr() {
+    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
+    dts.replace(":", "-");         // replace colons (invalid in filenames)
+    dts = dts.section('.', 0, 0);  // remove milliseconds
+    return dts.toStdString();
+}
+
+}  // namespace
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
 
 /**
  * @brief Standard constructor.
@@ -32,7 +58,9 @@
  */
 CameraManager::CameraManager(const QString& id, QVideoWidget* viewfinder,
                              QObject* parent = nullptr)
-    : QObject(parent), id_(id), camera_(nullptr),
+    : QObject(parent),
+      id_(id),
+      camera_(nullptr),
       output_dir_(QDir::currentPath().toStdString() + "/") {
     // Find requested camera
     const auto cameras = QMediaDevices::videoInputs();
@@ -132,24 +160,8 @@ CameraManager::~CameraManager() {
 };
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
-
-namespace {
-
-/**
- * @brief Provides a filename-safe string of the current date and time.
- *
- * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
- */
-std::string GetDateTimeStr() {
-    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    dts.replace(":", "-");         // replace colons (invalid in filenames)
-    dts = dts.section('.', 0, 0);  // remove milliseconds
-    return dts.toStdString();
-}
-
-}  // namespace
 
 //------------------------------------------------------------------------------
 // !Camera Commands

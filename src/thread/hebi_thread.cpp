@@ -24,12 +24,12 @@
 #include "ros2_logger.h"
 
 /* --- TABLE OF CONTENTS ---
- * !Helper Functions
+ * !Local Helpers
+ * !Class Management
+ * !Class Helpers
  * !Thread Overrides
  * !Actuator Commands (slots)
  */
-
-/* Constants */
 
 // Improving Readability of Conversions
 
@@ -42,6 +42,16 @@ constexpr int32_t kTimeout = 3000;   // ms
 constexpr double kMaxVel = 0.1;      // rad/s
 constexpr double kStiffness = 50.0;  // Nm/rad
 constexpr double kDamping = 1.0;     // Nm/rad/s
+
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+namespace {}  // namespace
+
+//------------------------------------------------------------------------------
+// !Class Management
+//------------------------------------------------------------------------------
 
 /**
  * @brief Standard constructor.
@@ -111,12 +121,8 @@ HebiThread::~HebiThread() {
 }
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
-
-namespace {  // local to this file
-
-}  // namespace
 
 /**
  * @brief Convenience function for matching individual actuator feedback to the
