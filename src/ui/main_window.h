@@ -142,6 +142,8 @@ class MainWindow : public QMainWindow {
 
     // --- Helper Functions ---
 
+    void ConfigureUi();
+    void InitializeThreads();
     void InitializeFeedbackElementMap();
 
     void UpdatePumpVals();

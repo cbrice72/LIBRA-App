@@ -61,9 +61,9 @@ void CheckWslEnvironment() {
 }
 
 /**
- * @brief Fully removes a widget or layout from its parent.
+ * @brief Fully deletes a widget or layout from the user interface.
  *
- * @tparam T Any Qt widget type
+ * @tparam T Any visual QObject type
  * @param widget The widget or layout to be removed
  */
 template<typename T>
@@ -72,27 +72,46 @@ void RemoveUiElement(T*& element) {
         return;
     }
 
-    // Handle widgets
-    if constexpr (std::is_base_of_v<QWidget, T>) {
-        // Remove from parent layout, if exists
-        // (NOTE: deleting a widget without removing it from its layout may cause
-        //        visual glitches since the layout still thinks the widget exists)
-        if (QLayout* parent_layout = element->parentWidget()
-                                         ? element->parentWidget()->layout()
-                                         : nullptr) {
-            parent_layout->removeWidget(element);
+    // To avoid duplicating code, define this lambda capable of handling both
+    // QWidgets and QLayouts (since they boil down to different QObjects)
+    auto RemoveFromParentLayout = [](QObject* obj) {
+        if (!obj) {
+            return;
         }
-    }
+
+        // All objects are eventually children of a QWidget, so this is allowed
+        if (auto* p = qobject_cast<QWidget*>(obj->parent())) {
+            if (auto* pl = p->layout()) {
+                // We must explicitly cast since indexOf() does not take QObjects
+                if (auto* w = qobject_cast<QWidget*>(obj)) {
+                    if (int i = pl->indexOf(w); i >= 0) {
+                        delete pl->takeAt(i);
+                    }
+                } else if (auto* l = qobject_cast<QLayout*>(obj)) {
+                    if (int i = pl->indexOf(l); i >= 0) {
+                        delete pl->takeAt(i);
+                    }
+                }
+            }
+        }
+    };
+
+    RemoveFromParentLayout(element);
 
     // Handle layouts
-    else if constexpr (std::is_base_of_v<QLayout, T>) {
-        // Remove from parent widget (automatically deletes contained widgets)
-        if (element->parentWidget()) {
-            element->parentWidget()->setLayout(nullptr);
+    if constexpr (std::is_base_of_v<QLayout, T>) {
+        // Recursively delete all children
+        while (QLayoutItem* item = element->takeAt(0)) {
+            if (auto* w = item->widget()) {
+                RemoveUiElement(w);
+            } else if (auto* l = item->layout()) {
+                RemoveUiElement(l);
+            }
+            delete item;
         }
     }
 
-    // Delete object and reclaim visual space
+    // Mark for deletion to reclaim visual space
     element->deleteLater();
     element = nullptr;
 }
@@ -114,182 +133,17 @@ MainWindow::MainWindow(QWidget* parent)
       ser_water_(new QSerialPort(this)),
       ser_servo_(new QSerialPort(this)) {
     ui_->setupUi(this);
+    this->setMinimumSize(this->minimumSizeHint());  // enforce minimum size
 
-    // Set UI elements
-    ui_->a_debug_mode->setChecked(debug_mode_);
+    // Runtime checks
+    CheckWslEnvironment();
 
-    // Check if app is running in Windows Subsystem for Linux (WSL2)
-    {
-        const char* wsl_path = "/run/WSL";
-
-        struct stat buf {};
-
-        if (stat(wsl_path, &buf) == 0 && S_ISDIR(buf.st_mode)) {
-            qWarning()
-                << "[WARN] You seem to be running this on WSL2. Please ensure "
-                   "you have properly forwarded your USB connections.";
-        }
-    }
-
-    // --- Slot Management (non-thread) ---
-
-    // Arm
-#if LIBRA_VERSION == 1
-    connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // when moved
-            ui_->sb_arm_roll, &QDoubleSpinBox::setValue);     // update display
-    connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // when changed
-            ui_->hs_arm_roll, &QAbstractSlider::setValue);    // update slider
-
-    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_pitch, &QAbstractSlider::setValue);
-
-    connect(ui_->hs_arm_j1, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_j1, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_j1, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_j1, &QAbstractSlider::setValue);
-
-    connect(ui_->hs_arm_j2, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_j2, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_j2, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_j2, &QAbstractSlider::setValue);
-
-    connect(ui_->hs_arm_j3, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_j3, &QAbstractSlider::setValue);
-#elif LIBRA_VERSION == 2
-    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // when moved
-            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);     // update display
-    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // when changed
-            ui_->hs_arm_yaw, &QAbstractSlider::setValue);    // update slider
-
-    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_pitch, &QAbstractSlider::setValue);
-#endif
-
-    // Pump (FOR TESTING PURPOSES ONLY)
-    connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Fill);      // start filling
-
-    connect(ui_->pb_pump_disable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Stop);       // stop filling
-
-    connect(ui_->pb_pump_drain, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Drain);    // force drain
-
-    // --- Thread Management ---
-
-    /* In Qt, thread management for subclassed QThreads generally has 4 steps:
-     *   1) Initialize a new QThread object
-     *   2) Register a QThread signal to return data to a MainWindow handler
-     *   3) Register the QThread's exit signal to its own destruction slot
-     *   4) Spin off the QThread
-     * If the thread loops continuously, there is a fifth step:
-     *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
-     */
-
-    // Log thread
-    log_thread_ = new LogThread(this, debug_mode_);
-
-    // - MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            log_thread_, &LogThread::SetDebugMode);
-
-    connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
-            log_thread_, &LogThread::TakeLogShot);
-
-    // - MainWindow slots
-    // TODO: implementation
-
-    log_thread_->start();
-
-#if LIBRA_VERSION == 2
-    // EPOS thread
-    epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
-                                  "USB0", 1000000, debug_mode_);
-
-    // - MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            epos_thread_, &EposThread::SetDebugMode);
-
-    connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
-            epos_thread_, &EposThread::Connect);
-    connect(ui_->a_epos_disconnect, &QAction::triggered,  // disconnect EPOS
-            epos_thread_, &EposThread::Disconnect);
-
-    connect(this, &MainWindow::CommandEpos,  // update EPOS target(s)
-            epos_thread_, &EposThread::SetTarget);
-    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
-            epos_thread_, &EposThread::Stop);
-
-    // - MainWindow slots
-    connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
-            this, &MainWindow::HandleActuatorFeedback);
-    connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
-            this, &MainWindow::HandleActuatorStatus);
-
-    connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
-            this, &MainWindow::HandleErrorMsg);
-
-    // - Thread cleanup
-    connect(epos_thread_, &EposThread::finished,      // when thread exits
-            epos_thread_, &EposThread::deleteLater);  // ... deallocate
-
-    epos_thread_->start();
-#endif
-
-    // HEBI thread
-    hebi_thread_ = new HebiThread(this, {"LIBRA"},
-#if LIBRA_VERSION == 1
-                                  {
-                                      "MA",
-                                      "MB",
-                                      "J1",
-                                      "J2",
-                                      "J3",
-                                  },
-#elif LIBRA_VERSION == 2
-                                  {"Pitch"},
-#endif
-                                  debug_mode_);
-
-    // - MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            hebi_thread_, &HebiThread::SetDebugMode);
-
-    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
-            hebi_thread_, &HebiThread::Connect);
-    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
-            hebi_thread_, &HebiThread::Disconnect);
-
-    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
-            hebi_thread_, &HebiThread::SetTarget);
-    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
-            hebi_thread_, &HebiThread::Stop);
-
-    // - MainWindow slots
-    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
-            this, &MainWindow::HandleActuatorFeedback);
-    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
-            this, &MainWindow::HandleActuatorStatus);
-
-    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
-            this, &MainWindow::HandleErrorMsg);
-
-    // - Thread cleanup
-    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
-            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
-
-    hebi_thread_->start();
-
-    // --- Component Connection ---
-
+    // GUI configuration
+    ConfigureUi();
+    InitializeThreads();
     InitializeFeedbackElementMap();
 
+    // Component auto-connect
     auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
                                        "Automatically connect all components?",
                                        QMessageBox::Yes | QMessageBox::No);
@@ -324,59 +178,239 @@ MainWindow::~MainWindow() {
 }
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Class Helpers
 //------------------------------------------------------------------------------
 
-namespace {  // local to this file
+/**
+ * @brief Based on LIBRA version, disables unneeded widgets and connects those
+ *        with complementary functions.
+ *
+ * @note Only used in constructor - placed in own function to improve readability.
+ */
+void MainWindow::ConfigureUi() {
+    ui_->a_debug_mode->setChecked(debug_mode_);
 
-}  // namespace
+    // ========== Pump ==========
+
+    // Unneeded Widgets
+    //   (none)
+
+    // Slots (TODO: FOR TESTING PURPOSES ONLY)
+    connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Fill);      // start filling
+
+    connect(ui_->pb_pump_disable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Stop);       // stop filling
+
+    connect(ui_->pb_pump_drain, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Drain);    // force drain
+
+    // ========== Arm ==========
+
+    // Unneeded Widgets
+#if LIBRA_VERSION == 1
+    RemoveUiElement(ui_->gl_yaw_input);
+    RemoveUiElement(ui_->gl_yaw_output);
+    RemoveUiElement(ui_->l_epos_status);
+    //  TODO
+#elif LIBRA_VERSION == 2
+    // TODO
+#endif
+
+    // Slots
+    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved
+            ui_->sb_arm_pitch,
+            &QDoubleSpinBox::setValue);                        // update display
+    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
+            ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
+
+#if LIBRA_VERSION == 1
+    // TODO: LIBRA-I
+    /*
+    connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_roll, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_roll, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j1, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j1, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j1, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j1, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j2, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j2, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j2, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j2, &QAbstractSlider::setValue);
+
+    connect(ui_->hs_arm_j3, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_j3, &QAbstractSlider::setValue);
+    */
+#elif LIBRA_VERSION == 2
+    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_yaw, &QAbstractSlider::setValue);
+#endif
+}
+
+/**
+ * @brief Sets up signal and slot connections to child threads and spins them up.
+ *
+ * @note In Qt, thread management for subclassed QThreads generally has 4 steps:
+ *   1) Initialize a new QThread object
+ *   2) Register a QThread signal to return data to a MainWindow handler
+ *   3) Register the QThread's exit signal to its own destruction slot
+ *   4) Spin off the QThread
+ * If the thread loops continuously, there is a fifth step:
+ *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
+ *
+ * @note Only used in constructor - placed in own function to improve readability.
+ */
+void MainWindow::InitializeThreads() {
+    // ========== Log Thread ==========
+
+    log_thread_ = new LogThread(this, debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            log_thread_, &LogThread::SetDebugMode);
+
+    connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
+            log_thread_, &LogThread::TakeLogShot);
+
+    log_thread_->start();
+
+    // ========== EPOS Thread ==========
+
+#if LIBRA_VERSION == 2
+    epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
+                                  "USB0", 1000000, debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            epos_thread_, &EposThread::SetDebugMode);
+
+    connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
+            epos_thread_, &EposThread::Connect);
+    connect(ui_->a_epos_disconnect, &QAction::triggered,  // disconnect EPOS
+            epos_thread_, &EposThread::Disconnect);
+
+    connect(this, &MainWindow::CommandEpos,  // update EPOS target(s)
+            epos_thread_, &EposThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
+            epos_thread_, &EposThread::Stop);
+
+    // MainWindow slots
+    connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
+    connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
+
+    // Thread cleanup
+    connect(epos_thread_, &EposThread::finished,      // when thread exits
+            epos_thread_, &EposThread::deleteLater);  // ... deallocate
+
+    epos_thread_->start();
+#endif
+
+    // ========== HEBI Thread ==========
+
+    hebi_thread_ = new HebiThread(this, {"LIBRA"},
+#if LIBRA_VERSION == 1
+                                  {
+                                      "MA",
+                                      "MB",
+                                      "J1",
+                                      "J2",
+                                      "J3",
+                                  },
+#elif LIBRA_VERSION == 2
+                                  {"Pitch"},
+#endif
+                                  debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+            hebi_thread_, &HebiThread::SetDebugMode);
+
+    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
+            hebi_thread_, &HebiThread::Connect);
+    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
+            hebi_thread_, &HebiThread::Disconnect);
+
+    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
+            hebi_thread_, &HebiThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
+            hebi_thread_, &HebiThread::Stop);
+
+    // MainWindow slots
+    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
+    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
+            this, &MainWindow::HandleErrorMsg);
+
+    // Thread cleanup
+    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
+            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
+
+    hebi_thread_->start();
+}
 
 /**
  * @brief Populates a map-of-maps with UI label elements, according to their
  *        corresponding actuator joint names (`Actuator::Joint`) and feedback types
  *        (`Actuator::Feedback`).
  *
+ * @note Only used in constructor - placed in own function to improve readability.
+ *
  * @see Actuator::Joint Actuator::Feedback
  */
 void MainWindow::InitializeFeedbackElementMap() {
 #if LIBRA_VERSION == 1
+    // TODO: LIBRA-I
+    /*
     // 2-Dof joint
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_roll;
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_roll;
-    feedback_element_map_[Actuator::Joint::kMA]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_roll;
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos]
+    = ui_->l_target_roll;
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos]
+    = ui_->l_actual_roll; feedback_element_map_[Actuator::Joint::kMA]
+                         [Actuator::Feedback::kActualTorque] =
+    ui_->l_torque_roll;
 
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_pitch;
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_pitch;
-    feedback_element_map_[Actuator::Joint::kMB]
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos]
+    = ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos]
+    = ui_->l_actual_pitch; feedback_element_map_[Actuator::Joint::kMB]
                          [Actuator::Feedback::kActualTorque] =
                              ui_->l_torque_pitch;
 
     // Arm
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j1;
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j1;
-    feedback_element_map_[Actuator::Joint::kJ1]
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos]
+    = ui_->l_target_j1;
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos]
+    = ui_->l_actual_j1; feedback_element_map_[Actuator::Joint::kJ1]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j1;
 
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j2;
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j2;
-    feedback_element_map_[Actuator::Joint::kJ2]
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos]
+    = ui_->l_target_j2;
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos]
+    = ui_->l_actual_j2; feedback_element_map_[Actuator::Joint::kJ2]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j2;
 
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j3;
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j3;
-    feedback_element_map_[Actuator::Joint::kJ3]
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos]
+    = ui_->l_target_j3;
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos]
+    = ui_->l_actual_j3; feedback_element_map_[Actuator::Joint::kJ3]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j3;
+    */
 #elif LIBRA_VERSION == 2
     // Yaw joint
     feedback_element_map_[Actuator::Joint::kYaw]
@@ -805,6 +839,8 @@ void MainWindow::on_a_disconnect_all_triggered() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
+    // TODO: LIBRA-I
+    /*
     emit CommandHebi({
         ui_->sb_arm_roll->value(),
         ui_->sb_arm_pitch->value(),
@@ -812,6 +848,7 @@ void MainWindow::on_pb_arm_start_clicked() {
         ui_->sb_arm_j2->value(),
         ui_->sb_arm_j3->value(),
     });
+    */
 #elif LIBRA_VERSION == 2
     emit CommandEpos({ui_->sb_arm_yaw->value()});
     emit CommandHebi({ui_->sb_arm_pitch->value()});
