@@ -13,7 +13,6 @@ set(UI_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
-    PARENT_SCOPE
 )
 
 if(LIBRA_VERSION EQUAL 2)
@@ -26,3 +25,5 @@ if(LIBRA_VERSION EQUAL 2)
         ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.ui
     )
 endif()
+
+set(UI_SOURCE ${UI_SOURCE} PARENT_SCOPE)  # propagate changes
