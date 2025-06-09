@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>501</height>
+    <width>994</width>
+    <height>737</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -24,7 +24,7 @@
       <property name="sizeConstraint">
        <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
       </property>
-      <item row="2" column="3">
+      <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignTop">
        <widget class="QGroupBox" name="gb_manipulator">
         <property name="font">
          <font>
@@ -37,7 +37,7 @@
         <layout class="QGridLayout" name="gridLayout">
          <item row="1" column="0">
           <layout class="QHBoxLayout" name="hl_manip_servo_control">
-           <item>
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QPushButton" name="pb_manip_slow">
              <property name="enabled">
               <bool>false</bool>
@@ -68,7 +68,7 @@
              </property>
             </widget>
            </item>
-           <item>
+           <item alignment="Qt::AlignmentFlag::AlignTop">
             <widget class="QPushButton" name="pb_manip_fast">
              <property name="enabled">
               <bool>false</bool>
@@ -643,7 +643,7 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="3">
+      <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
        <widget class="QGroupBox" name="gb_pump">
         <property name="title">
          <string>PUMP</string>
@@ -831,7 +831,7 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="7" rowspan="2">
+      <item row="1" column="7" rowspan="2" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
        <widget class="QGroupBox" name="gb_camera">
         <property name="title">
          <string>CAMERA</string>
@@ -1061,32 +1061,25 @@
         </item>
        </layout>
       </item>
-      <item row="2" column="0" colspan="3">
+      <item row="2" column="0" colspan="3" alignment="Qt::AlignmentFlag::AlignTop">
        <widget class="QGroupBox" name="gb_arm">
         <property name="title">
          <string>ARM</string>
         </property>
         <layout class="QGridLayout" name="gl_arm">
-         <item row="0" column="2">
-          <widget class="QLabel" name="static_l_actual">
+         <item row="0" column="1">
+          <widget class="QLabel" name="static_l_target">
            <property name="text">
-            <string>Actual Pos.</string>
+            <string>Target Pos.</string>
            </property>
           </widget>
          </item>
-         <item row="0" column="3">
-          <widget class="QLabel" name="static_l_torque">
-           <property name="text">
-            <string>Actual Torque</string>
-           </property>
-          </widget>
-         </item>
-         <item row="2" column="1" colspan="3">
-          <layout class="QGridLayout" name="gl_pitch_output">
-           <item row="0" column="1">
-            <layout class="QHBoxLayout" name="hl_actual_pitch">
+         <item row="9" column="1" colspan="3">
+          <layout class="QGridLayout" name="gl_j2_output">
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="hl_target_j2">
              <item>
-              <widget class="QLabel" name="l_actual_pitch">
+              <widget class="QLabel" name="l_target_j2">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -1106,7 +1099,7 @@
                 </size>
                </property>
                <property name="statusTip">
-                <string>Primary pitch joint</string>
+                <string>Arm joint #2 (yaw)</string>
                </property>
                <property name="text">
                 <string>...</string>
@@ -1117,7 +1110,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="static_l_actual_pitch_u">
+              <widget class="QLabel" name="static_l_target_j2_u">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -1131,10 +1124,10 @@
              </item>
             </layout>
            </item>
-           <item row="0" column="0">
-            <layout class="QHBoxLayout" name="hl_target_pitch">
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="hl_actual_j2">
              <item>
-              <widget class="QLabel" name="l_target_pitch">
+              <widget class="QLabel" name="l_actual_j2">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -1154,7 +1147,7 @@
                 </size>
                </property>
                <property name="statusTip">
-                <string>Primary pitch joint</string>
+                <string>Arm joint #2 (yaw)</string>
                </property>
                <property name="text">
                 <string>...</string>
@@ -1165,7 +1158,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="static_l_target_pitch_u">
+              <widget class="QLabel" name="static_l_actual_j2_u">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -1180,9 +1173,9 @@
             </layout>
            </item>
            <item row="0" column="2">
-            <layout class="QHBoxLayout" name="hl_torque_pitch">
+            <layout class="QHBoxLayout" name="hl_torque_j2">
              <item>
-              <widget class="QLabel" name="l_torque_pitch">
+              <widget class="QLabel" name="l_torque_j2">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                  <horstretch>0</horstretch>
@@ -1202,7 +1195,7 @@
                 </size>
                </property>
                <property name="statusTip">
-                <string>Primary pitch joint</string>
+                <string>Arm joint #2 (yaw)</string>
                </property>
                <property name="text">
                 <string>...</string>
@@ -1213,7 +1206,7 @@
               </widget>
              </item>
              <item>
-              <widget class="QLabel" name="static_l_torque_pitch_u">
+              <widget class="QLabel" name="static_l_torque_j2_u">
                <property name="sizePolicy">
                 <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                  <horstretch>0</horstretch>
@@ -1227,23 +1220,644 @@
              </item>
             </layout>
            </item>
-           <item row="1" column="0" colspan="3">
-            <widget class="QFrame" name="hline_pitch">
+          </layout>
+         </item>
+         <item row="0" column="3">
+          <widget class="QLabel" name="static_l_torque">
+           <property name="text">
+            <string>Actual Torque</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0" rowspan="2">
+          <layout class="QGridLayout" name="gl_yaw_input">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_input_yaw">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Yaw</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="sb_arm_yaw">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
-             <property name="frameShape">
-              <enum>QFrame::Shape::HLine</enum>
+             <property name="minimumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
              </property>
-             <property name="frameShadow">
-              <enum>QFrame::Shadow::Plain</enum>
+             <property name="maximumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Range: -90,90  |  Interval: 5</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+             <property name="decimals">
+              <number>0</number>
+             </property>
+             <property name="minimum">
+              <double>-90.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>90.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>5.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="static_l_input_yaw_u">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QSlider" name="hs_arm_yaw">
+             <property name="statusTip">
+              <string>Range: -90,90  |  Interval: 5</string>
+             </property>
+             <property name="autoFillBackground">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <number>-90</number>
+             </property>
+             <property name="maximum">
+              <number>90</number>
+             </property>
+             <property name="singleStep">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>0</number>
+             </property>
+             <property name="sliderPosition">
+              <number>0</number>
+             </property>
+             <property name="tracking">
+              <bool>true</bool>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="tickPosition">
+              <enum>QSlider::TickPosition::TicksAbove</enum>
+             </property>
+             <property name="tickInterval">
+              <number>10</number>
              </property>
             </widget>
            </item>
           </layout>
+         </item>
+         <item row="7" column="1" colspan="3">
+          <layout class="QGridLayout" name="gl_j1_output">
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="hl_actual_j1">
+             <item>
+              <widget class="QLabel" name="l_actual_j1">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #1 (yaw)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_actual_j1_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="hl_target_j1">
+             <item>
+              <widget class="QLabel" name="l_target_j1">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #1 (yaw)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_target_j1_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QHBoxLayout" name="hl_torque_j1">
+             <item>
+              <widget class="QLabel" name="l_torque_j1">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #1 (yaw)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_torque_j1_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Nm</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item row="11" column="1" colspan="3">
+          <layout class="QGridLayout" name="gl_j3_output">
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="hl_target_j3">
+             <item>
+              <widget class="QLabel" name="l_target_j3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #3 (pitch)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_target_j3_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QHBoxLayout" name="hl_torque_j3">
+             <item>
+              <widget class="QLabel" name="l_torque_j3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #3 (pitch)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_torque_j3_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Nm</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="hl_actual_j3">
+             <item>
+              <widget class="QLabel" name="l_actual_j3">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Arm joint #3 (pitch)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_actual_j3_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item row="11" column="0" rowspan="2">
+          <layout class="QGridLayout" name="gl_j3_input">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_input_j3">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>J3</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="sb_arm_j3">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+             <property name="decimals">
+              <number>0</number>
+             </property>
+             <property name="minimum">
+              <double>-90.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>90.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>5.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="static_l_input_j3_u">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QSlider" name="hs_arm_j3">
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="autoFillBackground">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <number>-90</number>
+             </property>
+             <property name="maximum">
+              <number>90</number>
+             </property>
+             <property name="singleStep">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>0</number>
+             </property>
+             <property name="sliderPosition">
+              <number>0</number>
+             </property>
+             <property name="tracking">
+              <bool>true</bool>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="tickPosition">
+              <enum>QSlider::TickPosition::TicksAbove</enum>
+             </property>
+             <property name="tickInterval">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="7" column="0" rowspan="2">
+          <layout class="QGridLayout" name="gl_j1_input">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_input_j1">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>J1</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="sb_arm_j1">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+             <property name="decimals">
+              <number>0</number>
+             </property>
+             <property name="minimum">
+              <double>-90.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>90.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>5.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="static_l_input_j1_u">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QSlider" name="hs_arm_j1">
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="autoFillBackground">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <number>-90</number>
+             </property>
+             <property name="maximum">
+              <number>90</number>
+             </property>
+             <property name="singleStep">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>0</number>
+             </property>
+             <property name="sliderPosition">
+              <number>0</number>
+             </property>
+             <property name="tracking">
+              <bool>true</bool>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="tickPosition">
+              <enum>QSlider::TickPosition::TicksAbove</enum>
+             </property>
+             <property name="tickInterval">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="static_l_actual">
+           <property name="text">
+            <string>Actual Pos.</string>
+           </property>
+          </widget>
          </item>
          <item row="1" column="1" colspan="3">
           <layout class="QGridLayout" name="gl_yaw_output">
@@ -1391,42 +2005,19 @@
              </item>
             </layout>
            </item>
-           <item row="1" column="0" colspan="3">
-            <widget class="QFrame" name="hline_yaw">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::Shape::HLine</enum>
-             </property>
-             <property name="frameShadow">
-              <enum>QFrame::Shadow::Plain</enum>
-             </property>
-            </widget>
-           </item>
           </layout>
          </item>
-         <item row="0" column="1">
-          <widget class="QLabel" name="static_l_target">
-           <property name="text">
-            <string>Target Pos.</string>
-           </property>
-          </widget>
-         </item>
-         <item row="1" column="0">
-          <layout class="QGridLayout" name="gl_yaw_imput">
+         <item row="9" column="0" rowspan="2">
+          <layout class="QGridLayout" name="gl_j2_input">
            <item row="0" column="0">
-            <widget class="QLabel" name="static_l_input_yaw">
+            <widget class="QLabel" name="static_l_input_j2">
              <property name="font">
               <font>
                <bold>true</bold>
               </font>
              </property>
              <property name="text">
-              <string>Yaw</string>
+              <string>J2</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignCenter</set>
@@ -1434,7 +2025,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <widget class="QDoubleSpinBox" name="sb_arm_yaw">
+            <widget class="QDoubleSpinBox" name="sb_arm_j2">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -1454,7 +2045,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -90,90  |  Interval: 5</string>
+              <string>Range: -?,?  |  Interval: ?</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -1474,7 +2065,7 @@
             </widget>
            </item>
            <item row="0" column="2">
-            <widget class="QLabel" name="static_l_input_yaw_u">
+            <widget class="QLabel" name="static_l_input_j2_u">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
                <horstretch>0</horstretch>
@@ -1487,9 +2078,9 @@
             </widget>
            </item>
            <item row="1" column="0" colspan="3">
-            <widget class="QSlider" name="hs_arm_yaw">
+            <widget class="QSlider" name="hs_arm_j2">
              <property name="statusTip">
-              <string>Range: -90,90  |  Interval: 5</string>
+              <string>Range: -?,?  |  Interval: ?</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
@@ -1525,7 +2116,261 @@
            </item>
           </layout>
          </item>
-         <item row="2" column="0">
+         <item row="3" column="1" colspan="3">
+          <layout class="QGridLayout" name="gl_roll_output">
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="hl_target_roll">
+             <item>
+              <widget class="QLabel" name="l_target_roll">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary roll joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_target_roll_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QHBoxLayout" name="hl_torque_roll">
+             <item>
+              <widget class="QLabel" name="l_torque_roll">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary roll joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_torque_roll_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Nm</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="hl_actual_roll">
+             <item>
+              <widget class="QLabel" name="l_actual_roll">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary roll joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_actual_roll_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
+         </item>
+         <item row="3" column="0" rowspan="2">
+          <layout class="QGridLayout" name="gl_roll_input">
+           <item row="0" column="1">
+            <widget class="QDoubleSpinBox" name="sb_arm_roll">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>65</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+             </property>
+             <property name="decimals">
+              <number>0</number>
+             </property>
+             <property name="minimum">
+              <double>-90.000000000000000</double>
+             </property>
+             <property name="maximum">
+              <double>45.000000000000000</double>
+             </property>
+             <property name="singleStep">
+              <double>5.000000000000000</double>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="static_l_input_roll_u">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="text">
+              <string>deg</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="0" colspan="3">
+            <widget class="QSlider" name="hs_arm_roll">
+             <property name="statusTip">
+              <string>Range: -?,?  |  Interval: ?</string>
+             </property>
+             <property name="autoFillBackground">
+              <bool>true</bool>
+             </property>
+             <property name="minimum">
+              <number>-90</number>
+             </property>
+             <property name="maximum">
+              <number>45</number>
+             </property>
+             <property name="singleStep">
+              <number>5</number>
+             </property>
+             <property name="value">
+              <number>-90</number>
+             </property>
+             <property name="tracking">
+              <bool>true</bool>
+             </property>
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="tickPosition">
+              <enum>QSlider::TickPosition::TicksAbove</enum>
+             </property>
+             <property name="tickInterval">
+              <number>10</number>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_input_roll">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Roll</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item row="5" column="0" rowspan="2">
           <layout class="QGridLayout" name="gl_pitch_input">
            <item row="0" column="1">
             <widget class="QDoubleSpinBox" name="sb_arm_pitch">
@@ -1564,21 +2409,6 @@
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_input_pitch">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Pitch</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
              </property>
             </widget>
            </item>
@@ -1629,23 +2459,170 @@
              </property>
             </widget>
            </item>
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_input_pitch">
+             <property name="font">
+              <font>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Pitch</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
+             </property>
+            </widget>
+           </item>
           </layout>
          </item>
-         <item row="3" column="1">
-          <spacer name="verticalSpacer">
-           <property name="orientation">
-            <enum>Qt::Orientation::Vertical</enum>
-           </property>
-           <property name="sizeType">
-            <enum>QSizePolicy::Policy::MinimumExpanding</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>20</width>
-             <height>40</height>
-            </size>
-           </property>
-          </spacer>
+         <item row="5" column="1" colspan="3">
+          <layout class="QGridLayout" name="gl_pitch_output">
+           <item row="0" column="1">
+            <layout class="QHBoxLayout" name="hl_actual_pitch">
+             <item>
+              <widget class="QLabel" name="l_actual_pitch">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary pitch joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_actual_pitch_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QHBoxLayout" name="hl_target_pitch">
+             <item>
+              <widget class="QLabel" name="l_target_pitch">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary pitch joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_target_pitch_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QHBoxLayout" name="hl_torque_pitch">
+             <item>
+              <widget class="QLabel" name="l_torque_pitch">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Primary pitch joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="static_l_torque_pitch_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>Nm</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>
@@ -1704,7 +2681,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1000</width>
+     <width>994</width>
      <height>19</height>
     </rect>
    </property>
