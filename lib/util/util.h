@@ -22,8 +22,8 @@ std::string GetDateTimeStr();
 std::string GetTimestampStr();
 
 #if LIBRA_VERSION == 2
-static QString GetFormattedEposErrTxt(const std::string& func_name,
-                                      const uint& err, const int& node_id = 0);
+QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
+                               const int& node_id = 0);
 #endif
 
 }  // namespace util

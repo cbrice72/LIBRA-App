@@ -6,6 +6,7 @@
 ################################################################################
 
 cmake_minimum_required(VERSION 3.16)
+message(STATUS "Using CMake version: ${CMAKE_VERSION}")
 
 project(
     libra_app
@@ -194,7 +195,7 @@ qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})
 # Copy app and actuator configurations to the executable directory
 if(LIBRA_VERSION EQUAL 1)
     set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-1)
-else() # assume LIBRA_VERSION EQUAL 2
+elseif(LIBRA_VERSION EQUAL 2)
     set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-2)
 endif()
 
@@ -212,7 +213,7 @@ target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(
     libra_app_gui
     # Project
-    PRIVATE camera_manager actuator_thread log_thread
+    PRIVATE camera_manager util actuator_thread log_thread
     # Qt
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
