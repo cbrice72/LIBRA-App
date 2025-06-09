@@ -25,8 +25,10 @@ set(LIBRA_VERSION
         "Which prototype to build for: 1 = LIBRA-I (HEBI x5), 2 = LIBRA-II (EPOS x1 + HEBI x1)"
 )
 set_property(CACHE LIBRA_VERSION PROPERTY STRINGS 1 2)
+message(STATUS "Selected LIBRA version: ${LIBRA_VERSION}")
 
 option(BUILD_WITH_ROS2 "Build LIBRA App with ROS2 functionality" ON)
+message(STATUS "ROS2 integration: ${BUILD_WITH_ROS2}")
 
 # - Internal (shouldn't need to be changed by user)
 set(HEBI_DIR
