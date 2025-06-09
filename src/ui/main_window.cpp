@@ -211,10 +211,20 @@ void MainWindow::ConfigureUi() {
 #if LIBRA_VERSION == 1
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
+
     RemoveUiElement(ui_->l_epos_status);
-    //  TODO
 #elif LIBRA_VERSION == 2
-    // TODO
+    RemoveUiElement(ui_->gl_roll_input);
+    RemoveUiElement(ui_->gl_roll_output);
+
+    RemoveUiElement(ui_->gl_j1_input);
+    RemoveUiElement(ui_->gl_j1_output);
+
+    RemoveUiElement(ui_->gl_j2_input);
+    RemoveUiElement(ui_->gl_j2_output);
+
+    RemoveUiElement(ui_->gl_j3_input);
+    RemoveUiElement(ui_->gl_j3_output);
 #endif
 
     // Slots
@@ -225,8 +235,6 @@ void MainWindow::ConfigureUi() {
             ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
 
 #if LIBRA_VERSION == 1
-    // TODO: LIBRA-I
-    /*
     connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // "
             ui_->sb_arm_roll, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // "
@@ -246,7 +254,6 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
-    */
 #elif LIBRA_VERSION == 2
     connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
             ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
@@ -375,42 +382,43 @@ void MainWindow::InitializeThreads() {
  */
 void MainWindow::InitializeFeedbackElementMap() {
 #if LIBRA_VERSION == 1
-    // TODO: LIBRA-I
-    /*
     // 2-Dof joint
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos]
-    = ui_->l_target_roll;
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos]
-    = ui_->l_actual_roll; feedback_element_map_[Actuator::Joint::kMA]
-                         [Actuator::Feedback::kActualTorque] =
-    ui_->l_torque_roll;
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_roll;
+    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_roll;
+    feedback_element_map_[Actuator::Joint::kMA]
+                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_roll;
 
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos]
-    = ui_->l_target_pitch;
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos]
-    = ui_->l_actual_pitch; feedback_element_map_[Actuator::Joint::kMB]
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_pitch;
+    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_pitch;
+    feedback_element_map_[Actuator::Joint::kMB]
                          [Actuator::Feedback::kActualTorque] =
                              ui_->l_torque_pitch;
 
     // Arm
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos]
-    = ui_->l_target_j1;
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos]
-    = ui_->l_actual_j1; feedback_element_map_[Actuator::Joint::kJ1]
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j1;
+    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j1;
+    feedback_element_map_[Actuator::Joint::kJ1]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j1;
 
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos]
-    = ui_->l_target_j2;
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos]
-    = ui_->l_actual_j2; feedback_element_map_[Actuator::Joint::kJ2]
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j2;
+    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j2;
+    feedback_element_map_[Actuator::Joint::kJ2]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j2;
 
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos]
-    = ui_->l_target_j3;
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos]
-    = ui_->l_actual_j3; feedback_element_map_[Actuator::Joint::kJ3]
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j3;
+    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j3;
+    feedback_element_map_[Actuator::Joint::kJ3]
                          [Actuator::Feedback::kActualTorque] = ui_->l_torque_j3;
-    */
 #elif LIBRA_VERSION == 2
     // Yaw joint
     feedback_element_map_[Actuator::Joint::kYaw]
@@ -839,8 +847,6 @@ void MainWindow::on_a_disconnect_all_triggered() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
-    // TODO: LIBRA-I
-    /*
     emit CommandHebi({
         ui_->sb_arm_roll->value(),
         ui_->sb_arm_pitch->value(),
@@ -848,7 +854,6 @@ void MainWindow::on_pb_arm_start_clicked() {
         ui_->sb_arm_j2->value(),
         ui_->sb_arm_j3->value(),
     });
-    */
 #elif LIBRA_VERSION == 2
     emit CommandEpos({ui_->sb_arm_yaw->value()});
     emit CommandHebi({ui_->sb_arm_pitch->value()});
