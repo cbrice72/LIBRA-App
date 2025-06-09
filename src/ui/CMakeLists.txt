@@ -12,21 +12,13 @@ set(UI_SOURCE
     # Main Window
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
 )
 
-if(LIBRA_VERSION EQUAL 1)
+if(LIBRA_VERSION EQUAL 2)
     list(
         APPEND
         UI_SOURCE
-        # Main Window
-        ${CMAKE_CURRENT_SOURCE_DIR}/main_window_libra-1.ui
-    )
-elseif(LIBRA_VERSION EQUAL 2)
-    list(
-        APPEND
-        UI_SOURCE
-        # Main Window
-        ${CMAKE_CURRENT_SOURCE_DIR}/main_window_libra-2.ui
         # EPOS Connection Dialog
         ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.h
         ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.cpp
