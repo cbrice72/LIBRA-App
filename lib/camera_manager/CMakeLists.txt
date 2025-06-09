@@ -17,8 +17,7 @@ qt_add_library(
 
 target_include_directories(
     camera_manager
-    # Make sure the path to this directory is automatically added as an include
-    # path to all targets using this library
+    # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

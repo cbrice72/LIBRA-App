@@ -53,8 +53,7 @@ target_include_directories(
     actuator_thread
     # HEBI
     PUBLIC ${HEBI_INCLUDE_DIRS}
-    # Make sure the path to this directory is automatically added as an include
-    # path to all targets using this library
+    # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
@@ -110,8 +109,7 @@ qt_add_library(
 # Ensure this module has access to the necessary 3rd-party libraries, if any
 target_include_directories(
     log_thread
-    # Make sure the path to this directory is automatically added as an include
-    # path to all targets using this library
+    # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 

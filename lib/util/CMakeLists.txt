@@ -16,8 +16,7 @@ add_library(
 # Ensure this module has access to the necessary 3rd-party libraries
 target_include_directories(
     util
-    # Make sure the path to this directory is automatically added as an include
-    # path to all targets using this library
+    # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
