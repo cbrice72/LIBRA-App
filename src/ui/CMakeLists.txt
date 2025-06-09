@@ -13,9 +13,16 @@ set(UI_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
-    # EPOS Connection Dialog
-    ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.ui
     PARENT_SCOPE
 )
+
+if(LIBRA_VERSION EQUAL 2)
+    list(
+        APPEND
+        UI_SOURCE
+        # EPOS Connection Dialog
+        ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/open_epos_window.ui
+    )
+endif()
