@@ -104,6 +104,19 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     state_msg_.header.frame_id = "hebi_actuators";
     state_msg_.families = families_;
     state_msg_.names = names_;
+
+    // Resize message vectors to match number of actuators
+    state_msg_.target_pos.resize(num_actuators_);
+    state_msg_.actual_pos.resize(num_actuators_);
+    state_msg_.target_vel.resize(num_actuators_);
+    state_msg_.actual_vel.resize(num_actuators_);
+    state_msg_.target_trq.resize(num_actuators_);
+    state_msg_.actual_trq.resize(num_actuators_);
+    state_msg_.deflection.resize(num_actuators_);
+    state_msg_.deflection_vel.resize(num_actuators_);
+    state_msg_.voltage.resize(num_actuators_);
+    state_msg_.current.resize(num_actuators_);
+    state_msg_.motor_temp.resize(num_actuators_);
 #endif
 }
 
@@ -212,22 +225,6 @@ void HebiThread::PublishState() {
 
     // Update header timestamp
     state_msg_.header.stamp = this->get_clock()->now();
-
-    // Resize vectors to match number of actuators
-    auto resize_vectors = [this]() {
-        state_msg_.target_pos.resize(num_actuators_);
-        state_msg_.actual_pos.resize(num_actuators_);
-        state_msg_.target_vel.resize(num_actuators_);
-        state_msg_.actual_vel.resize(num_actuators_);
-        state_msg_.target_trq.resize(num_actuators_);
-        state_msg_.actual_trq.resize(num_actuators_);
-        state_msg_.deflection.resize(num_actuators_);
-        state_msg_.deflection_vel.resize(num_actuators_);
-        state_msg_.voltage.resize(num_actuators_);
-        state_msg_.current.resize(num_actuators_);
-        state_msg_.motor_temp.resize(num_actuators_);
-    };
-    resize_vectors();
 
     // Populate the message and publish it
     for (int i = 0; i < num_actuators_; ++i) {
