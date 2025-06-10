@@ -841,13 +841,20 @@ void MainWindow::on_a_disconnect_all_triggered() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
-    emit CommandHebi({
-        ui_->sb_arm_roll->value(),
-        ui_->sb_arm_pitch->value(),
-        ui_->sb_arm_j1->value(),
-        ui_->sb_arm_j2->value(),
-        ui_->sb_arm_j3->value(),
-    });
+    // Roll and Pitch are controlled by actuators MA and MB via differential drive
+    // TODO: confirm this
+    auto val_ma = (-ui_->sb_arm_roll->value() - ui_->sb_arm_pitch->value());
+    auto val_mb = (-ui_->sb_arm_roll->value() + ui_->sb_arm_pitch->value());
+
+    // To improve ease of use, arm actuator angles in the UI are shown
+    // relative to a perspective directly behind the robot, where 0 is
+    // directly forward. Adjust for actual J1, J2 and J3 angles here
+    // TODO: confirm this
+    auto val_j1 = ui_->sb_arm_j1->value();
+    auto val_j2 = -ui_->sb_arm_j2->value();
+    auto val_j3 = ui_->sb_arm_j3->value();
+
+    emit CommandHebi({val_ma, val_mb, val_j1, val_j2, val_j3});
 #elif LIBRA_VERSION == 2
     emit CommandEpos({ui_->sb_arm_yaw->value()});
     emit CommandHebi({ui_->sb_arm_pitch->value()});

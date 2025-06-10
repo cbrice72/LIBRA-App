@@ -1302,7 +1302,7 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_yaw">
              <property name="statusTip">
-              <string>Range: -90,90  |  Interval: 5</string>
+              <string>Range: -90,90  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
@@ -1314,7 +1314,7 @@
               <number>90</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>10</number>
              </property>
              <property name="value">
               <number>0</number>
@@ -1672,7 +1672,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 5</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -1681,13 +1681,16 @@
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-90.000000000000000</double>
+              <double>-170.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>90.000000000000000</double>
+              <double>170.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
+             </property>
+             <property name="value">
+              <double>-150.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -1707,25 +1710,25 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_j3">
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-90</number>
+              <number>-170</number>
              </property>
              <property name="maximum">
-              <number>90</number>
+              <number>170</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>10</number>
              </property>
              <property name="value">
-              <number>0</number>
+              <number>-150</number>
              </property>
              <property name="sliderPosition">
-              <number>0</number>
+              <number>-150</number>
              </property>
              <property name="tracking">
               <bool>true</bool>
@@ -1737,7 +1740,7 @@
               <enum>QSlider::TickPosition::TicksAbove</enum>
              </property>
              <property name="tickInterval">
-              <number>10</number>
+              <number>20</number>
              </property>
             </widget>
            </item>
@@ -1781,7 +1784,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 5</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -1790,10 +1793,10 @@
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-90.000000000000000</double>
+              <double>-170.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>90.000000000000000</double>
+              <double>170.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
@@ -1816,19 +1819,19 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_j1">
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-90</number>
+              <number>-170</number>
              </property>
              <property name="maximum">
-              <number>90</number>
+              <number>170</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>10</number>
              </property>
              <property name="value">
               <number>0</number>
@@ -1846,7 +1849,7 @@
               <enum>QSlider::TickPosition::TicksAbove</enum>
              </property>
              <property name="tickInterval">
-              <number>10</number>
+              <number>20</number>
              </property>
             </widget>
            </item>
@@ -2045,7 +2048,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 5</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -2054,10 +2057,10 @@
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-90.000000000000000</double>
+              <double>-170.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>90.000000000000000</double>
+              <double>170.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
@@ -2080,19 +2083,19 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_j2">
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -170,170  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-90</number>
+              <number>-170</number>
              </property>
              <property name="maximum">
-              <number>90</number>
+              <number>170</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>10</number>
              </property>
              <property name="value">
               <number>0</number>
@@ -2110,7 +2113,7 @@
               <enum>QSlider::TickPosition::TicksAbove</enum>
              </property>
              <property name="tickInterval">
-              <number>10</number>
+              <number>20</number>
              </property>
             </widget>
            </item>
@@ -2287,7 +2290,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -10,10  |  Interval: 1</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -2296,13 +2299,13 @@
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-90.000000000000000</double>
+              <double>-10.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>45.000000000000000</double>
+              <double>10.000000000000000</double>
              </property>
              <property name="singleStep">
-              <double>5.000000000000000</double>
+              <double>1.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -2322,22 +2325,22 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_roll">
              <property name="statusTip">
-              <string>Range: -?,?  |  Interval: ?</string>
+              <string>Range: -10,10  |  Interval: 2</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-90</number>
+              <number>-10</number>
              </property>
              <property name="maximum">
-              <number>45</number>
+              <number>10</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>2</number>
              </property>
              <property name="value">
-              <number>-90</number>
+              <number>0</number>
              </property>
              <property name="tracking">
               <bool>true</bool>
@@ -2349,7 +2352,7 @@
               <enum>QSlider::TickPosition::TicksAbove</enum>
              </property>
              <property name="tickInterval">
-              <number>10</number>
+              <number>2</number>
              </property>
             </widget>
            </item>
@@ -2393,7 +2396,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -90,45  |  Interval: 5</string>
+              <string>Range: -10,90  |  Interval: 5</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -2402,13 +2405,16 @@
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-90.000000000000000</double>
+              <double>-15.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>45.000000000000000</double>
+              <double>90.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
+             </property>
+             <property name="value">
+              <double>90.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -2428,22 +2434,22 @@
            <item row="1" column="0" colspan="3">
             <widget class="QSlider" name="hs_arm_pitch">
              <property name="statusTip">
-              <string>Range: -90,45  |  Interval: 5</string>
+              <string>Range: -10,90  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-90</number>
+              <number>-10</number>
              </property>
              <property name="maximum">
-              <number>45</number>
+              <number>90</number>
              </property>
              <property name="singleStep">
-              <number>5</number>
+              <number>10</number>
              </property>
              <property name="value">
-              <number>-90</number>
+              <number>90</number>
              </property>
              <property name="tracking">
               <bool>true</bool>
