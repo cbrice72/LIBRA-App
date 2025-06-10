@@ -329,13 +329,7 @@ void MainWindow::InitializeThreads() {
 
     hebi_thread_ = new HebiThread(this, {"LIBRA"},
 #if LIBRA_VERSION == 1
-                                  {
-                                      "MA",
-                                      "MB",
-                                      "J1",
-                                      "J2",
-                                      "J3",
-                                  },
+                                  {"MA", "MB", "J1", "J2", "J3"},
 #elif LIBRA_VERSION == 2
                                   {"Pitch"},
 #endif
@@ -494,7 +488,7 @@ void MainWindow::HandleActuatorStatus(const QString& status,
 /**
  * @brief Throws a pop-up error box upon receiving an error signal from a thread.
  *
- * @param err Fatal error message from an actuator
+ * @param err Fatal error message from a component
  */
 void MainWindow::HandleErrorMsg(const QString& err) {
     QMessageBox::critical(this, tr("Error"), err);
