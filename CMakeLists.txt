@@ -16,8 +16,7 @@ project(
 
 # ========================= CONFIG =========================
 
-# Project options
-# - Configurable by user
+# Project options (public)
 set(LIBRA_VERSION
     2
     CACHE
@@ -30,18 +29,19 @@ message(STATUS "Selected LIBRA version: ${LIBRA_VERSION}")
 option(BUILD_WITH_ROS2 "Build LIBRA App with ROS2 functionality" ON)
 message(STATUS "ROS2 integration: ${BUILD_WITH_ROS2}")
 
-# - Internal (shouldn't need to be changed by user)
+# Project options (private, i.e, shouldn't need to be changed by user)
 set(HEBI_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
-    CACHE PATH "Path to the HEBI API" FORCE  # included in this project
+    CACHE PATH "Path to the HEBI API" FORCE # included in this project
 )
 
 set(EPOS_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
-    CACHE PATH "Path to the EPOS API" FORCE  # included in this project
+    CACHE PATH "Path to the EPOS API" FORCE # included in this project
 )
 
-# Validate project options and ensure the relevant preprocessor directives are triggered in C++ code
+# Validate project options and ensure the relevant preprocessor directives are
+# triggered in C++ code
 if(LIBRA_VERSION EQUAL 1 OR LIBRA_VERSION EQUAL 2)
     add_compile_definitions(LIBRA_VERSION=${LIBRA_VERSION})
 else()
@@ -155,7 +155,9 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
     # Find ROS2 packages
-    set(ROS_CORE_PACKAGES ament_cmake rclcpp rcutils rmw_implementation rosidl_default_generators)
+    set(ROS_CORE_PACKAGES ament_cmake rclcpp rcutils rmw_implementation
+                          rosidl_default_generators
+    )
     foreach(PKG ${ROS_CORE_PACKAGES})
         find_package(${PKG} REQUIRED)
     endforeach()

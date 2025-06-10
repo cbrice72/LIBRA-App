@@ -26,4 +26,7 @@ if(LIBRA_VERSION EQUAL 2)
     )
 endif()
 
-set(UI_SOURCE ${UI_SOURCE} PARENT_SCOPE)  # propagate changes
+set(UI_SOURCE
+    ${UI_SOURCE}
+    PARENT_SCOPE
+) # propagate changes

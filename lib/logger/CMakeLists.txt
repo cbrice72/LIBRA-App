@@ -14,11 +14,9 @@ set(SRC_FILES
 )
 
 if(BUILD_WITH_ROS2)
-    list(
-        APPEND
-        SRC_FILES
-        # ROS2 Implementation
-        ${CMAKE_CURRENT_SOURCE_DIR}/ros2_logger.h
+    list(APPEND SRC_FILES
+         # ROS2 Implementation
+         ${CMAKE_CURRENT_SOURCE_DIR}/ros2_logger.h
     )
 endif()
 
