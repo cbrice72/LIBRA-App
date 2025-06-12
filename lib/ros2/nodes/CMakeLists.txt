@@ -18,7 +18,7 @@ set_target_properties(
     minimal_pub_sub PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
-# Ensure this module has access to the necessary 3rd-party libraries
+# Ensure this module packages the necessary headers
 target_include_directories(
     minimal_pub_sub
     # Make this directory available to consumers

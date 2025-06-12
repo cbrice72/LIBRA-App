@@ -11,7 +11,7 @@ add_library(
                 ${CMAKE_CURRENT_SOURCE_DIR}/util.cpp
 )
 
-# Ensure this module has access to the necessary 3rd-party libraries
+# Ensure this module packages the necessary headers
 target_include_directories(
     util
     # Make this directory available to consumers

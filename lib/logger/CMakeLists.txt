@@ -22,7 +22,7 @@ endif()
 
 add_library(logger STATIC ${SRC_FILES})
 
-# Ensure this module has access to the necessary 3rd-party libraries
+# Ensure this module packages the necessary headers
 target_include_directories(
     logger
     # Make this directory available to consumers

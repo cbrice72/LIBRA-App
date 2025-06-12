@@ -99,7 +99,7 @@ endif()
 
 qt_add_library(actuator_thread STATIC ${SRC_FILES})
 
-# Ensure this module has access to the necessary 3rd-party libraries
+# Ensure this module packages the necessary headers
 set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
                       "${HEBI_DIR}/Eigen"
 )
