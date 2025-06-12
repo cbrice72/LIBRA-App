@@ -367,8 +367,6 @@ void HebiThread::run() {
 /**
  * @brief Attempts to establish connections to all actuators.
  *
- * @return true if successful, false otherwise
- *
  * @see
  * https://github.com/HebiRobotics/hebi-cpp-examples/blob/master/advanced/lookup/lookup_example.cpp
  */

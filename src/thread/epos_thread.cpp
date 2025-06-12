@@ -424,8 +424,6 @@ void EposThread::Connect() {
 
 /**
  * @brief Terminates the active connection(s).
- *
- * @return true if successful, false otherwise
  */
 void EposThread::Disconnect() {
     if (handle_ == nullptr) {
