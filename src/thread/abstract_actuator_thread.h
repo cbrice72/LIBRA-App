@@ -43,7 +43,8 @@ class AbstractActuatorThread : public QThread {
   public slots:
 
     void SetDebugMode(const bool& enabled) {
-        logger_->SetDebugMode(enabled);
+        debug_mode_ = enabled;
+        logger_->SetDebugMode(debug_mode_);
     };
 
     // --- Actuator Commands ---
@@ -70,7 +71,7 @@ class AbstractActuatorThread : public QThread {
     // --- Data Members ---
 
     std::unique_ptr<Logger> logger_;
-    bool debug_mode_{false};
+    bool debug_mode_{false};  // keep to allow disabling debug-only code
 
     const Actuator::Type type_;
 };
