@@ -57,7 +57,7 @@ target_link_libraries(
     PUBLIC logger
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
-    PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort
+    PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
 )
 
 # ========================= ACTUATOR THREAD =========================
