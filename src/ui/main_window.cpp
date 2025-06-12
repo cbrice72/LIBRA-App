@@ -567,7 +567,7 @@ void MainWindow::on_a_hebi_disconnect_triggered() {
  * @brief Event handler for "Actuators/Manip. Servos" menu action "Connect".
  *        Brings up a dialog box of available serial USB devices. (TODO: check)
  */
-void MainWindow::on_a_serial_servo_connect_triggered() {
+void MainWindow::on_a_manip_connect_triggered() {
     // Check if SerialServo Arduino (COM4) is connected
     bool found = false;
     foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
@@ -581,7 +581,9 @@ void MainWindow::on_a_serial_servo_connect_triggered() {
             qDebug() << "  Port: " << info.portName();
             qDebug() << "  Description: " << info.description();
             qDebug() << "  Manufacturer: " << info.manufacturer() << "\n";
-            return;
+
+            // TODO: query user to pick one and continue in function
+            return;  // temporary
         }
     }
 
@@ -591,7 +593,7 @@ void MainWindow::on_a_serial_servo_connect_triggered() {
     }
 
     // Set port options
-    ser_servo_->setPortName("COM4");
+    ser_servo_->setPortName("COM4");  // hard-coded, see above TODO
     ser_servo_->setBaudRate(QSerialPort::Baud115200);
     ser_servo_->setDataBits(QSerialPort::Data8);
     ser_servo_->setParity(QSerialPort::NoParity);
@@ -610,8 +612,8 @@ void MainWindow::on_a_serial_servo_connect_triggered() {
             &MainWindow::UpdateServoVals);
 
     // Reflect changes in UI
-    ui_->a_serial_servo_connect->setEnabled(false);
-    ui_->a_serial_servo_disconnect->setEnabled(true);
+    ui_->a_manip_connect->setEnabled(false);
+    ui_->a_manip_disconnect->setEnabled(true);
     ui_->pb_manip_slow->setEnabled(true);
     ui_->pb_manip_fast->setEnabled(true);
 }
@@ -620,7 +622,7 @@ void MainWindow::on_a_serial_servo_connect_triggered() {
  * @brief Event handler for "Actuators/Manip. Servos" menu action "Disconnect".
  *        Terminates the connection to the `SerialServo` Arduino, if it exists.
  */
-void MainWindow::on_a_serial_servo_disconnect_triggered() {
+void MainWindow::on_a_manip_disconnect_triggered() {
     // Clear the Serial and CameraManager objects
     if (ser_servo_->isOpen()) {
         ser_servo_->close();
@@ -628,8 +630,8 @@ void MainWindow::on_a_serial_servo_disconnect_triggered() {
     camera_manager_.reset();
 
     // Reflect changes in UI
-    ui_->a_serial_servo_connect->setEnabled(true);
-    ui_->a_serial_servo_disconnect->setEnabled(false);
+    ui_->a_manip_connect->setEnabled(true);
+    ui_->a_manip_disconnect->setEnabled(false);
     ui_->pb_manip_slow->setEnabled(false);
     ui_->pb_manip_fast->setEnabled(false);
 }
@@ -719,7 +721,9 @@ void MainWindow::on_a_pump_connect_triggered() {
             qDebug() << "  Port: " << info.portName();
             qDebug() << "  Description: " << info.description();
             qDebug() << "  Manufacturer: " << info.manufacturer() << "\n";
-            return;
+
+            // TODO: query user to pick one and continue in function
+            return;  // temporary
         }
     }
 
@@ -729,7 +733,7 @@ void MainWindow::on_a_pump_connect_triggered() {
     }
 
     // Set port options
-    ser_water_->setPortName("COM3");
+    ser_water_->setPortName("COM3");  // hard-coded, see above TODO
     ser_water_->setBaudRate(QSerialPort::Baud115200);
     ser_water_->setDataBits(QSerialPort::Data8);
     ser_water_->setParity(QSerialPort::NoParity);
@@ -800,7 +804,7 @@ void MainWindow::on_a_pump_set_full_triggered() {
 void MainWindow::on_a_connect_all_triggered() {
     // Actuators
     ui_->a_hebi_connect->trigger();
-    ui_->a_serial_servo_connect->trigger();
+    ui_->a_manip_connect->trigger();
     ui_->a_pump_connect->trigger();
 #if LIBRA_VERSION == 2
     ui_->a_epos_connect->trigger();
@@ -818,7 +822,7 @@ void MainWindow::on_a_connect_all_triggered() {
 void MainWindow::on_a_disconnect_all_triggered() {
     // Actuators
     ui_->a_hebi_disconnect->trigger();
-    ui_->a_serial_servo_disconnect->trigger();
+    ui_->a_manip_disconnect->trigger();
     ui_->a_pump_disconnect->trigger();
 #if LIBRA_VERSION == 2
     ui_->a_epos_disconnect->trigger();

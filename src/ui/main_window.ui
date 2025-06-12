@@ -2737,8 +2737,8 @@
      <property name="title">
       <string>Manip. Servos</string>
      </property>
-     <addaction name="a_serial_servo_connect"/>
-     <addaction name="a_serial_servo_disconnect"/>
+     <addaction name="a_manip_connect"/>
+     <addaction name="a_manip_disconnect"/>
      <addaction name="separator"/>
     </widget>
     <addaction name="m_epos"/>
@@ -2824,12 +2824,12 @@
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="a_serial_servo_connect">
+  <action name="a_manip_connect">
    <property name="text">
     <string>Connect</string>
    </property>
   </action>
-  <action name="a_serial_servo_disconnect">
+  <action name="a_manip_disconnect">
    <property name="enabled">
     <bool>false</bool>
    </property>

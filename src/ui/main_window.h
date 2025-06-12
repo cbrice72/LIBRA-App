@@ -86,8 +86,8 @@ class MainWindow : public QMainWindow {
     void on_a_hebi_connect_triggered();
     void on_a_hebi_disconnect_triggered();
 
-    void on_a_serial_servo_connect_triggered();
-    void on_a_serial_servo_disconnect_triggered();
+    void on_a_manip_connect_triggered();
+    void on_a_manip_disconnect_triggered();
 
     // Sensors Menu
     // (some actions are handed off to signals, and thus don't need functions)
