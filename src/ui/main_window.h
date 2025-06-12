@@ -13,15 +13,15 @@
 // Other Library Headers
 #include <QLabel>       // Qt::Widgets
 #include <QMainWindow>  // Qt::Widgets
-#include <QSerialPort>  // Qt::SerialPort
 
 // Project Headers
+#include "arduino_thread.h"
 #include "camera_manager.h"
+#include "hebi_thread.h"
+#include "log_thread.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
 #endif
-#include "hebi_thread.h"
-#include "log_thread.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -51,6 +51,11 @@ class MainWindow : public QMainWindow {
   public slots:
     void HandleErrorMsg(const QString& err);
 
+    // --- Arduino Updates ---
+
+    void HandleManipConnChanged(const bool& enabled);
+    void HandlePumpConnChanged(const bool& enabled);
+
     // --- Actuator Updates ---
 
     void HandleActuatorFeedback(
@@ -59,7 +64,15 @@ class MainWindow : public QMainWindow {
     void HandleActuatorStatus(const QString& status, const Actuator::Type type);
 
   signals:
+    // --- Generic Commands ---
+
     void UpdateDebugMode(const bool& enabled);
+
+    // --- Arduino Commands ---
+
+    void CommandManip(const double& arm_pitch, const double& pan,
+                      const double& tilt, const bool& move_slow);
+    void CommandPump(const PumpState& state);
 
     // --- Actuator Commands ---
 
@@ -86,9 +99,6 @@ class MainWindow : public QMainWindow {
     void on_a_hebi_connect_triggered();
     void on_a_hebi_disconnect_triggered();
 
-    void on_a_manip_connect_triggered();
-    void on_a_manip_disconnect_triggered();
-
     // Sensors Menu
     // (some actions are handed off to signals, and thus don't need functions)
 
@@ -100,8 +110,6 @@ class MainWindow : public QMainWindow {
 
     // Pump Menu
 
-    void on_a_pump_connect_triggered();
-    void on_a_pump_disconnect_triggered();
     void on_a_pump_set_empty_triggered();
     void on_a_pump_set_full_triggered();
 
@@ -146,6 +154,9 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
     void InitializeFeedbackElementMap();
 
+    void UpdateManipVals();
+    void UpdatePumpVals();
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
@@ -154,14 +165,12 @@ class MainWindow : public QMainWindow {
 
     FeedbackElementMapOfMaps feedback_element_map_;
 
-    LogThread* log_thread_{nullptr};    // consolidated logging
-    HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
+    LogThread* log_thread_{nullptr};          // consolidated logging
+    ArduinoThread* arduino_thread_{nullptr};  // serial device control
+    HebiThread* hebi_thread_{nullptr};        // HEBI actuator control
 #if LIBRA_VERSION == 2
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
 #endif
-
-    QSerialPort* ser_water_{nullptr};
-    QSerialPort* ser_servo_{nullptr};
 
     std::unordered_map<QString, QString> available_cameras_;  // ID, desc
     std::unique_ptr<CameraManager> camera_manager_;
