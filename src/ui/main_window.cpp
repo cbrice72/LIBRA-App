@@ -345,7 +345,7 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorStatus);
 
     connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
-            this, &MainWindow::HandleErrorMsg);
+            this, &MainWindow::HandleCriticalError);
 
     // Thread cleanup
     connect(epos_thread_, &EposThread::finished,      // when thread exits
@@ -385,7 +385,7 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorStatus);
 
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
-            this, &MainWindow::HandleErrorMsg);
+            this, &MainWindow::HandleCriticalError);
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits
@@ -557,7 +557,7 @@ void MainWindow::HandleActuatorStatus(const QString& status,
  *
  * @param err Fatal error message from a component
  */
-void MainWindow::HandleErrorMsg(const QString& err) {
+void MainWindow::HandleCriticalError(const QString& err) {
     QMessageBox::critical(this, tr("Error"), err);
 }
 

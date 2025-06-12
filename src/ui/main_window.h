@@ -49,7 +49,7 @@ class MainWindow : public QMainWindow {
     ~MainWindow() override;
 
   public slots:
-    void HandleErrorMsg(const QString& err);
+    void HandleCriticalError(const QString& err);
 
     // --- Arduino Updates ---
 
