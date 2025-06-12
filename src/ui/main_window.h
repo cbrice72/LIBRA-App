@@ -146,9 +146,6 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
     void InitializeFeedbackElementMap();
 
-    void UpdatePumpVals();
-    void UpdateServoVals();
-
     // --- Data Members ---
 
     Ui::MainWindow* ui_;

@@ -607,10 +607,6 @@ void MainWindow::on_a_manip_connect_triggered() {
         return;
     }
 
-    // Ensure data gets processed when it's made available
-    connect(ser_servo_, &QSerialPort::readyRead, this,
-            &MainWindow::UpdateServoVals);
-
     // Reflect changes in UI
     ui_->a_manip_connect->setEnabled(false);
     ui_->a_manip_disconnect->setEnabled(true);
@@ -746,10 +742,6 @@ void MainWindow::on_a_pump_connect_triggered() {
         QMessageBox::critical(this, tr("Error"), ser_water_->errorString());
         return;
     }
-
-    // Ensure data gets processed when it's made available
-    connect(ser_water_, &QSerialPort::readyRead, this,
-            &MainWindow::UpdatePumpVals);
 
     // Reflect changes in UI
     ui_->a_pump_connect->setEnabled(false);
@@ -911,25 +903,6 @@ void MainWindow::on_pb_manip_fast_clicked() {
     */
 }
 
-/**
- * @brief Updates camera servo values shown in the UI.
- */
-void MainWindow::UpdateServoVals() {
-    if (!ser_servo_->isOpen()) {
-        qDebug() << "[WARN] SerialServo not connected!";
-        return;
-    }
-
-    auto data = ser_servo_->readAll();
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Received data from SerialServo:" << data;
-    }
-
-    qDebug() << "[WARN] Camera servo control not yet implemented!";
-
-    // TODO: implementation
-}
-
 //------------------------------------------------------------------------------
 // !Pump
 //------------------------------------------------------------------------------
@@ -992,25 +965,6 @@ void MainWindow::on_pb_pump_drain_clicked() {
     water_en_ = true;
     water_mode_ = WaterMode::kDrain;
     */
-}
-
-/**
- * @brief Updates pump values shown in the UI (from `ser_water_` Arduino).
- */
-void MainWindow::UpdatePumpVals() {
-    if (!ser_water_->isOpen()) {
-        qDebug() << "[WARN] SerialWater not connected!";
-        return;
-    }
-
-    auto data = ser_water_->readAll();
-    if (debug_mode_) {
-        qDebug() << "[DEBUG] Received data from SerialWater:" << data;
-    }
-
-    qDebug() << "[WARN] Pump control not yet implemented!";
-
-    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
