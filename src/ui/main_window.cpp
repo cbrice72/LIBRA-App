@@ -607,6 +607,10 @@ void MainWindow::on_a_manip_connect_triggered() {
         return;
     }
 
+    // Ensure data gets processed when it's made availableAdd commentMore actions
+    connect(ser_servo_, &QSerialPort::readyRead, this,
+            &MainWindow::UpdateManipVals);
+
     // Reflect changes in UI
     ui_->a_manip_connect->setEnabled(false);
     ui_->a_manip_disconnect->setEnabled(true);
@@ -624,6 +628,10 @@ void MainWindow::on_a_manip_disconnect_triggered() {
         ser_servo_->close();
     }
     camera_manager_.reset();
+
+    // Clear the signal-slot relationship until next connect
+    disconnect(ser_servo_, &QSerialPort::readyRead, this,
+               &MainWindow::UpdateManipVals);
 
     // Reflect changes in UI
     ui_->a_manip_connect->setEnabled(true);
@@ -743,6 +751,10 @@ void MainWindow::on_a_pump_connect_triggered() {
         return;
     }
 
+    // Ensure data gets processed when it's made availableAdd commentMore actions
+    connect(ser_water_, &QSerialPort::readyRead, this,
+            &MainWindow::UpdatePumpVals);
+
     // Reflect changes in UI
     ui_->a_pump_connect->setEnabled(false);
     ui_->a_pump_disconnect->setEnabled(true);
@@ -760,6 +772,10 @@ void MainWindow::on_a_pump_disconnect_triggered() {
     if (ser_water_->isOpen()) {
         ser_water_->close();
     }
+
+    // Clear the signal-slot relationship until next connect
+    disconnect(ser_water_, &QSerialPort::readyRead, this,
+               &MainWindow::UpdatePumpVals);
 
     // Reflect changes in UI
     ui_->a_pump_connect->setEnabled(true);
@@ -903,6 +919,25 @@ void MainWindow::on_pb_manip_fast_clicked() {
     */
 }
 
+/**
+ * @brief Updates manipulator servo values shown in the UI.
+ */
+void MainWindow::UpdateManipVals() {
+    if (!ser_servo_->isOpen()) {
+        qDebug() << "[WARN] SerialServo not connected!";
+        return;
+    }
+
+    auto data = ser_servo_->readAll();
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Received data from SerialServo:" << data;
+    }
+
+    qDebug() << "[WARN] Camera servo control not yet implemented!";
+
+    // TODO: implementation
+}
+
 //------------------------------------------------------------------------------
 // !Pump
 //------------------------------------------------------------------------------
@@ -965,6 +1000,25 @@ void MainWindow::on_pb_pump_drain_clicked() {
     water_en_ = true;
     water_mode_ = WaterMode::kDrain;
     */
+}
+
+/**
+ * @brief Updates pump values shown in the UI.
+ */
+void MainWindow::UpdatePumpVals() {
+    if (!ser_water_->isOpen()) {
+        qDebug() << "[WARN] SerialWater not connected!";
+        return;
+    }
+
+    auto data = ser_water_->readAll();
+    if (debug_mode_) {
+        qDebug() << "[DEBUG] Received data from SerialWater:" << data;
+    }
+
+    qDebug() << "[WARN] Pump control not yet implemented!";
+
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
