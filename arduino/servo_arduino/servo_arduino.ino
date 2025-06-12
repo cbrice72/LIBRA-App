@@ -6,9 +6,9 @@ Servo sv_pitch;
 Servo sv_pan;
 Servo sv_tilt;
 
-const int kDefaultPitch = 180;
-const int kDefaultPan = 90;
-const int kDefaultTilt = 0;
+const int kZeroPitch = 180;  // deg
+const int kZeroPan = 90;     // deg
+const int kZeroTilt = 0;     // deg
 
 /**
  * @brief Initializes variables, pin modes, libraries, etc.
@@ -24,9 +24,9 @@ void setup() {
     sv_tilt.attach(2);
 
     // Set default positions for each servo
-    sv_pitch.write(kDefaultPitch);
-    sv_pan.write(kDefaultPan);
-    sv_tilt.write(kDefaultTilt);
+    sv_pitch.write(kZeroPitch);
+    sv_pan.write(kZeroPan);
+    sv_tilt.write(kZeroTilt);
 }
 
 /**
@@ -48,13 +48,13 @@ void loop() {
 
         // Write new positions to each servo
         sv_pitch.writeMicroseconds(
-            (int)mapfloat(float(kDefaultPitch) - cmds[0].toFloat(), 0, 180, 400,
+            (int)mapfloat(float(kZeroPitch) - cmds[0].toFloat(), 0, 180, 400,
                           2470));
         sv_pan.writeMicroseconds(
-            (int)mapfloat(float(kDefaultPan) - cmds[1].toFloat(), 0, 180, 530,
+            (int)mapfloat(float(kZeroPan) - cmds[1].toFloat(), 0, 180, 530,
                           2530));
         sv_tilt.writeMicroseconds(
-            (int)mapfloat(float(kDefaultTilt) - cmds[2].toFloat(), 0, 180, 420,
+            (int)mapfloat(float(kZeroTilt) - cmds[2].toFloat(), 0, 180, 420,
                           2470));
     }
 }
