@@ -204,17 +204,32 @@ void MainWindow::ConfigureUi() {
     // ========== Water ==========
 
     // Unneeded Widgets
-    //   (none)
+#if LIBRA_VERSION == 2
+    RemoveUiElement(ui_->w_counterweight_2);
+#endif
 
-    // Slots (TODO: FOR TESTING PURPOSES ONLY)
-    connect(ui_->pb_water_enable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Fill);       // start filling
+    // Slots
+    /*
+    connect(TODO, TODO,  // when clicked
+            ui_->w_counterweight_1, &TankWidget::Fill);   // start filling
 
-    connect(ui_->pb_water_disable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Stop);        // stop filling
+    connect(TODO, TODO,  // when clicked
+            ui_->w_counterweight_1, &TankWidget::Stop);    // stop
 
-    connect(ui_->pb_water_drain, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Drain);     // force drain
+    connect(TODO, TODO,   // when clicked
+            ui_->w_counterweight_1, &TankWidget::Drain);  // start draining
+
+#if LIBRA_VERSION == 1
+    connect(TODO, TODO,  // "
+            ui_->w_counterweight_2, &TankWidget::Fill);
+
+    connect(TODO, TODO,  // "
+            ui_->w_counterweight_2, &TankWidget::Stop);
+
+    connect(TODO, TODO,  // "
+            ui_->w_counterweight_2, &TankWidget::Drain);
+#endif
+*/
 
     // ========== Arm ==========
 
@@ -540,12 +555,13 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     if (connected) {
         ui_->a_water_connect->setEnabled(false);
         ui_->a_water_disconnect->setEnabled(true);
+        // Initializes into "Disabled" state by default
         ui_->pb_water_enable->setEnabled(true);
-        ui_->pb_water_disable->setEnabled(true);
         ui_->pb_water_drain->setEnabled(true);
     } else {
         ui_->a_water_connect->setEnabled(true);
         ui_->a_water_disconnect->setEnabled(false);
+        // Disable all buttons regardless of which state it's in
         ui_->pb_water_enable->setEnabled(false);
         ui_->pb_water_disable->setEnabled(false);
         ui_->pb_water_drain->setEnabled(false);
@@ -832,6 +848,10 @@ void MainWindow::on_pb_manip_fast_clicked() {
 void MainWindow::on_pb_water_enable_clicked() {
     emit EnableFluidSystem(true);
     emit EnableAutoTorqueComp(true);
+
+    // Reflect changes in UI
+    ui_->pb_water_enable->setEnabled(false);
+    ui_->pb_water_disable->setEnabled(true);
 }
 
 /**
@@ -841,6 +861,10 @@ void MainWindow::on_pb_water_enable_clicked() {
 void MainWindow::on_pb_water_disable_clicked() {
     emit EnableFluidSystem(false);
     emit EnableAutoTorqueComp(false);
+
+    // Reflect changes in UI
+    ui_->pb_water_enable->setEnabled(true);
+    ui_->pb_water_disable->setEnabled(false);
 }
 
 /**

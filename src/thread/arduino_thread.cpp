@@ -376,9 +376,9 @@ void ArduinoThread::DisconnectWater() {
  * @brief Sets the operational state of the fluid system.
  */
 void ArduinoThread::SetWaterState(const bool& enabled) {
-    p_state_ = enabled;
+    p_enabled_ = enabled;
 
-    if (!p_state_) {
+    if (!p_enabled_) {
         p_command_.clear();  // clear any active water commands
     }
 
