@@ -31,7 +31,7 @@ typedef libra_app::msg::HebiState msgHebiState;
 /**
  * @brief Control class for HEBI actuators.
  *
- * @see abstract_actuator_thread.h
+ * @see abstract_actuator_thread
  */
 class HebiThread :
 #ifdef BUILD_WITH_ROS2

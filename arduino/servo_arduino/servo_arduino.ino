@@ -34,7 +34,7 @@ void setup() {
  *
  * @note Required Arduino function (called repeatedly).
  *
- * @see setup()
+ * @see setup
  */
 void loop() {
     // Check for incoming commands from LIBRA App

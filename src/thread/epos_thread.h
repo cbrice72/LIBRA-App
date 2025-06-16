@@ -25,7 +25,7 @@
  *       I won't go through the trouble of making full use of the EPOS library
  *       to match the HEBI API's one-group-to-many-actuators functionality.
  *
- * @see abstract_actuator_thread.h
+ * @see abstract_actuator_thread
  */
 class EposThread : public AbstractActuatorThread {
   public:

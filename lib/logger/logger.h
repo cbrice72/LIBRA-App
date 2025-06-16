@@ -19,8 +19,7 @@
 /**
  * @brief Abstract interface for class-level logging.
  *
- * @see QtLogger
- * @see Ros2Logger
+ * @see QtLogger Ros2Logger
  */
 class Logger {
   public:

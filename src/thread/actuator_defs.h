@@ -42,7 +42,7 @@ enum Joint {
 /**
  * @brief Actuator implementations.
  *
- * @see abstract_actuator_thread.h
+ * @see abstract_actuator_thread
  */
 enum Type {
     kEpos = 0,  // EPOS4 (Maxon)
@@ -55,7 +55,7 @@ enum Type {
  * @note Secondary feedback should go in each actuator implementation's
  *       `ReportStatus()` override.
  *
- * @see AbstractActuatorThread::ReportStatus()
+ * @see AbstractActuatorThread::ReportStatus
  */
 enum Feedback { kTargetPos = 0, kActualPos, kActualTorque };
 

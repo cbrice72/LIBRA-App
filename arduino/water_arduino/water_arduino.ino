@@ -21,7 +21,7 @@ void setup() {
  *
  * @note Required Arduino function (called repeatedly).
  *
- * @see `setup()`
+ * @see setup
  */
 void loop() {
     // Šî€‚Ì•Ï” - Time reference variable
