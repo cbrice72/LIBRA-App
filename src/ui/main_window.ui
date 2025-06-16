@@ -657,7 +657,7 @@
            <item>
             <widget class="QPushButton" name="pb_pump_enable">
              <property name="enabled">
-              <bool>true</bool>
+              <bool>false</bool>
              </property>
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">

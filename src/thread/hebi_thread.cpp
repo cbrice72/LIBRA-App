@@ -10,6 +10,7 @@
 
 // C++ Standard Library Headers
 #include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -42,6 +43,11 @@ constexpr int32_t kTimeout = 3000;   // ms
 constexpr double kMaxVel = 0.1;      // rad/s
 constexpr double kStiffness = 50.0;  // Nm/rad
 constexpr double kDamping = 1.0;     // Nm/rad/s
+
+// LIBRA Control
+
+constexpr double kTorqueCompUpperBound = 6.0;  // Nm
+constexpr double kTorqueCompLowerBound = 3.0;  // Nm
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -275,6 +281,9 @@ void HebiThread::run() {
     std::vector<double> a_pos(num_actuators_);
     std::vector<double> a_trq(num_actuators_);
 
+    double arm_torque_r;      // magnitude of torque exerted on central joint
+    double arm_torque_theta;  // angle of torque exerted on central joint
+
     std::chrono::duration<double> time(std::chrono::system_clock::now()
                                        - trajectory_start_time_);
 
@@ -289,8 +298,48 @@ void HebiThread::run() {
         // Update feedback object
         group_->getNextFeedback(*feedback_);
 
+        // Control the overall torque experienced by the central joint
+        // (LIBRA-I: 2-DoF joint, LIBRA-II: pitch joint)
+        if (torque_control_en_) {
+            // TODO: the current "algorithm" is just simple hysteresis which
+            //       stops ALL arm movement until the counterweight is full
+            //       enough. This is not ideal, and we should be predicting how
+            //       arm movement will affect the central joint torque.
+
+            // Retrieve torque magnitude and direction (i.e., polar coords)
+#if LIBRA_VERSION == 1
+            arm_torque_r =
+                std::max(std::abs(feedback_->getEffort()[Actuator::Joint::kMA]),
+                         std::abs(feedback_->getEffort()[Actuator::Joint::kMB]));
+
+            arm_torque_theta = std::atan2(
+                -feedback_->getEffort()[Actuator::Joint::kMA]
+                    + feedback_->getEffort()[Actuator::Joint::kMB],  // pitch
+                -feedback_->getEffort()[Actuator::Joint::kMA]
+                    - feedback_->getEffort()[Actuator::Joint::kMB]);  // roll
+#elif LIBRA_VERSION == 2
+            arm_torque_r = std::abs(
+                feedback_->getEffort()[Actuator::Joint::kPitch]);
+            arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
+#endif
+
+            if (arm_torque_r > kTorqueCompUpperBound) {
+                // Disable movement if arm torque is too high
+                movement_en_ = false;
+            }
+
+            if (arm_torque_r >= kTorqueCompLowerBound) {
+                // While arm torque remains above the specified lower bound, report
+                // magnitude and direction (if applicable) to arduino_thread
+                emit ReportArmTorque(arm_torque_theta);
+            } else {
+                // Re-enable movement when arm torque reaches an acceptable level
+                movement_en_ = true;
+            }
+        }
+
         // Determine movement command
-        if (trajectory_ != nullptr) {
+        if (movement_en_ && trajectory_ != nullptr) {
             time = std::chrono::system_clock::now() - trajectory_start_time_;
             if (time.count() < trajectory_->getDuration()) {
                 // Build next step of trajectory
@@ -301,7 +350,7 @@ void HebiThread::run() {
                 // Trajectory is complete
                 trajectory_.reset();
 
-                logger_->Debug("Trajectory complete");
+                logger_->Debug("HEBI - Trajectory complete");
             }
         } else {
             // Add compensating effort/torque to resist external forces
@@ -387,7 +436,7 @@ void HebiThread::Connect() {
             return;
         }
 
-        logger_->Debug("Found following actuators (Family|Name):");
+        logger_->Debug("HEBI - Found following actuators (Family|Name):");
         for (auto entry : *entry_list) {
             logger_->Debug("  " + entry.family_ + " | " + entry.name_);
         }
@@ -421,6 +470,7 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
+    logger_->Debug("HEBI - Connection successful");
     emit Connected(true);
 
     // Command actuator(s) to hold current position
@@ -435,7 +485,7 @@ void HebiThread::Connect() {
         return;
     }
 
-    logger_->Debug("Creating log file at" + log_path);
+    logger_->Debug("HEBI - Creating log file at" + log_path);
 }
 
 /**
@@ -454,6 +504,7 @@ void HebiThread::Disconnect() {
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
 
+        logger_->Debug("HEBI - Gracefully disconnected from actuator(s)");
         emit Connected(false);
     }
 }
@@ -510,7 +561,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                                                                       &vel,
                                                                       &accel);
 
-    logger_->Debug("Set trajectory target(s) to " + trajectory_ss.str()
+    logger_->Debug("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
 }
 
@@ -524,5 +575,17 @@ void HebiThread::Stop() {
 
     trajectory_.reset();
 
-    logger_->Debug("Trajectory reset");
+    logger_->Debug("HEBI - Trajectory reset");
+}
+
+/**
+ * @brief TODO: documentation.
+ */
+void HebiThread::SetAutoTorqueComp(const bool& enabled) {
+    torque_control_en_ = enabled;
+
+    if (!torque_control_en_) {
+        // "Manual" mode: only force allow movement if torque compensation is disabled
+        movement_en_ = true;
+    }
 }

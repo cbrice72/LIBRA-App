@@ -58,10 +58,14 @@ class HebiThread : public AbstractActuatorThread
     void SetTarget(const std::vector<double>& deg) override;
     void Stop() override;
 
+    void SetAutoTorqueComp(const bool& enabled);
+
   signals:
     // --- Actuator Updates ---
 
     // NOTE: see `AbstractActuatorThread`
+
+    void ReportArmTorque(double theta);
 
   private:
     void run() override;
@@ -87,6 +91,13 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
     std::vector<Actuator::Joint> joint_order_;  // NOTE: should match `names_`
+
+    // Enables logic that uses torque feedback hysteresis to control trajectory
+    // movement state (see `movement_en_`)
+    bool torque_control_en_{true};
+    // Enables trajectory-based movement
+    // (NOTE: movement compensating for external forces is always allowed)
+    bool movement_en_{true};
 
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;

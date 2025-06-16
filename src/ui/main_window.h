@@ -53,8 +53,10 @@ class MainWindow : public QMainWindow {
 
     // --- Arduino Updates ---
 
-    void HandleManipConnChanged(const bool& enabled);
-    void HandlePumpConnChanged(const bool& enabled);
+#if LIBRA_VERSION == 1
+    void HandleManipConnChanged(const bool& connected);
+#endif
+    void HandlePumpConnChanged(const bool& connected);
 
     // --- Actuator Updates ---
 
@@ -71,17 +73,23 @@ class MainWindow : public QMainWindow {
   signals:
     // --- Generic Commands ---
 
-    void UpdateDebugMode(const bool& enabled);
+    void EnableDebugMode(const bool& enabled);
 
     // --- Arduino Commands ---
 
+#if LIBRA_VERSION == 1
     void CommandManip(const double& arm_pitch, const double& pan,
                       const double& tilt, const bool& move_slow);
-    void CommandPump(const PumpState& state);
+#endif
+
+    void CommandPump(double torque_dir);
+    void EnableFluidSystem(const bool& enabled);
 
     // --- Actuator Commands ---
 
     void CommandHebi(const std::vector<double>& deg);
+    void EnableAutoTorqueComp(const bool& enabled);
+
 #if LIBRA_VERSION == 2
     void CommandEpos(const std::vector<double>& deg);
 #endif
@@ -96,21 +104,13 @@ class MainWindow : public QMainWindow {
 
     // Actuators Menu
 
-#if LIBRA_VERSION == 2
-    void on_a_epos_connect_triggered();
-    void on_a_epos_disconnect_triggered();
-#endif
-
-    void on_a_hebi_connect_triggered();
-    void on_a_hebi_disconnect_triggered();
+    //   (none)
 
     // Sensors Menu
     // (some actions are handed off to signals, and thus don't need functions)
 
     void on_a_refresh_camera_list_triggered();
 
-    void on_a_lidar_connect_triggered();
-    void on_a_lidar_disconnect_triggered();
     void on_a_lidar_about_triggered();
 
     // Pump Menu
@@ -131,8 +131,10 @@ class MainWindow : public QMainWindow {
 
     // Manipulator
 
+#if LIBRA_VERSION == 1
     void on_pb_manip_slow_clicked();
     void on_pb_manip_fast_clicked();
+#endif
 
     // Pump
 
@@ -159,7 +161,9 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
     void InitializeFeedbackElementMap();
 
+#if LIBRA_VERSION == 1
     void UpdateManipVals();
+#endif
     void UpdatePumpVals();
 
     // --- Data Members ---

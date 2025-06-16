@@ -41,8 +41,10 @@ constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
 
 // Arduino
 
+#if LIBRA_VERSION == 1
 constexpr bool kManipMoveSlow = true;
-constexpr bool kManipMoveFast = true;
+constexpr bool kManipMoveFast = false;
+#endif
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -192,6 +194,13 @@ MainWindow::~MainWindow() {
 void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
+    // ========== Menu Bar ==========
+#if LIBRA_VERSION == 1
+    ui_->m_epos->setVisible(false);
+#elif LIBRA_VERSION == 2
+    ui_->m_serial_servo->setVisible(false);
+#endif
+
     // ========== Pump ==========
 
     // Unneeded Widgets
@@ -231,8 +240,7 @@ void MainWindow::ConfigureUi() {
 
     // Slots
     connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved
-            ui_->sb_arm_pitch,
-            &QDoubleSpinBox::setValue);                        // update display
+            ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);     // update display
     connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
             ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
 
@@ -280,43 +288,105 @@ void MainWindow::ConfigureUi() {
 void MainWindow::InitializeThreads() {
     // ========== Log Thread ==========
 
+    /*
     log_thread_ = new LogThread(this, debug_mode_);
 
     // MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             log_thread_, &LogThread::SetDebugMode);
 
     connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
             log_thread_, &LogThread::TakeLogShot);
 
     log_thread_->start();
+    */
 
     // ========== Arduino Thread ==========
 
     arduino_thread_ = new ArduinoThread(this, debug_mode_);
 
     // MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            arduino_thread_, &LogThread::SetDebugMode);
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            arduino_thread_, &ArduinoThread::SetDebugMode);
 
-    // TODO: manipulator commands should only be enabled if LIBRA_VERSION == 1
+#if LIBRA_VERSION == 1
     connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
             arduino_thread_, &ArduinoThread::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_thread_, &ArduinoThread::DisconnectManip);
+    connect(this, &MainWindow::CommandManip,  // update manip target(s)
+            arduino_thread_, &ArduinoThread::SetManipCommand);
+#endif
 
     connect(ui_->a_pump_connect, &QAction::triggered,  // connect to water
             arduino_thread_, &ArduinoThread::ConnectPump);
     connect(ui_->a_pump_disconnect, &QAction::triggered,  // disconnect water
             arduino_thread_, &ArduinoThread::DisconnectPump);
+    connect(this, &MainWindow::EnableFluidSystem,  // change water state
+            arduino_thread_, &ArduinoThread::SetPumpState);
+    connect(this, &MainWindow::CommandPump,  // force update water command
+            arduino_thread_, &ArduinoThread::SetPumpCommand);
 
     // MainWindow slots
+#if LIBRA_VERSION == 1
     connect(arduino_thread_, &ArduinoThread::ManipConnected,  // update UI
             this, &MainWindow::HandleManipConnChanged);
+#endif
     connect(arduino_thread_, &ArduinoThread::PumpConnected,  // update UI
             this, &MainWindow::HandlePumpConnChanged);
 
+    connect(arduino_thread_, &ArduinoThread::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
     arduino_thread_->start();
+
+    // ========== HEBI Thread ==========
+
+    hebi_thread_ = new HebiThread(this, {"LIBRA"},
+#if LIBRA_VERSION == 1
+                                  {"MA", "MB", "J1", "J2", "J3"},
+#elif LIBRA_VERSION == 2
+                                  {"Pitch"},
+#endif
+                                  debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            hebi_thread_, &HebiThread::SetDebugMode);
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // update auto control
+            hebi_thread_, &HebiThread::SetAutoTorqueComp);
+
+    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
+            hebi_thread_, &HebiThread::Connect);
+    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
+            hebi_thread_, &HebiThread::Disconnect);
+
+    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
+            hebi_thread_, &HebiThread::SetTarget);
+    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
+            hebi_thread_, &HebiThread::Stop);
+
+    // MainWindow slots
+    connect(hebi_thread_, &HebiThread::Connected,  // update UI
+            this, &MainWindow::HandleHebiConnChanged);
+
+    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
+            this, &MainWindow::HandleActuatorFeedback);
+    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
+            this, &MainWindow::HandleActuatorStatus);
+
+    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
+    // ArduinoThread slots
+    connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
+            arduino_thread_, &ArduinoThread::SetPumpCommand);
+
+    // Thread cleanup
+    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
+            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
+
+    hebi_thread_->start();
 
     // ========== EPOS Thread ==========
 
@@ -325,7 +395,7 @@ void MainWindow::InitializeThreads() {
                                   "USB0", 1000000, debug_mode_);
 
     // MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             epos_thread_, &EposThread::SetDebugMode);
 
     connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
@@ -339,12 +409,15 @@ void MainWindow::InitializeThreads() {
             epos_thread_, &EposThread::Stop);
 
     // MainWindow slots
+    connect(epos_thread_, &EposThread::Connected,  // update UI
+            this, &MainWindow::HandleEposConnChanged);
+
     connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
             this, &MainWindow::HandleActuatorFeedback);
     connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
             this, &MainWindow::HandleActuatorStatus);
 
-    connect(epos_thread_, &EposThread::ErrorThrown,  // handle error messages
+    connect(epos_thread_, &EposThread::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
 
     // Thread cleanup
@@ -353,45 +426,6 @@ void MainWindow::InitializeThreads() {
 
     epos_thread_->start();
 #endif
-
-    // ========== HEBI Thread ==========
-
-    hebi_thread_ = new HebiThread(this, {"LIBRA"},
-#if LIBRA_VERSION == 1
-                                  {"MA", "MB", "J1", "J2", "J3"},
-#elif LIBRA_VERSION == 2
-                                  {"Pitch"},
-#endif
-                                  debug_mode_);
-
-    // MainWindow signals
-    connect(this, &MainWindow::UpdateDebugMode,  // update debug mode
-            hebi_thread_, &HebiThread::SetDebugMode);
-
-    connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
-            hebi_thread_, &HebiThread::Connect);
-    connect(ui_->a_hebi_disconnect, &QAction::triggered,  // disconnect HEBI
-            hebi_thread_, &HebiThread::Disconnect);
-
-    connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
-            hebi_thread_, &HebiThread::SetTarget);
-    connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
-            hebi_thread_, &HebiThread::Stop);
-
-    // MainWindow slots
-    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
-            this, &MainWindow::HandleActuatorFeedback);
-    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
-            this, &MainWindow::HandleActuatorStatus);
-
-    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle error messages
-            this, &MainWindow::HandleCriticalError);
-
-    // Thread cleanup
-    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
-            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
-
-    hebi_thread_->start();
 }
 
 /**
@@ -466,12 +500,12 @@ void MainWindow::InitializeFeedbackElementMap() {
 // !Thread Handlers (Slots)
 //------------------------------------------------------------------------------
 
+#if LIBRA_VERSION == 1
 /**
- * @brief TODO: documentation.
+ * @brief Reflect SerialServo connection status in UI.
  */
-void MainWindow::HandleManipConnChanged(const bool& enabled) {
-    // Reflect changes in UI
-    if (enabled) {
+void MainWindow::HandleManipConnChanged(const bool& connected) {
+    if (connected) {
         ui_->a_manip_connect->setEnabled(false);
         ui_->a_manip_disconnect->setEnabled(true);
         ui_->pb_manip_slow->setEnabled(true);
@@ -483,13 +517,13 @@ void MainWindow::HandleManipConnChanged(const bool& enabled) {
         ui_->pb_manip_fast->setEnabled(false);
     }
 }
+#endif
 
 /**
- * @brief TODO: documentation.
+ * @brief Reflect SerialWater connection status in UI.
  */
-void MainWindow::HandlePumpConnChanged(const bool& enabled) {
-    // Reflect changes in UI
-    if (enabled) {
+void MainWindow::HandlePumpConnChanged(const bool& connected) {
+    if (connected) {
         ui_->a_pump_connect->setEnabled(false);
         ui_->a_pump_disconnect->setEnabled(true);
         ui_->pb_pump_enable->setEnabled(true);
@@ -503,6 +537,42 @@ void MainWindow::HandlePumpConnChanged(const bool& enabled) {
         ui_->pb_pump_drain->setEnabled(false);
     }
 }
+
+/**
+ * @brief Reflect HEBI actuator connection status in UI.
+ */
+void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    if (connected) {
+        ui_->a_hebi_connect->setEnabled(false);
+        ui_->a_hebi_disconnect->setEnabled(true);
+        ui_->pb_arm_start->setEnabled(true);
+        ui_->pb_arm_stop->setEnabled(true);
+    } else {
+        ui_->a_hebi_connect->setEnabled(true);
+        ui_->a_hebi_disconnect->setEnabled(false);
+        ui_->pb_arm_start->setEnabled(false);
+        // DON'T disable pb_arm_stop as other actuator types may still be connected
+    }
+}
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Reflect EPOS (Maxon) actuator connection status in UI.
+ */
+void MainWindow::HandleEposConnChanged(const bool& connected) {
+    if (connected) {
+        ui_->a_epos_connect->setEnabled(false);
+        ui_->a_epos_disconnect->setEnabled(true);
+        ui_->pb_arm_start->setEnabled(true);
+        ui_->pb_arm_stop->setEnabled(true);
+    } else {
+        ui_->a_epos_connect->setEnabled(true);
+        ui_->a_epos_disconnect->setEnabled(false);
+        ui_->pb_arm_start->setEnabled(false);
+        // DON'T disable pb_arm_stop as other actuator types may still be connected
+    }
+}
+#endif
 
 /**
  * @brief Sorts important actuator information into individual UI elements.
@@ -577,57 +647,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     }
 
     // Propagate to all children
-    emit UpdateDebugMode(checked);
-}
-
-#if LIBRA_VERSION == 2
-/**
- * @brief Event handler for "Actuators/EPOS" menu action "Connect".
- *        Simply applies UI changes; functionality is covered by signal call.
- */
-void MainWindow::on_a_epos_connect_triggered() {
-    ui_->a_epos_connect->setEnabled(false);
-    ui_->a_epos_disconnect->setEnabled(true);
-
-    ui_->pb_arm_start->setEnabled(true);
-    ui_->pb_arm_stop->setEnabled(true);
-}
-
-/**
- * @brief Event handler for "Actuators/EPOS" menu action "Disonnect".
- *        Simply applies UI changes; functionality is covered by signal call.
- */
-void MainWindow::on_a_epos_disconnect_triggered() {
-    ui_->a_epos_connect->setEnabled(true);
-    ui_->a_epos_disconnect->setEnabled(false);
-
-    ui_->pb_arm_start->setEnabled(false);
-    // DON'T disable pb_arm_stop as other actuator types may still be connected
-}
-#endif
-
-/**
- * @brief Event handler for "Actuators/HEBI" menu action "Connect".
- *        Simply applies UI changes; functionality is covered by signal call.
- */
-void MainWindow::on_a_hebi_connect_triggered() {
-    ui_->a_hebi_connect->setEnabled(false);
-    ui_->a_hebi_disconnect->setEnabled(true);
-
-    ui_->pb_arm_start->setEnabled(true);
-    ui_->pb_arm_stop->setEnabled(true);
-}
-
-/**
- * @brief Event handler for "Actuators/HEBI" menu action "Disonnect".
- *        Simply applies UI changes; functionality is covered by signal call.
- */
-void MainWindow::on_a_hebi_disconnect_triggered() {
-    ui_->a_hebi_connect->setEnabled(true);
-    ui_->a_hebi_disconnect->setEnabled(false);
-
-    ui_->pb_arm_start->setEnabled(false);
-    // DON'T disable pb_arm_stop as other actuator types may still be connected
+    emit EnableDebugMode(checked);
 }
 
 /**
@@ -657,34 +677,6 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
     } else if (debug_mode_) {
         qDebug() << "[DEBUG] No cameras were found";
     }
-}
-
-/**
- * @brief Event handler for "Sensors/2D LIDAR" menu action "Connect".
- *        ???
- */
-void MainWindow::on_a_lidar_connect_triggered() {
-    qDebug() << "[WARN] 2D LIDAR \"Connect\" not yet implemented";
-
-    // TODO: 2D LIDAR implementation
-
-    // Reflect changes in UI
-    ui_->a_lidar_connect->setEnabled(false);
-    ui_->a_lidar_disconnect->setEnabled(true);
-}
-
-/**
- * @brief Event handler for "Sensors/2D LIDAR" menu action "Disconnect".
- *        ???
- */
-void MainWindow::on_a_lidar_disconnect_triggered() {
-    qDebug() << "[WARN] 2D LIDAR \"Disconnect\" not yet implemented";
-
-    // TODO: 2D LIDAR implementation
-
-    // Reflect changes in UI
-    ui_->a_lidar_connect->setEnabled(true);
-    ui_->a_lidar_disconnect->setEnabled(false);
 }
 
 /**
@@ -723,8 +715,11 @@ void MainWindow::on_a_pump_set_full_triggered() {
  */
 void MainWindow::on_a_connect_all_triggered() {
     // Arduinos
+#if LIBRA_VERSION == 1
     emit arduino_thread_->ConnectManip();
+#endif
     emit arduino_thread_->ConnectPump();
+
     // Actuators
     ui_->a_hebi_connect->trigger();
 #if LIBRA_VERSION == 2
@@ -742,8 +737,11 @@ void MainWindow::on_a_connect_all_triggered() {
  */
 void MainWindow::on_a_disconnect_all_triggered() {
     // Arduinos
+#if LIBRA_VERSION == 1
     emit arduino_thread_->DisconnectManip();
+#endif
     emit arduino_thread_->DisconnectPump();
+
     // Actuators
     ui_->a_hebi_disconnect->trigger();
 #if LIBRA_VERSION == 2
@@ -791,6 +789,7 @@ void MainWindow::on_pb_arm_start_clicked() {
 // !Manipulator
 //------------------------------------------------------------------------------
 
+#if LIBRA_VERSION == 1
 /**
  * @brief Moves manipulator servos at a leisurely pace.
  */
@@ -815,30 +814,36 @@ void MainWindow::UpdateManipVals() {
 
     // TODO: implementation
 }
+#endif
 
 //------------------------------------------------------------------------------
 // !Pump
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation.
+ * @brief Enable fluid system operation (and, by association, automatic torque
+ *        control of the central arm joint).
  */
 void MainWindow::on_pb_pump_enable_clicked() {
-    emit CommandPump(PumpState::kEnable);
+    emit EnableFluidSystem(true);
+    emit EnableAutoTorqueComp(true);
 }
 
 /**
- * @brief TODO: documentation.
+ * @brief Disable fluid system operation (and, by association, automatic torque
+ *        control of the central arm joint).
  */
 void MainWindow::on_pb_pump_disable_clicked() {
-    emit CommandPump(PumpState::kDisable);
+    emit EnableFluidSystem(false);
+    emit EnableAutoTorqueComp(false);
 }
 
 /**
- * @brief TODO: documentation.
+ * @brief Force-drain the counterweight(s).
  */
 void MainWindow::on_pb_pump_drain_clicked() {
-    emit CommandPump(PumpState::kForceDrain);
+    emit EnableFluidSystem(true);
+    emit CommandPump(ArduinoThread::kDrain);
 }
 
 /**

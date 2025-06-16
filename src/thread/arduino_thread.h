@@ -11,6 +11,7 @@
 //   (none)
 
 // Other Library Headers
+#include <QByteArray>   // Qt::Core
 #include <QSerialPort>  // Qt::SerialPort
 #include <QThread>      // Qt::Core
 
@@ -18,18 +19,21 @@
 #include "logger.h"
 
 /**
- * @brief Operational state of the pump(s).
- */
-enum PumpState { kEnable = 0, kDisable, kForceDrain };
-
-/**
  * @brief Lightweight manager class for the SerialWater and SerialServo
  * arduinos.
  */
 class ArduinoThread : public QThread {
+    // NOLINTBEGIN: required by Qt
+    Q_OBJECT
+    // NOLINTEND
+
   public:
     explicit ArduinoThread(QObject* parent, const bool& debug_mode);
     ~ArduinoThread() override;
+
+    // For use in "Force" SetPumpCommand() calls
+    static constexpr double kFill = -M_PI / 2.0;  // unused
+    static constexpr double kDrain = M_PI / 2.0;
 
   public slots:
 
@@ -40,20 +44,27 @@ class ArduinoThread : public QThread {
 
     // --- Arduino Commands ---
 
+#if LIBRA_VERSION == 1
     void ConnectManip();
     void DisconnectManip();
-    void CommandManip(const double& arm_pitch, const double& target_pan,
-                      const double& target_tilt, const bool& move_slow);
+    void SetManipCommand(const double& arm_pitch, const double& target_pan,
+                         const double& target_tilt, const bool& move_slow);
+#endif
 
     void ConnectPump();
     void DisconnectPump();
-    void CommandPump(const PumpState& state);
+    void SetPumpState(const bool& enabled);
+    void SetPumpCommand(double torque_dir);
 
   signals:
     // --- Arduino Updates ---
 
-    void ManipConnected(const bool& enabled);
-    void PumpConnected(const bool& enabled);
+#if LIBRA_VERSION == 1
+    void ManipConnected(const bool& connected);
+#endif
+    void PumpConnected(const bool& connected);
+
+    void ErrorThrown(const QString& err);
 
   private:
     void run() override;
@@ -67,4 +78,11 @@ class ArduinoThread : public QThread {
 
     QSerialPort* ser_servo_{nullptr};
     QSerialPort* ser_water_{nullptr};
+
+    std::array<double, 3> m_current_pos_{0};
+    std::array<double, 3> m_target_pos_{0};
+    std::array<int, 3> m_slow_direction_{0};
+
+    bool p_state_{false};
+    QByteArray p_command_;  // only 4 bits used
 };
