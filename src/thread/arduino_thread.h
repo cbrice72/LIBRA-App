@@ -31,7 +31,7 @@ class ArduinoThread : public QThread {
     explicit ArduinoThread(QObject* parent, const bool& debug_mode);
     ~ArduinoThread() override;
 
-    // For use in "Force" SetPumpCommand() calls
+    // For use in "Force" SetWaterCommand() calls
     static constexpr double kFill = -M_PI / 2.0;  // unused
     static constexpr double kDrain = M_PI / 2.0;
 
@@ -51,18 +51,20 @@ class ArduinoThread : public QThread {
                          const double& target_tilt, const bool& move_slow);
 #endif
 
-    void ConnectPump();
-    void DisconnectPump();
-    void SetPumpState(const bool& enabled);
-    void SetPumpCommand(double torque_dir);
+    void ConnectWater();
+    void DisconnectWater();
+    void SetWaterState(const bool& enabled);
+    void SetWaterCommand(double torque_dir);
 
   signals:
     // --- Arduino Updates ---
 
 #if LIBRA_VERSION == 1
     void ManipConnected(const bool& connected);
+    void ReportPosition(const double& base, const double& pan,
+                        const double& tilt);
 #endif
-    void PumpConnected(const bool& connected);
+    void WaterConnected(const bool& connected);
 
     void ErrorThrown(const QString& err);
 

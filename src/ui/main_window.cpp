@@ -29,7 +29,7 @@
  * !Main Window
  * !Arm
  * !Manipulator
- * !Pump
+ * !Water
  * !Camera
  * !Misc.
  * !Uncategorized
@@ -201,20 +201,20 @@ void MainWindow::ConfigureUi() {
     ui_->m_serial_servo->setVisible(false);
 #endif
 
-    // ========== Pump ==========
+    // ========== Water ==========
 
     // Unneeded Widgets
     //   (none)
 
     // Slots (TODO: FOR TESTING PURPOSES ONLY)
-    connect(ui_->pb_pump_enable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Fill);      // start filling
+    connect(ui_->pb_water_enable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Fill);       // start filling
 
-    connect(ui_->pb_pump_disable, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Stop);       // stop filling
+    connect(ui_->pb_water_disable, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Stop);        // stop filling
 
-    connect(ui_->pb_pump_drain, &QPushButton::clicked,  // when clicked
-            ui_->w_tank_visual, &TankWidget::Drain);    // force drain
+    connect(ui_->pb_water_drain, &QPushButton::clicked,  // when clicked
+            ui_->w_tank_visual, &TankWidget::Drain);     // force drain
 
     // ========== Arm ==========
 
@@ -318,22 +318,22 @@ void MainWindow::InitializeThreads() {
             arduino_thread_, &ArduinoThread::SetManipCommand);
 #endif
 
-    connect(ui_->a_pump_connect, &QAction::triggered,  // connect to water
-            arduino_thread_, &ArduinoThread::ConnectPump);
-    connect(ui_->a_pump_disconnect, &QAction::triggered,  // disconnect water
-            arduino_thread_, &ArduinoThread::DisconnectPump);
+    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
+            arduino_thread_, &ArduinoThread::ConnectWater);
+    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
+            arduino_thread_, &ArduinoThread::DisconnectWater);
     connect(this, &MainWindow::EnableFluidSystem,  // change water state
-            arduino_thread_, &ArduinoThread::SetPumpState);
-    connect(this, &MainWindow::CommandPump,  // force update water command
-            arduino_thread_, &ArduinoThread::SetPumpCommand);
+            arduino_thread_, &ArduinoThread::SetWaterState);
+    connect(this, &MainWindow::CommandWater,  // force update water command
+            arduino_thread_, &ArduinoThread::SetWaterCommand);
 
     // MainWindow slots
 #if LIBRA_VERSION == 1
     connect(arduino_thread_, &ArduinoThread::ManipConnected,  // update UI
             this, &MainWindow::HandleManipConnChanged);
 #endif
-    connect(arduino_thread_, &ArduinoThread::PumpConnected,  // update UI
-            this, &MainWindow::HandlePumpConnChanged);
+    connect(arduino_thread_, &ArduinoThread::WaterConnected,  // update UI
+            this, &MainWindow::HandleWaterConnChanged);
 
     connect(arduino_thread_, &ArduinoThread::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
@@ -380,7 +380,7 @@ void MainWindow::InitializeThreads() {
 
     // ArduinoThread slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
-            arduino_thread_, &ArduinoThread::SetPumpCommand);
+            arduino_thread_, &ArduinoThread::SetWaterCommand);
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits
@@ -517,24 +517,38 @@ void MainWindow::HandleManipConnChanged(const bool& connected) {
         ui_->pb_manip_fast->setEnabled(false);
     }
 }
+
+/**
+ * @brief Sorts important actuator information into individual UI elements.
+ *
+ * @param base Position of the pitch-correction servo.
+ * @param pan Position of the manipulator yaw servo.
+ * @param tilt Position of the manipulator pitch servo.
+ */
+void MainWindow::HandleManipPosition(const double& base, const double& pan,
+                                     const double& tilt) {
+    ui_->l_actual_manip_base->setText(QString::number(base, 'f', 1));  // 0.1
+    ui_->l_actual_manip_pan->setText(QString::number(pan, 'f', 1));
+    ui_->l_actual_manip_tilt->setText(QString::number(tilt, 'f', 1));
+}
 #endif
 
 /**
  * @brief Reflect SerialWater connection status in UI.
  */
-void MainWindow::HandlePumpConnChanged(const bool& connected) {
+void MainWindow::HandleWaterConnChanged(const bool& connected) {
     if (connected) {
-        ui_->a_pump_connect->setEnabled(false);
-        ui_->a_pump_disconnect->setEnabled(true);
-        ui_->pb_pump_enable->setEnabled(true);
-        ui_->pb_pump_disable->setEnabled(true);
-        ui_->pb_pump_drain->setEnabled(true);
+        ui_->a_water_connect->setEnabled(false);
+        ui_->a_water_disconnect->setEnabled(true);
+        ui_->pb_water_enable->setEnabled(true);
+        ui_->pb_water_disable->setEnabled(true);
+        ui_->pb_water_drain->setEnabled(true);
     } else {
-        ui_->a_pump_connect->setEnabled(true);
-        ui_->a_pump_disconnect->setEnabled(false);
-        ui_->pb_pump_enable->setEnabled(false);
-        ui_->pb_pump_disable->setEnabled(false);
-        ui_->pb_pump_drain->setEnabled(false);
+        ui_->a_water_connect->setEnabled(true);
+        ui_->a_water_disconnect->setEnabled(false);
+        ui_->pb_water_enable->setEnabled(false);
+        ui_->pb_water_disable->setEnabled(false);
+        ui_->pb_water_drain->setEnabled(false);
     }
 }
 
@@ -690,22 +704,22 @@ void MainWindow::on_a_lidar_about_triggered() {
 }
 
 /**
- * @brief Event handler for "Pump/Advanced" menu action "Set empty (0%)".
+ * @brief Event handler for "Water/Advanced" menu action "Set empty (0%)".
  *        Forces the tank (water bladder) visualization to show as empty.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
-void MainWindow::on_a_pump_set_empty_triggered() {
+void MainWindow::on_a_water_set_empty_triggered() {
     ui_->w_tank_visual->OverrideLevel(0.0);
 }
 
 /**
- * @brief Event handler for "Pump/Advanced" menu action "Set full (100%)".
+ * @brief Event handler for "Water/Advanced" menu action "Set full (100%)".
  *        Forces the tank (water bladder) visualization to show as full.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
-void MainWindow::on_a_pump_set_full_triggered() {
+void MainWindow::on_a_water_set_full_triggered() {
     ui_->w_tank_visual->OverrideLevel(1.0);
 }
 
@@ -718,7 +732,7 @@ void MainWindow::on_a_connect_all_triggered() {
 #if LIBRA_VERSION == 1
     emit arduino_thread_->ConnectManip();
 #endif
-    emit arduino_thread_->ConnectPump();
+    emit arduino_thread_->ConnectWater();
 
     // Actuators
     ui_->a_hebi_connect->trigger();
@@ -740,7 +754,7 @@ void MainWindow::on_a_disconnect_all_triggered() {
 #if LIBRA_VERSION == 1
     emit arduino_thread_->DisconnectManip();
 #endif
-    emit arduino_thread_->DisconnectPump();
+    emit arduino_thread_->DisconnectWater();
 
     // Actuators
     ui_->a_hebi_disconnect->trigger();
@@ -805,26 +819,17 @@ void MainWindow::on_pb_manip_fast_clicked() {
     emit CommandManip(ui_->sb_arm_j3->value(), ui_->sb_manip_pan->value(),
                       ui_->sb_manip_tilt->value(), kManipMoveFast);
 }
-
-/**
- * @brief Updates manipulator servo values shown in the UI.
- */
-void MainWindow::UpdateManipVals() {
-    qDebug() << "[WARN] Manipulator servo UI updates not yet implemented!";
-
-    // TODO: implementation
-}
 #endif
 
 //------------------------------------------------------------------------------
-// !Pump
+// !Water
 //------------------------------------------------------------------------------
 
 /**
  * @brief Enable fluid system operation (and, by association, automatic torque
  *        control of the central arm joint).
  */
-void MainWindow::on_pb_pump_enable_clicked() {
+void MainWindow::on_pb_water_enable_clicked() {
     emit EnableFluidSystem(true);
     emit EnableAutoTorqueComp(true);
 }
@@ -833,7 +838,7 @@ void MainWindow::on_pb_pump_enable_clicked() {
  * @brief Disable fluid system operation (and, by association, automatic torque
  *        control of the central arm joint).
  */
-void MainWindow::on_pb_pump_disable_clicked() {
+void MainWindow::on_pb_water_disable_clicked() {
     emit EnableFluidSystem(false);
     emit EnableAutoTorqueComp(false);
 }
@@ -841,18 +846,9 @@ void MainWindow::on_pb_pump_disable_clicked() {
 /**
  * @brief Force-drain the counterweight(s).
  */
-void MainWindow::on_pb_pump_drain_clicked() {
+void MainWindow::on_pb_water_drain_clicked() {
     emit EnableFluidSystem(true);
-    emit CommandPump(ArduinoThread::kDrain);
-}
-
-/**
- * @brief Updates pump values shown in the UI.
- */
-void MainWindow::UpdatePumpVals() {
-    qDebug() << "[WARN] Pump UI updates not yet implemented!";
-
-    // TODO: implementation
+    emit CommandWater(ArduinoThread::kDrain);
 }
 
 //------------------------------------------------------------------------------

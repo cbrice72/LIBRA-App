@@ -644,18 +644,18 @@
        </layout>
       </item>
       <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignVCenter">
-       <widget class="QGroupBox" name="gb_pump">
+       <widget class="QGroupBox" name="gb_water">
         <property name="title">
-         <string>PUMP</string>
+         <string>WATER</string>
         </property>
-        <layout class="QGridLayout" name="gl_pump">
+        <layout class="QGridLayout" name="gl_water">
          <item row="0" column="3">
-          <layout class="QVBoxLayout" name="vl_pump_controls">
+          <layout class="QVBoxLayout" name="vl_water_controls">
            <property name="sizeConstraint">
             <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
            </property>
            <item>
-            <widget class="QPushButton" name="pb_pump_enable">
+            <widget class="QPushButton" name="pb_water_enable">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -689,7 +689,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pb_pump_disable">
+            <widget class="QPushButton" name="pb_water_disable">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -720,7 +720,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pb_pump_drain">
+            <widget class="QPushButton" name="pb_water_drain">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -753,7 +753,7 @@
           </layout>
          </item>
          <item row="0" column="1">
-          <layout class="QGridLayout" name="gl_pump_status">
+          <layout class="QGridLayout" name="gl_water_status">
            <item row="0" column="1">
             <widget class="QLabel" name="static_l_status">
              <property name="font">
@@ -770,7 +770,7 @@
             </widget>
            </item>
            <item row="1" column="1">
-            <widget class="QLabel" name="l_pump_status">
+            <widget class="QLabel" name="l_water_status">
              <property name="statusTip">
               <string>Fluid system status</string>
              </property>
@@ -2691,21 +2691,21 @@
      <height>19</height>
     </rect>
    </property>
-   <widget class="QMenu" name="m_pump">
+   <widget class="QMenu" name="m_water">
     <property name="title">
-     <string>Pump</string>
+     <string>Water</string>
     </property>
-    <widget class="QMenu" name="m_pump_advanced">
+    <widget class="QMenu" name="m_water_advanced">
      <property name="title">
       <string>Advanced</string>
      </property>
-     <addaction name="a_pump_set_empty"/>
-     <addaction name="a_pump_set_full"/>
+     <addaction name="a_water_set_empty"/>
+     <addaction name="a_water_set_full"/>
     </widget>
-    <addaction name="a_pump_connect"/>
-    <addaction name="a_pump_disconnect"/>
+    <addaction name="a_water_connect"/>
+    <addaction name="a_water_disconnect"/>
     <addaction name="separator"/>
-    <addaction name="m_pump_advanced"/>
+    <addaction name="m_water_advanced"/>
    </widget>
    <widget class="QMenu" name="m_preferences">
     <property name="title">
@@ -2778,7 +2778,7 @@
    <addaction name="m_preferences"/>
    <addaction name="m_actuators"/>
    <addaction name="m_sensors"/>
-   <addaction name="m_pump"/>
+   <addaction name="m_water"/>
    <addaction name="m_quick_actions"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -2811,12 +2811,12 @@
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="a_pump_connect">
+  <action name="a_water_connect">
    <property name="text">
     <string>Connect</string>
    </property>
   </action>
-  <action name="a_pump_disconnect">
+  <action name="a_water_disconnect">
    <property name="enabled">
     <bool>false</bool>
    </property>
@@ -2866,12 +2866,12 @@
     <string>Debug Mode</string>
    </property>
   </action>
-  <action name="a_pump_set_empty">
+  <action name="a_water_set_empty">
    <property name="text">
     <string>Set empty (0%)</string>
    </property>
   </action>
-  <action name="a_pump_set_full">
+  <action name="a_water_set_full">
    <property name="text">
     <string>Set full (100%)</string>
    </property>

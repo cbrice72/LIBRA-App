@@ -55,12 +55,17 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 1
     void HandleManipConnChanged(const bool& connected);
+    void HandleManipPosition(const double& base, const double& pan,
+                             const double& tilt);
 #endif
-    void HandlePumpConnChanged(const bool& connected);
 
-    // --- Actuator Updates ---
+    void HandleWaterConnChanged(const bool& connected);
+    void
 
-    void HandleHebiConnChanged(const bool& connected);
+        // --- Actuator Updates ---
+
+        void
+        HandleHebiConnChanged(const bool& connected);
 #if LIBRA_VERSION == 2
     void HandleEposConnChanged(const bool& connected);
 #endif
@@ -82,7 +87,7 @@ class MainWindow : public QMainWindow {
                       const double& tilt, const bool& move_slow);
 #endif
 
-    void CommandPump(double torque_dir);
+    void CommandWater(double torque_dir);
     void EnableFluidSystem(const bool& enabled);
 
     // --- Actuator Commands ---
@@ -113,10 +118,10 @@ class MainWindow : public QMainWindow {
 
     void on_a_lidar_about_triggered();
 
-    // Pump Menu
+    // Water Menu
 
-    void on_a_pump_set_empty_triggered();
-    void on_a_pump_set_full_triggered();
+    void on_a_waterr_set_empty_triggered();
+    void on_a_water_set_full_triggered();
 
     // Quick Actions Menu
 
@@ -136,11 +141,11 @@ class MainWindow : public QMainWindow {
     void on_pb_manip_fast_clicked();
 #endif
 
-    // Pump
+    // Water
 
-    void on_pb_pump_enable_clicked();
-    void on_pb_pump_disable_clicked();
-    void on_pb_pump_drain_clicked();
+    void on_pb_water_enable_clicked();
+    void on_pb_water_disable_clicked();
+    void on_pb_water_drain_clicked();
 
     // Camera
 
@@ -160,11 +165,6 @@ class MainWindow : public QMainWindow {
     void ConfigureUi();
     void InitializeThreads();
     void InitializeFeedbackElementMap();
-
-#if LIBRA_VERSION == 1
-    void UpdateManipVals();
-#endif
-    void UpdatePumpVals();
 
     // --- Data Members ---
 

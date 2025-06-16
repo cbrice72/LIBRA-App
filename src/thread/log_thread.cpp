@@ -87,7 +87,7 @@ std::ofstream LogThread::InitializeLog(std::string name) {
             << "TP_Yaw (deg),TP_Pitch (deg),,"
             << "AP_Yaw (deg),AP_Pitch (deg),,"
             << "AT_Yaw (Nm),AT_Pitch (Nm),,"
-            << "PUMP_IN,PUMP_OUT,,"
+            << "WATER_IN,WATER_OUT,,"
             << "TP_ManipBase (deg),TP_ManipPan (deg),TP_ManipTilt (deg),,"
             << "Voltage (V),Current (A)" << std::endl;
 

@@ -25,14 +25,14 @@
  * !Class Helpers
  * !Thread Overrides
  * !Manipulator Commands (slots)
- * !Pump Commands (slots)
+ * !Water Commands (slots)
  */
 
 #if LIBRA_VERSION == 1
 // Convenience constants for manipulator control
 constexpr uint8_t kPitch = 0;
-constexpr uint8_t kPan = 0;
-constexpr uint8_t kTilt = 0;
+constexpr uint8_t kPan = 1;
+constexpr uint8_t kTilt = 2;
 
 // Manipulator control
 constexpr double kManipSlowSpeed = 1.5;   // deg/s, arbitrary
@@ -122,7 +122,7 @@ ArduinoThread::~ArduinoThread() {
 #if LIBRA_VERSION == 1
     DisconnectManip();
 #endif
-    DisconnectPump();
+    DisconnectWater();
 
     logger_->Debug("Cleaned up ArduinoThread");
 }
@@ -185,13 +185,17 @@ void ArduinoThread::run() {
             ser_servo_->write(servo_cmd.toUtf8());
 
             logger_->Debug("Sent manip command: " + servo_cmd.toStdString());
+
+            emit ReportPosition(m_current_pos_.at(kPitch),
+                                m_current_pos_.at(kPan),
+                                m_current_pos_.at(kTilt));
         }
 #endif
 
-        // SerialWater (pumps)
+        // SerialWater
         ser_water_->write(p_command_);
 
-        logger_->Debug("Sent pump command: " + BytesToStr(p_command_) + "\n");
+        logger_->Debug("Sent water command: " + BytesToStr(p_command_) + "\n");
     }
 
     QThread::msleep(500);  // update 2 times/second (theoretically)
@@ -303,15 +307,15 @@ void ArduinoThread::SetManipCommand(const double& arm_pitch,
 #endif
 
 //------------------------------------------------------------------------------
-// !Pump Commands (slots)
+// !Water Commands (slots)
 //------------------------------------------------------------------------------
 
 /**
  * @brief Attempts to establish a connection to the SerialWater Arduino.
  */
-void ArduinoThread::ConnectPump() {
+void ArduinoThread::ConnectWater() {
     // If there is already an active connection, gracefully terminate it
-    DisconnectPump();
+    DisconnectWater();
 
     // Check if device is connected at default COM port (COM3)
     bool found = false;
@@ -349,33 +353,33 @@ void ArduinoThread::ConnectPump() {
 
     // Only continue if "open" was successful
     if (!ser_water_->open(QIODevice::ReadWrite)) {
-        emit ErrorThrown("Pump - Failed to open port: COM3!\n"
+        emit ErrorThrown("Water - Failed to open port: COM3!\n"
                          + ser_water_->errorString());
         return;
     }
 
-    emit PumpConnected(true);
+    emit WaterConnected(true);
 }
 
 /**
  * @brief Terminates the active connection.
  */
-void ArduinoThread::DisconnectPump() {
+void ArduinoThread::DisconnectWater() {
     if (ser_water_->isOpen()) {
         ser_water_->close();
     }
 
-    emit PumpConnected(false);
+    emit WaterConnected(false);
 }
 
 /**
  * @brief Sets the operational state of the fluid system.
  */
-void ArduinoThread::SetPumpState(const bool& enabled) {
+void ArduinoThread::SetWaterState(const bool& enabled) {
     p_state_ = enabled;
 
     if (!p_state_) {
-        p_command_.clear();  // clear any active pump commands
+        p_command_.clear();  // clear any active water commands
     }
 
     logger_->Debug("Fluid system "
@@ -393,12 +397,12 @@ void ArduinoThread::SetPumpState(const bool& enabled) {
  * @note This function is only triggered under two situations:
  *   1) `HebiThread` emits the `ReportArmTorque` signal, which means
  *        automatic torque compensation is enabled.
- *   2) `MainWindow` emits the `CommandPump` signal, which in this case is only
+ *   2) `MainWindow` emits the `CommandWater` signal, which in this case is only
  *        used to force fill or drain the counterweight(s).
  *
  * @see hebi_thread
  */
-void ArduinoThread::SetPumpCommand(double torque_dir) {
+void ArduinoThread::SetWaterCommand(double torque_dir) {
     if (!ser_water_->isOpen()) {
         logger_->Warn("SerialWater not connected!");
         return;
