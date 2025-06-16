@@ -13,9 +13,11 @@ A collection of detailed instructions and lessons learned from operating the LIB
 
 ### *LIBRA-I*
 
+(TODO: this will change once the Qt-based app is operational)
+
 1. Plug in LIBRA power cables
 2. Plug in LIBRA USB cable
-3. Start LIBRA_App
+3. Start `LIBRA_App`
     - This activates the HEBI motors so they can hold their position
 4. Connect to serial ports/COMs via terminal (see `notes/Arduino COM IDs.txt`)
 5. Disable water system (click `DISABLE`)
