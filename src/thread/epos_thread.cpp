@@ -213,7 +213,7 @@ QString EposThread::GetStatus() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Main pump command loop.
+ * @brief Main command loop.
  */
 void EposThread::run() {
     logger_->Debug("Initialized EposThread");
