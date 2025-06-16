@@ -419,6 +419,7 @@ void EposThread::Connect() {
     }
 
     handle_ = handle;  // only set our class handle after successful init
+    emit Connected(true);
 
     logger_->Debug("EPOS - Connection successful");
 }
@@ -449,6 +450,7 @@ void EposThread::Disconnect() {
 
     // Void our class handle
     handle_ = nullptr;
+    emit Connected(false);
 
     logger_->Debug("EPOS - Gracefully disconnected from actuator");
 }

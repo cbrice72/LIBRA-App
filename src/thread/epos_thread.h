@@ -28,6 +28,10 @@
  * @see abstract_actuator_thread
  */
 class EposThread : public AbstractActuatorThread {
+    // NOLINTBEGIN: required by Qt
+    Q_OBJECT
+    // NOLINTEND
+
   public:
     explicit EposThread(QObject* parent, std::string device_name,
                         std::string protocol_name, std::string interface_name,

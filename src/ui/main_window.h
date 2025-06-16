@@ -58,6 +58,11 @@ class MainWindow : public QMainWindow {
 
     // --- Actuator Updates ---
 
+    void HandleHebiConnChanged(const bool& connected);
+#if LIBRA_VERSION == 2
+    void HandleEposConnChanged(const bool& connected);
+#endif
+
     void HandleActuatorFeedback(
         const std::unordered_map<Actuator::Joint, double>& feedbacks,
         const Actuator::Feedback feedback_type);

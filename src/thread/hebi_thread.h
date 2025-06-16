@@ -33,11 +33,15 @@ typedef libra_app::msg::HebiState msgHebiState;
  *
  * @see abstract_actuator_thread
  */
-class HebiThread :
+class HebiThread : public AbstractActuatorThread
 #ifdef BUILD_WITH_ROS2
-    public rclcpp::Node,
+    ,
+                   public rclcpp::Node
 #endif
-    public AbstractActuatorThread {
+{
+    // NOLINTBEGIN: required by Qt
+    Q_OBJECT
+    // NOLINTEND
 
   public:
     explicit HebiThread(QObject* parent, std::vector<std::string> families,

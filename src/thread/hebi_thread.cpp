@@ -142,7 +142,6 @@ HebiThread::~HebiThread() {
  *        corresponding `Actuator::Joint`. Facilitates reporting to `MainWindow`.
  *
  * @param feedback Actuator values (ideally, already converted to desired units)
- * @return std::unordered_map<Actuator::Joint, double>
  *
  * @note The enum vector `joint_order_`, defined in the constructor, should have
  *       the same order as the strings in `names_`. Otherwise, this function
@@ -422,7 +421,7 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
-    logger_->Debug("Connection successful");
+    emit Connected(true);
 
     // Command actuator(s) to hold current position
     group_ = group;
@@ -455,7 +454,7 @@ void HebiThread::Disconnect() {
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
 
-        logger_->Debug("Gracefully disconnected from actuator(s)");
+        emit Connected(false);
     }
 }
 
