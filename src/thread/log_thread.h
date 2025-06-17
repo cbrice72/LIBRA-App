@@ -2,6 +2,8 @@
  * @file   log_thread.h
  * @brief  Consolidated logging class for LIBRA sensor data; header file.
  *
+ * @note TODO: this might be abandoned?
+ *
  * @author Christian Brice
  ******************************************************************************/
 
