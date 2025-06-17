@@ -131,6 +131,46 @@ ArduinoThread::~ArduinoThread() {
 // !Class Helpers
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Returns formatted activity information for the fluid system(s).
+ *
+ * @return QString Status message in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
+ */
+QString ArduinoThread::GetWaterStatus() {
+    if (!ser_water_->isOpen() || p_command_.isEmpty()) {
+        return QString("<span style='color: gray;'>-- | --</span>");
+    }
+
+    uint8_t command = static_cast<uint8_t>(p_command_[0]);
+
+    // Extract A-side (left-hand) status
+    QString A_status;
+    if (command & kA_IN) {
+        A_status = "<span style='color: green;'>IN</span>";
+    } else if (command & kA_OUT) {
+        A_status = "<span style='color: red;'>OUT</span>";
+    } else {
+        A_status = "<span style='color: gray;'>--</span>";
+    }
+
+#if LIBRA_VERSION == 1
+    // Extract B-side (right-hand) status
+    QString B_status;
+    if (command & kB_IN) {
+        B_status = "<span style='color: green;'>IN</span>";
+    } else if (command & kB_OUT) {
+        B_status = "<span style='color: red;'>OUT</span>";
+    } else {
+        B_status = "<span style='color: gray;'>--</span>";
+    }
+
+    // Form return string
+    return A_status + " | " + B_status;
+#else
+    return A_status;
+#endif
+}
+
 //------------------------------------------------------------------------------
 // !Thread Overrides
 //------------------------------------------------------------------------------
@@ -139,9 +179,7 @@ ArduinoThread::~ArduinoThread() {
  * @brief Main arduino connection manager loop.
  */
 void ArduinoThread::run() {
-    if (debug_mode_) {
-        logger_->Debug("Initialized ArduinoThread");
-    }
+    logger_->Debug("Initialized ArduinoThread");
 
     // Initialize thread variables for efficiency
     QString servo_cmd;
@@ -193,9 +231,14 @@ void ArduinoThread::run() {
 #endif
 
         // SerialWater
-        ser_water_->write(p_command_);
+        if (ser_water_->isOpen()) {
+            ser_water_->write(p_command_);
 
-        logger_->Debug("Sent water command: " + BytesToStr(p_command_) + "\n");
+            logger_->Debug("Sent water command: " + BytesToStr(p_command_)
+                           + "\n");
+
+            emit ReportWaterStatus(GetWaterStatus());
+        }
     }
 
     QThread::msleep(500);  // update 2 times/second (theoretically)
@@ -220,18 +263,15 @@ void ArduinoThread::ConnectManip() {
             found = true;
             break;
         }
-        if (debug_mode_) {
-            // Enumerate available serial ports
-            logger_->Debug(
-                std::string("Found SerialPort with following metadata")
-                + "\n  Port: " + info.portName().toStdString()
-                + "\n  Description: " + info.description().toStdString()
-                + "\n  Manufacturer: " + info.manufacturer().toStdString()
-                + "\n");
 
-            // TODO: query user to pick one and continue in function
-            return;  // temporary
-        }
+        // Enumerate available serial ports
+        logger_->Debug(std::string("Found SerialPort with following metadata")
+                       + "\n  Port: " + info.portName().toStdString()
+                       + "\n  Description: " + info.description().toStdString()
+                       + "\n  Manufacturer: "
+                       + info.manufacturer().toStdString() + "\n");
+
+        // TODO: query user to pick one and continue in function
     }
 
     if (!found) {
@@ -324,18 +364,15 @@ void ArduinoThread::ConnectWater() {
             found = true;
             break;
         }
-        if (debug_mode_) {
-            // Enumerate available serial ports
-            logger_->Debug(
-                std::string("Found SerialPort with following metadata")
-                + "\n  Port: " + info.portName().toStdString()
-                + "\n  Description: " + info.description().toStdString()
-                + "\n  Manufacturer: " + info.manufacturer().toStdString()
-                + "\n");
 
-            // TODO: query user to pick one and continue in function
-            return;  // temporary
-        }
+        // Enumerate available serial ports
+        logger_->Debug(std::string("Found SerialPort with following metadata")
+                       + "\n  Port: " + info.portName().toStdString()
+                       + "\n  Description: " + info.description().toStdString()
+                       + "\n  Manufacturer: "
+                       + info.manufacturer().toStdString() + "\n");
+
+        // TODO: query user to pick one and continue in function
     }
 
     if (!found) {

@@ -60,12 +60,11 @@ class MainWindow : public QMainWindow {
 #endif
 
     void HandleWaterConnChanged(const bool& connected);
-    void
+    void HandleWaterStatus(const QString& status);
 
-        // --- Actuator Updates ---
+    // --- Actuator Updates ---
 
-        void
-        HandleHebiConnChanged(const bool& connected);
+    void HandleHebiConnChanged(const bool& connected);
 #if LIBRA_VERSION == 2
     void HandleEposConnChanged(const bool& connected);
 #endif
@@ -120,7 +119,7 @@ class MainWindow : public QMainWindow {
 
     // Water Menu
 
-    void on_a_waterr_set_empty_triggered();
+    void on_a_water_set_empty_triggered();
     void on_a_water_set_full_triggered();
 
     // Quick Actions Menu

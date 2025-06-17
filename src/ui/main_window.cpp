@@ -195,6 +195,7 @@ void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
     // ========== Menu Bar ==========
+
 #if LIBRA_VERSION == 1
     ui_->m_epos->setVisible(false);
 #elif LIBRA_VERSION == 2
@@ -329,6 +330,7 @@ void MainWindow::InitializeThreads() {
             arduino_thread_, &ArduinoThread::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_thread_, &ArduinoThread::DisconnectManip);
+
     connect(this, &MainWindow::CommandManip,  // update manip target(s)
             arduino_thread_, &ArduinoThread::SetManipCommand);
 #endif
@@ -337,6 +339,7 @@ void MainWindow::InitializeThreads() {
             arduino_thread_, &ArduinoThread::ConnectWater);
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
             arduino_thread_, &ArduinoThread::DisconnectWater);
+
     connect(this, &MainWindow::EnableFluidSystem,  // change water state
             arduino_thread_, &ArduinoThread::SetWaterState);
     connect(this, &MainWindow::CommandWater,  // force update water command
@@ -352,6 +355,11 @@ void MainWindow::InitializeThreads() {
 
     connect(arduino_thread_, &ArduinoThread::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
+
+    connect(arduino_thread_, &ArduinoThread::ReportPosition,  // receive pos
+            this, &MainWindow::HandleManipPosition);
+    connect(arduino_thread_, &ArduinoThread::ReportWaterStatus,  // receive info
+            this, &MainWindow::HandleWaterStatus);
 
     arduino_thread_->start();
 
@@ -569,6 +577,17 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
 }
 
 /**
+ * @brief Prints colorized fluid system state in the "WATER" GroupBox.
+ *
+ * @param status Text in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
+ *
+ * @see ArduinoThread::GetWaterStatus
+ */
+void MainWindow::HandleWaterStatus(const QString& status) {
+    ui_->l_water_status->setText(status);
+}
+
+/**
  * @brief Reflect HEBI actuator connection status in UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
@@ -726,7 +745,10 @@ void MainWindow::on_a_lidar_about_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_empty_triggered() {
-    ui_->w_tank_visual->OverrideLevel(0.0);
+    ui_->w_counterweight_1->OverrideLevel(0.0);
+#if LIBRA_VERSION == 1
+    ui_->w_counterweight_2->OverrideLevel(0.0);
+#endif
 }
 
 /**
@@ -736,7 +758,10 @@ void MainWindow::on_a_water_set_empty_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_full_triggered() {
-    ui_->w_tank_visual->OverrideLevel(1.0);
+    ui_->w_counterweight_1->OverrideLevel(1.0);
+#if LIBRA_VERSION == 1
+    ui_->w_counterweight_2->OverrideLevel(1.0);
+#endif
 }
 
 /**

@@ -65,6 +65,7 @@ class ArduinoThread : public QThread {
                         const double& tilt);
 #endif
     void WaterConnected(const bool& connected);
+    void ReportWaterStatus(const QString& status);
 
     void ErrorThrown(const QString& err);
 
@@ -72,6 +73,8 @@ class ArduinoThread : public QThread {
     void run() override;
 
     // --- Helper Functions ---
+
+    QString GetWaterStatus();
 
     // --- Data Members ---
 
