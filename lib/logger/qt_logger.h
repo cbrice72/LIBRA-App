@@ -38,20 +38,20 @@ class QtLogger : public Logger {
 
     void Debug(const std::string& msg) override {
         if (debug_mode_) {
-            qDebug() << "[DEBUG] " << QString::fromStdString(msg);
+            qDebug().noquote() << "[DEBUG]" << QString::fromStdString(msg);
         }
     }
 
     void Info(const std::string& msg) override {
-        qInfo() << "[INFO] " << QString::fromStdString(msg);
+        qInfo().noquote() << "[INFO]" << QString::fromStdString(msg);
     }
 
     void Warn(const std::string& msg) override {
-        qWarning() << "[WARN] " << QString::fromStdString(msg);
+        qWarning().noquote() << "[WARN]" << QString::fromStdString(msg);
     }
 
     void Error(const std::string& msg) override {
-        qCritical() << "[ERROR] " << QString::fromStdString(msg);
+        qCritical().noquote() << "[ERROR]" << QString::fromStdString(msg);
     }
 
   private:
