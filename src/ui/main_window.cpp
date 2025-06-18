@@ -161,23 +161,21 @@ MainWindow::MainWindow(QWidget* parent)
  * @brief Standard destructor.
  */
 MainWindow::~MainWindow() {
-    // Wrap up the worker thread(s) gracefully
-    if (log_thread_ != nullptr && log_thread_->isRunning()) {
-        log_thread_->requestInterruption();  // signal thread to stop looping
-        log_thread_->wait();  // wait for thread cleanup to finish
-    }
+    // Define a lambda for gracefully wrapping up worker thread(s)
+    auto StopThread = [](QThread* thread) {
+        if (thread != nullptr && thread->isRunning()) {
+            thread->requestInterruption();  // signal thread to stop looping
+            thread->wait();                 // wait for thread cleanup to finish
+        }
+    };
 
+    // Cleanup
+    StopThread(log_thread_);
+    StopThread(arduino_thread_);
+    StopThread(hebi_thread_);
 #if LIBRA_VERSION == 2
-    if (epos_thread_ != nullptr && epos_thread_->isRunning()) {
-        epos_thread_->requestInterruption();
-        epos_thread_->wait();
-    }
+    StopThread(epos_thread_);
 #endif
-
-    if (hebi_thread_ != nullptr && hebi_thread_->isRunning()) {
-        hebi_thread_->requestInterruption();
-        hebi_thread_->wait();
-    }
 
     delete ui_;
 }
