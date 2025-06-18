@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   open_epos_window.h
+ * @file   open_epos_dialog.h
  * @brief  Open EPOS device window header file.
  *
  * @author brice.c.aa
@@ -21,9 +21,8 @@ class OpenEPOSWindow;
 }  // namespace Ui
 
 /**
- * @brief The "Open EPOS device" window, a sub-window of MainWindow.
- *        Used to retrieve the information required for the call to
- *        `VCS_OpenDevice()`.
+ * @brief A dialog for retrieving the information required for the EPOS (Maxon)
+ *        library call `VCS_OpenDevice()`.
  */
 class OpenEPOSWindow : public QDialog {
     // NOLINTBEGIN: required by Qt
