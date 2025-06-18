@@ -45,13 +45,13 @@ class ArduinoThread : public QThread {
     // --- Arduino Commands ---
 
 #if LIBRA_VERSION == 1
-    void ConnectManip();
+    void ConnectManip(QString port_name);
     void DisconnectManip();
     void SetManipCommand(const double& arm_pitch, const double& target_pan,
                          const double& target_tilt, const bool& move_slow);
 #endif
 
-    void ConnectWater();
+    void ConnectWater(QString port_name);
     void DisconnectWater();
     void SetWaterState(const bool& enabled);
     void SetWaterCommand(double torque_dir);

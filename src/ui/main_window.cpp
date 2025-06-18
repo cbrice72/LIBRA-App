@@ -326,8 +326,6 @@ void MainWindow::InitializeThreads() {
             arduino_thread_, &ArduinoThread::SetDebugMode);
 
 #if LIBRA_VERSION == 1
-    connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
-            arduino_thread_, &ArduinoThread::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_thread_, &ArduinoThread::DisconnectManip);
 
@@ -335,8 +333,6 @@ void MainWindow::InitializeThreads() {
             arduino_thread_, &ArduinoThread::SetManipCommand);
 #endif
 
-    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
-            arduino_thread_, &ArduinoThread::ConnectWater);
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
             arduino_thread_, &ArduinoThread::DisconnectWater);
 
@@ -347,9 +343,14 @@ void MainWindow::InitializeThreads() {
 
     // MainWindow slots
 #if LIBRA_VERSION == 1
+    connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
+            this, &MainWindow::ConnectManipHelper);
     connect(arduino_thread_, &ArduinoThread::ManipConnected,  // update UI
             this, &MainWindow::HandleManipConnChanged);
 #endif
+
+    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
+            this, &MainWindow::ConnectWaterHelper);
     connect(arduino_thread_, &ArduinoThread::WaterConnected,  // update UI
             this, &MainWindow::HandleWaterConnChanged);
 
@@ -517,6 +518,56 @@ void MainWindow::InitializeFeedbackElementMap() {
                          [Actuator::Feedback::kActualTorque] =
                              ui_->l_torque_pitch;
 #endif
+}
+
+#if LIBRA_VERSION == 1
+/**
+ * @brief Allows user to select a physical serial device and commands
+ *        ArduinoThread to connect to it as the "SerialServo" device.
+ */
+void MainWindow::ConnectManipHelper() {
+    // Prompt user to select a serial device
+    OpenSerialDialog open_port_dlg(this, QString("SerialServo"));
+    QString port_name;
+
+    if (open_port_dlg.exec() == QDialog::Accepted) {
+        port_name = open_port_dlg.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            qCritical("No port selected!");
+            return;
+        }
+    } else {
+        qDebug("Port selection cancelled by user");
+        return;
+    }
+
+    emit arduino_thread_->ConnectManip(port_name);
+}
+#endif
+
+/**
+ * @brief Allows user to select a physical serial device and commands
+ *        ArduinoThread to connect to it as the "SerialWater" device.
+ */
+void MainWindow::ConnectWaterHelper() {
+    // Prompt user to select a serial device
+    OpenSerialDialog open_port_dlg(this, QString("SerialWater"));
+    QString port_name;
+
+    if (open_port_dlg.exec() == QDialog::Accepted) {
+        port_name = open_port_dlg.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            qCritical("No port selected!");
+            return;
+        }
+    } else {
+        qDebug("Port selection cancelled by user");
+        return;
+    }
+
+    emit arduino_thread_->ConnectWater(port_name);
 }
 
 //------------------------------------------------------------------------------
@@ -771,9 +822,9 @@ void MainWindow::on_a_water_set_full_triggered() {
 void MainWindow::on_a_connect_all_triggered() {
     // Arduinos
 #if LIBRA_VERSION == 1
-    emit arduino_thread_->ConnectManip();
+    ConnectManipHelper();
 #endif
-    emit arduino_thread_->ConnectWater();
+    ConnectWaterHelper();
 
     // Actuators
     ui_->a_hebi_connect->trigger();

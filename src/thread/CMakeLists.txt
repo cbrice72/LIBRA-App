@@ -11,7 +11,6 @@
 qt_add_library(
     log_thread
     STATIC
-    # Logging
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.cpp
 )
@@ -38,7 +37,6 @@ target_link_libraries(
 qt_add_library(
     arduino_thread
     STATIC
-    # Logging
     ${CMAKE_CURRENT_SOURCE_DIR}/arduino_thread.h
     ${CMAKE_CURRENT_SOURCE_DIR}/arduino_thread.cpp
 )

@@ -9,7 +9,7 @@
 add_subdirectory(thread) # log_thread, arduino_thread, actuator_thread
 
 # Collect project source files
-add_subdirectory(ui) # UI_SOURCE
+add_subdirectory(ui) # UI_SOURCE, open_serial_dialog, open_epos_dialog
 add_subdirectory(widgets) # WIDGET_SOURCE
 
 # Define project sources for use by root CMakeLists.txt

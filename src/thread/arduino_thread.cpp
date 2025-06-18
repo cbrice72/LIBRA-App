@@ -252,35 +252,12 @@ void ArduinoThread::run() {
 /**
  * @brief Attempts to establish a connection to the SerialServo Arduino.
  */
-void ArduinoThread::ConnectManip() {
+void ArduinoThread::ConnectManip(QString port_name) {
     // If there is already an active connection, gracefully terminate it
     DisconnectManip();
 
-    // Check if device is connected at default COM port (COM4)
-    bool found = false;
-    foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
-        if (info.portName() == "COM4") {
-            found = true;
-            break;
-        }
-
-        // Enumerate available serial ports
-        logger_->Debug(std::string("Found SerialPort with following metadata")
-                       + "\n  Port: " + info.portName().toStdString()
-                       + "\n  Description: " + info.description().toStdString()
-                       + "\n  Manufacturer: "
-                       + info.manufacturer().toStdString() + "\n");
-
-        // TODO: query user to pick one and continue in function
-    }
-
-    if (!found) {
-        logger_->Error("SerialServo (COM4) not found!");
-        return;
-    }
-
     // Set port options
-    ser_servo_->setPortName("COM4");  // hard-coded, see above TODO
+    ser_servo_->setPortName(port_name);
     ser_servo_->setBaudRate(QSerialPort::Baud115200);
     ser_servo_->setDataBits(QSerialPort::Data8);
     ser_servo_->setParity(QSerialPort::NoParity);
@@ -295,6 +272,8 @@ void ArduinoThread::ConnectManip() {
     }
 
     emit ManipConnected(true);
+
+    logger_->Info("Manip - Connected to device at: " + port_name.toStdString());
 }
 
 /**
@@ -353,35 +332,12 @@ void ArduinoThread::SetManipCommand(const double& arm_pitch,
 /**
  * @brief Attempts to establish a connection to the SerialWater Arduino.
  */
-void ArduinoThread::ConnectWater() {
+void ArduinoThread::ConnectWater(QString port_name) {
     // If there is already an active connection, gracefully terminate it
     DisconnectWater();
 
-    // Check if device is connected at default COM port (COM3)
-    bool found = false;
-    foreach (const QSerialPortInfo& info, QSerialPortInfo::availablePorts()) {
-        if (info.portName() == "COM3") {
-            found = true;
-            break;
-        }
-
-        // Enumerate available serial ports
-        logger_->Debug(std::string("Found SerialPort with following metadata")
-                       + "\n  Port: " + info.portName().toStdString()
-                       + "\n  Description: " + info.description().toStdString()
-                       + "\n  Manufacturer: "
-                       + info.manufacturer().toStdString() + "\n");
-
-        // TODO: query user to pick one and continue in function
-    }
-
-    if (!found) {
-        logger_->Error("SerialWater (COM3) not found!");
-        return;
-    }
-
     // Set port options
-    ser_water_->setPortName("COM3");  // hard-coded, see above TODO
+    ser_water_->setPortName(port_name);
     ser_water_->setBaudRate(QSerialPort::Baud115200);
     ser_water_->setDataBits(QSerialPort::Data8);
     ser_water_->setParity(QSerialPort::NoParity);
@@ -396,6 +352,8 @@ void ArduinoThread::ConnectWater() {
     }
 
     emit WaterConnected(true);
+
+    logger_->Info("Water - Connected to device at: " + port_name.toStdString());
 }
 
 /**

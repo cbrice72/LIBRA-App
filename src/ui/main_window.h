@@ -165,6 +165,11 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
     void InitializeFeedbackElementMap();
 
+#if LIBRA_VERSION == 1
+    void ConnectManipHelper();
+#endif
+    void ConnectWaterHelper();
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_;
