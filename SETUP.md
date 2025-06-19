@@ -17,12 +17,15 @@ This document lists the necessary steps to set up an Ubuntu 22.04 development en
 
 ## Setting Up
 
-You may set up a development environment in either a Virtual Machine (VM) or Windows Subsystem for Linux (WSL). There are a few differences you should be aware of.
+You may set up a Linux development environment in any way you see fit. If you prefer Windows, you can choose between a Virtual Machine (VM) or Windows Subsystem for Linux (WSL). There are a few differences you should be aware of.
 
 | | Ability | Environment | USB Support | Shared Folder Support |
 |---|---|---|---|---|
+| **Native<br>Linux** | Full-featured | Runs natively on your PC | No special actions required | N/A |
 | **VM** | Full-featured | Runs in separate environment | Select PC or VM on plug-in | Non-native; enable in VMWare settings + install [open-vm-tools](https://kb.vmware.com/s/article/2073803) |
 | **WSL** | Lightweight | Runs natively in Windows | Non-native; install [USBIPD](https://learn.microsoft.com/en-us/windows/wsl/connect-usb) + use every time |  Windows `C:\` drive located at `/mnt/c` |
+
+If you choose to set up natively on Linux, skip ahead to [Preparing Your Development Environment](#preparing-your-development-environment).
 
 ### *VM*
 
@@ -121,18 +124,16 @@ Update the APT package lists and ensure your system is up to date.
 sudo apt update && sudo apt upgrade
 ```
 
-(TODO: from here to next section)
-
 Install the following packages via the terminal.
 
 ```bash
-sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libudev-dev
+sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libxcb-cursor0 libxcb-cursor-dev
 ```
 
 Package notes:
 
 - `build-essential`: programs and libraries necessary for basic software development.
-- `clang` & `libclang-dev`: C/C++ compiler ([link](https://clang.llvm.org/)).
+- `clang` & `libclang-dev`: C/C++ compiler, required by `clang-format` and `clang-tidy` ([link](https://clang.llvm.org/)).
 - `clang-format`: clang-based C++ formatter ([link](https://clang.llvm.org/docs/ClangFormat.html)).
 - `clang-tidy`: clang-based C++ linter ([link](https://clang.llvm.org/extra/clang-tidy/)).
 - `cmake`: cross-platform C++ build tool ([link](https://cmake.org/)).
@@ -141,11 +142,13 @@ Package notes:
 - `git`: popular open-source version control system ([link](https://git-scm.com)).
 - `libgl1-mesa-dev`: open-source graphics library, used by Qt ([link](https://www.mesa3d.org/)).
 - `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
-- `libudev-dev`: C++ library for enumerating local devices([link](https://www.freedesktop.org/software/systemd/man/latest/libudev.html)).
+- `libxcb-cursor0` & `libxcb-cursor-dev`: cursor-related convenience libraries, required by Qt ([link](https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor)).
 
 ### *Required Drivers and Permissions*
 
 #### **Maxon EPOS**
+
+The *driver* installation is only necessary on Windows. For *library* installation on Linux, see [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install).
 
 The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
 
@@ -163,18 +166,29 @@ Other than that, you do not need to download or install anything yourself since 
 
 Apply for a [Qt educational license](https://www.qt.io/qt-educational-license#application) (make sure to select "Qt Edu for Developers").
 
-Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux". To run it, you must first give the `.run` file execution permissions (remember to replace the text in brackets).
+Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux". To run it, you must first give the `.run` file execution permissions.
 
-```bash
-chmod +x qt-unified-linux-x64-<ver>-online.run
-./qt-unified-linux-x64-<ver>-online.run
-```
+- **Via the GUI** &ndash; Navigate to the installer via the file explorer and do the following.
+    - Right click, "Properties" -> "Permissions" tab
+    - Ensure "Allow executing file as program" is checked
+
+- **Via the Terminal** &ndash; Run the following code. Remember to replace the bracketed text with your Qt installer version.
+
+    ```bash
+    chmod +x qt-unified-linux-x64-<ver>-online.run
+    ./qt-unified-linux-x64-<ver>-online.run
+    ```
 
 > ***NOTE:*** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration". Enter your proxy settings **without** the preceding `http://` (e.g., HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`).
 
-Login and follow the installation procedure, being mindful of the following:
+Log in and follow the installation procedure. The following list of installation steps show non-default configurations that you **must** install.
 
-- At the "Installation Folder" step, select "Qt Design Studio" and "Qt 6.x for desktop development".
+1. "Installation options"
+    - Select "Qt X.X for desktop development" and "Custom Installation".
+2. "Customize"
+    - Under "Qt" -> "Qt X.X.X" (whichever is automatically selected) -> "Additional Libraries", check the following.
+        - While most libraries listed in the `set(QT_PACKAGES ...)` line in the root `CMakeLists.txt` are available by default, some must be manually selected. At the time of writing, these are: "Qt Multimedia" and "Qt Serial Port".
+    - Ensure "Qt Creator" -> "Debug Symbols" is checked.
 
 #### *Add Qt Creator to PATH*
 
