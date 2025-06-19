@@ -11,6 +11,7 @@ This document lists the necessary steps to set up an Ubuntu 22.04 development en
     - [*Required Drivers and Permissions*](#required-drivers-and-permissions)
 - [Project Software](#project-software)
     - [*Qt Creator*](#qt-creator)
+    - [*HEBI Scope*](#hebi-scope)
     - [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install)
 - [Optional Items](#optional-items)
     - [*VS Code*](#vs-code)
@@ -146,6 +147,12 @@ Package notes:
 
 ### *Required Drivers and Permissions*
 
+#### **HEBI**
+
+While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [docs/HEBI.md](./docs/HEBI.md) "Before You Start" -> "Networking).
+
+Other than that, no additional installation is required since the HEBI C++ API included with this project (`thirdparty/hebi-cpp-3.11.1`) is automatically built when CMake is run.
+
 #### **Maxon EPOS**
 
 The *driver* installation is only necessary on Windows. For *library* installation on Linux, see [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install).
@@ -153,12 +160,6 @@ The *driver* installation is only necessary on Windows. For *library* installati
 The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
 
 If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf). All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
-
-#### **HEBI**
-
-While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [docs/HEBI.md](./docs/HEBI.md) "Before You Start" -> "Networking).
-
-Other than that, you do not need to download or install anything yourself since the HEBI C++ API included with this project is automatically built when CMake is run.
 
 ## Project Software
 
@@ -242,6 +243,10 @@ See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt
 ##### *Running CMake gives "Unknown CMake command "qt_xxx""*
 
 Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely have an older version of Qt installed. You can check what version you have by opening QtCreator, opening the "Help" tab at the top, and clicking "System Information".
+
+### *HEBI Scope*
+
+Although not required, Scope is very useful for visualizing the state of HEBI actuators and adjusting their parameters in real time. You can download the [latest release](https://docs.hebi.us/downloads_changelogs.html#software) on the HEBI docs website.
 
 ### *Maxon EPOS Library (system-wide install)*
 
