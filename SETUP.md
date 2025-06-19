@@ -248,6 +248,17 @@ Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely h
 
 Although not required, Scope is very useful for visualizing the state of HEBI actuators and adjusting their parameters in real time. You can download the [latest release](https://docs.hebi.us/downloads_changelogs.html#software) on the HEBI docs website.
 
+Installation on Linux requires a couple extra steps on the command line.
+
+```bash
+# Install required dependencies
+sudo apt install -y libgdk-pixbuf2.0-0
+# Install Scope via dpkg
+sudo dpkg -i hebi-robotics-scope_<ver>_<architecture>.deb
+# Run via terminal
+hebi-scope
+```
+
 ### *Maxon EPOS Library (system-wide install)*
 
 The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`). However, for ease of compilation (specifically, using the `-lEposCmd` flag), follow the instructions below to install the EPOS library files on your system.
