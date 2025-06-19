@@ -22,9 +22,26 @@ Download the latest API `.zip` (Windows) or `.tar.gz` (Linux) from the [HEBI too
 
 > ***NOTE:*** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [SETUP.md](../SETUP.md) "WSL" -> "Networking Mode" for more information.
 
-It is recommended that you use HEBI actuators via IP addressing as Windows and Linux do not come with DHCP server capabilities by default. The following instructions will help you set up your environment for IP addressing.
+HEBI actuators support both dynamic and static IP addressing (the former is known as [DHCP](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol)). Since Windows and Linux do not come with DHCP server capabilities by default, it is recommended that you use HEBI actuators with statically-assigned IP addresses. The following instructions will help you set up your computer so it can communicate with these actuators.
 
-Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet (an Ethernet-to-USB adapter also works). Then, in Windows Settings, navigate to "Network & Internet" and find the actuator's network based on your connection method.
+Before setting a static IP, ensure that the actuator is powered on and connected via Ethernet (an Ethernet-to-USB adapter also works).
+
+#### **Linux**
+
+Navigate to "Settings" -> "Network" and select the gear icon next to either "PCI Ethernet" or "USB Ethernet", depending on whether you connected the actuators via LAN port or USB adapter, respectively.
+
+Under the "IPv4" tab, change the IPv4 Method to "Manual" and assign settings according to the table below.
+
+| Setting | Value | Notes |
+|---|---|---|
+| Addresses::**Address** | `10.11.12.xxx` | `xxx` can be anything (e.g., `2`) as long as it doesn't clash with the default actuator address (`10.11.12.13`) or other user-assigned actuator addresses |
+| Addresses::**Netmask** | `255.255.255.0` | If instead you see "Subnet prefix length", enter `24` |
+| Addresses::**Gateway** | `10.11.12.1` | Doesn't matter, but required |
+| DNS | `Automatic` | If this doesn't work for you, you can manually assign the default Google nameserver: `8.8.8.8` |
+
+#### **Windows**
+
+In Windows Settings, navigate to "Network & Internet" and find the actuator's network based on your connection method.
 
 - **Ethernet (via LAN port)**: in the main window, it may show up as "Unidentified Network", "Ethernet2", or something similar.
 - **USB Adapter (via USB port)**: go to "Advanced network settings" and find the network with your adapter's name under it. Click on it to expand, then click "View additional properties".
