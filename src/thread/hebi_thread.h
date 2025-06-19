@@ -92,6 +92,15 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<hebi::GroupFeedback> feedback_;
     std::vector<Actuator::Joint> joint_order_;  // NOTE: should match `names_`
 
+    /* Improve performance of GetStatus() by allocating these vectors here
+      (the `mutable` keyword allows a const function to modify class members) */
+    mutable std::vector<double> status_a_vel_;
+    mutable std::vector<double> status_defl_;
+    mutable std::vector<double> status_defl_vel_;
+    mutable std::vector<double> status_volt_;
+    mutable std::vector<double> status_curr_;
+    mutable std::vector<double> status_temp_;
+
     // Enables logic that uses torque feedback hysteresis to control trajectory
     // movement state (see `movement_en_`)
     bool torque_control_en_{true};

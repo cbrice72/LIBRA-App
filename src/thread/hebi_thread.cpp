@@ -49,11 +49,43 @@ constexpr double kDamping = 1.0;     // Nm/rad/s
 constexpr double kTorqueCompUpperBound = 6.0;  // Nm
 constexpr double kTorqueCompLowerBound = 3.0;  // Nm
 
+// Status Message Formatting
+
+constexpr int kLabelWidth = 21;  // longest label = 19 char, +2 for visuals
+constexpr int kValueWidth = 8;  // format is [sign][#,3][.][#,2], +1 for visuals
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
 
-namespace {}  // namespace
+namespace {
+
+/**
+ * @brief Formats actuator values and appends them to an existing stream.
+ *
+ * @param ss Reference to an output stream
+ * @param label Row title
+ * @param values Values for every actuator
+ * @param unit Value units, if applicable
+ */
+void AppendRow(std::ostringstream& ss, const std::string& label,
+               const std::vector<double>& values,
+               const std::string& unit = "") {
+    ss << std::left << std::setw(kLabelWidth) << label;  // left-aligned
+
+    for (double val : values) {
+        ss << std::right << std::setw(kValueWidth) << std::fixed
+           << std::setprecision(2) << val;  // 0.01, right-aligned
+    }
+
+    if (!unit.empty()) {
+        ss << " " << unit;
+    }
+
+    ss << "\n";
+}
+
+}  // namespace
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -102,6 +134,14 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #elif LIBRA_VERSION == 2
     joint_order_ = {Actuator::Joint::kPitch};  // LIBRA-II
 #endif
+
+    // Resize status vectors to match number of actuators
+    status_a_vel_.resize(num_actuators_);
+    status_defl_.resize(num_actuators_);
+    status_defl_vel_.resize(num_actuators_);
+    status_volt_.resize(num_actuators_);
+    status_curr_.resize(num_actuators_);
+    status_temp_.resize(num_actuators_);
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
@@ -177,41 +217,44 @@ std::unordered_map<Actuator::Joint, double> HebiThread::GetFeedbackMap(
  */
 QString HebiThread::GetStatus() {
     if (group_ == nullptr) {
-        return {QString("Not Connected")};
+        return QString("Not Connected");
     }
 
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2);  // 0.01
-    ss << std::right;                          // right-align numbers
+    std::ostringstream ss;
 
-    for (auto i = 0; i < num_actuators_; i++) {
-        // Get values
-        auto a_vel = feedback_->getVelocity()[i];  // rad/s
+    // Get references to minor status info vectors (improves readability)
+    const auto& vel = feedback_->getVelocity();
+    const auto& defl = feedback_->getDeflection();
+    const auto& defl_vel = feedback_->getDeflectionVelocity();
+    const auto& volt = feedback_->getVoltage();
+    const auto& curr = feedback_->getMotorCurrent();
+    const auto& temp = feedback_->getMotorWindingTemperature();
+    // (alternatively, `getBoardTemperature()` for electronics)
 
-        auto defl = feedback_->getDeflection()[i];              // rad
-        auto defl_vel = feedback_->getDeflectionVelocity()[i];  // rad/s
-
-        auto volt = feedback_->getVoltage()[i];                  // V
-        auto curr = feedback_->getMotorCurrent()[i];             // A
-        auto temp = feedback_->getMotorWindingTemperature()[i];  // C
-        // (alternatively, `getBoardTemperature()` for electronics)
-
-        // Perform conversions
-        a_vel *= defl_vel;      // to deg/s
-        defl *= kRadToDeg;      // to deg
-        defl_vel *= kRadToDeg;  // to deg/s
-
-        // Create stringstream entry
-        // - std::setw(7) for values to account for [sign][#,3][.][#,2]
-        ss << "[" << i << "]\n"
-           << "  Actual Velocity:     " << std::setw(7) << a_vel << " deg/s\n"
-           << "  Deflection:          " << std::setw(7) << defl << " deg\n"
-           << "  Deflection Velocity: " << std::setw(7) << defl_vel
-           << " deg/s\n"
-           << "  Voltage:             " << std::setw(7) << volt << " V\n"
-           << "  Current:             " << std::setw(7) << curr << " A\n"
-           << "  Temperature:         " << std::setw(7) << temp << " C\n";
+    // Convert data, if necessary
+    for (int i = 0; i < num_actuators_; ++i) {
+        status_a_vel_[i] = vel[i] * kRadToDeg;
+        status_defl_[i] = defl[i] * kRadToDeg;
+        status_defl_vel_[i] = defl_vel[i] * kRadToDeg;
+        status_volt_[i] = volt[i];
+        status_curr_[i] = curr[i];
+        status_temp_[i] = temp[i];
     }
+
+    // Format header row
+    ss << std::setw(24) << "Actuator Index:";
+    for (int i = 0; i < num_actuators_; ++i) {
+        ss << std::right << std::setw(kValueWidth) << "[" + names_[i] + "]";
+    }
+    ss << "\n";
+
+    // Format information rows
+    AppendRow(ss, "Actual Velocity", status_a_vel_, "deg/s");
+    AppendRow(ss, "Deflection", status_defl_, "deg");
+    AppendRow(ss, "Deflection Velocity", status_defl_vel_, "deg/s");
+    AppendRow(ss, "Voltage", status_volt_, "V");
+    AppendRow(ss, "Current", status_curr_, "A");
+    AppendRow(ss, "Temperature", status_temp_, "C");
 
     return QString::fromStdString(ss.str());
 }
