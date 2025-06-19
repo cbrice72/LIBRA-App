@@ -156,7 +156,7 @@ If manual installation is required (e.g., Device Manager shows "Unknown device" 
 
 #### **HEBI**
 
-While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [notes/HEBI.md](notes/HEBI.md) "Before You Start" -> "Networking).
+While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [docs/HEBI.md](docs/HEBI.md) "Before You Start" -> "Networking).
 
 Other than that, you do not need to download or install anything yourself since the HEBI C++ API included with this project is automatically built when CMake is run.
 
