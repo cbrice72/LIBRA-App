@@ -196,9 +196,9 @@ void MainWindow::ConfigureUi() {
     // ========== Menu Bar ==========
 
 #if LIBRA_VERSION == 1
-    ui_->m_epos->setVisible(false);
+    ui_->m_epos->setEnabled(false);
 #elif LIBRA_VERSION == 2
-    ui_->m_serial_servo->setVisible(false);
+    ui_->m_serial_servo->setEnabled(false);
 #endif
 
     // ========== Water ==========
