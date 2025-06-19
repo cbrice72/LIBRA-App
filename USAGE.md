@@ -19,12 +19,12 @@ A collection of detailed instructions and lessons learned from operating the LIB
 2. Plug in LIBRA USB cable
 3. Start `LIBRA_App`
     - This activates the HEBI motors so they can hold their position
-4. Connect to serial ports/COMs via terminal (see [docs/Arduino_COM_IDs.txt](docs/Arduino_COM_IDs.txt))
+4. Connect to serial ports/COMs via terminal (see [docs/Arduino_COM_IDs.txt](./docs/Arduino_COM_IDs.txt))
 5. Disable water system (click `DISABLE`)
 6. Remove tape supports
     - Around the furthest two links (1st floor)
     - Around the mast and counterweight links (2nd floor)
-7. Slowly unfold LIBRA (see [docs/LIBRA-I_Unfolding_Angles.xlsx](docs/LIBRA-I_Unfolding_Angles.xlsx))
+7. Slowly unfold LIBRA (see [docs/LIBRA-I_Unfolding_Angles.xlsx](./docs/LIBRA-I_Unfolding_Angles.xlsx))
 
 ### *LIBRA-II (w/ ETA)*
 
@@ -34,7 +34,7 @@ TODO
 
 ### *Networking with/Connecting to HEBI actuators*
 
-To connect to HEBI actuators without a DHCP server (i.e., router), a static IP must be assigned to each actuator as well as the computer running the control app. See [docs/HEBI.md](docs/HEBI.md) for more information.
+To connect to HEBI actuators without a DHCP server (i.e., router), a static IP must be assigned to each actuator as well as the computer running the control app. See [docs/HEBI.md](./docs/HEBI.md) for more information.
 
 ### *Qt-based apps crash on startup*
 
