@@ -2,16 +2,41 @@
 
 A collection of detailed instructions and lessons learned from operating the LIBRA robot.
 
-- [Extending the Arm in Kikura Lab (North Lab Bldg. 1)](#extending-the-arm-in-kikura-lab-north-lab-bldg-1)
-    - [*LIBRA-I*](#libra-i)
-    - [*LIBRA-II (w/ ETA)*](#libra-ii-w-eta)
+- [Networking](#networking)
+    - [*LIBRA-I HEBI Actuators*](#libra-i-hebi-actuators)
+    - [*LIBRA-II HEBI Actuators*](#libra-ii-hebi-actuators)
+- [Operation](#operation)
+    - [*Using LIBRA-I*](#using-libra-i)
+    - [*Using LIBRA-II (w/ ETA)*](#using-libra-ii-w-eta)
 - [Troubleshooting](#troubleshooting)
     - [*Networking with/Connecting to HEBI actuators*](#networking-withconnecting-to-hebi-actuators)
     - [*Qt-based apps crash on startup*](#qt-based-apps-crash-on-startup)
 
-## Extending the Arm in Kikura Lab (North Lab Bldg. 1)
+## Networking
 
-### *LIBRA-I*
+Communication with the HEBI X8-16 actuators used by both LIBRA prototypes is carried out via IP addressing. Each actuator's IP address is statically assigned (see the [official HEBI documentation](https://docs.hebi.us/core_concepts.html#static-address-assignment) for more details), and you must ensure no conflicting addresses exist on the network &ndash; **otherwise the network may become unusable!** Each actuator's IP address is listed below for reference.
+
+The recommended IP address for your PC is `10.11.12.2` (see [docs/HEBI.md](./docs/HEBI.md) for instructions).
+
+### *LIBRA-I HEBI Actuators*
+
+| Actuator<br>Family | Actuator<br>Name | IP Address |
+|---|---|---|
+| LIBRA | MA | `10.11.12.100` |
+| LIBRA | MB | `10.11.12.101` |
+| LIBRA | J1 | `10.11.12.102` |
+| LIBRA | J2 | `10.11.12.103` |
+| LIBRA | J3 | `10.11.12.104` |
+
+### *LIBRA-II HEBI Actuators*
+
+| Actuator<br>Family | Actuator<br>Name | IP Address |
+|---|---|---|
+| LIBRA | Pitch | `10.11.12.100` |
+
+## Operation
+
+### *Using LIBRA-I*
 
 (TODO: this will change once the Qt-based app is operational)
 
@@ -26,7 +51,7 @@ A collection of detailed instructions and lessons learned from operating the LIB
     - Around the mast and counterweight links (2nd floor)
 7. Slowly unfold LIBRA (see [docs/LIBRA-I_Unfolding_Angles.xlsx](./docs/LIBRA-I_Unfolding_Angles.xlsx))
 
-### *LIBRA-II (w/ ETA)*
+### *Using LIBRA-II (w/ ETA)*
 
 TODO
 
