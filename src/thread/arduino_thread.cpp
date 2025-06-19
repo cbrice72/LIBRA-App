@@ -144,30 +144,30 @@ QString ArduinoThread::GetWaterStatus() {
     uint8_t command = static_cast<uint8_t>(p_command_[0]);
 
     // Extract A-side (left-hand) status
-    QString A_status;
+    QString status_A;
     if (command & kA_IN) {
-        A_status = "<span style='color: green;'>IN</span>";
+        status_A = "<span style='color: green;'>IN</span>";
     } else if (command & kA_OUT) {
-        A_status = "<span style='color: red;'>OUT</span>";
+        status_A = "<span style='color: red;'>OUT</span>";
     } else {
-        A_status = "<span style='color: gray;'>--</span>";
+        status_A = "<span style='color: gray;'>--</span>";
     }
 
 #if LIBRA_VERSION == 1
     // Extract B-side (right-hand) status
-    QString B_status;
+    QString status_B;
     if (command & kB_IN) {
-        B_status = "<span style='color: green;'>IN</span>";
+        status_B = "<span style='color: green;'>IN</span>";
     } else if (command & kB_OUT) {
-        B_status = "<span style='color: red;'>OUT</span>";
+        status_B = "<span style='color: red;'>OUT</span>";
     } else {
-        B_status = "<span style='color: gray;'>--</span>";
+        status_B = "<span style='color: gray;'>--</span>";
     }
 
     // Form return string
-    return A_status + " | " + B_status;
+    return status_A + " | " + status_B;
 #else
-    return A_status;
+    return status_A;
 #endif
 }
 
