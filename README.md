@@ -55,16 +55,18 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ### *Build Options*
 
-The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` executable, if you have it installed.
+The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` program, if you have it installed.
 
 | Variable | Type | Possible<br>Values | Notes |
 |---|---|---|---|
-| `LIBRA_VERSION` | STRING | `ONE`, `TWO` | `ONE` = **LIBRA-I** (actuators: HEBI x5)<br>`TWO` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1)|
+| `LIBRA_VERSION` | STRING | `1`, `2` | `1` = **LIBRA-I** (actuators: HEBI x5)<br>`2` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1)|
 | `BUILD_WITH_ROS` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
 
 ### *Running the App*
 
 Open QtCreator (located at `<PATH-TO-QT-INSTALL-DIR>/Tools/QtCreator/bin/qtcreator`) and click the green "run" arrow at the bottom left. If you haven't built the project yet, or have made changes to the source code, this will automatically build it for you.
+
+For detailed usage instructions, see [USAGE.md](./USAGE.md).
 
 #### **If ROS2 is enabled**
 
