@@ -95,5 +95,5 @@ class TankWidget : public QWidget {
 
     double level_;
     FlowMode flow_mode_;
-    QTimer* animation_timer_;
+    QTimer* animation_timer_{nullptr};
 };

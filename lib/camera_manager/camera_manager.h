@@ -39,11 +39,11 @@ class CameraManager : public QObject {
     QString id_;
 
     std::string output_dir_;
-    QCamera* camera_;
+    QCamera* camera_{nullptr};
 
     QMediaCaptureSession session_;
-    QImageCapture* capture_;
-    QMediaRecorder* recorder_;
+    QImageCapture* capture_{nullptr};
+    QMediaRecorder* recorder_{nullptr};
 
     bool is_recording_{false};
     QString video_filename_;
