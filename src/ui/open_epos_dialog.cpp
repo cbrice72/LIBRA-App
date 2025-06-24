@@ -95,7 +95,6 @@ OpenEposDialog::OpenEposDialog(QWidget* parent)
  * @brief Standard destructor.
  */
 OpenEposDialog::~OpenEposDialog() {
-    // Clean up the Qt-based GUI
     delete ui_;
 }
 
