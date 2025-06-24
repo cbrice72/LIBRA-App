@@ -153,6 +153,10 @@ set(QT_PACKAGES Core Multimedia MultimediaWidgets SerialPort Widgets)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
+if(Qt6Core_VERSION VERSION_LESS "6.8.0")
+    message(FATAL_ERROR "This project requires Qt 6.8.0 or higher. Found: ${Qt6Core_VERSION}")
+endif()
+
 if(BUILD_WITH_ROS2)
     # Find ROS2 packages
     set(ROS_CORE_PACKAGES ament_cmake rclcpp rcutils rmw_implementation

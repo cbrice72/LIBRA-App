@@ -25,8 +25,12 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 |---|---|---|---|
 | **Operating System** | Ubuntu 22.04.4<br>(Jammy) | Ubuntu 24.04<br>(Noble) | [ubuntu.com](https://ubuntu.com/download/alternative-downloads) |
 | **C++ Standard** | C++17 | C++17 | N/A |
-| **Qt** | 6.1.0 | 6.7.2 | [doc.qt.io](https://doc.qt.io/qt-6/get-and-install-qt.html) |
-| **ROS2** | Humble Hawksbill<br>(humble) | Humble Hawksbill<br>(humble) | [docs.ros.org](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) |
+| **Qt** | 6.8.0<sup>1</sup> | 6.9.1 | [doc.qt.io](https://doc.qt.io/qt-6/get-and-install-qt.html) |
+| **ROS2** | Humble Hawksbill<br>(humble)<sup>2</sup> | Humble Hawksbill<br>(humble) | [docs.ros.org](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) |
+
+<sup>1</sup> Qt 6.8 minimum required specifically for constructing a `QVideoFrame` from a `QImage` (used in `CameraManager`). See the official docs for [QVideoFrame::QvideoFrame()](https://doc.qt.io/qt-6/qvideoframe.html#QVideoFrame-2).
+
+<sup>2</sup> The RTAB-Map ROS2 package repo specifically states "ROS2 Humble minimum required", although Jazzy is also supported (support for Rolling is currently in development). See their [README.md](https://github.com/introlab/rtabmap_ros?tab=readme-ov-file#rtabmap_ros).
 
 ## Optional
 
