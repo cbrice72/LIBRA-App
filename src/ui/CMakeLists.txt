@@ -15,36 +15,34 @@ set(UI_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
 )
 
-if(LIBRA_VERSION EQUAL 1)
-    # ========================= OPEN SERIAL DIALOG =========================
+# ========================= OPEN SERIAL DIALOG =========================
 
-    # Create and configure the module
-    qt_add_library(
-        open_serial_dialog
-        STATIC
-        # UI Resources (icons, etc.)
-        ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc
-        # Dialog
-        ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.ui
-    )
+# Create and configure the module
+qt_add_library(
+    open_serial_dialog
+    STATIC
+    # UI Resources (icons, etc.)
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc
+    # Dialog
+    ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/open_serial_dialog.ui
+)
 
-    # Ensure this module packages the necessary headers
-    target_include_directories(
-        open_serial_dialog
-        # Make this directory available to consumers
-        INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+# Ensure this module packages the necessary headers
+target_include_directories(
+    open_serial_dialog
+    # Make this directory available to consumers
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
 
-    # Tell the linker which libraries to link against
-    target_link_libraries(
-        open_serial_dialog
-        # Qt
-        PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
-        PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
-    )
-endif()
+# Tell the linker which libraries to link against
+target_link_libraries(
+    open_serial_dialog
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
+    PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
+)
 
 if(LIBRA_VERSION EQUAL 2)
     # ========================= OPEN EPOS DIALOG =========================
