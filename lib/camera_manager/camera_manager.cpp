@@ -219,11 +219,13 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 CameraManager::~CameraManager() {
 #ifdef BUILD_WITH_ROS2
     // Stop helper objects used for ROS2 message processing
-    if (spin_timer_) {
-        spin_timer_->stop();
-    }
     if (video_writer_.isOpened()) {
         video_writer_.release();
+    }
+    delete video_sink_;
+
+    if (spin_timer_) {
+        spin_timer_->stop();
     }
 #endif
 
@@ -333,6 +335,8 @@ void CameraManager::Start() {
         // Start custom realsense2_camera node via launch file
         ros2_process_ = new QProcess(this);
         ros2_process_->start("bash", QStringList() << "-c" << launch_cmd);
+        connect(ros2_process_, &QProcess::finished, ros2_process_,
+                &QObject::deleteLater);
 
         // Error checking
         if (ros2_process_->waitForStarted()) {
