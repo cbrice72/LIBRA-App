@@ -164,6 +164,7 @@ MainWindow::~MainWindow() {
     // Define a lambda for gracefully wrapping up worker thread(s)
     auto StopThread = [](QThread* thread) {
         if (thread != nullptr && thread->isRunning()) {
+            thread->disconnect();           // kill any further communication
             thread->requestInterruption();  // signal thread to stop looping
             thread->wait();                 // wait for thread cleanup to finish
         }
@@ -176,6 +177,8 @@ MainWindow::~MainWindow() {
 #if LIBRA_VERSION == 2
     StopThread(epos_thread_);
 #endif
+
+    disconnect();  // all MainWindow-related signals and slots, just in case
 
     delete ui_;
 }
