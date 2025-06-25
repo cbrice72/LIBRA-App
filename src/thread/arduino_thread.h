@@ -88,6 +88,6 @@ class ArduinoThread : public QThread {
     std::array<double, 3> m_target_pos_{0};
     std::array<int, 3> m_slow_direction_{0};
 
-    bool p_enabled_{false};
-    QByteArray p_command_;  // only 4 bits used
+    bool water_en_{false};
+    QByteArray water_cmd_;  // only 4 bits used
 };

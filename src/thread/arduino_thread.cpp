@@ -47,27 +47,30 @@ constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
 //       reference, the servos are rated at a speed of 60 deg / 0.18 sec
 //       (at 5.0 V).
 
-// Bit positions for p_command_ (see usage in following constexpr block)
-constexpr uint8_t kA_IN = 0b1000;
-constexpr uint8_t kB_IN = 0b0100;
-constexpr uint8_t kA_OUT = 0b0010;
-constexpr uint8_t kB_OUT = 0b0001;
+// Bit positions for water_cmd_ (see usage in following constexpr block)
+constexpr uint8_t kAIn = 0b1000;
+constexpr uint8_t kBIn = 0b0100;
+constexpr uint8_t kAOut = 0b0010;
+constexpr uint8_t kBOut = 0b0001;
 
 // Water commands based on torque direction (where North = PI/2 = forward)
-constexpr uint8_t kWestCmd = kA_IN | kB_OUT;    // 0b1001
-constexpr uint8_t kNorthWestCmd = kB_OUT;       // 0b0001
-constexpr uint8_t kNorthCmd = kA_OUT | kB_OUT;  // 0b0011
-constexpr uint8_t kNorthEastCmd = kA_OUT;       // 0b0010
-constexpr uint8_t kEastCmd = kB_IN | kA_OUT;    // 0b0110
-constexpr uint8_t kSouthEastCmd = kB_IN;        // 0b0100
-constexpr uint8_t kSouthCmd = kA_IN | kB_IN;    // 0b1100
-constexpr uint8_t kSouthWestCmd = kA_IN;        // 0b1000
+constexpr uint8_t kWestCmd = kAIn | kBOut;    // 0b1001
+constexpr uint8_t kNorthWestCmd = kBOut;      // 0b0001
+constexpr uint8_t kNorthCmd = kAOut | kBOut;  // 0b0011
+constexpr uint8_t kNorthEastCmd = kAOut;      // 0b0010
+constexpr uint8_t kEastCmd = kBIn | kAOut;    // 0b0110
+constexpr uint8_t kSouthEastCmd = kBIn;       // 0b0100
+constexpr uint8_t kSouthCmd = kAIn | kBIn;    // 0b1100
+constexpr uint8_t kSouthWestCmd = kAIn;       // 0b1000
 
+// NOLINTBEGIN(readability-identifier-naming)
 // Angular thresholds for direction determination
 constexpr double k1_8Pi = M_PI / 8.0;
 constexpr double k3_8Pi = M_PI * 3.0 / 8.0;
 constexpr double k5_8Pi = M_PI * 5.0 / 8.0;
 constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
+
+// NOLINTEND(readability-identifier-naming)
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -137,17 +140,17 @@ ArduinoThread::~ArduinoThread() {
  * @return QString Status message in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
  */
 QString ArduinoThread::GetWaterStatus() {
-    if (!ser_water_->isOpen() || p_command_.isEmpty()) {
+    if (!ser_water_->isOpen() || water_cmd_.isEmpty()) {
         return QString("<span style='color: gray;'>-- | --</span>");
     }
 
-    uint8_t command = static_cast<uint8_t>(p_command_[0]);
+    uint8_t command = static_cast<uint8_t>(water_cmd_[0]);
 
     // Extract A-side (left-hand) status
     QString status_A;
-    if (command & kA_IN) {
+    if ((command & kAIn) != 0) {
         status_A = "<span style='color: green;'>IN</span>";
-    } else if (command & kA_OUT) {
+    } else if ((command & kAOut) != 0) {
         status_A = "<span style='color: red;'>OUT</span>";
     } else {
         status_A = "<span style='color: gray;'>--</span>";
@@ -156,9 +159,9 @@ QString ArduinoThread::GetWaterStatus() {
 #if LIBRA_VERSION == 1
     // Extract B-side (right-hand) status
     QString status_B;
-    if (command & kB_IN) {
+    if ((command & kBIn) != 0) {
         status_B = "<span style='color: green;'>IN</span>";
-    } else if (command & kB_OUT) {
+    } else if ((command & kBOut) != 0) {
         status_B = "<span style='color: red;'>OUT</span>";
     } else {
         status_B = "<span style='color: gray;'>--</span>";
@@ -222,8 +225,6 @@ void ArduinoThread::run() {
                                           m_current_pos_.at(kTilt));
             ser_servo_->write(servo_cmd.toUtf8());
 
-            logger_->Debug("Sent manip command: " + servo_cmd.toStdString());
-
             emit ReportPosition(m_current_pos_.at(kPitch),
                                 m_current_pos_.at(kPan),
                                 m_current_pos_.at(kTilt));
@@ -232,10 +233,7 @@ void ArduinoThread::run() {
 
         // SerialWater
         if (ser_water_->isOpen()) {
-            ser_water_->write(p_command_);
-
-            logger_->Debug("Sent water command: " + BytesToStr(p_command_)
-                           + "\n");
+            ser_water_->write(water_cmd_);
 
             emit ReportWaterStatus(GetWaterStatus());
         }
@@ -322,6 +320,11 @@ void ArduinoThread::SetManipCommand(const double& arm_pitch,
         m_current_pos_.at(kPan) = target_pan;
         m_current_pos_.at(kTilt) = target_tilt;
     }
+
+    logger_->Debug("Set manip targets to "
+                   + std::to_string(m_current_pos_.at(kPitch)) + " "
+                   + std::to_string(m_current_pos_.at(kPan)) + " "
+                   + std::to_string(m_current_pos_.at(kTilt)) + " deg");
 }
 #endif
 
@@ -371,10 +374,10 @@ void ArduinoThread::DisconnectWater() {
  * @brief Sets the operational state of the fluid system.
  */
 void ArduinoThread::SetWaterState(const bool& enabled) {
-    p_enabled_ = enabled;
+    water_en_ = enabled;
 
-    if (!p_enabled_) {
-        p_command_.clear();  // clear any active water commands
+    if (!water_en_) {
+        water_cmd_.clear();  // clear any active water commands
     }
 
     logger_->Debug("Fluid system "
@@ -431,5 +434,8 @@ void ArduinoThread::SetWaterCommand(double torque_dir) {
     }
 #endif
 
-    p_command_ = QByteArray(1, static_cast<char>(command));
+    water_cmd_ = QByteArray(1, static_cast<char>(command));
+
+    logger_->Debug("Set water command to " + BytesToStr(water_cmd_)
+                   + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
