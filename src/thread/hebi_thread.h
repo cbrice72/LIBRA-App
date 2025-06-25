@@ -74,7 +74,7 @@ class HebiThread : public AbstractActuatorThread
 
     std::unordered_map<Actuator::Joint, double> GetFeedbackMap(
         const std::vector<double>& feedback);
-    QString GetStatus();
+    QString GetStatus() const;
 
 #ifdef BUILD_WITH_ROS2
     void PublishState();

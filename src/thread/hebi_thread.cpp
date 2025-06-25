@@ -20,6 +20,7 @@
 #include "Eigen/Core"    // Eigen
 #include "log_file.hpp"  // HEBI
 #include "lookup.hpp"    // HEBI
+#include <QDir>          // Qt::Core
 
 // Project Headers
 #include "ros2_logger.h"
@@ -75,7 +76,7 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
 
     for (double val : values) {
         ss << std::right << std::setw(kValueWidth) << std::fixed
-           << std::setprecision(2) << val;  // 0.01, right-aligned
+           << std::setprecision(1) << val;  // 0.1, right-aligned
     }
 
     if (!unit.empty()) {
@@ -215,7 +216,7 @@ std::unordered_map<Actuator::Joint, double> HebiThread::GetFeedbackMap(
  * feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
  */
-QString HebiThread::GetStatus() {
+QString HebiThread::GetStatus() const {
     if (group_ == nullptr) {
         return QString("Not Connected");
     }
@@ -242,7 +243,7 @@ QString HebiThread::GetStatus() {
     }
 
     // Format header row
-    ss << std::setw(24) << "Actuator Index:";
+    ss << std::setw(kLabelWidth) << "Actuator Name";
     for (int i = 0; i < num_actuators_; ++i) {
         ss << std::right << std::setw(kValueWidth) << "[" + names_[i] + "]";
     }
@@ -324,8 +325,8 @@ void HebiThread::run() {
     std::vector<double> a_pos(num_actuators_);
     std::vector<double> a_trq(num_actuators_);
 
-    double arm_torque_r;      // magnitude of torque exerted on central joint
-    double arm_torque_theta;  // angle of torque exerted on central joint
+    double arm_torque_r{0};      // magnitude of torque exerted on central joint
+    double arm_torque_theta{0};  // angle of torque exerted on central joint
 
     std::chrono::duration<double> time(std::chrono::system_clock::now()
                                        - trajectory_start_time_);
@@ -520,6 +521,15 @@ void HebiThread::Connect() {
     group_ = group;
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());
+
+    // Ensure a log directory exists (or else group_->startLog()  will fail!)
+    QDir log_dir("./log");
+    if (!log_dir.exists()) {
+        if (!log_dir.mkpath(".")) {
+            emit ErrorThrown("HEBI - Failed to create log directory");
+            return;
+        }
+    }
 
     // Start logging
     const std::string log_path = group_->startLog("./log");
