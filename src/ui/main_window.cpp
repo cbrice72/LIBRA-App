@@ -154,6 +154,9 @@ MainWindow::MainWindow(QWidget* parent)
                                        QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::Yes) {
         ui_->a_connect_all->trigger();
+    } else {
+        // Even if auto-connect was refused, some UI elements should be populated
+        ui_->a_refresh_camera_list->trigger();
     }
 }
 
@@ -212,6 +215,7 @@ void MainWindow::ConfigureUi() {
 #endif
 
     // Slots
+    // TODO: implementation
     /*
     connect(TODO, TODO,  // when clicked
             ui_->w_counterweight_1, &TankWidget::Fill);   // start filling
@@ -288,6 +292,11 @@ void MainWindow::ConfigureUi() {
     connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_yaw, &QAbstractSlider::setValue);
 #endif
+
+    // ========== Camera ==========
+
+    connect(ui_->pb_camera_refresh, &QPushButton::clicked,     // when clicked
+            ui_->a_refresh_camera_list, &QAction::triggered);  // refresh list
 }
 
 /**
@@ -767,6 +776,8 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 void MainWindow::on_a_refresh_camera_list_triggered() {
     qDebug() << "[INFO] Checking available video inputs...";
 
+    ui_->cb_camera_id->clear();  // existing list may be stale
+
     const auto cameras = QMediaDevices::videoInputs();
     for (const auto& camera_device : cameras) {
         auto id = QString(camera_device.id());
@@ -775,8 +786,9 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
             qDebug() << "[DEBUG] Found camera at " << camera_device.id();
         }
 
-        // Populate ComboBox (new items are appended to existing list)
+        // Populate ComboBox
         ui_->cb_camera_id->addItem(id);
+
         // Populate internal map (used on ComboBox change)
         available_cameras_[id] = camera_device.description();
     }
