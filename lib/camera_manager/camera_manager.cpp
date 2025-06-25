@@ -218,15 +218,17 @@ CameraManager::~CameraManager() {
     // Stop camera
     Stop();
 
+    if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-    // Stop helper objects used for ROS2 message processing
-    if (video_writer_.isOpened()) {
-        video_writer_.release();
-    }
-    if (spin_timer_) {
-        spin_timer_->stop();
-    }
+        // Stop helper objects used by ROS2 message processing
+        if (video_writer_.isOpened()) {
+            video_writer_.release();
+        }
+#else
+        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                       "to \"OFF\". You shouldn't be able to get here!");
 #endif
+    }
 
     // NOTE: raw pointers to QObjects (such as camera_) are automatically
     //       cleaned up by virtue of Qt's parenting structure (passing in "this"
@@ -332,8 +334,12 @@ void CameraManager::Start() {
         // Start custom realsense2_camera node via launch file
         ros2_process_ = new QProcess(this);
         ros2_process_->start("bash", QStringList() << "-c" << launch_cmd);
-        connect(ros2_process_, &QProcess::finished, ros2_process_,
-                &QObject::deleteLater);
+
+        connect(ros2_process_, &QObject::destroyed,  // to avoid invalid access
+                this, [this]() { ros2_process_ = nullptr; });  // ... nullify me
+
+        connect(ros2_process_, &QProcess::finished,     // when thread exits
+                ros2_process_, &QObject::deleteLater);  // ... deallocate
 
         // Error checking
         if (ros2_process_->waitForStarted()) {
@@ -373,28 +379,34 @@ void CameraManager::Start() {
  * @brief Stops the camera feed.
  */
 void CameraManager::Stop() {
-    if (!CameraIsActive()) {
-        // Do nothing
-        return;
-    }
-
     if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-        // Attempt to gracefully terminate the realsense2_camera node
-        ros2_process_->terminate();
-        if (!ros2_process_->waitForFinished(kWaitForTimeout)) {
-            // Force terminate if non-responsive
-            ros2_process_->kill();
+        // Stop the spin timer first
+        if (spin_timer_) {
+            spin_timer_->stop();
+            spin_timer_->deleteLater();
+            spin_timer_ = nullptr;
         }
 
-        logger_->Debug("CameraManager - ROS2 node stopped");
+        // Attempt to gracefully terminate the realsense2_camera node
+        if (ros2_process_ != nullptr) {
+            ros2_process_->terminate();
+            if (!ros2_process_->waitForFinished(kWaitForTimeout)) {
+                // Force terminate if non-responsive
+                ros2_process_->kill();
+            }
+
+            logger_->Debug("CameraManager - ROS2 node stopped");
+        }
 #else
         logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
                        "to \"OFF\". You shouldn't be able to get here!");
 #endif
     } else {
         // Directly stop the QCamera object
-        camera_->stop();
+        if (camera_ != nullptr) {
+            camera_->stop();
+        }
     }
 }
 
@@ -403,8 +415,8 @@ void CameraManager::Stop() {
  */
 void CameraManager::Capture() {
     if (!CameraIsActive()) {
-        logger_->Error(
-            "CameraManager - Cannot capture image; camera not initialized!");
+        logger_->Error("CameraManager - Cannot capture image; camera not "
+                       "initialized!");
     }
 
     image_filename_ = output_dir_ + "img/" + GetDateTimeStr() + ".jpg";
