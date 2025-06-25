@@ -45,9 +45,7 @@ namespace {
 
 #ifdef BUILD_WITH_ROS2
 bool IsRealSenseCamera(const QCameraDevice& device) {
-    QString name = device.description().toLower();
-    // TODO: get actual device name string
-    return name.contains("realsense") || name.contains("intel");
+    return device.description().toLower().contains("realsense");
 }
 #endif
 
@@ -86,7 +84,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
       output_dir_(QDir::currentPath().toStdString() + "/")
 #ifdef BUILD_WITH_ROS2
       ,
-      rclcpp::Node("camera_manager_" + id.toStdString()),
+      rclcpp::Node("camera_manager_" + id.section('/', -1).toStdString()),
       video_codec_(cv::VideoWriter::fourcc('M', 'J', 'P', 'G'))
 #endif
 {
@@ -141,13 +139,13 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 
     // ========== Regular Cameras use Qt Multimedia ==========
 
-    camera_ = new QCamera(selected_camera);
+    camera_ = new QCamera(selected_camera, this);
 
     // Initialize central media capture object
     session_.setCamera(camera_);
 
     // Register image capture object
-    capture_ = new QImageCapture;
+    capture_ = new QImageCapture(this);
     session_.setImageCapture(capture_);
 
     // Register video recorder object
@@ -217,25 +215,24 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
  * @brief Standard desctructor.
  */
 CameraManager::~CameraManager() {
+    // Stop camera
+    Stop();
+
 #ifdef BUILD_WITH_ROS2
     // Stop helper objects used for ROS2 message processing
     if (video_writer_.isOpened()) {
         video_writer_.release();
     }
-    delete video_sink_;
-
     if (spin_timer_) {
         spin_timer_->stop();
     }
 #endif
 
-    // Stop camera
-    Stop();
+    // NOTE: raw pointers to QObjects (such as camera_) are automatically
+    //       cleaned up by virtue of Qt's parenting structure (passing in "this"
+    //       as a constructor parameter)
 
-    // Clean up raw pointers
-    delete recorder_;
-    delete capture_;
-    delete camera_;
+    logger_->Debug("Cleaned up CameraManager");
 };
 
 //------------------------------------------------------------------------------
@@ -389,6 +386,8 @@ void CameraManager::Stop() {
             // Force terminate if non-responsive
             ros2_process_->kill();
         }
+
+        logger_->Debug("CameraManager - ROS2 node stopped");
 #else
         logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
                        "to \"OFF\". You shouldn't be able to get here!");
@@ -397,8 +396,6 @@ void CameraManager::Stop() {
         // Directly stop the QCamera object
         camera_->stop();
     }
-
-    logger_->Debug("CameraManager - ROS2 node stopped");
 }
 
 /**
