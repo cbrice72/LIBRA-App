@@ -54,6 +54,7 @@ class CameraManager : public QObject
     bool CameraIsActive();
 
 #ifdef BUILD_WITH_ROS2
+    void StartRos2NodeViaLaunchFile();
     void ProcessRos2Image(const sensor_msgs::msg::Image::SharedPtr msg);
 #endif
 
@@ -77,6 +78,8 @@ class CameraManager : public QObject
     std::string video_filename_;
 
 #ifdef BUILD_WITH_ROS2
+    const std::string kCameraRgbTopic = "/camera/color/image_raw";
+
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     QProcess* ros2_process_{nullptr};
     QTimer* spin_timer_{nullptr};
