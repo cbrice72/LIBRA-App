@@ -249,7 +249,7 @@ QString HebiThread::GetStatus() const {
     // Format header row
     ss << std::setw(kLabelWidth) << "Actuator Name";
     for (int i = 0; i < num_actuators_; ++i) {
-        ss << std::right << std::setw(kValueWidth) << "[" + names_[i] + "]";
+        ss << std::left << std::setw(kValueWidth) << "[" + names_[i] + "]";
     }
     ss << "\n";
 
