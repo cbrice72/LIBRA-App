@@ -23,7 +23,11 @@
 #include <QDir>          // Qt::Core
 
 // Project Headers
-#include "ros2_logger.h"
+#ifdef BUILD_WITH_ROS2
+# include "ros2_logger.h"
+#else
+# include "qt_logger.h"
+#endif
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers

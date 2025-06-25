@@ -14,9 +14,19 @@
 // Other Library Headers
 #include <QDateTime>  // Qt::Core
 #include <QDir>       // Qt::Core
+#ifdef BUILD_WITH_ROS2
+# include <cv_bridge/cv_bridge.h>  // OpenCV
+# include <opencv2/imgcodecs.hpp>  // OpenCV
+# include <QProcess>               // Qt::Core
+# include <QVideoFrame>            // Qt::Multimedia
+#endif
 
 // Project Headers
-//   (none)
+#ifdef BUILD_WITH_ROS2
+# include "ros2_logger.h"
+#else
+# include "qt_logger.h"
+#endif
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
@@ -25,11 +35,21 @@
  * !Camera Commands
  */
 
+constexpr int kWaitForTimeout = 3000;  // ms
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
 
 namespace {
+
+#ifdef BUILD_WITH_ROS2
+bool IsRealSenseCamera(const QCameraDevice& device) {
+    QString name = device.description().toLower();
+    // TODO: get actual device name string
+    return name.contains("realsense") || name.contains("intel");
+}
+#endif
 
 /**
  * @brief Provides a filename-safe string of the current date and time.
@@ -54,95 +74,142 @@ std::string GetDateTimeStr() {
  *
  * @param id Camera location (e.g., `/dev/video0`); will be used to find the device
  * @param viewfinder The QVideoWidget object to display the camera feeed in
+ * @param debug_mode Whether verbose debug text should be output
  * @param parent Owning Qt widget (default: nullptr)
  */
-CameraManager::CameraManager(const QString& id, QVideoWidget* viewfinder,
-                             QObject* parent = nullptr)
+CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
+                             const bool& debug_mode, QObject* parent)
     : QObject(parent),
-      id_(id),
+      id_(std::move(id)),
+      debug_mode_(debug_mode),
       camera_(nullptr),
-      output_dir_(QDir::currentPath().toStdString() + "/") {
+      output_dir_(QDir::currentPath().toStdString() + "/")
+#ifdef BUILD_WITH_ROS2
+      ,
+      rclcpp::Node("camera_manager_" + id.toStdString()),
+      video_codec_(cv::VideoWriter::fourcc('M', 'J', 'P', 'G'))
+#endif
+{
+    // Initialize the logger
+#ifdef BUILD_WITH_ROS2
+    logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
+#else
+    logger_ = std::make_unique<QtLogger>(debug_mode_);
+#endif
+
     // Find requested camera
     const auto cameras = QMediaDevices::videoInputs();
+    QCameraDevice selected_camera;
+
     for (const auto& camera_device : cameras) {
         if (camera_device.id() == id_) {
-            camera_ = new QCamera(camera_device);
+            // NOTE: We don't immediately initialize the QCamera object `camera_`
+            //       here since, if it's a RealSense RGB-D camera, we'd rather
+            //       let a ROS2 realsense2_camera node do all the work.
+            selected_camera = camera_device;
             break;
         }
     }
 
-    // Set up Qt multimedia objects
-    if (camera_ != nullptr) {
-        // Initialize central media capture object
-        session_.setCamera(camera_);
+    if (selected_camera.isNull()) {
+        logger_->Error("CameraManager - Camera " + id_.toStdString()
+                       + " not found!");
+        return;
+    }
 
-        // Register image capture object
-        capture_ = new QImageCapture;
-        session_.setImageCapture(capture_);
+#ifdef BUILD_WITH_ROS2
+    // ========== Special Case: RealSense Depth Cameras ==========
 
-        // Register video recorder object
-        recorder_ = new QMediaRecorder(camera_);
-        session_.setRecorder(recorder_);
+    if (IsRealSenseCamera(selected_camera)) {
+        logger_->Info("CameraManager - RealSense camera detected! Deferring to "
+                      "ROS2 node...");
+        use_ros2_node_ = true;
 
-        // Register video output to existing UI VideoWidget
-        session_.setVideoOutput(viewfinder);
-        viewfinder->show();  // enable the video feed
+        // Set up image subscription
+        image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+            "/camera/color/image_raw", 10,
+            [this](const sensor_msgs::msg::Image::SharedPtr msg) {
+                this->ProcessRos2Image(msg);
+            });
 
-        // If an invalid CameraFormat is detected, select a safe default
-        if (camera_->cameraFormat().pixelFormat()
-            == QVideoFrameFormat::Format_Invalid) {
-            qDebug()
-                << "[WARN] Invalid camera format detected; applying defaults.";
+        // Get video sink from the QVideoWidget for direct frame injection
+        video_sink_ = viewfinder->videoSink();
 
-            // Check all supported formats
-            // (we can't edit a QCameraFormat object, so try looking for it)
-            bool selected = false;
-            QList<QCameraFormat> supported_formats = camera_->cameraDevice()
-                                                         .videoFormats();
-            for (const QCameraFormat& format : supported_formats) {
-                // Our "safe default" is a JPEG-formatted 720p (HD) stream
-                if (format.pixelFormat() == QVideoFrameFormat::Format_Jpeg
-                    && format.resolution() == QSize(1280, 720)) {
-                    camera_->setCameraFormat(format);
-                    selected = true;
-                    break;
-                }
+        return;  // Qt Multimedia setup not necessary
+    }
+#endif
+
+    // ========== Regular Cameras use Qt Multimedia ==========
+
+    camera_ = new QCamera(selected_camera);
+
+    // Initialize central media capture object
+    session_.setCamera(camera_);
+
+    // Register image capture object
+    capture_ = new QImageCapture;
+    session_.setImageCapture(capture_);
+
+    // Register video recorder object
+    recorder_ = new QMediaRecorder(camera_);
+    session_.setRecorder(recorder_);
+
+    // Register video output to existing UI VideoWidget
+    session_.setVideoOutput(viewfinder);
+    viewfinder->show();  // enable the video feed
+
+    // If an invalid CameraFormat is detected, select a safe default
+    if (camera_->cameraFormat().pixelFormat()
+        == QVideoFrameFormat::Format_Invalid) {
+        logger_->Warn("CameraManager - Invalid camera format detected; "
+                      "applying defaults");
+
+        // Check all supported formats
+        // (we can't edit a QCameraFormat object, so try looking for it)
+        bool selected = false;
+        QList<QCameraFormat> supported_formats = camera_->cameraDevice()
+                                                     .videoFormats();
+        for (const QCameraFormat& format : supported_formats) {
+            // Our "safe default" is a JPEG-formatted 720p (HD) stream
+            if (format.pixelFormat() == QVideoFrameFormat::Format_Jpeg
+                && format.resolution() == QSize(1280, 720)) {
+                camera_->setCameraFormat(format);
+                selected = true;
+                break;
             }
-
-            if (!selected) {
-                qDebug()
-                    << "[WARN] This camera doesn't seem to support a Jpeg 720p "
-                       "stream. Defaulting to the first supported format.";
-                camera_->setCameraFormat(supported_formats.first());
-            }
         }
 
-        // Start camera
-        camera_->start();
-
-        // Set output format for video
-        QMediaFormat format(QMediaFormat::MPEG4);  // init with FileFormat
-        // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
-        format.setVideoCodec(QMediaFormat::VideoCodec::MotionJPEG);
-
-        recorder_->setMediaFormat(format);
-        recorder_->setQuality(QMediaRecorder::Quality::VeryHighQuality);
-
-        const auto& camera_format = camera_->cameraFormat();
-        recorder_->setVideoResolution(camera_format.resolution());
-        recorder_->setVideoFrameRate(camera_format.maxFrameRate());
-
-        // Ensure output directories exist
-        const QDir img_dir(QString::fromStdString(output_dir_ + "img"));
-        if (!img_dir.exists()) {
-            img_dir.mkpath(".");
+        if (!selected) {
+            logger_->Warn(
+                "CameraManager - This camera doesn't seem to support "
+                "a Jpeg 720p stream; defaulting to the first supported format");
+            camera_->setCameraFormat(supported_formats.first());
         }
-        const QDir vid_dir(QString::fromStdString(output_dir_ + "vid"));
-        if (!vid_dir.exists()) {
-            vid_dir.mkpath(".");
-        }
-    } else {
-        qDebug() << "[ERROR] Camera " << id_ << " not found!";
+    }
+
+    // Start camera
+    camera_->start();
+
+    // Set output format for video
+    QMediaFormat format(QMediaFormat::MPEG4);  // init with FileFormat
+    // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
+    format.setVideoCodec(QMediaFormat::VideoCodec::MotionJPEG);
+
+    recorder_->setMediaFormat(format);
+    recorder_->setQuality(QMediaRecorder::Quality::VeryHighQuality);
+
+    const auto& camera_format = camera_->cameraFormat();
+    recorder_->setVideoResolution(camera_format.resolution());
+    recorder_->setVideoFrameRate(camera_format.maxFrameRate());
+
+    // Ensure output directories exist
+    const QDir img_dir(QString::fromStdString(output_dir_ + "img"));
+    if (!img_dir.exists()) {
+        img_dir.mkpath(".");
+    }
+    const QDir vid_dir(QString::fromStdString(output_dir_ + "vid"));
+    if (!vid_dir.exists()) {
+        vid_dir.mkpath(".");
     }
 };
 
@@ -150,8 +217,20 @@ CameraManager::CameraManager(const QString& id, QVideoWidget* viewfinder,
  * @brief Standard desctructor.
  */
 CameraManager::~CameraManager() {
+#ifdef BUILD_WITH_ROS2
+    // Stop helper objects used for ROS2 message processing
+    if (video_writer_.isOpened()) {
+        video_writer_.release();
+    }
+    delete video_sink_;
+
+    if (spin_timer_) {
+        spin_timer_->stop();
+    }
+#endif
+
     // Stop camera
-    Stop();  // checks if camera_ is null
+    Stop();
 
     // Clean up raw pointers
     delete recorder_;
@@ -163,6 +242,80 @@ CameraManager::~CameraManager() {
 // !Class Helpers
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Convenience function for checking camera status regardless of whether
+ *        it was instantiated through the owned QCamera object (`camera_`) or
+ *        delegated to a ROS2 node.
+ *
+ * @returns true if camera is running, false otherwise
+ */
+bool CameraManager::CameraIsActive() {
+    return (use_ros2_node_) ? ros2_process_ != nullptr
+                                  && ros2_process_->state() == QProcess::Running
+                            : camera_ != nullptr;
+}
+
+#ifdef BUILD_WITH_ROS2
+/**
+ * @brief Subscription callback for processing RGB image frames in a Qt GUI.
+ *
+ * @param msg A ROS2 RGB image message (e.g., `/camera/color/image_raw`)
+ */
+void CameraManager::ProcessRos2Image(
+    const sensor_msgs::msg::Image::SharedPtr msg) {
+    // Recording settings
+    constexpr double kVideoFps = 30.0;
+
+    try {
+        // Convert to OpenCV for processing
+        cv_bridge::CvImagePtr cv_ptr =
+            cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
+
+        // Convert to QVideoFrame for streaming to GUI
+        if (video_sink_) {
+            QImage qimg(cv_ptr->image.data, cv_ptr->image.cols,
+                        cv_ptr->image.rows, cv_ptr->image.step,
+                        QImage::Format_RGB888);
+            QVideoFrame frame(qimg);
+            video_sink_->setVideoFrame(frame);
+        }
+
+        // If capture was requested, save to file
+        if (capture_requested_.load()) {
+            if (!cv::imwrite(image_filename_, cv_ptr->image)) {
+                logger_->Error("CameraManager - Failed to save image data");
+            }
+            capture_requested_.store(false);
+        }
+
+        // If recording, write to video file
+        if (is_recording_.load()) {
+            // If this is a new recording, start the VideoWriter
+            if (!video_writer_.isOpened()) {
+                cv::Size frame_size(cv_ptr->image.cols, cv_ptr->image.rows);
+                video_writer_.open(video_filename_, video_codec_, kVideoFps,
+                                   frame_size);
+
+                if (!video_writer_.isOpened()) {
+                    logger_->Error(
+                        "CameraManager - Failed to initialize VideoWriter");
+                    is_recording_.store(false);
+                    return;
+                }
+            }
+
+            // Save the current frame
+            cv::Mat bgr_frame;
+            cv::cvtColor(cv_ptr->image, bgr_frame, cv::COLOR_RGB2BGR);
+            video_writer_.write(bgr_frame);
+        }
+    } catch (cv_bridge::Exception& e) {
+        logger_->Error("CameraManager - OpenCV Bridge error: "
+                       + std::string(e.what()));
+    }
+}
+#endif
+
 //------------------------------------------------------------------------------
 // !Camera Commands
 //------------------------------------------------------------------------------
@@ -171,10 +324,51 @@ CameraManager::~CameraManager() {
  * @brief Starts the camera feed.
  */
 void CameraManager::Start() {
-    if (camera_ != nullptr) {
-        camera_->start();
+    // If there is already an active connection, gracefully terminate it
+    Stop();
+
+    if (use_ros2_node_) {
+#ifdef BUILD_WITH_ROS2
+        const QString launch_cmd =
+            "ros2 launch libra rtabmap_realsense_d456_stereo.launch.py";
+
+        // Start custom realsense2_camera node via launch file
+        ros2_process_ = new QProcess(this);
+        ros2_process_->start("bash", QStringList() << "-c" << launch_cmd);
+        connect(ros2_process_, &QProcess::finished, ros2_process_,
+                &QObject::deleteLater);
+
+        // Error checking
+        if (ros2_process_->waitForStarted()) {
+            logger_->Debug(
+                "CameraManager - RealSense ROS2 node successfully launched");
+
+            // Start timer for periodic ROS2 spinning
+            // (NOTE: this is useful for, e.g., triggering subscriber callbacks)
+            spin_timer_ = new QTimer(this);
+            connect(spin_timer_, &QTimer::timeout, [this]() {
+                if (rclcpp::ok()) {
+                    rclcpp::spin_some(this->get_node_base_interface());
+                }
+            });
+            spin_timer_->start(10);  // 100 Hz
+        } else {
+            logger_->Error(
+                "CameraManager - Failed to start RealSense ROS2 node!");
+        }
+#else
+        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                       "to \"OFF\". You shouldn't be able to get here!");
+#endif
     } else {
-        qDebug() << "[ERROR] Cannot start camera; camera not initialized!";
+        if (camera_ == nullptr) {
+            logger_->Error(
+                "CameraManager - Cannot start camera; camera not initialized!");
+            return;
+        }
+
+        // Directly start the QCamera object
+        camera_->start();
     }
 }
 
@@ -182,30 +376,67 @@ void CameraManager::Start() {
  * @brief Stops the camera feed.
  */
 void CameraManager::Stop() {
-    if (camera_ != nullptr) {
+    if (!CameraIsActive()) {
+        // Do nothing
+        return;
+    }
+
+    if (use_ros2_node_) {
+#ifdef BUILD_WITH_ROS2
+        // Attempt to gracefully terminate the realsense2_camera node
+        ros2_process_->terminate();
+        if (!ros2_process_->waitForFinished(kWaitForTimeout)) {
+            // Force terminate if non-responsive
+            ros2_process_->kill();
+        }
+#else
+        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                       "to \"OFF\". You shouldn't be able to get here!");
+#endif
+    } else {
+        // Directly stop the QCamera object
         camera_->stop();
     }
+
+    logger_->Debug("CameraManager - ROS2 node stopped");
 }
 
 /**
  * @brief Saves a still image of the current frame.
  */
 void CameraManager::Capture() {
-    if (camera_ != nullptr) {
-        // Save image capture
-        auto filename = QString::fromStdString(output_dir_ + "img/"
-                                               + GetDateTimeStr() + ".jpg");
-        auto id = capture_->captureToFile(filename);
-
-        // Error checking
-        if (id != -1) {
-            qDebug() << "[INFO] Saved image data to" << filename;
-        } else {
-            qDebug() << "[ERROR]" << capture_->errorString();
-        }
-    } else {
-        qDebug() << "[ERROR] Cannot capture image; camera not initialized!";
+    if (!CameraIsActive()) {
+        logger_->Error(
+            "CameraManager - Cannot capture image; camera not initialized!");
     }
+
+    image_filename_ = output_dir_ + "img/" + GetDateTimeStr() + ".jpg";
+
+    // Capture a single frame
+    if (use_ros2_node_) {
+#ifdef BUILD_WITH_ROS2
+        // NOTE: this does not immediately save the current frame! Rather, it
+        //       sets a bool that is checked by the ROS2 subscriber callback
+        //       ProcessRos2Image(), which then saves the latest frame.
+        //       Although this ensures the "freshness" of the image data, it
+        //       slightly obfuscates the capture logic.
+        capture_requested_.store(true);
+#else
+        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                       "to \"OFF\". You shouldn't be able to get here!");
+        return;
+#endif
+    } else {
+        auto id = capture_->captureToFile(
+            QString::fromStdString(image_filename_));
+        if (id == -1) {
+            logger_->Error("CameraManager - "
+                           + capture_->errorString().toStdString());
+            return;
+        }
+    }
+
+    logger_->Info("CameraManager - Saving image data to " + image_filename_);
 }
 
 /**
@@ -214,27 +445,66 @@ void CameraManager::Capture() {
  * @return true if recording is active; false otherwise
  */
 bool CameraManager::Record() {
-    if (!is_recording_) {
-        // Start recording
-        video_filename_ = QString::fromStdString(output_dir_ + "vid/"
-                                                 + GetDateTimeStr() + ".mp4");
-        recorder_->setOutputLocation(QUrl::fromLocalFile(video_filename_));
-        recorder_->record();
-
-        // Error checking
-        auto status = recorder_->recorderState();
-        if (status == QMediaRecorder::RecordingState) {
-            is_recording_ = true;
-        } else {
-            qDebug() << "[ERROR]" << recorder_->errorString();
-        }
-    } else {
-        // Stop recording and reset
-        recorder_->stop();
-        qDebug() << "[INFO] Saved video recording to" << video_filename_;
-        video_filename_.clear();
-        is_recording_ = false;
+    if (!CameraIsActive()) {
+        logger_->Error(
+            "CameraManager - Cannot record video; camera not initialized!");
     }
 
-    return is_recording_;
+    if (!is_recording_.load()) {
+        video_filename_ = output_dir_ + "vid/" + GetDateTimeStr() + ".mp4";
+
+        // Start recording
+        if (use_ros2_node_) {
+#ifdef BUILD_WITH_ROS2
+            // NOTE: similarly to Capture(), we simply need to set a bool that
+            //       is checked by the subscriber callback ProcessRos2Image().
+            //       Since, in Record(), this bool is also used by the non-ROS2
+            //       branch, it is set after this conditional block. In other
+            //       words, this use_ros2_node_ conditional serves no function
+            //       but visual symmetry with the "Stop recording" block.
+#else
+            logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                           "to \"OFF\". You shouldn't be able to get here!");
+            return false;
+#endif
+        } else {
+            recorder_->setOutputLocation(
+                QUrl::fromLocalFile(QString::fromStdString(video_filename_)));
+            recorder_->record();
+
+            if (recorder_->recorderState() != QMediaRecorder::RecordingState) {
+                logger_->Error("CameraManager - "
+                               + recorder_->errorString().toStdString());
+                return false;
+            }
+        }
+
+        // Set common members
+        is_recording_.store(true);
+
+    } else {
+        // Stop recording
+        if (use_ros2_node_) {
+#ifdef BUILD_WITH_ROS2
+            if (video_writer_.isOpened()) {
+                video_writer_.release();
+            }
+#else
+            logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
+                           "to \"OFF\". You shouldn't be able to get here!");
+            return false;
+#endif
+        } else {
+            recorder_->stop();
+        }
+
+        logger_->Info("CameraManager - Saving video recording to "
+                      + video_filename_);
+
+        // Reset common members
+        video_filename_.clear();
+        is_recording_.store(false);
+    }
+
+    return is_recording_.load();
 }

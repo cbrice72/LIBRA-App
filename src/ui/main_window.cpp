@@ -164,6 +164,7 @@ MainWindow::~MainWindow() {
     // Define a lambda for gracefully wrapping up worker thread(s)
     auto StopThread = [](QThread* thread) {
         if (thread != nullptr && thread->isRunning()) {
+            thread->disconnect();           // kill any further communication
             thread->requestInterruption();  // signal thread to stop looping
             thread->wait();                 // wait for thread cleanup to finish
         }
@@ -176,6 +177,8 @@ MainWindow::~MainWindow() {
 #if LIBRA_VERSION == 2
     StopThread(epos_thread_);
 #endif
+
+    disconnect();  // all MainWindow-related signals and slots, just in case
 
     delete ui_;
 }
@@ -291,10 +294,10 @@ void MainWindow::ConfigureUi() {
  * @brief Sets up signal and slot connections to child threads and spins them up.
  *
  * @note In Qt, thread management for subclassed QThreads generally has 4 steps:
- *   1) Initialize a new QThread object
- *   2) Register a QThread signal to return data to a MainWindow handler
- *   3) Register the QThread's exit signal to its own destruction slot
- *   4) Spin off the QThread
+ *   1) Initialize a new QThread object as a child of MainWindow
+ *   2) Register its signals and slots to send/receive data to/from MainWindow
+ *   3) Register its exit signal to its own destruction slot
+ *   4) Spin it off
  * If the thread loops continuously, there is a fifth step:
  *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
  *
@@ -312,6 +315,10 @@ void MainWindow::InitializeThreads() {
 
     connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
             log_thread_, &LogThread::TakeLogShot);
+
+    // Thread cleanup
+    connect(log_thread_, &LogThread::finished,      // when thread exits
+            log_thread_, &LogThread::deleteLater);  // ... deallocate
 
     log_thread_->start();
     */
@@ -360,6 +367,10 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleManipPosition);
     connect(arduino_thread_, &ArduinoThread::ReportWaterStatus,  // receive info
             this, &MainWindow::HandleWaterStatus);
+
+    // Thread cleanup
+    connect(arduino_thread_, &ArduinoThread::finished,      // when thread exits
+            arduino_thread_, &ArduinoThread::deleteLater);  // ... deallocate
 
     arduino_thread_->start();
 

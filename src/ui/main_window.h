@@ -172,7 +172,7 @@ class MainWindow : public QMainWindow {
 
     // --- Data Members ---
 
-    Ui::MainWindow* ui_;
+    Ui::MainWindow* ui_{nullptr};
 
     bool debug_mode_{true};
 

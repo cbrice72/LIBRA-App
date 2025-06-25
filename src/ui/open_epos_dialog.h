@@ -17,21 +17,21 @@
 //   (none)
 
 namespace Ui {  // NOLINT: Qt-generated
-class OpenEPOSWindow;
+class OpenEposDialog;
 }  // namespace Ui
 
 /**
  * @brief A dialog for retrieving the information required for the EPOS (Maxon)
  *        library call `VCS_OpenDevice()`.
  */
-class OpenEPOSWindow : public QDialog {
+class OpenEposDialog : public QDialog {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
 
   public:
-    explicit OpenEPOSWindow(QWidget* parent = nullptr);
-    ~OpenEPOSWindow() override;
+    explicit OpenEposDialog(QWidget* parent = nullptr);
+    ~OpenEposDialog() override;
 
     // --- Getters & Setters ---
 
@@ -53,7 +53,7 @@ class OpenEPOSWindow : public QDialog {
   private:
     // NOLINTEND
     // --- Data Members ---
-    Ui::OpenEPOSWindow* ui_;
+    Ui::OpenEposDialog* ui_{nullptr};
 
     std::string device_name_;
     std::string protocol_name_;

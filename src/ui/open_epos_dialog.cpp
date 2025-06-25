@@ -45,8 +45,8 @@ constexpr uint kTimeout = 100;  // ms
  *
  * @param parent Owning Qt widget (default: nullptr)
  */
-OpenEPOSWindow::OpenEPOSWindow(QWidget* parent)
-    : QDialog(parent), ui_(new Ui::OpenEPOSWindow) {
+OpenEposDialog::OpenEposDialog(QWidget* parent)
+    : QDialog(parent), ui_(new Ui::OpenEposDialog) {
     ui_->setupUi(this);
 
     QStringList devices;
@@ -94,8 +94,7 @@ OpenEPOSWindow::OpenEPOSWindow(QWidget* parent)
 /**
  * @brief Standard destructor.
  */
-OpenEPOSWindow::~OpenEPOSWindow() {
-    // Clean up the Qt-based GUI
+OpenEposDialog::~OpenEposDialog() {
     delete ui_;
 }
 
@@ -109,7 +108,7 @@ OpenEPOSWindow::~OpenEPOSWindow() {
  *
  * @param sel The device name selected by the user
  */
-void OpenEPOSWindow::on_cb_device_name_textActivated(const QString& sel) {
+void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     // Save selected device name
     device_name_ = sel.toStdString();
 
@@ -179,7 +178,7 @@ void OpenEPOSWindow::on_cb_device_name_textActivated(const QString& sel) {
  *
  * @param sel The protocol name selected by the user
  */
-void OpenEPOSWindow::on_cb_protocol_name_textActivated(const QString& sel) {
+void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     // Save selected protocol name
     protocol_name_ = sel.toStdString();
 
@@ -247,7 +246,7 @@ void OpenEPOSWindow::on_cb_protocol_name_textActivated(const QString& sel) {
  *
  * @param sel The interface name selected by the user
  */
-void OpenEPOSWindow::on_cb_interface_name_textActivated(const QString& sel) {
+void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     // Save selected interface name
     interface_name_ = sel.toStdString();
 
@@ -310,7 +309,7 @@ void OpenEPOSWindow::on_cb_interface_name_textActivated(const QString& sel) {
  *
  * @param sel The port name selected by the user
  */
-void OpenEPOSWindow::on_cb_port_name_textActivated(const QString& sel) {
+void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     // Save selected port name
     port_name_ = sel.toStdString();
 
@@ -371,7 +370,7 @@ void OpenEPOSWindow::on_cb_port_name_textActivated(const QString& sel) {
  *
  * @param sel The baud rate selected by the user
  */
-void OpenEPOSWindow::on_cb_baud_rate_textActivated(const QString& sel) {
+void OpenEposDialog::on_cb_baud_rate_textActivated(const QString& sel) {
     // Save selected baud rate
     baud_rate_ = sel.toUInt();
 
@@ -384,7 +383,7 @@ void OpenEPOSWindow::on_cb_baud_rate_textActivated(const QString& sel) {
  *        Opens the EPOS device specified by the selections in the four combo
  *        boxes, sets baud rate and timeout, and clears residual faults.
  */
-void OpenEPOSWindow::on_pb_connect_clicked() {
+void OpenEposDialog::on_pb_connect_clicked() {
     // Connect to specified controller
     uint err_code = 0;
 
@@ -409,16 +408,16 @@ void OpenEPOSWindow::on_pb_connect_clicked() {
     }
 
     // Close the dialog and return `QDialog::Accepted`
-    OpenEPOSWindow::accept();
+    OpenEposDialog::accept();
 }
 
 /**
  * @brief Give the user another way to close the window
  *        (in addition to the X in the menu bar).
  */
-void OpenEPOSWindow::on_pb_cancel_clicked() {
+void OpenEposDialog::on_pb_cancel_clicked() {
     // Close the dialog and return `QDialog::Rejected`
-    OpenEPOSWindow::reject();
+    OpenEposDialog::reject();
 }
 
 //------------------------------------------------------------------------------
@@ -430,7 +429,7 @@ void OpenEPOSWindow::on_pb_cancel_clicked() {
  *
  * @return Handle for port access
  */
-void* OpenEPOSWindow::GetEPOSHandle() {
+void* OpenEposDialog::GetEPOSHandle() {
     return handle_;
 }
 

@@ -51,7 +51,7 @@ class OpenSerialDialog : public QDialog {
 
     // --- Data Members ---
 
-    Ui::OpenSerialDialog* ui_;
+    Ui::OpenSerialDialog* ui_{nullptr};
 
     QList<QSerialPortInfo> valid_ports_;
 };
