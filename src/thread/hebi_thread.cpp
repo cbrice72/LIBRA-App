@@ -129,16 +129,10 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
 
     // Define joint order for organizing feedback
-    // NOTE: ideally, this shouldn't be defined here since it defeats the purpose
-    //       of generalizing actuator control code. It should be inferred/provided
-    //       by the user, somehow (but I don't have time to make it pretty, so...)
-#if LIBRA_VERSION == 1
-    joint_order_ = {Actuator::Name::kMA, Actuator::Name::kMB,
-                    Actuator::Name::kJ1, Actuator::Name::kJ2,
-                    Actuator::Name::kJ3};  // LIBRA-I
-#elif LIBRA_VERSION == 2
-    joint_order_ = {Actuator::Name::kPitch};  // LIBRA-II
-#endif
+    assert(names_.size() == joint_order_.size());
+    for (std::size_t i = 0; i < names_.size(); ++i) {
+        joint_order_[i] = Actuator::StringToNameEnum(names_[i]);
+    }
 
     // Resize status vectors to match number of actuators
     status_a_vel_.resize(num_actuators_);

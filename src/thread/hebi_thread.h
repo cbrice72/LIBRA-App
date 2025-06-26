@@ -90,7 +90,7 @@ class HebiThread : public AbstractActuatorThread
 
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
-    std::vector<Actuator::Name> joint_order_;  // NOTE: should match `names_`
+    std::array<Actuator::Name, Actuator::Name::kJointCount> joint_order_;
 
     /* Improve performance of GetStatus() by allocating these vectors here
       (the `mutable` keyword allows a const function to modify class members) */
