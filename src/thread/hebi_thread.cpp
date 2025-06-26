@@ -268,8 +268,9 @@ QString HebiThread::GetStatus() const {
 /**
  * @brief Publish HEBI actuator state(s).
  *
- * @note Currently, this function only exists to log actuator information in the
- *       ROS2 ecosystem (i.e., via rosbag).
+ * @note Currently, this function only exists as an example, since the ROS2
+ *       ecosystem cannot be made aware of interfaces or nodes created by the
+ *       LIBRA CMake project (since we don't use `colcon build`).
  */
 void HebiThread::PublishState() {
     if (!state_pub_ || group_ == nullptr) {
