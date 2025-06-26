@@ -72,7 +72,7 @@ class HebiThread : public AbstractActuatorThread
 
     // --- Helper Functions ---
 
-    std::unordered_map<Actuator::Joint, double> GetFeedbackMap(
+    std::unordered_map<Actuator::Name, double> GetFeedbackMap(
         const std::vector<double>& feedback);
     QString GetStatus() const;
 
@@ -90,7 +90,7 @@ class HebiThread : public AbstractActuatorThread
 
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
-    std::vector<Actuator::Joint> joint_order_;  // NOTE: should match `names_`
+    std::vector<Actuator::Name> joint_order_;  // NOTE: should match `names_`
 
     /* Improve performance of GetStatus() by allocating these vectors here
       (the `mutable` keyword allows a const function to modify class members) */

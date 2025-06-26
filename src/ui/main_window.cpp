@@ -38,6 +38,7 @@
 
 // Qt
 
+constexpr int kPrecision = 1;        // 0.1
 constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
 
 // Arduino
@@ -473,69 +474,67 @@ void MainWindow::InitializeThreads() {
 
 /**
  * @brief Populates a map-of-maps with UI label elements, according to their
- *        corresponding actuator joint names (`Actuator::Joint`) and feedback types
+ *        corresponding joint names (`Joint`) and feedback types
  *        (`Actuator::Feedback`).
  *
  * @note Only used in constructor - placed in own function to improve readability.
  *
- * @see Actuator::Joint Actuator::Feedback
+ * @see Joint::Name Actuator::Feedback
  */
 void MainWindow::InitializeFeedbackElementMap() {
 #if LIBRA_VERSION == 1
     // 2-Dof joint
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kTargetPos] =
         ui_->l_target_roll;
-    feedback_element_map_[Actuator::Joint::kMA][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualPos] =
         ui_->l_actual_roll;
-    feedback_element_map_[Actuator::Joint::kMA]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_roll;
+    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_roll;
 
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kTargetPos] =
         ui_->l_target_pitch;
-    feedback_element_map_[Actuator::Joint::kMB][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualPos] =
         ui_->l_actual_pitch;
-    feedback_element_map_[Actuator::Joint::kMB]
-                         [Actuator::Feedback::kActualTorque] =
-                             ui_->l_torque_pitch;
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_pitch;
 
     // Arm
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j1;
-    feedback_element_map_[Actuator::Joint::kJ1][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j1;
-    feedback_element_map_[Actuator::Joint::kJ1]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j1;
+    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j1;
 
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j2;
-    feedback_element_map_[Actuator::Joint::kJ2][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j2;
-    feedback_element_map_[Actuator::Joint::kJ2]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j2;
+    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j2;
 
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j3;
-    feedback_element_map_[Actuator::Joint::kJ3][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j3;
-    feedback_element_map_[Actuator::Joint::kJ3]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_j3;
+    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j3;
 #elif LIBRA_VERSION == 2
     // Yaw joint
-    feedback_element_map_[Actuator::Joint::kYaw]
-                         [Actuator::Feedback::kTargetPos] = ui_->l_target_yaw;
-    feedback_element_map_[Actuator::Joint::kYaw]
-                         [Actuator::Feedback::kActualPos] = ui_->l_actual_yaw;
-    feedback_element_map_[Actuator::Joint::kYaw]
-                         [Actuator::Feedback::kActualTorque] = ui_->l_torque_yaw;
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_yaw;
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_yaw;
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_yaw;
 
     // Pitch joint
-    feedback_element_map_[Actuator::Joint::kPitch]
-                         [Actuator::Feedback::kTargetPos] = ui_->l_target_pitch;
-    feedback_element_map_[Actuator::Joint::kPitch]
-                         [Actuator::Feedback::kActualPos] = ui_->l_actual_pitch;
-    feedback_element_map_[Actuator::Joint::kPitch]
-                         [Actuator::Feedback::kActualTorque] =
-                             ui_->l_torque_pitch;
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_pitch;
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_pitch;
+    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_pitch;
 #endif
 }
 
@@ -700,15 +699,54 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
  * @param feedback_type The type of primary feedback provided
  */
 void MainWindow::HandleActuatorFeedback(
-    const std::unordered_map<Actuator::Joint, double>& feedbacks,
+    const std::unordered_map<Actuator::Name, double>& feedbacks,
     const Actuator::Feedback feedback_type) {
+    // Handle complex joints first
+#if LIBRA_VERSION == 1
+    // Special Case: MA and MB differential drive -> Roll and Pitch
+    const auto ma = feedbacks.find(Actuator::Name::kMA);
+    const auto mb = feedbacks.find(Actuator::Name::kMB);
+
+    if (ma != feedbacks.end() && mb != feedbacks.end()) {
+        const double ma_val = ma->second;
+        const double mb_val = mb->second;
+
+        /*
+         * From our forward mapping at the `emit CommandHebi(...)` call:
+         *   MA = -roll - pitch
+         *   MB = -roll + pitch
+         * Combine the equations and solve:
+         *   MA + MB = -2 * roll    ->   roll  = -(MA + MB) / 2
+         *   MA - MB = -2 * pitch   ->   pitch = -(MA - MB) / 2
+         */
+        feedback_element_map_.at(Joint::kRoll)
+            .at(feedback_type)
+            ->setText(
+                QString::number(-(ma_val + mb_val) / 2.0, 'f', kPrecision));
+
+        feedback_element_map_.at(Joint::kPitch)
+            .at(feedback_type)
+            ->setText(
+                QString::number(-(ma_val - mb_val) / 2.0, 'f', kPrecision));
+    }
+#endif
+
+    // Handle regular 1-DoF joints
     for (const auto& feedback : feedbacks) {
+#if LIBRA_VERSION == 1
+        // Skip special cases (already processed)
+        if (feedback.first == Actuator::Name::kMA
+            || feedback.first == Actuator::Name::kMB) {
+            continue;
+        }
+#endif
         try {
-            // Index into the relevant UI label using the map-of-maps
-            // initialized in the constructor
-            feedback_element_map_.at(feedback.first)
+            // Index into relevant UI label using the map-of-maps initialized
+            // in the constructor (we can static cast Actuator::Name to Joint
+            // for 1:1 cases)
+            feedback_element_map_.at(static_cast<Joint>(feedback.first))
                 .at(feedback_type)
-                ->setText(QString::number(feedback.second, 'f', 1));  // 0.1
+                ->setText(QString::number(feedback.second, 'f', kPrecision));
         } catch (const std::out_of_range&) {
             qCritical() << "[ERROR] No UI element mapped to joint"
                         << feedback.first << "and feedback type"

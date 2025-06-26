@@ -61,7 +61,7 @@ class AbstractActuatorThread : public QThread {
     void Connected(const bool& connected);
 
     void ReportFeedback(
-        const std::unordered_map<Actuator::Joint, double>& feedbacks,
+        const std::unordered_map<Actuator::Name, double>& feedbacks,
         const Actuator::Feedback feedback_type);
     void ReportStatus(const QString& status, const Actuator::Type type);
 

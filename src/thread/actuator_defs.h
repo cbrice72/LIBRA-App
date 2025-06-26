@@ -14,17 +14,22 @@
 
 namespace Actuator {  // place enums in this namespace to improve readability
 
+/**
+ * @brief LIBRA actuator names.
+ */
+enum Name {
 #if LIBRA_VERSION == 1
-/**
- * @brief LIBRA-I joint names.
- */
-enum Joint { kMA = 0, kMB, kJ1, kJ2, kJ3, kUndefined };
+    kMA = 0,
+    kMB,
+    kJ1,
+    kJ2,
+    kJ3,
 #elif LIBRA_VERSION == 2
-/**
- * @brief LIBRA-II joint names.
- */
-enum Joint { kYaw = 0, kPitch, kUndefined };
+    kYaw = 0,
+    kPitch,
 #endif
+    kUndefined  // KEEP THIS LAST
+};
 
 /**
  * @brief Actuator implementations.

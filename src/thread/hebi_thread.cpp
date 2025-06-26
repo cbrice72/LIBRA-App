@@ -133,11 +133,11 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     //       of generalizing actuator control code. It should be inferred/provided
     //       by the user, somehow (but I don't have time to make it pretty, so...)
 #if LIBRA_VERSION == 1
-    joint_order_ = {Actuator::Joint::kMA, Actuator::Joint::kMB,
-                    Actuator::Joint::kJ1, Actuator::Joint::kJ2,
-                    Actuator::Joint::kJ3};  // LIBRA-I
+    joint_order_ = {Actuator::Name::kMA, Actuator::Name::kMB,
+                    Actuator::Name::kJ1, Actuator::Name::kJ2,
+                    Actuator::Name::kJ3};  // LIBRA-I
 #elif LIBRA_VERSION == 2
-    joint_order_ = {Actuator::Joint::kPitch};  // LIBRA-II
+    joint_order_ = {Actuator::Name::kPitch};  // LIBRA-II
 #endif
 
     // Resize status vectors to match number of actuators
@@ -190,7 +190,7 @@ HebiThread::~HebiThread() {
 
 /**
  * @brief Convenience function for matching individual actuator feedback to the
- *        corresponding `Actuator::Joint`. Facilitates reporting to `MainWindow`.
+ *        corresponding `Actuator::Name`. Facilitates reporting to `MainWindow`.
  *
  * @param feedback Actuator values (ideally, already converted to desired units)
  *
@@ -200,9 +200,9 @@ HebiThread::~HebiThread() {
  *
  * @see MainWindow::HandleActuatorFeedback
  */
-std::unordered_map<Actuator::Joint, double> HebiThread::GetFeedbackMap(
+std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
     const std::vector<double>& feedback) {
-    std::unordered_map<Actuator::Joint, double> feedback_map;
+    std::unordered_map<Actuator::Name, double> feedback_map;
     for (auto i = 0; i < joint_order_.size(); i++) {
         feedback_map[joint_order_[i]] = feedback[i];
     }
@@ -358,17 +358,17 @@ void HebiThread::run() {
             // Retrieve torque magnitude and direction (i.e., polar coords)
 #if LIBRA_VERSION == 1
             arm_torque_r =
-                std::max(std::abs(feedback_->getEffort()[Actuator::Joint::kMA]),
-                         std::abs(feedback_->getEffort()[Actuator::Joint::kMB]));
+                std::max(std::abs(feedback_->getEffort()[Actuator::Name::kMA]),
+                         std::abs(feedback_->getEffort()[Actuator::Name::kMB]));
 
             arm_torque_theta = std::atan2(
-                -feedback_->getEffort()[Actuator::Joint::kMA]
-                    + feedback_->getEffort()[Actuator::Joint::kMB],  // pitch
-                -feedback_->getEffort()[Actuator::Joint::kMA]
-                    - feedback_->getEffort()[Actuator::Joint::kMB]);  // roll
+                -feedback_->getEffort()[Actuator::Name::kMA]
+                    + feedback_->getEffort()[Actuator::Name::kMB],  // pitch
+                -feedback_->getEffort()[Actuator::Name::kMA]
+                    - feedback_->getEffort()[Actuator::Name::kMB]);  // roll
 #elif LIBRA_VERSION == 2
             arm_torque_r = std::abs(
-                feedback_->getEffort()[Actuator::Joint::kPitch]);
+                feedback_->getEffort()[Actuator::Name::kPitch]);
             arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
 #endif
 
