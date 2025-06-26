@@ -1,12 +1,21 @@
 <?xml version="1.0"?>
 <group_safety version="1.0.0">
+  <!-- Actuators: "MA", "MB", "J1", "J2", "J3" -->
   <mstop />
-  <position />
+  <position>
+    <!-- 170 deg ~= 2.97 rad -->
+    <!-- NOTE: the MA-MB relationship is a bit more complicated, so just give them "infinite" limits -->
+    <min_limit>-1000 -1000 -2.97 -2.97 -2.97</min_limit>
+    <max_limit>1000 1000  2.97  2.97  2.97</max_limit>
+  </position>
   <velocity>
+    <!-- 28 deg/s ~= 0.5 rad (default) -->
     <min_limit>-0.5 -0.5 -0.5 -0.5 -0.5</min_limit>
     <max_limit>0.5 0.5 0.5 0.5 0.5</max_limit>
   </velocity>
   <effort>
+    <!-- For X8-16: Cont. Torque = 16 Nm, Peak Torque = 38 Nm -->
+    <!-- NOTE: give J1 higher limits since it bears the brunt of the arm torque -->
     <min_limit>-20 -20 -40 -20 -20</min_limit>
     <max_limit>20 20 40 20 20</max_limit>
   </effort>
