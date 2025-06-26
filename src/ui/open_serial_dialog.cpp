@@ -112,7 +112,7 @@ void OpenSerialDialog::on_cb_ports_currentIndexChanged(int sel) {
 /**
  * @brief Returns the Linux device name used to communicate with a serial device.
  *
- * @return Device name for serial connection
+ * @return QString Device name for serial connection
  */
 QString OpenSerialDialog::GetSelectedPortName() {
     auto i = ui_->cb_ports->currentIndex();

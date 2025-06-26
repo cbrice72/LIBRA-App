@@ -427,7 +427,7 @@ void OpenEposDialog::on_pb_cancel_clicked() {
 /**
  * @brief Returns the handle used to communicate with the EPOS controller
  *
- * @return Handle for port access
+ * @return void* Handle for port access
  */
 void* OpenEposDialog::GetEPOSHandle() {
     return handle_;

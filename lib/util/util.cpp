@@ -37,7 +37,7 @@ namespace util {
 /**
  * @brief Provides a filename-safe string of the current date and time.
  *
- * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
+ * @return std::string Date-time string in the format "yyyy-MM-ddTHH-mm-ss"
  */
 std::string GetDateTimeStr() {
     auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
@@ -49,7 +49,7 @@ std::string GetDateTimeStr() {
 /**
  * @brief Provides an Excel-friendly string of the current time.
  *
- * @return String formatted as "HH-mm-ss.zzz"
+ * @return std::string Time string in the format "HH-mm-ss.zzz"
  */
 std::string GetTimestampStr() {
     return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();

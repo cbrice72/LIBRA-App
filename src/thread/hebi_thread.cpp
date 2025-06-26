@@ -549,7 +549,8 @@ void HebiThread::Connect() {
 /**
  * @brief Terminates the active connection(s).
  *
- * @return true if successful, false otherwise
+ * @return true Disconnection successful
+ * @return false Disconnection failed
  */
 void HebiThread::Disconnect() {
     // In case this was called in the middle of a movement, gracefully stop

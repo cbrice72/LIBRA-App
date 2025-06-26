@@ -83,7 +83,7 @@ namespace {
  *        since Qt doesn't seem to support this natively.
  *
  * @param bytes The QByteArray to convert
- * @return A QString representing the input QBitArray in binary format
+ * @return std::string A representation of the input QBitArray in binary format
  */
 std::string BytesToStr(QByteArray bytes) {
     std::string str;
@@ -137,7 +137,7 @@ ArduinoThread::~ArduinoThread() {
 /**
  * @brief Returns formatted activity information for the fluid system(s).
  *
- * @return QString Status message in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
+ * @return QString Status in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
  */
 QString ArduinoThread::GetWaterStatus() {
     if (!ser_water_->isOpen() || water_cmd_.isEmpty()) {

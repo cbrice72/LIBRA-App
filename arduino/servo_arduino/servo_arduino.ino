@@ -66,7 +66,7 @@ void loop() {
  * @param delimiter Field separator in input data
  * @param dst Pointer to array in which to save output data
  * @param arraySize Size of output array
- * @return Number of elements parsed (-1 if error)
+ * @return int Number of elements parsed (-1 if error)
  */
 int split(String data, char delimiter, String* dst, int arraySize) {
     int index = 0;
@@ -99,7 +99,7 @@ int split(String data, char delimiter, String* dst, int arraySize) {
  * @param in_max Upper bound of `x`'s current range
  * @param out_min Lower bound of target range
  * @param out_max Upper bound of target range
- * @return Mapped value
+ * @return float Mapped value
  */
 float mapfloat(float x, float in_min, float in_max, float out_min,
                float out_max) {

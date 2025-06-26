@@ -293,7 +293,8 @@ void EposThread::run() {
 /**
  * @brief Attempts to establish connections to all actuators.
  *
- * @return true if successful, false otherwise
+ * @return true Connection successful
+ * @return false Connection failed
  */
 void EposThread::Connect() {
     // If there is already an active connection, gracefully terminate it

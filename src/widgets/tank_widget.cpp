@@ -119,7 +119,7 @@ void TankWidget::UpdateAnimation() {
 /**
  * @brief Returns current fluid level.
  *
- * @return Current fluid level as a fraction in the range [0.0, 1.0].
+ * @return double Current fluid level as a fraction in the range [0.0, 1.0].
  */
 double TankWidget::GetLevel() const {
     return level_;
@@ -128,7 +128,7 @@ double TankWidget::GetLevel() const {
 /**
  * @brief Returns current fluid volume.
  *
- * @return Current fluid volume (in L).
+ * @return double Current fluid volume (in L).
  */
 double TankWidget::GetVolume() const {
     return level_ * kCapacity;
@@ -139,7 +139,7 @@ double TankWidget::GetVolume() const {
  *
  * @param new_level A fraction in the range [0.0, 1.0]
  *
- * @note ONLY USE IF INACCURACIES ARE NOTICED IN REAL TIME!!!
+ * @note ONLY TO BE USED IF INACCURACIES ARE NOTICED IN REAL TIME!!!
  */
 void TankWidget::OverrideLevel(double new_level) {
     // Validate input

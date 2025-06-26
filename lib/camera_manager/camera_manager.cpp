@@ -52,7 +52,7 @@ bool IsRealSenseCamera(const QCameraDevice& device) {
 /**
  * @brief Provides a filename-safe string of the current date and time.
  *
- * @return String formatted as "yyyy-MM-ddTHH-mm-ss"
+ * @return std::string Date-time string in the format "yyyy-MM-ddTHH-mm-ss"
  */
 std::string GetDateTimeStr() {
     auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
@@ -246,7 +246,8 @@ CameraManager::~CameraManager() {
  *        it was instantiated through the owned QCamera object (`camera_`) or
  *        delegated to a separate process running the ROS2 node.
  *
- * @returns true if camera is running, false otherwise
+ * @return true Camera is running
+ * @return false Camera is not initialized
  */
 bool CameraManager::CameraIsActive() {
     return (use_ros2_node_) ? ros2_process_ != nullptr
@@ -520,7 +521,8 @@ void CameraManager::Capture() {
 /**
  * @brief Toggles video recording of the current feed.
  *
- * @return true if recording is active; false otherwise
+ * @return true Recording is active
+ * @return false Not recording
  */
 bool CameraManager::Record() {
     if (!CameraIsActive()) {
