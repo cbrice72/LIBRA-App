@@ -1,6 +1,9 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  ROS2 workspace CMakeLists file.
+# @brief  Internal ROS2 workspace CMakeLists file.
+#         Any targets built in these subdirectories will not be installed in the
+#         same way that `colcon build` installs targets, so they can only be
+#         used within the `libra_app` CMake project.
 #
 # @author brice.c.aa
 ################################################################################

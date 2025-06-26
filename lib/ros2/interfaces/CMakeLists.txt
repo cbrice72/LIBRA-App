@@ -1,6 +1,6 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  LIBRA ROS2 interfaces (message types, services, etc.) CMakeLists file.
+# @brief  Internal ROS2 interfaces (message types, services) CMakeLists file.
 #
 # @author brice.c.aa
 ################################################################################

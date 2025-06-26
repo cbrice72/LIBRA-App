@@ -1,6 +1,6 @@
 ################################################################################
 # @file   CMakeLists.txt
-# @brief  LIBRA ROS2 nodes CMakeLists file.
+# @brief  Internal ROS2 nodes CMakeLists file.
 #
 # @author brice.c.aa
 ################################################################################
