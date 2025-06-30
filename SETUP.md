@@ -1,6 +1,6 @@
 # Setup
 
-This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App on a Windows 11 machine. Please contact Christian Brice ([email](mailto:brice.c.aa@m.titech.ac.jp)) with any questions or revision suggestions.
+This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App. Please contact Christian Brice ([email](mailto:brice.c.67b9@m.isct.ac.jp)) with any questions or revision suggestions.
 
 - [Setting Up](#setting-up)
     - [*VM*](#vm)
