@@ -3,7 +3,7 @@
         {
             "name": "Linux",
             "compileCommands": [
-                "~/repos/build/compile_commands.json"
+                "${workspaceFolder}/build/compile_commands.json"
             ],
             "compilerPath": "/usr/bin/gcc",
             "intelliSenseMode": "linux-gcc-x64",
@@ -16,8 +16,8 @@
                 "/usr/local/include",
                 "/usr/include",
                 "~/Qt/6.9.0/gcc_64/include",
-                "~/repos/build/**/include/**",
-                "~/repos/build/**/rosidl_generator_cpp/**/msg"
+                "${workspaceFolder}/build/**/include/**",
+                "${workspaceFolder}/build/**/rosidl_generator_cpp/**/msg"
             ],
             "defines": [
                 "_DEBUG",
