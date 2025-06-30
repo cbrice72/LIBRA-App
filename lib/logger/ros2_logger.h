@@ -8,7 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
+#include <iostream>
 
 // Other Library Headers
 #include <rclcpp/logger.hpp>  // ROS2 Core
