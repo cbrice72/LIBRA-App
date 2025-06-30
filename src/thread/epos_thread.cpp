@@ -16,7 +16,12 @@
 #include "Definitions.h"  // EPOS (Maxon)
 
 // Project Headers
-// #include "util.h"  // TODO: integrate with main project
+#include "util.h"
+#ifdef BUILD_WITH_ROS2
+# include "ros2_logger.h"
+#else
+# include "qt_logger.h"
+#endif
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
@@ -110,7 +115,12 @@ EposThread::EposThread(QObject* parent, std::string device_name,
       port_name_(std::move(port_name)),
       baud_rate_(baud_rate),
       target_{0},
-      last_target_{0} {
+      last_target_{0}
+#ifdef BUILD_WITH_ROS2
+      ,
+      rclcpp::Node("epos_node")
+#endif
+{
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
     logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
@@ -129,7 +139,7 @@ EposThread::~EposThread() {
     //   3) Voids our class handle to the EPOS device
     Disconnect();
 
-    logger_->Debug("Cleaned up EposThread")
+    logger_->Debug("Cleaned up EposThread");
 }
 
 //------------------------------------------------------------------------------
@@ -461,10 +471,10 @@ void EposThread::Disconnect() {
  *
  * @param target Target angle (absolute), in degrees
  *
- * @note Since I don't see a reason to use `EposThread` outside of the LIBRA
- *       project in the near future, and I only need at most one EPOS actuator,
- *       I won't go through the trouble of making full use of the EPOS library
- *       to match the HEBI API's one-group-to-many-actuators functionality.
+ * @note I don't see a reason to use `EposThread` outside of the LIBRA project,
+ *       at least in the near future. Since LIBRA-II only uses a single EPOS
+ *       actuator, I won't go through the trouble of implementing the ability to
+ *       command any N actuators, like in `HebiThread::SetTarget()`.
  */
 void EposThread::SetTarget(const std::vector<double>& target) {
     if (handle_ == nullptr) {
@@ -481,7 +491,8 @@ void EposThread::SetTarget(const std::vector<double>& target) {
     // Convert and save
     target_ = target.at(0) * kDegToInc;
 
-    logger_->Debug("EPOS - Set target to " + target_ + " inc");
+    logger_->Debug("EPOS - Set target(s) to " + std::to_string(target_)
+                   + " inc");
 }
 
 /**

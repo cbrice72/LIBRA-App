@@ -363,20 +363,19 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::ConnectManipHelper);
     connect(arduino_thread_, &ArduinoThread::ManipConnected,  // update UI
             this, &MainWindow::HandleManipConnChanged);
+    connect(arduino_thread_, &ArduinoThread::ReportPosition,  // get position
+            this, &MainWindow::HandleManipPosition);
 #endif
 
     connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
             this, &MainWindow::ConnectWaterHelper);
     connect(arduino_thread_, &ArduinoThread::WaterConnected,  // update UI
             this, &MainWindow::HandleWaterConnChanged);
+    connect(arduino_thread_, &ArduinoThread::ReportWaterStatus,  // get state
+            this, &MainWindow::HandleWaterStatus);
 
     connect(arduino_thread_, &ArduinoThread::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
-
-    connect(arduino_thread_, &ArduinoThread::ReportPosition,  // receive pos
-            this, &MainWindow::HandleManipPosition);
-    connect(arduino_thread_, &ArduinoThread::ReportWaterStatus,  // receive info
-            this, &MainWindow::HandleWaterStatus);
 
     // Thread cleanup
     connect(arduino_thread_, &ArduinoThread::finished,      // when thread exits
@@ -414,9 +413,9 @@ void MainWindow::InitializeThreads() {
     connect(hebi_thread_, &HebiThread::Connected,  // update UI
             this, &MainWindow::HandleHebiConnChanged);
 
-    connect(hebi_thread_, &HebiThread::ReportFeedback,  // receive feedback
+    connect(hebi_thread_, &HebiThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
-    connect(hebi_thread_, &HebiThread::ReportStatus,  // receive minor statuses
+    connect(hebi_thread_, &HebiThread::ReportStatus,  // get minor statuses
             this, &MainWindow::HandleActuatorStatus);
 
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
@@ -456,9 +455,9 @@ void MainWindow::InitializeThreads() {
     connect(epos_thread_, &EposThread::Connected,  // update UI
             this, &MainWindow::HandleEposConnChanged);
 
-    connect(epos_thread_, &EposThread::ReportFeedback,  // receive feedback
+    connect(epos_thread_, &EposThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
-    connect(epos_thread_, &EposThread::ReportStatus,  // receive minor statuses
+    connect(epos_thread_, &EposThread::ReportStatus,  // get minor statuses
             this, &MainWindow::HandleActuatorStatus);
 
     connect(epos_thread_, &EposThread::ErrorThrown,  // handle errors

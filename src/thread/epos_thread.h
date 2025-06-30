@@ -12,7 +12,9 @@
 #include <string>
 
 // Other Library Headers
-//   (none)
+#ifdef BUILD_WITH_ROS2
+# include <rclcpp/rclcpp.hpp>  // ROS2 Core
+#endif
 
 // Project Headers
 #include "abstract_actuator_thread.h"
@@ -27,7 +29,12 @@
  *
  * @see abstract_actuator_thread
  */
-class EposThread : public AbstractActuatorThread {
+class EposThread : public AbstractActuatorThread
+#ifdef BUILD_WITH_ROS2
+    ,
+                   public rclcpp::Node
+#endif
+{
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
