@@ -71,6 +71,8 @@ if(LIBRA_VERSION EQUAL 2)
     # Tell the linker which libraries to link against
     target_link_libraries(
         open_epos_dialog
+        # Project
+        PUBLIC util
         # EPOS (Maxon)
         PRIVATE -lEposCmd
         # Qt
