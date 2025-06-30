@@ -194,11 +194,9 @@ adobe/*
 # Don't exclude the 3rd-party libraries
 !thirdparty/**
 
-# Build folders
-#   Qt
-**/build-*/
-#   ROS2
+# Build folders (Qt, ROS2, etc.)
 **/build/
+**/build-*/
 **/install/
 
 # Log file
