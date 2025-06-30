@@ -196,7 +196,7 @@ adobe/*
 
 # Build folders (Qt, ROS2, etc.)
 **/build/
-**/build-*/
+**/build*/
 **/install/
 
 # Log file
