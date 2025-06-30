@@ -9,8 +9,6 @@ This document lists the necessary steps to set up and use HEBI actuators in eith
 - [Troubleshooting](#troubleshooting)
     - [*Can't Access Actuator*](#cant-access-actuator)
     - [*Resetting Misaligned Actuators*](#resetting-misaligned-actuators)
-- [Optional Items](#optional-items)
-    - [*Downloading and Building Examples*](#downloading-and-building-examples)
 
 ## Before You Start
 
@@ -18,9 +16,15 @@ This document lists the necessary steps to set up and use HEBI actuators in eith
 
 Download the latest API `.zip` (Windows) or `.tar.gz` (Linux) from the [HEBI tools website](https://docs.hebi.us/tools.html#cpp-api). Then, simply extract it to your directory of choice.
 
+#### **Optional: Downloading and Building Examples**
+
+Clone the git repo at [https://github.com/HebiRobotics/hebi-cpp-examples/tree/master](https://github.com/HebiRobotics/hebi-cpp-examples/tree/master) and follow the instructions in the `README.md`. It is recommended that you download the HEBI C++ API manually (this is explained in the README).
+
+> ***NOTE:*** it is not necessary to build the `kits/` directory, so if you are getting compile/build errors from files in that directory, feel free to remove it from `/projects/cmake/CMakeLists.txt`. To do this, open that `CMakeLists.txt` and delete all lines pertaining to kits CMake targets (as of 2024/12/04, lines 274-321).
+
 ### *Networking*
 
-> ***NOTE:*** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [SETUP.md](../SETUP.md) "WSL" -> "Networking Mode" for more information.
+> ***NOTE:*** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [WINDOWS_SETUP.md "WSL" -> "Networking Mode"](WINDOWS_SETUP.md#networking-mode) for more information.
 
 HEBI actuators support both dynamic and static IP addressing (the former is known as [DHCP](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol)). Since Windows and Linux do not come with DHCP server capabilities by default, it is recommended that you use HEBI actuators with statically-assigned IP addresses. The following instructions will help you set up your computer so it can communicate with these actuators.
 
@@ -63,6 +67,8 @@ When you build your CMake project, the HEBI C++ API will automatically be built 
 
 For examples, see the [hebi-cpp-examples](https://github.com/HebiRobotics/hebi-cpp-examples/tree/master) git repo.
 
+<hr>
+
 ## Troubleshooting
 
 ### *Can't Access Actuator*
@@ -79,11 +85,3 @@ If the actuator does not show up (e.g., in HEBI Scope) or is inaccessible, follo
 5. Go to Dashboard -> Advanced
     1. Set "Position Offset" to the opposite value
     2. Set "Effort" to 0
-
-## Optional Items
-
-### *Downloading and Building Examples*
-
-Clone the git repo at [https://github.com/HebiRobotics/hebi-cpp-examples/tree/master](https://github.com/HebiRobotics/hebi-cpp-examples/tree/master) and follow the instructions in the `README.md`. It is recommended that you download the HEBI C++ API manually (this is explained in the README).
-
-> ***NOTE:*** it is not necessary to build the `kits/` directory, so if you are getting compile/build errors from files in that directory, feel free to remove it from `/projects/cmake/CMakeLists.txt`. To do this, open that `CMakeLists.txt` and delete all lines pertaining to kits CMake targets (as of 2024/12/04, lines 274-321).

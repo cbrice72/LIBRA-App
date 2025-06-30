@@ -2,99 +2,29 @@
 
 This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App. Please contact Christian Brice ([email](mailto:brice.c.67b9@m.isct.ac.jp)) with any questions or revision suggestions.
 
-- [Setting Up](#setting-up)
-    - [*VM*](#vm)
-    - [*WSL*](#wsl)
-- [Preparing Your Development Environment](#preparing-your-development-environment)
-    - [*Proxy Settings*](#proxy-settings)
-    - [*System Updates and Required Packages*](#system-updates-and-required-packages)
-    - [*Required Drivers and Permissions*](#required-drivers-and-permissions)
-- [Project Software](#project-software)
+If you wish to set up a virtual Linux container on **Windows**, follow the instructions in [docs/WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md) before continuing.
+
+- [Network](#network)
+    - [*Proxy Setup*](#proxy-setup)
+    - [*HEBI Actuators*](#hebi-actuators)
+- [Required Software](#required-software)
+    - [*System Packages*](#system-packages)
+    - [*EPOS (Maxon) Library*](#epos-maxon-library)
+- [Recommended Applications](#recommended-applications)
+    - [*VS Code*](#vs-code)
     - [*Qt Creator*](#qt-creator)
     - [*HEBI Scope*](#hebi-scope)
-    - [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install)
-- [Optional Items](#optional-items)
-    - [*VS Code*](#vs-code)
+- [Troubleshooting](#troubleshooting)
+    - [*VS Code: prompted to "unlock a keyring" on every launch*](#vs-code-prompted-to-unlock-a-keyring-on-every-launch)
+    - [*Unable to run Qt Creator*](#unable-to-run-qt-creator)
+    - [*Qt Creator: "No valid license available"*](#qt-creator-no-valid-license-available)
+    - [*EPOS controllers not appearing in device list*](#epos-controllers-not-appearing-in-device-list)
 
-## Setting Up
+## Network
 
-You may set up a Linux development environment in any way you see fit. If you prefer Windows, you can choose between a Virtual Machine (VM) or Windows Subsystem for Linux (WSL). There are a few differences you should be aware of.
+### *Proxy Setup*
 
-| | Ability | Environment | USB Support | Shared Folder Support |
-|---|---|---|---|---|
-| **Native<br>Linux** | Full-featured | Runs natively on your PC | No special actions required | N/A |
-| **VM** | Full-featured | Runs in separate environment | Select PC or VM on plug-in | Non-native; enable in VMWare settings + install [open-vm-tools](https://kb.vmware.com/s/article/2073803) |
-| **WSL** | Lightweight | Runs natively in Windows | Non-native; install [USBIPD](https://learn.microsoft.com/en-us/windows/wsl/connect-usb) + use every time |  Windows `C:\` drive located at `/mnt/c` |
-
-If you choose to set up natively on Linux, skip ahead to [Preparing Your Development Environment](#preparing-your-development-environment).
-
-### *VM*
-
-1. Download and install [VMware Workstation Player](https://www.vmware.com/products/workstation-player.html).
-    - **Version 17.5 is currently bugged!! Install Version 17.0.2 or lower**
-    - If you use a non-English language keyboard, install the optional "Enhanced Keyboard Driver".
-    - You may also use [VirtualBox](https://www.virtualbox.org/).
-3. Download the [Ubuntu 22.04](https://ubuntu.com/download/desktop) OS image.
-4. Open VMware and create a new Ubuntu virtual machine using the .iso you downloaded.
-    - Most settings can be left as default, but you may want to allocate more space to the virtual hard disk (e.g., 80 GB).
-5. Step through the Ubuntu installation once the VM initializes.
-    - Note: "Erase disk and install Ubuntu" is referring to the virtual hard disk created by VMware, NOT your computer's actual hard disk.
-
-I also recommend you allocate more cores and RAM to your VM; this can be done in Virtual Machine Settings.
-
-- Memory: 8192 MB (8 GB)
-- Processors: 4 cores
-
-### *WSL*
-
-#### **Installation**
-
-1. Open a PowerShell terminal and install [WSL2](https://learn.microsoft.com/en-us/windows/wsl/install).
-
-    ```bash
-    wsl --install -d Ubuntu-22.04
-    ```
-
-> ***NOTE:*** If you are getting the error "System Integrity policy has been violated", you will need to disable Smart App Control in Windows settings.
-
-1. Once the installation is finished, enter the username and password you want to use when logging into the Ubuntu shell.
-
-#### **Networking Mode**
-
-It is recommended that you change your WSL networking mode from the default `NAT` to `mirrored`, as this allows WSL to seamlessly integrate Windows network adapters (e.g., as required to use HEBI actuators via IP addressing).
-
-1. Ensure WSL isn't running.
-
-    ```ps
-    # In a PowerShell window
-    wsl.exe --shutdown
-    ```
-
-2. In your user folder (`C:\Users\<Username>`), create or edit the `.wslconfig` file. Add the following.
-
-    ```txt
-    [wsl2]
-    networkingMode=mirrored
-    ```
-
-3. Configure HyperV (the WSL virtual machine manager) so that it allows all inbound connections (see the [Microsoft docs](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) for more information).
-
-    ```ps
-    Set-NetFirewallHyperVVMSetting -Name '{40E0AC32-46A5-438A-A0B2-2B479E8F2E90}' -DefaultInboundAction Allow
-    ```
-
-4. Restart WSL.
-
-    ```ps
-    # In a PowerShell window
-    wsl.exe
-    ```
-
-See the relevant [Microsoft docs page](https://learn.microsoft.com/en-us/windows/wsl/networking#mirrored-mode-networking) for more information.
-
-## Preparing Your Development Environment
-
-### *Proxy Settings*
+If you are not behind a proxy (or you don't know what it is), skip ahead to [*Required Software*](#required-software).
 
 Open `/etc/apt/apt.conf` (requires sudo) and add the following line with your proxy details. Note that the address *must* include the leading "http://" (e.g., `http://proxy.noc.titech.ac.jp:3128`).
 
@@ -102,22 +32,21 @@ Open `/etc/apt/apt.conf` (requires sudo) and add the following line with your pr
 Acquire::http::Proxy "<address>:<port>";
 ```
 
-#### **Git**
+#### **Configuring the Git Proxy**
 
-If you already have Git installed, go ahead and configure its proxy now. If not, remember to do so after the `sudo apt install` step in the next section. Note that the address *must* include the leading "http://".
+If you already have [Git](https://git-scm.com/) installed, go ahead and configure its proxy now. If not, remember to do so after the `sudo apt install` step in the next section. Note that the address *must* include the leading "http://".
 
 ```bash
 git config --global http.proxy <address>:<port>
 ```
 
-To download the required submodules (i.e., copy other repositories used as dependencies), run the following.
+### *HEBI Actuators*
 
-```bash
-git submodule init  # only necessary the first time
-git submodule update
-```
+The HEBI actuators used in the LIBRA prototypes have statically-assigned IP addresses. In order to communicate with them, you must first configure your PC's local network (see [docs/HEBI.md "Networking"](./docs/HEBI.md#networking)).
 
-### *System Updates and Required Packages*
+## Required Software
+
+### *System Packages*
 
 Update the APT package lists and ensure your system is up to date.
 
@@ -131,8 +60,6 @@ Install the following packages via the terminal.
 sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libxcb-cursor0 libxcb-cursor-dev
 ```
 
-Package notes:
-
 - `build-essential`: programs and libraries necessary for basic software development.
 - `clang` & `libclang-dev`: C/C++ compiler, required by `clang-format` and `clang-tidy` ([link](https://clang.llvm.org/)).
 - `clang-format`: clang-based C++ formatter ([link](https://clang.llvm.org/docs/ClangFormat.html)).
@@ -145,127 +72,16 @@ Package notes:
 - `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
 - `libxcb-cursor0` & `libxcb-cursor-dev`: cursor-related convenience libraries, required by Qt ([link](https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor)).
 
-### *Required Drivers and Permissions*
+### *EPOS (Maxon) Library*
 
-#### **HEBI**
+If you are not building for the *LIBRA-II* system, you may skip ahead to [*Recommended Applications*](#recommended-applications).
 
-While HEBI actuators don't need any special drivers or permissions to run, you must first configure the network to be able to access them (see [docs/HEBI.md](./docs/HEBI.md) "Before You Start" -> "Networking).
+In order to link against the EPOS library during compilation (specifically, using the `-lEposCmd` flag), you must install the EPOS library files on your system.
 
-Other than that, no additional installation is required since the HEBI C++ API included with this project (`thirdparty/hebi-cpp-3.11.1`) is automatically built when CMake is run.
-
-#### **Maxon EPOS**
-
-The *driver* installation is only necessary on Windows. For *library* installation on Linux, see [*Maxon EPOS Library (system-wide install)*](#maxon-epos-library-system-wide-install).
-
-The driver should be automatically installed when connecting an EPOS controller to your PC (via USB) for the first time.
-
-If manual installation is required (e.g., Device Manager shows "Unknown device" with a warning icon), follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf). All driver installation files are located in `thirdparty/epos-6.8.1.0/driver/`.
-
-## Project Software
-
-### *Qt Creator*
-
-Apply for a [Qt educational license](https://www.qt.io/qt-educational-license#application) (make sure to select "Qt Edu for Developers").
-
-Go to your [Account Page](https://account.qt.io/s/) -> Downloads and download the "Unified Qt Installer X.X.X. for Linux". To run it, you must first give the `.run` file execution permissions.
-
-- **Via the GUI** &ndash; Navigate to the installer via the file explorer and do the following.
-    - Right click, "Properties" -> "Permissions" tab
-    - Ensure "Allow executing file as program" is checked
-
-- **Via the Terminal** &ndash; Run the following code. Remember to replace the bracketed text with your Qt installer version.
+1. Extract the EPOS Library archive **into a non-project directory** of your choice, then navigate to the extracted directory.
 
     ```bash
-    chmod +x qt-unified-linux-x64-<ver>-online.run
-    ./qt-unified-linux-x64-<ver>-online.run
-    ```
-
-> ***NOTE:*** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration". Enter your proxy settings **without** the preceding `http://` (e.g., HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`).
-
-Log in and follow the installation procedure. The following list of installation steps show non-default configurations that you **must** install.
-
-1. "Installation options"
-    - Select "Qt X.X for desktop development" and "Custom Installation".
-2. "Customize"
-    - Under "Qt" -> "Qt X.X.X" (whichever is automatically selected) -> "Additional Libraries", check the following.
-        - While most libraries listed in the `set(QT_PACKAGES ...)` line in the root `CMakeLists.txt` are available by default, some must be manually selected. At the time of writing, these are: "Qt Multimedia" and "Qt Serial Port".
-    - Ensure "Qt Creator" -> "Debug Symbols" is checked.
-
-#### *Add Qt Creator to PATH*
-
-To run the GUI application from the terminal (via the command `qtcreator`), add the following to the end of your `~/.bashrc`.
-
-```bash
-if [ -d "$HOME/Qt/Tools" ]; then
-    PATH="$PATH:$HOME/Qt/Tools/QtCreator/bin"
-fi
-```
-
-#### **Troubleshooting: Qt Creator**
-
-##### *"No valid license available"*
-
-Upon opening Qt Creator, you may get an error that there is no valid license available. You can fix this via the Qt Maintenance Tool.
-
-1. Open Qt Maintenance Tool as superuser.
-
-    ```bash
-    sudo /opt/Qt/MaintenanceTool
-    ```
-
-2. Wait for the "Performing license check" message to give you the "Cancel" prompt, cancel it, then open the settings menu and select "Manual proxy configuration".
-    - Since Qt Maintenance Tool is technically a different app, the proxy settings you entered in Qt Installer may not be set correctly.
-3. Click "Retry", then login once the initial check finishes.
-4. Select "Update components", then click "Next".
-    - Once the operation finishes, you may get a message saying that there are no further updates required. This is fine -- your license info was still updated.
-5. Close Qt Maintenance Tool.
-
-You should now be able to use Qt Creator.
-
-##### *"Nothing happens/I get errors when I try to run Qt Creator"*
-
-If you are using a non-GNOME desktop environment (e.g., Windows's WSL2 or Mint's "Cinnamon" environment) you may run into problems with the Qt Creator UI. This might be because you're missing some display-related packages that Qt expects. Try the following catch-all install command for X11 display server protocol libraries.
-
-```bash
-sudo apt install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
-```
-
-If Qt Creator still doesn't run, try explicitly installing the following packages.
-
-```bash
-sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
-```
-
-> ***NOTE:*** Might be missing some, will have to check on laptop.
-
-See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt6-qt-qpa-plugin-could-not-load-the-qt-platform-plugin-xcb-in-even-thou) for more details.
-
-##### *Running CMake gives "Unknown CMake command "qt_xxx""*
-
-Qt-specific CMake commands (starting with `qt_`) were added in Qt6; you likely have an older version of Qt installed. You can check what version you have by opening QtCreator, opening the "Help" tab at the top, and clicking "System Information".
-
-### *HEBI Scope*
-
-Although not required, Scope is very useful for visualizing the state of HEBI actuators and adjusting their parameters in real time. You can download the [latest release](https://docs.hebi.us/downloads_changelogs.html#software) on the HEBI docs website.
-
-Installation on Linux requires a couple extra steps on the command line.
-
-```bash
-# Install required dependencies
-sudo apt install -y libgdk-pixbuf2.0-0
-# Install Scope via dpkg
-sudo dpkg -i hebi-robotics-scope_<ver>_<architecture>.deb
-# Run via terminal
-hebi-scope
-```
-
-### *Maxon EPOS Library (system-wide install)*
-
-The necessary header file is already included in this project (see `thirdparty/epos-6.8.1.0/`). However, for ease of compilation (specifically, using the `-lEposCmd` flag), follow the instructions below to install the EPOS library files on your system.
-
-1. Open a terminal in the `thirdparty/epos-6.8.1.0/` directory and extract the EPOS Library archive **into a non-project directory** of your choice. Navigate to the extracted directory.
-
-    ```bash
+    cd thirdparty/epos-6.8.1.0/
     unzip EPOS-Linux-Library-En.zip -d ~/Downloads
     cd ~/Downloads/EPOS_Linux_Library
     ```
@@ -282,9 +98,7 @@ The necessary header file is already included in this project (see `thirdparty/e
     cd .. && rm -rf EPOS_Linux_Library/
     ```
 
-<br><hr><br>
-
-## Optional Items
+## Recommended Applications
 
 ### *VS Code*
 
@@ -294,9 +108,64 @@ To install, simply [download](https://code.visualstudio.com/download) and run th
 sudo dpkg -i <package_name>
 ```
 
-#### **Troubleshooting: VS Code**
+### *Qt Creator*
 
-If you're prompted to "unlock a keyring" (by entering your Linux password) every time you start up VS Code, follow these instructions.
+This app's GUI is built on the [Qt](https://doc.qt.io/) development framework.
+
+First, apply for a [Qt educational license](https://www.qt.io/qt-educational-license#application) (make sure to select "Qt Edu for Developers"). Then go to your [Account Page](https://account.qt.io/s/) -> "Downloads" and download the "Unified Qt Installer X.X.X. for Linux". To run it, you must first give the `.run` file execution permissions.
+
+- **Via the GUI** &ndash; Navigate to the installer via the file explorer and do the following.
+    - Right click, "Properties" -> "Permissions" tab
+    - Ensure "Allow executing file as program" is checked
+
+- **Via the Terminal** &ndash; Execute the following. Remember to replace the bracketed text with your Qt installer version.
+
+    ```bash
+    chmod +x qt-unified-linux-x64-<ver>-online.run
+    ./qt-unified-linux-x64-<ver>-online.run
+    ```
+
+> ***NOTE:*** If you're behind a proxy, open the settings menu (bottom left) and select "Manual proxy configuration". Enter your proxy settings **without** the preceding `http://` (e.g., HTTP proxy: `proxy.noc.titech.ac.jp` Port: `3128`).
+
+Log in and follow the installation procedure. The following list of installation steps show non-default configurations that you **must** install.
+
+1. "Installation options"
+    - Select "Qt X.X for desktop development" and "Custom Installation".
+2. "Customize"
+    - Under "Qt" -> "Qt X.X.X" (whichever is automatically selected) -> "Additional Libraries", check the following.
+        - While most libraries listed in the `set(QT_PACKAGES ...)` line in the root `CMakeLists.txt` are available by default, some must be manually selected. At the time of writing, these are: **Qt Multimedia** and **Qt Serial Port**.
+    - Ensure "Qt Creator" -> "Debug Symbols" is checked.
+
+#### **Add Qt Creator to PATH**
+
+To run the GUI application from the terminal (via the command `qtcreator`), add the following to the end of your `~/.bashrc`.
+
+```bash
+if [ -d "$HOME/Qt/Tools" ]; then
+    PATH="$PATH:$HOME/Qt/Tools/QtCreator/bin"
+fi
+```
+
+### *HEBI Scope*
+
+Scope is very useful for visualizing the state of HEBI actuators and adjusting their parameters in real time. You can download the [latest release](https://docs.hebi.us/downloads_changelogs.html#software) on the HEBI docs website.
+
+Installation on Linux requires a couple extra steps on the command line.
+
+```bash
+# Install required dependencies
+sudo apt install -y libgdk-pixbuf2.0-0
+# Install Scope via dpkg
+sudo dpkg -i hebi-robotics-scope_<ver>_<architecture>.deb
+# Run via terminal
+hebi-scope
+```
+
+<hr>
+
+## Troubleshooting
+
+### *VS Code: prompted to "unlock a keyring" on every launch*
 
 1. Open your display manager config file. If you're not sure what that is, look for a file ending in "dm" in the `/etc/pam.d` directory (e.g., `sddm`, `lightdm`).
 
@@ -313,3 +182,45 @@ If you're prompted to "unlock a keyring" (by entering your Linux password) every
     @include common-session
     session optional        pam_gnome_keyring.so auto_start
     ```
+
+### *Unable to run Qt Creator*
+
+If you are using a non-GNOME desktop environment (e.g., Windows's WSL2 or Linux Mint's "Cinnamon" environment) you may run into problems with the Qt Creator UI. This might be because you're missing some display-related packages that Qt expects. Try the following catch-all install command for X11 display server protocol libraries.
+
+```bash
+sudo apt install '^libxcb.*-dev' libx11-xcb-dev libglu1-mesa-dev libxrender-dev libxi-dev libxkbcommon-dev libxkbcommon-x11-dev
+```
+
+If Qt Creator still doesn't run, try explicitly installing the following packages.
+
+```bash
+sudo apt install -y libfontconfig libxcb-glx0 libx11-xcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-shape0 libxcb-xkb1 libxcb-xinerama0 libxkbcommon-x11-0 libegl1
+```
+
+See this [Stack Overflow thread](https://stackoverflow.com/questions/68036484/qt6-qt-qpa-plugin-could-not-load-the-qt-platform-plugin-xcb-in-even-thou) for more details.
+
+### *Qt Creator: "No valid license available"*
+
+You might get this error upon opening Qt Creator for the first time. It can be fixed via the Qt Maintenance Tool.
+
+1. Open Qt Maintenance Tool as superuser.
+
+    ```bash
+    sudo /opt/Qt/MaintenanceTool
+    ```
+
+2. Wait for the "Performing license check" message to give you the "Cancel" prompt, then cancel it.
+3. Open the settings menu and select "Manual proxy configuration". Enter your proxy information, save, then exit the dialog.
+    - Since Qt Maintenance Tool is technically a different app, the proxy settings you entered in Qt Installer may not be set correctly.
+4. Click "Retry", then login once the initial check finishes.
+5. Select "Update components", then click "Next".
+    - Once the operation finishes, you may get a message saying that there are no further updates required. This is fine &ndash; your license info was still updated.
+6. Close Qt Maintenance Tool.
+
+You should now be able to use Qt Creator.
+
+### *EPOS controllers not appearing in device list*
+
+Although the driver should be automatically installed when an EPOS controller is connected to your PC (via USB) for the first time, this may occasionally fail. If the driver was *not* installed, the Windows Device Manager will show "Unknown device" with a warning icon.
+
+Follow the instructions in [the EPOS USB Driver Installation PDF](thirdparty/epos-6.8.1.0/driver/EPOS%20USB%20Driver%20Installation.pdf). All driver installation files are provided in `thirdparty/epos-6.8.1.0/driver/`.

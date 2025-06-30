@@ -55,6 +55,8 @@ The recommended IP address for your PC is `10.11.12.2` (see [docs/HEBI.md](./doc
 
 TODO
 
+<hr>
+
 ## Troubleshooting
 
 ### *Networking with/Connecting to HEBI actuators*

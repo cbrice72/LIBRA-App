@@ -55,7 +55,7 @@ if(BUILD_WITH_ROS2)
     if(NOT DEFINED ENV{AMENT_PREFIX_PATH})
         message(
             FATAL_ERROR
-                "It seems a ROS 2 environment has not been sourced (AMENT_PREFIX_PATH is not set). Please run 'source /opt/ros/<distro>/setup.bash' before opening QtCreator."
+                "It seems a ROS 2 environment has not been sourced (AMENT_PREFIX_PATH is not set). Please run 'source /opt/ros/<distro>/setup.bash' before opening Qt Creator."
         )
     endif()
 
@@ -69,14 +69,14 @@ if(BUILD_WITH_ROS2)
     add_compile_definitions(BUILD_WITH_ROS2)
 endif()
 
-# Check if CMake was called outside of a Qt environment (i.e., QtCreator)
+# Check if CMake was called outside of a Qt environment (i.e., Qt Creator)
 if(NOT DEFINED QT_DIR)
     message(
         AUTHOR_WARNING
-            "\nQT_DIR is not defined, meaning you may be attempting to run \"colcon build\" outside of QtCreator.\n"
-            "Doing so means the necessary Qt CMake modules are not automatically appended to \"CMAKE_PREFIX_PATH\".\n"
-            "It is recommended to build this project through QtCreator.\n\n"
-            "CMake will now attempt to locate a Qt6 installation...\n"
+            "QT_DIR is not defined, meaning you may be attempting to run build this project outside of Qt Creator."
+            "Doing so means the necessary Qt CMake modules are not automatically appended to \"CMAKE_PREFIX_PATH\"."
+            "It is recommended to build this project through Qt Creator."
+            "\nCMake will now attempt to locate a Qt6 installation...\n"
     )
 
     # Check for both user-level and system-wide installs
@@ -270,3 +270,5 @@ if(BUILD_WITH_ROS2)
     # Register the package with ament
     ament_package()
 endif()
+
+message(STATUS "LIBRA App executable installed in: ${CMAKE_INSTALL_BINDIR}")

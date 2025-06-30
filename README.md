@@ -7,10 +7,10 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 ## Table of Contents
 
 - [Requirements](#requirements)
-- [Optional](#optional)
+- [Optional Items](#optional-items)
     - [*VS Code Extensions*](#vs-code-extensions)
 - [Usage](#usage)
-    - [*Build Options*](#build-options)
+    - [*Building the App*](#building-the-app)
     - [*Running the App*](#running-the-app)
     - [*Code Formatting*](#code-formatting)
     - [*Code Linting*](#code-linting)
@@ -32,7 +32,7 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 <sup>2</sup> The RTAB-Map ROS2 package repo specifically states "ROS2 Humble minimum required", although Jazzy is also supported (support for Rolling is currently in development). See their [README.md](https://github.com/introlab/rtabmap_ros?tab=readme-ov-file#rtabmap_ros).
 
-## Optional
+## Optional Items
 
 ### *VS Code Extensions*
 
@@ -57,9 +57,32 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ## Usage
 
-### *Build Options*
+### *Building the App*
 
-The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` program, if you have it installed.
+If you want to get started as quickly as possible, you can run the provided build script via a terminal. If you are a developer, it's recommended you build the app via Qt Creator.
+
+- **Terminal** &ndash; Simply run the provided build script. It will automatically build the LIBRA ROS Tools submodule via colcon and source it, before building the main app via CMake.
+
+    ```bash
+    ./tools/build-all.bash
+    ```
+
+- **Qt Creator** &ndash; If you're building with ROS2 support, ensure you've sourced the relevant ROS2 environments in the *same* terminal you will use to launch Qt Creator. Then, click the gray "hammer" icon to build. Any errors will be output to the "Compile Output" tab at the bottom.
+
+    ```bash
+    # Setup a ROS2 environment
+    source /opt/ros/humble/setup.bash
+    # Add the "LIBRA ROS Tools" environment
+    source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
+    # Run Qt Creator
+    qtcreator
+    ```
+
+> ***NOTE:*** If you're getting the error `"Unknown CMake command "qt_xxx""`, you likely have an older version of Qt installed; Qt-specific CMake commands (starting with `qt_`) were added in Qt6. You can check which version you have by running Qt Creator, opening the "Help" tab at the top, and clicking "System Information".
+
+#### **Build Options**
+
+The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` app, if you have it installed.
 
 | Variable | Type | Possible<br>Values | Notes |
 |---|---|---|---|
@@ -68,19 +91,24 @@ The following CMake options can be used to easily select which version of the ap
 
 ### *Running the App*
 
-Open QtCreator (located at `<PATH-TO-QT-INSTALL-DIR>/Tools/QtCreator/bin/qtcreator`) and click the green "run" arrow at the bottom left. If you haven't built the project yet, or have made changes to the source code, this will automatically build it for you.
-
-For detailed usage instructions, see [USAGE.md](./USAGE.md).
-
-#### **If ROS2 is enabled**
-
-*Before opening QtCreator*, ensure you've sourced a ROS2 environment in the *same* terminal.
+If you built the app with ROS2 support, you must first source the ROS2 environments.
 
 ```bash
-. /opt/ros/humble/setup.bash
+source /opt/ros/humble/setup.bash
+source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
 ```
 
-If you're not sure whether you've done this correctly, my CMake will let you know at build time.
+The app can then be launched via the terminal or, if you need easy access to debugging tools, via Qt Creator. For detailed usage instructions, see [USAGE.md](./USAGE.md).
+
+- **Terminal** &ndash; Simply run the `libra_app_gui` executable located in the build folder (the path is output to the terminal at the end of the CMake build step).
+
+    ```bash
+    ./<PATH-TO-BUILD-FOLDER>/libra_app_gui
+    ```
+
+- **Qt Creator** &ndash; Open QtCreator and click the green "run" arrow at the bottom left.
+
+    > ***NOTE:*** If you haven't built the project yet, or have made changes to the source code, clicking the green "run" arrow will automatically build it for you.
 
 ### *Code Formatting*
 
