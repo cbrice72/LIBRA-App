@@ -18,7 +18,7 @@ project(
 
 # Project options (public)
 set(LIBRA_VERSION
-    2
+    1
     CACHE
         STRING
         "Which prototype to build for: 1 = LIBRA-I (HEBI x5), 2 = LIBRA-II (EPOS x1 + HEBI x1)"
