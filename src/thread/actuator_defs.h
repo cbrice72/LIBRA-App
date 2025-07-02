@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   actuator_defs.h
- * @brief  Type definitions for initializing LIBRA actuators; header-only.
+ * @brief  Common definitions for LIBRA actuators; header-only.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -12,6 +12,9 @@
 #include <variant>
 #include <vector>
 
+// Other Library Headers
+//   (none)
+
 /* --- TABLE OF CONTENTS ---
  * !Constants
  * !Helper Functions
@@ -22,6 +25,17 @@ namespace Actuator {  // class not necessary, but namespace improves readability
 //------------------------------------------------------------------------------
 // !Constants
 //------------------------------------------------------------------------------
+
+#if LIBRA_VERSION == 1
+constexpr int kJointCountHebi = 5;
+constexpr int kJointCountEpos = 0;
+#elif LIBRA_VERSION == 2
+constexpr int kJointCountHebi = 1;
+constexpr int kJointCountEpos = 1;
+#else
+constexpr int kJointCountHebi = 0;
+constexpr int kJointCountEpos = 0;
+#endif
 
 /**
  * @brief LIBRA actuator names.
@@ -37,8 +51,7 @@ enum Name {
     kYaw = 0,
     kPitch,
 #endif
-    kJointCount,  // included for convenience
-    kUndefined    // KEEP THIS LAST
+    kUndefined  // KEEP THIS LAST
 };
 
 /**
@@ -74,15 +87,15 @@ enum Feedback { kTargetPos = 0, kActualPos, kActualTorque };
 inline Name StringToNameEnum(const std::string& name_str) {
 #if LIBRA_VERSION == 1
     if (name_str == "MA") {
-        return kMA;
+        return Name::kMA;
     } else if (name_str == "MB") {
-        return kMB;
+        return Name::kMB;
     } else if (name_str == "J1") {
-        return kJ1;
+        return Name::kJ1;
     } else if (name_str == "J2") {
-        return kJ2;
+        return Name::kJ2;
     } else if (name_str == "J3") {
-        return kJ3;
+        return Name::kJ3;
     }
 #elif LIBRA_VERSION == 2
     if (name_str == "Yaw") {
@@ -105,24 +118,24 @@ inline Name StringToNameEnum(const std::string& name_str) {
 inline std::string NameEnumToString(Name name) {
 #if LIBRA_VERSION == 1
     switch (name) {
-        case kMA:
+        case Name::kMA:
             return "MA";
-        case kMB:
+        case Name::kMB:
             return "MB";
-        case kJ1:
+        case Name::kJ1:
             return "J1";
-        case kJ2:
+        case Name::kJ2:
             return "J2";
-        case kJ3:
+        case Name::kJ3:
             return "J3";
         default:
             return "Undefined";
     }
 #elif LIBRA_VERSION == 2
     switch (name) {
-        case kYaw:
+        case Name::kYaw:
             return "Yaw";
-        case kPitch:
+        case Name::kPitch:
             return "Pitch";
         default:
             return "Undefined";
