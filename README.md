@@ -4,6 +4,10 @@ The LIBRA robotic arm project is being developed for the internal survey of dang
 
 Project link: <https://github.com/christian-brice/LIBRA-App>
 
+![image](docs/images/main_window.png)
+
+Most colors used in this GUI are compliant with Bang Wong's proposed colorblind-friendly palette: [https://doi.org/10.1038/nmeth.1618](https://doi.org/10.1038/nmeth.1618).
+
 ## Table of Contents
 
 - [Requirements](#requirements)
