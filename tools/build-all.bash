@@ -113,4 +113,4 @@ color_echo INFO "$F_ELAPSED_TIME"
 # ==================== SCRIPT END ====================
 
 echo -e "\nYou may now run the app with the following command:"
-echo "  source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && ./build/libra_app_gui"
+echo "  source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && ./build/<BUILD_TYPE>/libra_app_gui"
