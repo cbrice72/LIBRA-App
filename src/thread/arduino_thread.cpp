@@ -135,43 +135,42 @@ ArduinoThread::~ArduinoThread() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns formatted activity information for the fluid system(s).
+ * @brief Parses the active water command based on the specified side and
+ *        reports its status.
  *
- * @return QString Status in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
+ * @param side The side of the fluid system to check
+ * @return Water::State The state of the specified fluid system
  */
-QString ArduinoThread::GetWaterStatus() {
-    if (!ser_water_->isOpen() || water_cmd_.isEmpty()) {
-        return QString("<span style='color: gray;'>-- | --</span>");
-    }
+void ArduinoThread::SendWaterStatus(Water::Side side) {
+    auto state = Water::State::kStopped;
 
-    uint8_t command = static_cast<uint8_t>(water_cmd_[0]);
-
-    // Extract A-side (left-hand) status
-    QString status_A;
-    if ((command & kAIn) != 0) {
-        status_A = "<span style='color: green;'>IN</span>";
-    } else if ((command & kAOut) != 0) {
-        status_A = "<span style='color: red;'>OUT</span>";
-    } else {
-        status_A = "<span style='color: gray;'>--</span>";
-    }
-
+    if (ser_water_->isOpen() && !water_cmd_.isEmpty()) {
+        // Parse command to get corresponding state
+        uint8_t command = static_cast<uint8_t>(water_cmd_[0]);
+        switch (side) {
+            case Water::Side::kA:
+                if ((command & kAIn) != 0) {
+                    state = Water::State::kFilling;
+                } else if ((command & kAOut) != 0) {
+                    state = Water::State::kDraining;
+                }
+                break;
 #if LIBRA_VERSION == 1
-    // Extract B-side (right-hand) status
-    QString status_B;
-    if ((command & kBIn) != 0) {
-        status_B = "<span style='color: green;'>IN</span>";
-    } else if ((command & kBOut) != 0) {
-        status_B = "<span style='color: red;'>OUT</span>";
-    } else {
-        status_B = "<span style='color: gray;'>--</span>";
+            case Water::Side::kB:
+                if ((command & kBIn) != 0) {
+                    state = Water::State::kFilling;
+                } else if ((command & kBOut) != 0) {
+                    state = Water::State::kDraining;
+                }
+                break;
+#endif
+            default:
+                // Do nothing (since state is initialized at the top)
+                break;
+        }
     }
 
-    // Form return string
-    return status_A + " | " + status_B;
-#else
-    return status_A;
-#endif
+    emit ReportWaterStatus(side, state);
 }
 
 //------------------------------------------------------------------------------
@@ -235,7 +234,10 @@ void ArduinoThread::run() {
         if (ser_water_->isOpen()) {
             ser_water_->write(water_cmd_);
 
-            emit ReportWaterStatus(GetWaterStatus());
+            SendWaterStatus(Water::Side::kA);  // emits ReportWaterStatus
+#if LIBRA_VERSION == 1
+            SendWaterStatus(Water::Side::kB);  // "
+#endif
         }
     }
 

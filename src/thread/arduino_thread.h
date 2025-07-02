@@ -16,6 +16,7 @@
 #include <QThread>      // Qt::Core
 
 // Project Headers
+#include "arduino_defs.h"
 #include "logger.h"
 
 /**
@@ -65,7 +66,7 @@ class ArduinoThread : public QThread {
                         const double& tilt);
 #endif
     void WaterConnected(const bool& connected);
-    void ReportWaterStatus(const QString& status);
+    void ReportWaterStatus(const Water::Side& side, const Water::State& state);
 
     void ErrorThrown(const QString& err);
 
@@ -74,7 +75,7 @@ class ArduinoThread : public QThread {
 
     // --- Helper Functions ---
 
-    QString GetWaterStatus();
+    void SendWaterStatus(Water::Side side);
 
     // --- Data Members ---
 

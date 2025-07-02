@@ -210,32 +210,15 @@ void MainWindow::ConfigureUi() {
 
     // ========== Water ==========
 
-    // Unneeded Widgets
-#if LIBRA_VERSION == 2
-    RemoveUiElement(ui_->w_counterweight_2);
+    // Unneeded widgets
+#if LIBRA_VERSION != 1
+    RemoveUiElement(ui_->vl_counterweight_2);
+    RemoveUiElement(ui_->pb_water_fill_2);
+    RemoveUiElement(ui_->pb_water_drain_2);
 #endif
 
     // Slots
-    // TODO: implementation
-    /*
-    connect(TODO, TODO,  // when clicked
-            ui_->w_counterweight_1, &TankWidget::Fill);   // start filling
-
-    connect(TODO, TODO,  // when clicked
-            ui_->w_counterweight_1, &TankWidget::Stop);    // stop
-
-    connect(TODO, TODO,   // when clicked
-            ui_->w_counterweight_1, &TankWidget::Drain);  // start draining
-
-#if LIBRA_VERSION == 1
-    connect(TODO, TODO,  // "
-            ui_->w_counterweight_2, &TankWidget::Fill);
-
-    connect(TODO, TODO,  // "
-            ui_->w_counterweight_2, &TankWidget::Stop);
-
-    connect(TODO, TODO,  // "
-            ui_->w_counterweight_2, &TankWidget::Drain);
+#if LIBRA_VERSION != 1
 #endif
 */
 
@@ -625,34 +608,52 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
 #endif
 
 /**
- * @brief Reflect SerialWater connection status in UI.
+ * @brief Reflects SerialWater connection status in UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
-    if (connected) {
-        ui_->a_water_connect->setEnabled(false);
-        ui_->a_water_disconnect->setEnabled(true);
-        // Initializes into "Disabled" state by default
-        ui_->pb_water_enable->setEnabled(true);
-        ui_->pb_water_drain->setEnabled(true);
-    } else {
-        ui_->a_water_connect->setEnabled(true);
-        ui_->a_water_disconnect->setEnabled(false);
-        // Disable all buttons regardless of which state it's in
-        ui_->pb_water_enable->setEnabled(false);
-        ui_->pb_water_disable->setEnabled(false);
-        ui_->pb_water_drain->setEnabled(false);
-    }
+    ui_->a_water_connect->setEnabled(!connected);
+    ui_->a_water_disconnect->setEnabled(connected);
+
+    ui_->pb_water_enable->setEnabled(connected);
+
+    ui_->pb_water_fill_1->setEnabled(connected);
+    ui_->pb_water_drain_1->setEnabled(connected);
+#if LIBRA_VERSION == 1
+    ui_->pb_water_fill_2->setEnabled(connected);
+    ui_->pb_water_drain_2->setEnabled(connected);
+#endif
 }
 
 /**
- * @brief Prints colorized fluid system state in the "WATER" GroupBox.
+ * @brief Reflects fluid system status in UI.
+ *        - Primary visual feedback: formatted status string in "WATER" GroupBox
+ *        - Secondary visual feedback: updates TankWidget(s) animation state
  *
- * @param status Text in the format "A | B" (LIBRA-I) or "A" (LIBRA-II)
- *
- * @see ArduinoThread::GetWaterStatus
+ * @param side The side of the fluid system
+ * @param state The flow state of the fluid system
  */
-void MainWindow::HandleWaterStatus(const QString& status) {
-    ui_->l_water_status->setText(status);
+void MainWindow::HandleWaterStatus(const Water::Side& side,
+                                   const Water::State& state) {
+    // Display formatted status string - primary visual feedback
+    switch (side) {
+        case Water::Side::kA:
+            ui_->l_water1_status->setText(Water::StateEnumToString(state));
+            ui_->tw_fill_level_1->UpdateState(state);
+            break;
+#if LIBRA_VERSION == 1
+        case Water::Side::kB:
+            ui_->l_water2_status->setText(Water::StateEnumToString(state));
+            ui_->tw_fill_level_2->UpdateState(state);
+            break;
+#endif
+        default:
+            // Shouldn't be able to get here
+            qCritical() << "[ERROR] Received status for unknown fluid system "
+                           "side: Water::Side("
+                        << std::to_string(static_cast<int>(side)) << ")";
+    }
+
+    // Pass along to TankWidget(s) - secondary visual feedback
 }
 
 /**
@@ -855,9 +856,9 @@ void MainWindow::on_a_lidar_about_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_empty_triggered() {
-    ui_->w_counterweight_1->OverrideLevel(0.0);
+    ui_->tw_fill_level_1->OverrideLevel(0.0);
 #if LIBRA_VERSION == 1
-    ui_->w_counterweight_2->OverrideLevel(0.0);
+    ui_->tw_fill_level_2->OverrideLevel(0.0);
 #endif
 }
 
@@ -868,9 +869,9 @@ void MainWindow::on_a_water_set_empty_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_full_triggered() {
-    ui_->w_counterweight_1->OverrideLevel(1.0);
+    ui_->tw_fill_level_1->OverrideLevel(1.0);
 #if LIBRA_VERSION == 1
-    ui_->w_counterweight_2->OverrideLevel(1.0);
+    ui_->tw_fill_level_2->OverrideLevel(1.0);
 #endif
 }
 
@@ -977,29 +978,24 @@ void MainWindow::on_pb_manip_fast_clicked() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Enable fluid system operation (and, by association, automatic torque
- *        control of the central arm joint).
+ * @brief Enable/disable fluid system operation (and, by association, automatic
+ *        torque control of the central arm joint).
+ *
+ * @param checked Whether the fluid system is being enabled or disabled
  */
-void MainWindow::on_pb_water_enable_clicked() {
-    emit EnableFluidSystem(true);
-    emit EnableAutoTorqueComp(true);
+void MainWindow::on_pb_water_enable_toggled(bool checked) {
+    emit EnableFluidSystem(checked);
+    emit EnableAutoTorqueComp(checked);
 
-    // Reflect changes in UI
-    ui_->pb_water_enable->setEnabled(false);
-    ui_->pb_water_disable->setEnabled(true);
-}
-
-/**
- * @brief Disable fluid system operation (and, by association, automatic torque
- *        control of the central arm joint).
- */
-void MainWindow::on_pb_water_disable_clicked() {
-    emit EnableFluidSystem(false);
-    emit EnableAutoTorqueComp(false);
-
-    // Reflect changes in UI
-    ui_->pb_water_enable->setEnabled(true);
-    ui_->pb_water_disable->setEnabled(false);
+    if (checked) {
+        // Clearly display an "enabled" state
+        ui_->pb_camera_record->setStyleSheet("color: red;");
+        ui_->pb_camera_record->setText("DISABLE");
+    } else {
+        // Revert to "disabled" state
+        ui_->pb_camera_record->setStyleSheet("color: black;");
+        ui_->pb_camera_record->setText("ENABLE");
+    }
 }
 
 /**
