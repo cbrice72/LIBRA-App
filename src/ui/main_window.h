@@ -87,7 +87,7 @@ class MainWindow : public QMainWindow {
 #endif
 
     void HandleWaterConnChanged(const bool& connected);
-    void HandleWaterStatus(const QString& status);
+    void HandleWaterStatus(const Water::Side& side, const Water::State& state);
 
     // --- Actuator Updates ---
 
@@ -169,8 +169,7 @@ class MainWindow : public QMainWindow {
 
     // Water
 
-    void on_pb_water_enable_clicked();
-    void on_pb_water_disable_clicked();
+    void on_pb_water_enable_toggled(bool checked);
     void on_pb_water_drain_clicked();
 
     // Camera
