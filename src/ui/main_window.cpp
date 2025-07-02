@@ -224,10 +224,11 @@ void MainWindow::ConfigureUi() {
 
     // ========== Menu Bar ==========
 
-#if LIBRA_VERSION == 1
-    ui_->m_epos->setEnabled(false);
-#elif LIBRA_VERSION == 2
+    // Unneeded menus/actions
+#if LIBRA_VERSION != 1
     ui_->m_serial_servo->setEnabled(false);
+#elif LIBRA_VERSION != 2
+    ui_->m_epos->setEnabled(false);
 #endif
 
     // Slots
@@ -243,19 +244,12 @@ void MainWindow::ConfigureUi() {
 #endif
 
     // Slots
-#if LIBRA_VERSION != 1
-#endif
-*/
+    //   (none)
 
     // ========== Arm ==========
 
-    // Unneeded Widgets
-#if LIBRA_VERSION == 1
-    RemoveUiElement(ui_->gl_yaw_input);
-    RemoveUiElement(ui_->gl_yaw_output);
-
-    RemoveUiElement(ui_->l_epos_status);
-#elif LIBRA_VERSION == 2
+    // Unneeded widgets
+#if LIBRA_VERSION != 1
     RemoveUiElement(ui_->gl_roll_input);
     RemoveUiElement(ui_->gl_roll_output);
 
@@ -267,6 +261,11 @@ void MainWindow::ConfigureUi() {
 
     RemoveUiElement(ui_->gl_j3_input);
     RemoveUiElement(ui_->gl_j3_output);
+#elif LIBRA_VERSION != 2
+    RemoveUiElement(ui_->gl_yaw_input);
+    RemoveUiElement(ui_->gl_yaw_output);
+
+    RemoveUiElement(ui_->l_epos_status);
 #endif
 
     // Slots
@@ -275,7 +274,12 @@ void MainWindow::ConfigureUi() {
     connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
             ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
 
-#if LIBRA_VERSION == 1
+#if LIBRA_VERSION != 1
+    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_yaw, &QAbstractSlider::setValue);
+#elif LIBRA_VERSION != 2
     connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // "
             ui_->sb_arm_roll, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // "
@@ -295,11 +299,6 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
-#elif LIBRA_VERSION == 2
-    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_yaw, &QAbstractSlider::setValue);
 #endif
 
     // ========== Camera ==========
@@ -497,6 +496,14 @@ void MainWindow::InitializeFeedbackElementMap() {
         ui_->l_actual_roll;
     feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_roll;
+#elif LIBRA_VERSION == 2
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_yaw;
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_yaw;
+    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_yaw;
+#endif
 
     feedback_element_map_[Joint::kPitch][Actuator::Feedback::kTargetPos] =
         ui_->l_target_pitch;
@@ -506,6 +513,7 @@ void MainWindow::InitializeFeedbackElementMap() {
         ui_->l_torque_pitch;
 
     // Arm
+#if LIBRA_VERSION == 1
     feedback_element_map_[Joint::kJ1][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j1;
     feedback_element_map_[Joint::kJ1][Actuator::Feedback::kActualPos] =
@@ -526,22 +534,6 @@ void MainWindow::InitializeFeedbackElementMap() {
         ui_->l_actual_j3;
     feedback_element_map_[Joint::kJ3][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j3;
-#elif LIBRA_VERSION == 2
-    // Yaw joint
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_yaw;
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_yaw;
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_yaw;
-
-    // Pitch joint
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_pitch;
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_pitch;
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_pitch;
 #endif
 }
 
@@ -685,16 +677,16 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
  * @brief Reflects HEBI actuator connection status in UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    ui_->a_hebi_connect->setEnabled(!connected);
+    ui_->a_hebi_disconnect->setEnabled(connected);
+
+    ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
-        ui_->a_hebi_connect->setEnabled(false);
-        ui_->a_hebi_disconnect->setEnabled(true);
-        ui_->pb_arm_start->setEnabled(true);
-        ui_->pb_arm_stop->setEnabled(true);
-    } else {
-        ui_->a_hebi_connect->setEnabled(true);
-        ui_->a_hebi_disconnect->setEnabled(false);
-        ui_->pb_arm_start->setEnabled(false);
-        // DON'T disable pb_arm_stop as other actuator types may still be connected
+        // NOTE: It is possible for multiple actuator types -- and, by
+        //       extension, multiple HandleXConnChanged() calls -- to exist.
+        //       Therefore, the "STOP" PushButton should only ever be enabled
+        //       by such calls, since other actuators may still be connected.
+        ui_->pb_arm_stop->setEnabled(connected);
     }
 }
 
@@ -703,16 +695,16 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    ui_->a_epos_connect->setEnabled(!connected);
+    ui_->a_epos_disconnect->setEnabled(connected);
+
+    ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
-        ui_->a_epos_connect->setEnabled(false);
-        ui_->a_epos_disconnect->setEnabled(true);
-        ui_->pb_arm_start->setEnabled(true);
-        ui_->pb_arm_stop->setEnabled(true);
-    } else {
-        ui_->a_epos_connect->setEnabled(true);
-        ui_->a_epos_disconnect->setEnabled(false);
-        ui_->pb_arm_start->setEnabled(false);
-        // DON'T disable pb_arm_stop as other actuator types may still be connected
+        // NOTE: It is possible for multiple actuator types -- and, by
+        //       extension, multiple HandleXConnChanged() calls -- to exist.
+        //       Therefore, the "STOP" PushButton should only ever be enabled
+        //       by such calls, since other actuators may still be connected.
+        ui_->pb_arm_stop->setEnabled(connected);
     }
 }
 #endif
