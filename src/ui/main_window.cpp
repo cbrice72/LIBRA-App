@@ -208,6 +208,9 @@ void MainWindow::ConfigureUi() {
     ui_->m_serial_servo->setEnabled(false);
 #endif
 
+    // Slots
+    //   (none)
+
     // ========== Water ==========
 
     // Unneeded widgets
@@ -311,7 +314,7 @@ void MainWindow::InitializeThreads() {
 
     // Thread cleanup
     connect(log_thread_, &LogThread::finished,      // when thread exits
-            log_thread_, &LogThread::deleteLater);  // ... deallocate
+            log_thread_, &LogThread::deleteLater);  // deallocate
 
     log_thread_->start();
     */
@@ -362,7 +365,7 @@ void MainWindow::InitializeThreads() {
 
     // Thread cleanup
     connect(arduino_thread_, &ArduinoThread::finished,      // when thread exits
-            arduino_thread_, &ArduinoThread::deleteLater);  // ... deallocate
+            arduino_thread_, &ArduinoThread::deleteLater);  // deallocate
 
     arduino_thread_->start();
 
@@ -410,7 +413,7 @@ void MainWindow::InitializeThreads() {
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits
-            hebi_thread_, &HebiThread::deleteLater);  // ... deallocate
+            hebi_thread_, &HebiThread::deleteLater);  // deallocate
 
     hebi_thread_->start();
 
@@ -448,7 +451,7 @@ void MainWindow::InitializeThreads() {
 
     // Thread cleanup
     connect(epos_thread_, &EposThread::finished,      // when thread exits
-            epos_thread_, &EposThread::deleteLater);  // ... deallocate
+            epos_thread_, &EposThread::deleteLater);  // deallocate
 
     epos_thread_->start();
 #endif
@@ -464,8 +467,8 @@ void MainWindow::InitializeThreads() {
  * @see Joint::Name Actuator::Feedback
  */
 void MainWindow::InitializeFeedbackElementMap() {
+    // Central joint
 #if LIBRA_VERSION == 1
-    // 2-Dof joint
     feedback_element_map_[Joint::kRoll][Actuator::Feedback::kTargetPos] =
         ui_->l_target_roll;
     feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualPos] =
@@ -576,7 +579,7 @@ void MainWindow::ConnectWaterHelper() {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Reflect SerialServo connection status in UI.
+ * @brief Reflects SerialServo connection status in UI.
  */
 void MainWindow::HandleManipConnChanged(const bool& connected) {
     if (connected) {
@@ -657,7 +660,7 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
 }
 
 /**
- * @brief Reflect HEBI actuator connection status in UI.
+ * @brief Reflects HEBI actuator connection status in UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
     if (connected) {
@@ -675,7 +678,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Reflect EPOS (Maxon) actuator connection status in UI.
+ * @brief Reflects EPOS (Maxon) actuator connection status in UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
     if (connected) {
@@ -712,7 +715,7 @@ void MainWindow::HandleActuatorFeedback(
         const double mb_val = mb->second;
 
         /*
-         * From our forward mapping at the `emit CommandHebi(...)` call:
+         * From our forward mapping at the `emit CommandHebi()` call:
          *   MA = -roll - pitch
          *   MB = -roll + pitch
          * Combine the equations and solve:

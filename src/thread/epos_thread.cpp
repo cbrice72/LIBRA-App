@@ -71,6 +71,7 @@ constexpr int32_t kTimeout = 100;  // ms
 constexpr int kNodeID = 1;         // for now, we only support one actuator
 
 // - For Profile Position/Velocity Modes
+
 constexpr uint kProfileVel = 1000;  // rpm
 constexpr uint kProfileAcc = 1000;  // rpm/s
 constexpr uint kProfileDec = 100;   // rpm/s
@@ -78,6 +79,7 @@ constexpr uint kProfileDec = 100;   // rpm/s
 constexpr uint kEmergencyProfileDec = 2000;  // rpm/s
 
 // - For Profile Position Mode (see `VCS_MoveToPosition()`)
+
 constexpr int kMoveAbsolute = 1;     // `Absolute` = TRUE
 constexpr int kMoveRelative = 0;     // `Absolute` = FALSE
 constexpr int kMoveImmediately = 1;  // `Immediately` = TRUE

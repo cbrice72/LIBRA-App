@@ -29,31 +29,32 @@
  */
 
 #if LIBRA_VERSION == 1
-// Convenience constants for manipulator control
+// Convenience Indexes for Manipulator Control
+
 constexpr uint8_t kPitch = 0;
 constexpr uint8_t kPan = 1;
 constexpr uint8_t kTilt = 2;
 
-// Manipulator control
+// Manipulator Control
+
 constexpr double kManipSlowSpeed = 1.5;   // deg/s, arbitrary
 constexpr double kManipUpdateSpeed = 60;  // Hz, assumed (see note below)
 constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
+// NOTE: the old LIBRA-I control app calculated the "Slow" speed using arbitrary
+//       "magic" numbers. I think this results in a nice speed, though, so I try
+//       to make sense of it using the constants defined above. For reference,
+//       the servos are rated at a speed of 60 deg / 0.18 sec (at 5.0 V).
 #endif
 
-// NOTE: the old LIBRA-I control app calculated the "Slow" speed using
-// arbitrary
-//       "magic" numbers. I think this results in a nice speed, though, so I
-//       try to make sense of it using the constants defined above. For
-//       reference, the servos are rated at a speed of 60 deg / 0.18 sec
-//       (at 5.0 V).
+// Bit Positions for water_cmd_ (see usage in following constexpr block)
 
-// Bit positions for water_cmd_ (see usage in following constexpr block)
 constexpr uint8_t kAIn = 0b1000;
 constexpr uint8_t kBIn = 0b0100;
 constexpr uint8_t kAOut = 0b0010;
 constexpr uint8_t kBOut = 0b0001;
 
-// Water commands based on torque direction (where North = PI/2 = forward)
+// Water Commands based on Torque Direction (where North = PI/2 = forward)
+
 constexpr uint8_t kWestCmd = kAIn | kBOut;    // 0b1001
 constexpr uint8_t kNorthWestCmd = kBOut;      // 0b0001
 constexpr uint8_t kNorthCmd = kAOut | kBOut;  // 0b0011
@@ -64,7 +65,8 @@ constexpr uint8_t kSouthCmd = kAIn | kBIn;    // 0b1100
 constexpr uint8_t kSouthWestCmd = kAIn;       // 0b1000
 
 // NOLINTBEGIN(readability-identifier-naming)
-// Angular thresholds for direction determination
+// Angular Thresholds for Direction Determination
+
 constexpr double k1_8Pi = M_PI / 8.0;
 constexpr double k3_8Pi = M_PI * 3.0 / 8.0;
 constexpr double k5_8Pi = M_PI * 5.0 / 8.0;

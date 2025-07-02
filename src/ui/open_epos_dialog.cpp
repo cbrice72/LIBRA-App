@@ -26,6 +26,8 @@
  * !Uncategorized
  */
 
+// EPOS Functions
+
 constexpr int kMaxonTrue = 1;   // In general Maxon code = TRUE
 constexpr int kMaxonFalse = 0;  // In general Maxon code = FALSE
 constexpr uint kMaxCharBufSize = 100;
