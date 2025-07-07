@@ -23,6 +23,10 @@
 // Project Headers
 #include "logger.h"
 
+/**
+ * @brief Manages a single `QCamera` object, allowing for image capture, video
+ *        recording, and streaming to Qt Multimedia Widgets.
+ */
 class CameraManager : public QObject
 #ifdef BUILD_WITH_ROS2
     ,

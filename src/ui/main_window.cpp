@@ -200,7 +200,7 @@ MainWindow::~MainWindow() {
 void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
-    // Set LIBRA_VERSION label
+    // Display build configuration: LIBRA_VERSION
     QString ver_text =
         "<span style='color: rgba(0, 0, 0, 0.6);'>LIBRA_VERSION = ";
 #ifdef LIBRA_VERSION
@@ -211,7 +211,7 @@ void MainWindow::ConfigureUi() {
     ver_text += "</span>";
     ui_->static_l_libraversion->setText(ver_text);
 
-    // Set BUILD_WITH_ROS2 label
+    // Display build configuration: BUILD_WITH_ROS2
     QString ros2en_text =
         "<span style='color: rgba(0, 0, 0, 0.6);'>BUILD_WITH_ROS2 = ";
 #ifdef BUILD_WITH_ROS2
@@ -834,25 +834,29 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
     ui_->cb_camera_id->clear();  // existing list may be stale
 
     const auto cameras = QMediaDevices::videoInputs();
-    for (const auto& camera_device : cameras) {
-        auto id = QString(camera_device.id());
+    for (const auto& camera : cameras) {
+        auto id = QString(camera.id());
 
         if (debug_mode_) {
-            qDebug() << "[DEBUG] Found camera at " << camera_device.id();
+            qDebug() << "[DEBUG] Found camera at " << camera.id();
         }
 
         // Populate ComboBox
         ui_->cb_camera_id->addItem(id);
 
         // Populate internal map (used on ComboBox change)
-        available_cameras_[id] = camera_device.description();
+        available_cameras_[id] = camera.description();
     }
 
-    if (!available_cameras_.empty()) {
-        ui_->pb_camera_capture->setEnabled(true);
-        ui_->pb_camera_record->setEnabled(true);
-    } else if (debug_mode_) {
-        qDebug() << "[DEBUG] No cameras were found";
+    // NOTE: the "CAPTURE" and "RECORD" buttons are only enabled when a camera
+    //       is selected (see the on_cb_camera_id_currentTextChanged() callback)
+    if (available_cameras_.empty()) {
+        ui_->pb_camera_capture->setEnabled(false);
+        ui_->pb_camera_record->setEnabled(false);
+
+        if (debug_mode_) {
+            qDebug() << "[DEBUG] No cameras were found";
+        }
     }
 }
 
@@ -1061,7 +1065,8 @@ void MainWindow::on_pb_camera_capture_clicked() {
     camera_manager_->Capture();
 
     // Display a status tip at the bottom of the UI
-    statusBar()->showMessage("Saved capture to img/ directory!", kInfoLifespan);
+    statusBar()->showMessage("Saving capture to img/ directory...",
+                             kInfoLifespan);
 }
 
 /**
@@ -1074,7 +1079,7 @@ void MainWindow::on_pb_camera_record_clicked() {
         ui_->pb_camera_record->setText("STOP");
     } else {
         // Display a status tip at the bottom of the UI
-        statusBar()->showMessage("Saved recording to vid/ directory!",
+        statusBar()->showMessage("Saving recording to vid/ directory...",
                                  kInfoLifespan);
 
         // Revert to original state

@@ -487,6 +487,7 @@ void CameraManager::Capture() {
     if (!CameraIsActive()) {
         logger_->Error("CameraManager - Cannot capture image; camera not "
                        "initialized!");
+        return;
     }
 
     image_filename_ = output_dir_ + "img/" + GetDateTimeStr() + ".jpg";
@@ -528,6 +529,7 @@ bool CameraManager::Record() {
     if (!CameraIsActive()) {
         logger_->Error(
             "CameraManager - Cannot record video; camera not initialized!");
+        return;
     }
 
     if (!is_recording_.load()) {
