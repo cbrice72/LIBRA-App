@@ -31,33 +31,6 @@ target_link_libraries(
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
 )
 
-# ========================= ARDUINO THREAD =========================
-
-# Create and configure the module
-qt_add_library(
-    arduino_thread
-    STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/arduino_thread.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/arduino_thread.cpp
-)
-
-# Ensure this module packages the necessary headers
-target_include_directories(
-    arduino_thread
-    # Make this directory available to consumers
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Tell the linker which libraries to link against
-target_link_libraries(
-    arduino_thread
-    # Project
-    PUBLIC logger
-    # Qt
-    PUBLIC Qt${QT_VERSION_MAJOR}::Core
-    PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
-)
-
 # ========================= ACTUATOR THREAD =========================
 
 # Check whether the third-party directories are defined
