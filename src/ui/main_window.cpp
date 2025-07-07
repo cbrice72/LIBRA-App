@@ -234,7 +234,7 @@ void MainWindow::ConfigureUi() {
     // Slots
     //   (none)
 
-    // ========== ARM ==========
+    // ========== Arm ==========
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
@@ -289,7 +289,7 @@ void MainWindow::ConfigureUi() {
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
 #endif
 
-    // ========== WATER ==========
+    // ========== Water ==========
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
@@ -299,10 +299,10 @@ void MainWindow::ConfigureUi() {
 #endif
 
     // Slots
-    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
+    connect(ui_->a_water_connect, &QAction::triggered,  // set up water connect
             this, &MainWindow::ConnectWaterHelper);
 
-    // ========== MANIPULATOR ==========
+    // ========== Manipulator ==========
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
@@ -311,11 +311,11 @@ void MainWindow::ConfigureUi() {
 
     // Slots
 #if LIBRA_VERSION == 1
-    connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
+    connect(ui_->a_manip_connect, &QAction::triggered,  // set up servo connect
             this, &MainWindow::ConnectManipHelper);
 #endif
 
-    // ========== CAMERA ==========
+    // ========== Camera ==========
 
     connect(ui_->pb_camera_refresh, &QPushButton::clicked,     // when clicked,
             ui_->a_refresh_camera_list, &QAction::triggered);  // refresh list
@@ -877,16 +877,6 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
             qDebug() << "[DEBUG] No cameras were found";
         }
     }
-}
-
-/**
- * @brief Event handler for "Sensors/2D LIDAR" menu action "About".
- *        Opens a dialog box with sensor metadata, if connected.
- */
-void MainWindow::on_a_lidar_about_triggered() {
-    qDebug() << "[WARN] 2D LIDAR \"About\" not yet implemented";
-
-    // TODO: spinning LIDAR implementation
 }
 
 /**
