@@ -977,16 +977,18 @@ void MainWindow::on_pb_arm_start_clicked() {
  * @brief Moves manipulator servos at a leisurely pace.
  */
 void MainWindow::on_pb_manip_slow_clicked() {
-    emit CommandManip(ui_->sb_arm_j3->value(), ui_->sb_manip_pan->value(),
-                      ui_->sb_manip_tilt->value(), kManipMoveSlow);
+    emit CommandManip(ui_->l_actual_j3->text().toDouble(),
+                      ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
+                      kManipMoveSlow);
 }
 
 /**
  * @brief Moves manipulator servos at maximum speed (near-instant).
  */
 void MainWindow::on_pb_manip_fast_clicked() {
-    emit CommandManip(ui_->sb_arm_j3->value(), ui_->sb_manip_pan->value(),
-                      ui_->sb_manip_tilt->value(), kManipMoveFast);
+    emit CommandManip(ui_->l_actual_j3->text().toDouble(),
+                      ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
+                      kManipMoveFast);
 }
 #endif
 
