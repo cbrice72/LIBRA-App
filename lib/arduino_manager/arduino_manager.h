@@ -22,15 +22,13 @@
 
 /**
  * @brief Manages multiple serial Arduino devices using `QTimer`-based updates.
+ *        "Water" members control the fluid system (counterweight in/out).
+ *        "Manip" members control LIBRA-I's 3-servo, 2-DoF manipulator.
  *
  * @note Unlike `CameraManager`, this class uses `QTimer`s to asynchronously
  *       communicate with its device(s). Therefore, it follows the same
  *       command/feedback pattern as the `QThread`-based `HebiThread` and
  *       `EposThread` classes.
- *
- * @todo Delete below notes once SerialServo rename is complete.
- * @note "Manip" = SerialServo, in charge of LIBRA-I's 3-servo manipulator.
- * @note "Water" = SerialWater, in charge of the fluid system (water in/out).
  *
  * @see CameraManager HebiThread EposThread
  */
@@ -56,6 +54,11 @@ class ArduinoManager : public QObject {
 
     // --- Arduino Commands ---
 
+    void ConnectWater(QString port_name);
+    void DisconnectWater();
+    void SetWaterState(const bool& enabled);
+    void SetWaterCommand(double torque_dir);
+
 #if LIBRA_VERSION == 1
     void ConnectManip(QString port_name);
     void DisconnectManip();
@@ -63,23 +66,18 @@ class ArduinoManager : public QObject {
                          const double& target_tilt, const bool& move_slow);
 #endif
 
-    void ConnectWater(QString port_name);
-    void DisconnectWater();
-    void SetWaterState(const bool& enabled);
-    void SetWaterCommand(double torque_dir);
-
   signals:
     // --- Arduino Updates ---
 
     void ErrorThrown(const QString& err);
 
+    void WaterConnected(const bool& connected);
+    void ReportWaterStatus(const Water::Side& side, const Water::State& state);
 #if LIBRA_VERSION == 1
     void ManipConnected(const bool& connected);
     void ReportPosition(const double& base, const double& pan,
                         const double& tilt);
 #endif
-    void WaterConnected(const bool& connected);
-    void ReportWaterStatus(const Water::Side& side, const Water::State& state);
 
   private slots:
     // --- Timer Management ---
@@ -93,10 +91,10 @@ class ArduinoManager : public QObject {
     void SendWaterStatus(Water::Side side);
 
     void RefreshUpdateTimerState();
+    void UpdateWater();
 #if LIBRA_VERSION == 1
     void UpdateManip();
 #endif
-    void UpdateWater();
 
     // --- Data Members ---
 
@@ -104,28 +102,32 @@ class ArduinoManager : public QObject {
     bool debug_mode_{false};
 
     // Serial port management
-    QSerialPort* ser_servo_{nullptr};
+
     QSerialPort* ser_water_{nullptr};
+    QSerialPort* ser_manip_{nullptr};
 
     // Timer management
+
     QTimer* update_timer_{nullptr};
     static constexpr int kUpdateIntervalMs = 500;  // 2 Hz
 
     QTimer* reconnect_timer_{nullptr};
     static constexpr int kReconnectIntervalMs = 3000;  // 3 sec
+    bool water_needs_reconnect_{false};
 #if LIBRA_VERSION == 1
     bool manip_needs_reconnect_{false};
 #endif
-    bool water_needs_reconnect_{false};
+
+    // Water state
+
+    bool water_en_{false};
+    QByteArray water_cmd_;  // only 4 bits used
 
 #if LIBRA_VERSION == 1
     // Manip state
+
     std::array<double, 3> m_current_pos_{0};
     std::array<double, 3> m_target_pos_{0};
     std::array<int, 3> m_slow_direction_{0};
 #endif
-
-    // Water state
-    bool water_en_{false};
-    QByteArray water_cmd_;  // only 4 bits used
 };

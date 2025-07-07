@@ -26,27 +26,9 @@
  * !Class Helpers
  * !Timer Management
  * !Timer Helpers
- * !Manipulator Commands (slots)
  * !Water Commands (slots)
+ * !Manipulator Commands (slots)
  */
-
-#if LIBRA_VERSION == 1
-// Convenience Indexes for Manipulator Control
-
-constexpr uint8_t kPitch = 0;
-constexpr uint8_t kPan = 1;
-constexpr uint8_t kTilt = 2;
-
-// Manipulator Control
-
-constexpr double kManipSlowSpeed = 1.5;   // deg/s, arbitrary
-constexpr double kManipUpdateSpeed = 60;  // Hz, assumed (see note below)
-constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
-// NOTE: the old LIBRA-I control app calculated the "Slow" speed using arbitrary
-//       "magic" numbers. I think this results in a nice speed, though, so I try
-//       to make sense of it using the constants defined above. For reference,
-//       the servos are rated at a speed of 60 deg / 0.18 sec (at 5.0 V).
-#endif
 
 // Bit Positions for water_cmd_ (see usage in following constexpr block)
 
@@ -76,6 +58,24 @@ constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
 
 // NOLINTEND(readability-identifier-naming)
 
+#if LIBRA_VERSION == 1
+// Convenience Indexes for Manipulator Control
+
+constexpr uint8_t kPitch = 0;
+constexpr uint8_t kPan = 1;
+constexpr uint8_t kTilt = 2;
+
+// Manipulator Control
+
+constexpr double kManipSlowSpeed = 1.5;   // deg/s, arbitrary
+constexpr double kManipUpdateSpeed = 60;  // Hz, assumed (see note below)
+constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
+// NOTE: the old LIBRA-I control app calculated the "Slow" speed using arbitrary
+//       "magic" numbers. I think this results in a nice speed, though, so I try
+//       to make sense of it using the constants defined above. For reference,
+//       the servos are rated at a speed of 60 deg / 0.18 sec (at 5.0 V).
+#endif
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ namespace {
  * @param bytes The QByteArray to convert
  * @return std::string A representation of the input QBitArray in binary format
  */
-std::string BytesToStr(QByteArray bytes) {
+std::string BytesToStr(const QByteArray& bytes) {
     std::string str;
 
     // TODO: check the result of this block against the new one before deleting it
@@ -128,8 +128,8 @@ std::string BytesToStr(QByteArray bytes) {
 ArduinoManager::ArduinoManager(QObject* parent, const bool& debug_mode)
     : QObject(parent),
       debug_mode_(debug_mode),
-      ser_servo_(new QSerialPort(this)),
-      ser_water_(new QSerialPort(this)) {
+      ser_water_(new QSerialPort(this)),
+      ser_manip_(new QSerialPort(this)) {
     // Initialize the logger
     logger_ = std::make_unique<QtLogger>(debug_mode_);
 
@@ -159,10 +159,10 @@ ArduinoManager::~ArduinoManager() {
     reconnect_timer_->stop();
 
     // These calls to Disconnect*() simply close the serial port connections
+    DisconnectWater();
 #if LIBRA_VERSION == 1
     DisconnectManip();
 #endif
-    DisconnectWater();
 
     logger_->Debug("Cleaned up ArduinoManager");
 }
@@ -218,10 +218,10 @@ void ArduinoManager::RefreshUpdateTimerState() {
     bool any_connected = false;
 
     // Check if any devices are connected
-#if LIBRA_VERSION == 1
-    any_connected |= ser_servo_->isOpen();
-#endif
     any_connected |= ser_water_->isOpen();
+#if LIBRA_VERSION == 1
+    any_connected |= ser_manip_->isOpen();
+#endif
 
     if (any_connected && !update_timer_->isActive()) {
         // A device(s) has been connected, so start sending it commands
@@ -242,28 +242,27 @@ void ArduinoManager::RefreshUpdateTimerState() {
  * @brief Comprehensive device update callback.
  */
 void ArduinoManager::UpdateDevices() {
+    UpdateWater();
 #if LIBRA_VERSION == 1
     UpdateManip();
 #endif
-    UpdateWater();
 }
 
 /**
  * @brief Attempts to reconnect devices, if necessary.
  */
 void ArduinoManager::AttemptReconnects() {
-#if LIBRA_VERSION == 1
-    if (manip_needs_reconnect_) {
-        ConnectManip(ser_servo_->portName());
-    }
-#endif
-
     if (water_needs_reconnect_) {
         ConnectWater(ser_water_->portName());
     }
+#if LIBRA_VERSION == 1
+    if (manip_needs_reconnect_) {
+        ConnectManip(ser_manip_->portName());
+    }
+#endif
 
     // Stop timer if no devices need reconnect
-    if (!manip_needs_reconnect_ && !water_needs_reconnect_) {
+    if (!water_needs_reconnect_ && !manip_needs_reconnect_) {
         reconnect_timer_->stop();
         logger_->Debug("ArduinoManager - Stopped reconnect timer");
     }
@@ -273,6 +272,43 @@ void ArduinoManager::AttemptReconnects() {
 // !Timer Helpers
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Sends the previously-assigned command to the SerialWater Arduino.
+ *
+ * @see SetWaterCommand
+ */
+void ArduinoManager::UpdateWater() {
+    if (!ser_water_->isOpen()) {
+        return;
+    }
+
+    try {
+        qint64 bytes_written = ser_water_->write(water_cmd_);
+        if (bytes_written == -1) {
+            throw std::runtime_error("Water - Failed to write to port");
+        }
+
+        SendWaterStatus(Water::Side::kA);  // emits ReportWaterStatus
+#if LIBRA_VERSION == 1
+        SendWaterStatus(Water::Side::kB);  // "
+#endif
+
+    } catch (const std::exception& e) {
+        emit ErrorThrown("Water - Communication error: " + QString(e.what()));
+
+        // Close the problematic connection
+        ser_water_->close();
+        emit WaterConnected(false);
+
+        // Mark for reconnection
+        water_needs_reconnect_ = true;
+        if (!reconnect_timer_->isActive()) {
+            reconnect_timer_->start();
+            logger_->Debug("Water - Started reconnection timer");
+        }
+    }
+}
+
 #if LIBRA_VERSION == 1
 /**
  * @brief Sends the previously-assigned command to the SerialServo Arduino.
@@ -280,7 +316,7 @@ void ArduinoManager::AttemptReconnects() {
  * @see SetManipCommand
  */
 void ArduinoManager::UpdateManip() {
-    if (!ser_servo_->isOpen()) {
+    if (!ser_manip_->isOpen()) {
         return;
     }
 
@@ -325,7 +361,7 @@ void ArduinoManager::UpdateManip() {
                                               m_current_pos_.at(kPan),
                                               m_current_pos_.at(kTilt));
 
-        if (ser_servo_->write(servo_cmd.toUtf8()) == -1) {
+        if (ser_manip_->write(servo_cmd.toUtf8()) == -1) {
             throw std::runtime_error("Manip - Failed to write to port");
         }
 
@@ -336,7 +372,7 @@ void ArduinoManager::UpdateManip() {
         emit ErrorThrown("Manip - Communication error: " + QString(e.what()));
 
         // Close the problematic connection
-        ser_servo_->close();
+        ser_manip_->close();
         emit ManipConnected(false);
 
         // Mark for reconnection
@@ -346,143 +382,6 @@ void ArduinoManager::UpdateManip() {
             logger_->Debug("Manip - Started reconnection timer");
         }
     }
-}
-#endif
-
-/**
- * @brief Sends the previously-assigned command to the SerialWater Arduino.
- *
- * @see SetWaterCommand
- */
-void ArduinoManager::UpdateWater() {
-    if (!ser_water_->isOpen()) {
-        return;
-    }
-
-    try {
-        qint64 bytes_written = ser_water_->write(water_cmd_);
-        if (bytes_written == -1) {
-            throw std::runtime_error("Water - Failed to write to port");
-        }
-
-        SendWaterStatus(Water::Side::kA);  // emits ReportWaterStatus
-#if LIBRA_VERSION == 1
-        SendWaterStatus(Water::Side::kB);  // "
-#endif
-
-    } catch (const std::exception& e) {
-        emit ErrorThrown("Water - Communication error: " + QString(e.what()));
-
-        // Close the problematic connection
-        ser_water_->close();
-        emit WaterConnected(false);
-
-        // Mark for reconnection
-        water_needs_reconnect_ = true;
-        if (!reconnect_timer_->isActive()) {
-            reconnect_timer_->start();
-            logger_->Debug("Water - Started reconnection timer");
-        }
-    }
-}
-
-//------------------------------------------------------------------------------
-// !Manipulator Commands (slots)
-//------------------------------------------------------------------------------
-
-#if LIBRA_VERSION == 1
-/**
- * @brief Attempts to establish a connection to the SerialServo Arduino.
- *
- * @param port_name The serial device address to connect to
- */
-void ArduinoManager::ConnectManip(QString port_name) {
-    // If there is already an active connection, gracefully terminate it
-    DisconnectManip();
-
-    // Set port options
-    ser_servo_->setPortName(port_name);
-    ser_servo_->setBaudRate(QSerialPort::Baud115200);
-    ser_servo_->setDataBits(QSerialPort::Data8);
-    ser_servo_->setParity(QSerialPort::NoParity);
-    ser_servo_->setStopBits(QSerialPort::OneStop);
-    ser_servo_->setFlowControl(QSerialPort::NoFlowControl);
-
-    // Only continue if "open" was successful
-    if (!ser_servo_->open(QIODevice::ReadWrite)) {
-        emit ErrorThrown("Manip - Failed to open port: " + port_name + "!\n"
-                         + ser_servo_->errorString());
-        return;
-    }
-
-    logger_->Info("Manip - Connected to device at: " + port_name.toStdString());
-    emit ManipConnected(true);
-
-    // If update_timer_ is stopped, restart it
-    RefreshUpdateTimerState();
-}
-
-/**
- * @brief Terminates the active connection.
- */
-void ArduinoManager::DisconnectManip() {
-    // This function is only called intentionally, so don't attempt to reconnect
-    manip_needs_reconnect_ = false;
-
-    if (ser_servo_->isOpen()) {
-        ser_servo_->close();
-
-        logger_->Debug("Manip - Gracefully disconnected from device");
-        emit ManipConnected(false);
-    }
-
-    // If update_timer_ is running, and no other devices are connected, stop it
-    RefreshUpdateTimerState();
-}
-
-/**
- * @brief TODO: documentation.
- *
- * @param arm_pitch Angle of LIBRA-I arm pitch joint "J3"
- * @param target_pan Target yaw angle
- * @param target_tilt Target pitch angle
- * @param move_slow Whether to use a slower, controlled trajectory
- */
-void ArduinoManager::SetManipCommand(const double& arm_pitch,
-                                     const double& target_pan,
-                                     const double& target_tilt,
-                                     const bool& move_slow) {
-    if (!ser_servo_->isOpen()) {
-        logger_->Warn("Manip - Cannot command Arduino: not connected!");
-        return;
-    }
-
-    m_current_pos_.at(kPitch) = arm_pitch;  // TODO: should update continuously
-    m_target_pos_.at(kPan) = target_pan;
-    m_target_pos_.at(kTilt) = target_tilt;
-
-    if (move_slow) {
-        // Only calculate the direction (UpdateManip takes care of position)
-        auto get_direction = [](double target, double current) {
-            return (target > current) ? 1 : (target < current) ? -1 : 0;
-        };
-
-        m_slow_direction_.at(kPan) = get_direction(target_pan,
-                                                   m_current_pos_.at(kPan));
-        m_slow_direction_.at(kTilt) = get_direction(target_tilt,
-                                                    m_current_pos_.at(kTilt));
-    } else {
-        m_slow_direction_.at(kPan) = 0;
-        m_slow_direction_.at(kTilt) = 0;
-
-        // Setting the commanded positions to the target values causes the
-        // servos to move at maximum speed (near-instant)
-        m_current_pos_.at(kPan) = target_pan;
-        m_current_pos_.at(kTilt) = target_tilt;
-    }
-
-    logger_->Debug("Manip - Set targets to " + std::to_string(target_pan) + " "
-                   + std::to_string(target_tilt) + " deg");
 }
 #endif
 
@@ -608,3 +507,103 @@ void ArduinoManager::SetWaterCommand(double torque_dir) {
     logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
+
+//------------------------------------------------------------------------------
+// !Manipulator Commands (slots)
+//------------------------------------------------------------------------------
+
+#if LIBRA_VERSION == 1
+/**
+ * @brief Attempts to establish a connection to the SerialServo Arduino.
+ *
+ * @param port_name The serial device address to connect to
+ */
+void ArduinoManager::ConnectManip(QString port_name) {
+    // If there is already an active connection, gracefully terminate it
+    DisconnectManip();
+
+    // Set port options
+    ser_manip_->setPortName(port_name);
+    ser_manip_->setBaudRate(QSerialPort::Baud115200);
+    ser_manip_->setDataBits(QSerialPort::Data8);
+    ser_manip_->setParity(QSerialPort::NoParity);
+    ser_manip_->setStopBits(QSerialPort::OneStop);
+    ser_manip_->setFlowControl(QSerialPort::NoFlowControl);
+
+    // Only continue if "open" was successful
+    if (!ser_manip_->open(QIODevice::ReadWrite)) {
+        emit ErrorThrown("Manip - Failed to open port: " + port_name + "!\n"
+                         + ser_manip_->errorString());
+        return;
+    }
+
+    logger_->Info("Manip - Connected to device at: " + port_name.toStdString());
+    emit ManipConnected(true);
+
+    // If update_timer_ is stopped, restart it
+    RefreshUpdateTimerState();
+}
+
+/**
+ * @brief Terminates the active connection.
+ */
+void ArduinoManager::DisconnectManip() {
+    // This function is only called intentionally, so don't attempt to reconnect
+    manip_needs_reconnect_ = false;
+
+    if (ser_manip_->isOpen()) {
+        ser_manip_->close();
+
+        logger_->Debug("Manip - Gracefully disconnected from device");
+        emit ManipConnected(false);
+    }
+
+    // If update_timer_ is running, and no other devices are connected, stop it
+    RefreshUpdateTimerState();
+}
+
+/**
+ * @brief TODO: documentation.
+ *
+ * @param arm_pitch Angle of LIBRA-I arm pitch joint "J3"
+ * @param target_pan Target yaw angle
+ * @param target_tilt Target pitch angle
+ * @param move_slow Whether to use a slower, controlled trajectory
+ */
+void ArduinoManager::SetManipCommand(const double& arm_pitch,
+                                     const double& target_pan,
+                                     const double& target_tilt,
+                                     const bool& move_slow) {
+    if (!ser_manip_->isOpen()) {
+        logger_->Warn("Manip - Cannot command Arduino: not connected!");
+        return;
+    }
+
+    m_current_pos_.at(kPitch) = arm_pitch;  // TODO: should update continuously
+    m_target_pos_.at(kPan) = target_pan;
+    m_target_pos_.at(kTilt) = target_tilt;
+
+    if (move_slow) {
+        // Only calculate the direction (UpdateManip takes care of position)
+        auto get_direction = [](double target, double current) {
+            return (target > current) ? 1 : (target < current) ? -1 : 0;
+        };
+
+        m_slow_direction_.at(kPan) = get_direction(target_pan,
+                                                   m_current_pos_.at(kPan));
+        m_slow_direction_.at(kTilt) = get_direction(target_tilt,
+                                                    m_current_pos_.at(kTilt));
+    } else {
+        m_slow_direction_.at(kPan) = 0;
+        m_slow_direction_.at(kTilt) = 0;
+
+        // Setting the commanded positions to the target values causes the
+        // servos to move at maximum speed (near-instant)
+        m_current_pos_.at(kPan) = target_pan;
+        m_current_pos_.at(kTilt) = target_tilt;
+    }
+
+    logger_->Debug("Manip - Set targets to " + std::to_string(target_pan) + " "
+                   + std::to_string(target_tilt) + " deg");
+}
+#endif

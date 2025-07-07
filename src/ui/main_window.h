@@ -80,14 +80,14 @@ class MainWindow : public QMainWindow {
 
     // --- Arduino Updates ---
 
+    void HandleWaterConnChanged(const bool& connected);
+    void HandleWaterStatus(const Water::Side& side, const Water::State& state);
+
 #if LIBRA_VERSION == 1
     void HandleManipConnChanged(const bool& connected);
     void HandleManipPosition(const double& base, const double& pan,
                              const double& tilt);
 #endif
-
-    void HandleWaterConnChanged(const bool& connected);
-    void HandleWaterStatus(const Water::Side& side, const Water::State& state);
 
     // --- Actuator Updates ---
 
@@ -108,15 +108,15 @@ class MainWindow : public QMainWindow {
 
     // --- Arduino Commands ---
 
+    void ConnectWater(QString port_name);
+    void CommandWater(double torque_dir);
+    void EnableFluidSystem(const bool& enabled);
+
 #if LIBRA_VERSION == 1
     void ConnectManip(QString port_name);
     void CommandManip(const double& arm_pitch, const double& pan,
                       const double& tilt, const bool& move_slow);
 #endif
-
-    void ConnectWater(QString port_name);
-    void CommandWater(double torque_dir);
-    void EnableFluidSystem(const bool& enabled);
 
     // --- Actuator Commands ---
 
@@ -160,17 +160,17 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
 
+    // Water
+
+    void on_pb_water_enable_toggled(bool checked);
+    void on_pb_water_drain_clicked();
+
     // Manipulator
 
 #if LIBRA_VERSION == 1
     void on_pb_manip_slow_clicked();
     void on_pb_manip_fast_clicked();
 #endif
-
-    // Water
-
-    void on_pb_water_enable_toggled(bool checked);
-    void on_pb_water_drain_clicked();
 
     // Camera
 
@@ -192,10 +192,10 @@ class MainWindow : public QMainWindow {
     void InitializeDeviceManagers();
     void InitializeThreads();
 
+    void ConnectWaterHelper();
 #if LIBRA_VERSION == 1
     void ConnectManipHelper();
 #endif
-    void ConnectWaterHelper();
 
     // --- Data Members ---
 
