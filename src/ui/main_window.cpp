@@ -146,8 +146,9 @@ MainWindow::MainWindow(QWidget* parent)
 
     // GUI configuration
     ConfigureUi();
-    InitializeThreads();
     InitializeFeedbackElementMap();
+    InitializeDeviceManagers();
+    InitializeThreads();
 
     // Component auto-connect
     auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
@@ -176,7 +177,6 @@ MainWindow::~MainWindow() {
 
     // Cleanup
     StopThread(log_thread_);
-    StopThread(arduino_thread_);
     StopThread(hebi_thread_);
 #if LIBRA_VERSION == 2
     StopThread(epos_thread_);
@@ -234,19 +234,7 @@ void MainWindow::ConfigureUi() {
     // Slots
     //   (none)
 
-    // ========== Water ==========
-
-    // Unneeded widgets
-#if LIBRA_VERSION != 1
-    RemoveUiElement(ui_->vl_counterweight_2);
-    RemoveUiElement(ui_->pb_water_fill_2);
-    RemoveUiElement(ui_->pb_water_drain_2);
-#endif
-
-    // Slots
-    //   (none)
-
-    // ========== Arm ==========
+    // ========== ARM ==========
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
@@ -269,9 +257,9 @@ void MainWindow::ConfigureUi() {
 #endif
 
     // Slots
-    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved
+    connect(ui_->hs_arm_pitch, &QAbstractSlider::sliderMoved,  // when moved,
             ui_->sb_arm_pitch, &QDoubleSpinBox::setValue);     // update display
-    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed
+    connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed,
             ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
 
 #if LIBRA_VERSION != 1
@@ -301,10 +289,93 @@ void MainWindow::ConfigureUi() {
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
 #endif
 
-    // ========== Camera ==========
+    // ========== WATER ==========
 
-    connect(ui_->pb_camera_refresh, &QPushButton::clicked,     // when clicked
+    // Unneeded widgets
+#if LIBRA_VERSION != 1
+    RemoveUiElement(ui_->vl_counterweight_2);
+    RemoveUiElement(ui_->pb_water_fill_2);
+    RemoveUiElement(ui_->pb_water_drain_2);
+#endif
+
+    // Slots
+    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
+            this, &MainWindow::ConnectWaterHelper);
+
+    // ========== MANIPULATOR ==========
+
+    // Unneeded widgets
+#if LIBRA_VERSION != 1
+    RemoveUiElement(ui_->gb_manipulator);
+#endif
+
+    // Slots
+#if LIBRA_VERSION == 1
+    connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
+            this, &MainWindow::ConnectManipHelper);
+#endif
+
+    // ========== CAMERA ==========
+
+    connect(ui_->pb_camera_refresh, &QPushButton::clicked,     // when clicked,
             ui_->a_refresh_camera_list, &QAction::triggered);  // refresh list
+}
+
+/**
+ * @brief Sets up child objects.
+ *
+ * @note Only used in constructor - placed in own function to improve readability.
+ */
+void MainWindow::InitializeDeviceManagers() {
+    // ========== Arduino Manager ==========
+
+    // NOTE: since ArduinoManager is QTimer-driven and asynchronous, we set up
+    //       signal/slot connections much like we do with QThreads. This is not
+    //       necessary with CameraManager, which is different by nature.
+
+    arduino_manager_ = new ArduinoManager(this, debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            arduino_manager_, &ArduinoManager::SetDebugMode);
+
+#if LIBRA_VERSION == 1
+    connect(this, &MainWindow::ConnectManip,  // connect servos
+            arduino_manager_, &ArduinoManager::ConnectManip);
+    connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
+            arduino_manager_, &ArduinoManager::DisconnectManip);
+    connect(this, &MainWindow::CommandManip,  // update manip target(s)
+            arduino_manager_, &ArduinoManager::SetManipCommand);
+#endif
+
+    connect(this, &MainWindow::ConnectWater,  // connect water
+            arduino_manager_, &ArduinoManager::ConnectWater);
+    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
+            arduino_manager_, &ArduinoManager::DisconnectWater);
+    connect(this, &MainWindow::EnableFluidSystem,  // change water state
+            arduino_manager_, &ArduinoManager::SetWaterState);
+    connect(this, &MainWindow::CommandWater,  // force update water command
+            arduino_manager_, &ArduinoManager::SetWaterCommand);
+
+    // MainWindow slots
+    connect(arduino_manager_, &ArduinoManager::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
+#if LIBRA_VERSION == 1
+    connect(arduino_manager_, &ArduinoManager::ManipConnected,  // update UI
+            this, &MainWindow::HandleManipConnChanged);
+    connect(arduino_manager_, &ArduinoManager::ReportPosition,  // get position
+            this, &MainWindow::HandleManipPosition);
+#endif
+
+    connect(arduino_manager_, &ArduinoManager::WaterConnected,  // update UI
+            this, &MainWindow::HandleWaterConnChanged);
+    connect(arduino_manager_, &ArduinoManager::ReportWaterStatus,  // get state
+            this, &MainWindow::HandleWaterStatus);
+
+    // ========== Camera Manager ==========
+
+    // TODO: auto-display first connected device?
 }
 
 /**
@@ -334,61 +405,11 @@ void MainWindow::InitializeThreads() {
             log_thread_, &LogThread::TakeLogShot);
 
     // Thread cleanup
-    connect(log_thread_, &LogThread::finished,      // when thread exits
+    connect(log_thread_, &LogThread::finished,      // when thread exits,
             log_thread_, &LogThread::deleteLater);  // deallocate
 
     log_thread_->start();
     */
-
-    // ========== Arduino Thread ==========
-
-    arduino_thread_ = new ArduinoThread(this, debug_mode_);
-
-    // MainWindow signals
-    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
-            arduino_thread_, &ArduinoThread::SetDebugMode);
-
-#if LIBRA_VERSION == 1
-    connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
-            arduino_thread_, &ArduinoThread::DisconnectManip);
-
-    connect(this, &MainWindow::CommandManip,  // update manip target(s)
-            arduino_thread_, &ArduinoThread::SetManipCommand);
-#endif
-
-    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
-            arduino_thread_, &ArduinoThread::DisconnectWater);
-
-    connect(this, &MainWindow::EnableFluidSystem,  // change water state
-            arduino_thread_, &ArduinoThread::SetWaterState);
-    connect(this, &MainWindow::CommandWater,  // force update water command
-            arduino_thread_, &ArduinoThread::SetWaterCommand);
-
-    // MainWindow slots
-#if LIBRA_VERSION == 1
-    connect(ui_->a_manip_connect, &QAction::triggered,  // connect to servos
-            this, &MainWindow::ConnectManipHelper);
-    connect(arduino_thread_, &ArduinoThread::ManipConnected,  // update UI
-            this, &MainWindow::HandleManipConnChanged);
-    connect(arduino_thread_, &ArduinoThread::ReportPosition,  // get position
-            this, &MainWindow::HandleManipPosition);
-#endif
-
-    connect(ui_->a_water_connect, &QAction::triggered,  // connect to water
-            this, &MainWindow::ConnectWaterHelper);
-    connect(arduino_thread_, &ArduinoThread::WaterConnected,  // update UI
-            this, &MainWindow::HandleWaterConnChanged);
-    connect(arduino_thread_, &ArduinoThread::ReportWaterStatus,  // get state
-            this, &MainWindow::HandleWaterStatus);
-
-    connect(arduino_thread_, &ArduinoThread::ErrorThrown,  // handle errors
-            this, &MainWindow::HandleCriticalError);
-
-    // Thread cleanup
-    connect(arduino_thread_, &ArduinoThread::finished,      // when thread exits
-            arduino_thread_, &ArduinoThread::deleteLater);  // deallocate
-
-    arduino_thread_->start();
 
     // ========== HEBI Thread ==========
 
@@ -417,23 +438,22 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::Stop);
 
     // MainWindow slots
+    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
     connect(hebi_thread_, &HebiThread::Connected,  // update UI
             this, &MainWindow::HandleHebiConnChanged);
-
     connect(hebi_thread_, &HebiThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
     connect(hebi_thread_, &HebiThread::ReportStatus,  // get minor statuses
             this, &MainWindow::HandleActuatorStatus);
 
-    connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
-            this, &MainWindow::HandleCriticalError);
-
-    // ArduinoThread slots
+    // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
-            arduino_thread_, &ArduinoThread::SetWaterCommand);
+            arduino_manager_, &ArduinoManager::SetWaterCommand);
 
     // Thread cleanup
-    connect(hebi_thread_, &HebiThread::finished,      // when thread exits
+    connect(hebi_thread_, &HebiThread::finished,      // when thread exits,
             hebi_thread_, &HebiThread::deleteLater);  // deallocate
 
     hebi_thread_->start();
@@ -459,19 +479,18 @@ void MainWindow::InitializeThreads() {
             epos_thread_, &EposThread::Stop);
 
     // MainWindow slots
+    connect(epos_thread_, &EposThread::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
     connect(epos_thread_, &EposThread::Connected,  // update UI
             this, &MainWindow::HandleEposConnChanged);
-
     connect(epos_thread_, &EposThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
     connect(epos_thread_, &EposThread::ReportStatus,  // get minor statuses
             this, &MainWindow::HandleActuatorStatus);
 
-    connect(epos_thread_, &EposThread::ErrorThrown,  // handle errors
-            this, &MainWindow::HandleCriticalError);
-
     // Thread cleanup
-    connect(epos_thread_, &EposThread::finished,      // when thread exits
+    connect(epos_thread_, &EposThread::finished,      // when thread exits,
             epos_thread_, &EposThread::deleteLater);  // deallocate
 
     epos_thread_->start();
@@ -540,7 +559,7 @@ void MainWindow::InitializeFeedbackElementMap() {
 #if LIBRA_VERSION == 1
 /**
  * @brief Allows user to select a physical serial device and commands
- *        ArduinoThread to connect to it as the "SerialServo" device.
+ *        ArduinoManager to connect to it as the "SerialServo" device.
  */
 void MainWindow::ConnectManipHelper() {
     // Prompt user to select a serial device
@@ -559,13 +578,13 @@ void MainWindow::ConnectManipHelper() {
         return;
     }
 
-    emit arduino_thread_->ConnectManip(port_name);
+    emit ConnectManip(port_name);
 }
 #endif
 
 /**
  * @brief Allows user to select a physical serial device and commands
- *        ArduinoThread to connect to it as the "SerialWater" device.
+ *        ArduinoManager to connect to it as the "SerialWater" device.
  */
 void MainWindow::ConnectWaterHelper() {
     // Prompt user to select a serial device
@@ -584,7 +603,7 @@ void MainWindow::ConnectWaterHelper() {
         return;
     }
 
-    emit arduino_thread_->ConnectWater(port_name);
+    emit ConnectWater(port_name);
 }
 
 //------------------------------------------------------------------------------
@@ -925,9 +944,9 @@ void MainWindow::on_a_connect_all_triggered() {
 void MainWindow::on_a_disconnect_all_triggered() {
     // Arduinos
 #if LIBRA_VERSION == 1
-    emit arduino_thread_->DisconnectManip();
+    ui_->a_manip_disconnect->trigger();
 #endif
-    emit arduino_thread_->DisconnectWater();
+    ui_->a_water_disconnect->trigger();
 
     // Actuators
     ui_->a_hebi_disconnect->trigger();
@@ -1026,7 +1045,7 @@ void MainWindow::on_pb_water_enable_toggled(bool checked) {
  */
 void MainWindow::on_pb_water_drain_clicked() {
     emit EnableFluidSystem(true);
-    emit CommandWater(ArduinoThread::kDrain);
+    emit CommandWater(ArduinoManager::kDrain);
 }
 
 //------------------------------------------------------------------------------

@@ -17,7 +17,7 @@
 #include <QWidget>       // Qt::Widgets
 
 // Project Headers
-#include "thread/arduino_defs.h"  // Water::State
+#include "arduino_defs.h"  // Water::State
 
 /**
  * @brief A simple widget for visualizing a tank's fluid level.

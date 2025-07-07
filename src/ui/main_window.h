@@ -15,7 +15,7 @@
 #include <QMainWindow>  // Qt::Widgets
 
 // Project Headers
-#include "arduino_thread.h"
+#include "arduino_manager.h"
 #include "camera_manager.h"
 #include "hebi_thread.h"
 #include "log_thread.h"
@@ -109,10 +109,12 @@ class MainWindow : public QMainWindow {
     // --- Arduino Commands ---
 
 #if LIBRA_VERSION == 1
+    void ConnectManip(QString port_name);
     void CommandManip(const double& arm_pitch, const double& pan,
                       const double& tilt, const bool& move_slow);
 #endif
 
+    void ConnectWater(QString port_name);
     void CommandWater(double torque_dir);
     void EnableFluidSystem(const bool& enabled);
 
@@ -188,8 +190,9 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions ---
 
     void ConfigureUi();
-    void InitializeThreads();
     void InitializeFeedbackElementMap();
+    void InitializeDeviceManagers();
+    void InitializeThreads();
 
 #if LIBRA_VERSION == 1
     void ConnectManipHelper();
@@ -204,13 +207,18 @@ class MainWindow : public QMainWindow {
 
     FeedbackElementMapOfMaps feedback_element_map_;
 
-    LogThread* log_thread_{nullptr};          // consolidated logging
-    ArduinoThread* arduino_thread_{nullptr};  // serial device control
-    HebiThread* hebi_thread_{nullptr};        // HEBI actuator control
+    // Device Managers
+
+    ArduinoManager* arduino_manager_{nullptr};       // serial device control
+    std::unique_ptr<CameraManager> camera_manager_;  // media device control
+
+    std::unordered_map<QString, QString> available_cameras_;  // ID, desc
+
+    // Threads
+
+    LogThread* log_thread_{nullptr};    // consolidated logging
+    HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
 #if LIBRA_VERSION == 2
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
 #endif
-
-    std::unordered_map<QString, QString> available_cameras_;  // ID, desc
-    std::unique_ptr<CameraManager> camera_manager_;
 };

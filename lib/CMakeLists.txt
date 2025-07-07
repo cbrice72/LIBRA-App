@@ -10,6 +10,7 @@
 add_subdirectory(util)
 add_subdirectory(logger)
 # - "Manager"-type modules
+add_subdirectory(arduino_manager)
 add_subdirectory(camera_manager)
 # - Optional modules
 if(BUILD_WITH_ROS2)
