@@ -19,7 +19,7 @@
 /**
  * @brief Logger implementation that uses Qt's logging API.
  *
- * @note Usage: `logger_ = std::make_unique<QtLogger>()`
+ * @note Usage: `logger_ = std::make_unique<QtLogger>()`.
  */
 class QtLogger : public Logger {
   public:

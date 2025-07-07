@@ -311,12 +311,12 @@ void MainWindow::ConfigureUi() {
  * @brief Sets up signal and slot connections to child threads and spins them up.
  *
  * @note In Qt, thread management for subclassed QThreads generally has 4 steps:
- *   1) Initialize a new QThread object as a child of MainWindow
- *   2) Register its signals and slots to send/receive data to/from MainWindow
- *   3) Register its exit signal to its own destruction slot
- *   4) Spin it off
+ *   1) Initialize a new QThread object as a child of MainWindow.
+ *   2) Register its signals and slots to send/receive data to/from MainWindow.
+ *   3) Register its exit signal to its own destruction slot.
+ *   4) Spin it off.
  * If the thread loops continuously, there is a fifth step:
- *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread
+ *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread.
  *
  * @note Only used in constructor - placed in own function to improve readability.
  */
