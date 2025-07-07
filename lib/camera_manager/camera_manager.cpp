@@ -529,7 +529,7 @@ bool CameraManager::Record() {
     if (!CameraIsActive()) {
         logger_->Error(
             "CameraManager - Cannot record video; camera not initialized!");
-        return;
+        return false;
     }
 
     if (!is_recording_.load()) {
