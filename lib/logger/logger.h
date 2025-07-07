@@ -17,7 +17,13 @@
 //   (none)
 
 /**
- * @brief Abstract interface for class-level logging.
+ * @brief Abstract interface for class-level logging. Allows you to use the same
+ *        functions to output messages regardless of the logging backend.
+ *
+ * @note Usage:
+ *         1) In your class declaration, declare a `Logger` member variable.
+ *         2) In your class constructor, initialize the member as one of the
+ *            classes which derive from `Logger` (e.g., `QtLogger`).
  *
  * @see QtLogger Ros2Logger
  */

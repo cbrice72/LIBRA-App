@@ -19,7 +19,7 @@
 /**
  * @brief Logger implementation that uses ROS2's logging API.
  *
- * @note Usage: `logger_ = std::make_unique<QtLogger>(this->get_logger())`
+ * @note Usage: `logger_ = std::make_unique<Ros2Logger>(this->get_logger())`
  */
 class Ros2Logger : public Logger {
   public:

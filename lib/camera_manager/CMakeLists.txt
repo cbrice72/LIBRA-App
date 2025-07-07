@@ -32,10 +32,8 @@ endif()
 qt_add_library(
     camera_manager
     STATIC
-    # Header
-    camera_manager.h
-    # Source
-    camera_manager.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/camera_manager.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/camera_manager.cpp
 )
 
 target_include_directories(
