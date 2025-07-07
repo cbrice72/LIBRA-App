@@ -187,8 +187,8 @@ endif()
 # ========================= BUILD =========================
 
 # Add project subdirectories
-add_subdirectory(lib) # camera_manager, util, [ROS2 interfaces & nodes]
-add_subdirectory(src) # PROJECT_SOURCE, actuator_thread, log_thread
+add_subdirectory(lib) # utilites, managers, [internal ROS2 targets]
+add_subdirectory(src) # PROJECT_SOURCE, threads, custom dialog boxes
 
 # Add GUI target executable
 qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})

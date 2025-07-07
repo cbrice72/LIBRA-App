@@ -5,32 +5,6 @@
 # @author brice.c.aa
 ################################################################################
 
-# ========================= LOG THREAD =========================
-
-# Create and configure the module
-qt_add_library(
-    log_thread
-    STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.cpp
-)
-
-# Ensure this module packages the necessary headers
-target_include_directories(
-    log_thread
-    # Make this directory available to consumers
-    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-# Tell the linker which libraries to link against
-target_link_libraries(
-    log_thread
-    # Project
-    PUBLIC util
-    # Qt
-    PUBLIC Qt${QT_VERSION_MAJOR}::Core
-)
-
 # ========================= ACTUATOR THREAD =========================
 
 # Check whether the third-party directories are defined
@@ -120,3 +94,29 @@ if(BUILD_WITH_ROS2)
     target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
     ament_target_dependencies(actuator_thread PUBLIC rclcpp)
 endif()
+
+# ========================= LOG THREAD =========================
+
+# Create and configure the module
+qt_add_library(
+    log_thread
+    STATIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/log_thread.cpp
+)
+
+# Ensure this module packages the necessary headers
+target_include_directories(
+    log_thread
+    # Make this directory available to consumers
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    log_thread
+    # Project
+    PUBLIC util
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Core
+)
