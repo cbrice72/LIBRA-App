@@ -187,17 +187,17 @@ __pycache__/
 # Adobe project files for graphics in res/ directory
 adobe/*
 
-# Doxygen-generated files
-**/docs/html
-**/docs/latex
-
-# Don't exclude the 3rd-party libraries
-!thirdparty/**
-
 # Build folders (Qt, ROS2, etc.)
 **/build/
 **/build*/
 **/install/
+
+# Doxygen-generated files
+**/docs/html
+**/docs/latex
+
+# Include 3rd-party libraries - they're supposed to be packaged with the project
+!thirdparty/**
 
 # Log file
 Log.txt
@@ -205,5 +205,6 @@ Log.txt
 # ORB-SLAM3 vocabulary file (i.e., only upload archive)
 ORBvoc.txt
 
-# Temporary Excel files
+# Temporary files (Excel, Qt)
 ~$*
+*.autosave
