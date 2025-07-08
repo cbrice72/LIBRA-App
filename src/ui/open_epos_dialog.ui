@@ -21,7 +21,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/Remote-Robot-App.ico</normaloff>:/Remote-Robot-App.ico</iconset>
+    <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <widget class="QWidget" name="formLayoutWidget">
    <property name="geometry">
@@ -60,7 +60,7 @@
        <bool>false</bool>
       </property>
       <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContents</enum>
+       <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
       </property>
      </widget>
     </item>
@@ -70,7 +70,7 @@
        <bool>false</bool>
       </property>
       <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContents</enum>
+       <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
       </property>
      </widget>
     </item>
@@ -80,7 +80,7 @@
        <bool>false</bool>
       </property>
       <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContents</enum>
+       <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
       </property>
      </widget>
     </item>
@@ -90,7 +90,7 @@
        <bool>false</bool>
       </property>
       <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContents</enum>
+       <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
       </property>
      </widget>
     </item>
@@ -114,7 +114,7 @@
        <bool>false</bool>
       </property>
       <property name="sizeAdjustPolicy">
-       <enum>QComboBox::AdjustToContents</enum>
+       <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
       </property>
      </widget>
     </item>
@@ -133,7 +133,7 @@
     <item>
      <spacer name="hs_pb1">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -149,15 +149,14 @@
        <string>Cancel</string>
       </property>
       <property name="icon">
-       <iconset theme="window-close">
-        <normaloff>.</normaloff>.</iconset>
+       <iconset theme="window-close"/>
       </property>
      </widget>
     </item>
     <item>
      <spacer name="hs_pb2">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -176,15 +175,14 @@
        <string>Connect</string>
       </property>
       <property name="icon">
-       <iconset theme="list-add">
-        <normaloff>.</normaloff>.</iconset>
+       <iconset theme="list-add"/>
       </property>
      </widget>
     </item>
     <item>
      <spacer name="hs_pb3">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -198,6 +196,7 @@
   </widget>
  </widget>
  <resources>
+  <include location="resources.qrc"/>
   <include location="resources.qrc"/>
  </resources>
  <connections/>

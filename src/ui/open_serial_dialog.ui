@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/LIBRA-App_v2.ico</normaloff>:/LIBRA-App_v2.ico</iconset>
+    <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <property name="modal">
    <bool>true</bool>

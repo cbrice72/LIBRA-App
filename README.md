@@ -6,8 +6,6 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ![image](docs/images/main_window.png)
 
-Most colors used in this GUI are compliant with Bang Wong's proposed colorblind-friendly palette: [https://doi.org/10.1038/nmeth.1618](https://doi.org/10.1038/nmeth.1618).
-
 ## Table of Contents
 
 - [Requirements](#requirements)
@@ -21,6 +19,7 @@ Most colors used in this GUI are compliant with Bang Wong's proposed colorblind-
 - [Documentation](#documentation)
 - [About Us](#about-us)
 - [Acknowledgements](#acknowledgements)
+- [Attribution](#attribution)
 - [Contributing](#contributing)
 
 ## Requirements
@@ -145,6 +144,14 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
 ## Acknowledgements
 
 *LIBRA-I*, the first-generation LIBRA robot on which this project is based on, as well as the original Windows-based "LIBRA-I_App", were developed by **Yuto Goto** (a former member of the Gen Endo Laboratory).
+
+## Attribution
+
+Certain **icons** used in this application are part of the Adwaita icon set, &copy; GNOME Project. Licensed under the GNU LGPL v3.
+See: [https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master](https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master)
+
+Most **colors** used in this application are compliant with Bang Wong's proposed colorblind-friendly palette.
+See: [https://doi.org/10.1038/nmeth.1618](https://doi.org/10.1038/nmeth.1618)
 
 ## Contributing
 

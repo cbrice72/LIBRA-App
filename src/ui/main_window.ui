@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1003</width>
-    <height>642</height>
+    <height>635</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -15,7 +15,7 @@
   </property>
   <property name="windowIcon">
    <iconset resource="resources.qrc">
-    <normaloff>:/LIBRA-App_v2.ico</normaloff>:/LIBRA-App_v2.ico</iconset>
+    <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <widget class="QWidget" name="central_widget">
    <layout class="QGridLayout" name="gl_central_widget">
@@ -206,7 +206,8 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
+              <iconset resource="resources.qrc">
+               <normaloff>:/view-refresh</normaloff>:/view-refresh</iconset>
              </property>
             </widget>
            </item>
@@ -352,7 +353,7 @@
         </item>
        </layout>
       </item>
-      <item row="1" column="0" rowspan="3" colspan="2">
+      <item row="1" column="0" rowspan="3" colspan="2" alignment="Qt::AlignmentFlag::AlignBottom">
        <widget class="QGroupBox" name="gb_arm">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
