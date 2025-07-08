@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1001</width>
-    <height>615</height>
+    <width>1003</width>
+    <height>642</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -96,23 +96,18 @@
       <property name="sizeConstraint">
        <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
       </property>
-      <item row="3" column="2" alignment="Qt::AlignmentFlag::AlignBottom">
-       <widget class="QGroupBox" name="gb_manipulator">
+      <item row="0" column="2" rowspan="3" colspan="2">
+       <widget class="QGroupBox" name="gb_camera">
         <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
           <horstretch>0</horstretch>
           <verstretch>0</verstretch>
          </sizepolicy>
         </property>
-        <property name="font">
-         <font>
-          <bold>false</bold>
-         </font>
-        </property>
         <property name="title">
-         <string>MANIPULATOR</string>
+         <string>CAMERA</string>
         </property>
-        <layout class="QGridLayout" name="gridLayout">
+        <layout class="QGridLayout" name="gl_camera">
          <property name="leftMargin">
           <number>4</number>
          </property>
@@ -125,117 +120,140 @@
          <property name="bottomMargin">
           <number>4</number>
          </property>
-         <item row="1" column="0">
-          <layout class="QHBoxLayout" name="hl_manip_servo_control">
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QPushButton" name="pb_manip_slow">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
+         <item row="0" column="0">
+          <layout class="QGridLayout" name="gl_camera_feed">
+           <item row="0" column="0">
+            <widget class="QLabel" name="static_l_camera_id">
              <property name="minimumSize">
               <size>
-               <width>80</width>
-               <height>30</height>
+               <width>25</width>
+               <height>25</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
-               <height>30</height>
+               <width>25</width>
+               <height>25</height>
               </size>
              </property>
-             <property name="statusTip">
-              <string>Start manipulator movement</string>
-             </property>
              <property name="text">
-              <string>SLOW</string>
+              <string>ID</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignmentFlag::AlignCenter</set>
              </property>
             </widget>
            </item>
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QPushButton" name="pb_manip_fast">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
+           <item row="0" column="2">
+            <widget class="QPushButton" name="pb_camera_refresh">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
              </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="cb_camera_id">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
              <property name="minimumSize">
               <size>
-               <width>80</width>
-               <height>30</height>
+               <width>100</width>
+               <height>25</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
-               <height>30</height>
+               <width>200</width>
+               <height>25</height>
               </size>
              </property>
              <property name="statusTip">
-              <string>Start manipulator movement</string>
+              <string>OS-level device address</string>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+             </property>
+             <property name="placeholderText">
+              <string>...</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <spacer name="h_spacer_11">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item row="2" column="0" colspan="4">
+            <widget class="QVideoWidget" name="vw_camera_viewfinder" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>256</width>
+               <height>144</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Live camera feed</string>
+             </property>
+            </widget>
+           </item>
+           <item row="1" column="1" colspan="3">
+            <widget class="QLabel" name="l_camera_name">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>0</width>
+               <height>0</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Human-readable device label</string>
+             </property>
+             <property name="frameShape">
+              <enum>QFrame::Shape::Box</enum>
              </property>
              <property name="text">
-              <string>FAST</string>
+              <string>...</string>
              </property>
             </widget>
            </item>
           </layout>
          </item>
-         <item row="0" column="0">
-          <layout class="QGridLayout" name="gl_manip_input">
-           <item row="2" column="2">
-            <widget class="QLabel" name="static_l_manip_tilt_u">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+         <item row="1" column="0">
+          <layout class="QHBoxLayout" name="hl_camera_control">
+           <item>
+            <widget class="QPushButton" name="pb_camera_capture">
+             <property name="enabled">
+              <bool>false</bool>
              </property>
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="4">
-            <widget class="QLabel" name="static_l_actual_manip_pan_u">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="0">
-            <widget class="QLabel" name="static_l_manip_tilt">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Tilt</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <widget class="QLabel" name="l_actual_manip_base">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -244,42 +262,29 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>50</width>
-               <height>25</height>
+               <width>80</width>
+               <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>50</width>
-               <height>25</height>
+               <width>80</width>
+               <height>30</height>
               </size>
              </property>
              <property name="statusTip">
-              <string>Manipulator pitch correction (automatic)</string>
+              <string>Save an image</string>
              </property>
              <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+              <string>CAPTURE</string>
              </property>
             </widget>
            </item>
-           <item row="0" column="4">
-            <widget class="QLabel" name="static_l_actual_manip_base_u">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
+           <item>
+            <widget class="QPushButton" name="pb_camera_record">
+             <property name="enabled">
+              <bool>false</bool>
              </property>
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3">
-            <widget class="QLabel" name="l_actual_manip_tilt">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
                <horstretch>0</horstretch>
@@ -288,185 +293,21 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>50</width>
-               <height>25</height>
+               <width>80</width>
+               <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>50</width>
-               <height>25</height>
+               <width>80</width>
+               <height>30</height>
               </size>
              </property>
              <property name="statusTip">
-              <string>Manipulator pitch joint</string>
+              <string>Save a video</string>
              </property>
              <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3">
-            <widget class="QLabel" name="l_actual_manip_pan">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>50</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>50</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Manipulator yaw joint</string>
-             </property>
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1">
-            <widget class="QDoubleSpinBox" name="sb_manip_pan">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>65</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>65</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Range: -80,80  |  Interval: 10</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-             <property name="minimum">
-              <double>-80.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>80.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="4">
-            <widget class="QLabel" name="static_l_actual_manip_tilt_u">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="static_l_manip_pan_u">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string>deg</string>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1">
-            <widget class="QDoubleSpinBox" name="sb_manip_tilt">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>65</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>65</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Range: -80,80  |  Interval: 10</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-             </property>
-             <property name="minimum">
-              <double>-80.000000000000000</double>
-             </property>
-             <property name="maximum">
-              <double>80.000000000000000</double>
-             </property>
-             <property name="singleStep">
-              <double>10.000000000000000</double>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_manip_base">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Base</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QLabel" name="static_l_manip_pan">
-             <property name="font">
-              <font>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Pan</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
+              <string>RECORD</string>
              </property>
             </widget>
            </item>
@@ -491,7 +332,37 @@
         </property>
        </widget>
       </item>
-      <item row="1" column="0" rowspan="3" colspan="2" alignment="Qt::AlignmentFlag::AlignBottom">
+      <item row="0" column="1">
+       <layout class="QVBoxLayout" name="vl_buildtype">
+        <item>
+         <widget class="QLabel" name="static_l_libraversion">
+          <property name="statusTip">
+           <string>The LIBRA prototype version this app was built for</string>
+          </property>
+          <property name="text">
+           <string>LIBRA_VERSION = ...</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QLabel" name="static_l_ros2enabled">
+          <property name="statusTip">
+           <string>Whether this app was built with ROS2 support</string>
+          </property>
+          <property name="text">
+           <string>BUILD_WITH_ROS2 = ...</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item row="1" column="0" rowspan="3" colspan="2">
        <widget class="QGroupBox" name="gb_arm">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
@@ -2287,622 +2158,755 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
         </layout>
        </widget>
       </item>
-      <item row="0" column="1">
-       <layout class="QVBoxLayout" name="vl_buildtype">
-        <item>
-         <widget class="QLabel" name="static_l_libraversion">
-          <property name="statusTip">
-           <string>The LIBRA prototype version this app was built for</string>
+      <item row="3" column="2" colspan="2">
+       <layout class="QHBoxLayout" name="hl_arduino">
+        <item alignment="Qt::AlignmentFlag::AlignLeft">
+         <widget class="QGroupBox" name="gb_water">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="text">
-           <string>LIBRA_VERSION = ...</string>
+          <property name="title">
+           <string>WATER</string>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
-          </property>
+          <layout class="QGridLayout" name="gl_water">
+           <property name="leftMargin">
+            <number>4</number>
+           </property>
+           <property name="topMargin">
+            <number>4</number>
+           </property>
+           <property name="rightMargin">
+            <number>4</number>
+           </property>
+           <property name="bottomMargin">
+            <number>4</number>
+           </property>
+           <item row="0" column="1">
+            <layout class="QGridLayout" name="gl_water_controls">
+             <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="pb_water_fill_1">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="statusTip">
+                <string>Force-fill counterweight #1</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
+QPushButton:hover {background-color: rgb(0, 102, 159);}
+QPushButton:pressed {background-color: rgb(0, 85, 133);}
+QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="pb_water_drain_1">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="statusTip">
+                <string>Force-drain counterweight #1</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
+QPushButton:hover {background-color: rgb(190, 85, 0);}
+QPushButton:pressed {background-color: rgb(160, 70, 0);}
+QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="pb_water_drain_2">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="statusTip">
+                <string>Force-drain counterweight #2</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
+QPushButton:hover {background-color: rgb(190, 85, 0);}
+QPushButton:pressed {background-color: rgb(160, 70, 0);}
+QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="pb_water_fill_2">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>20</width>
+                 <height>20</height>
+                </size>
+               </property>
+               <property name="font">
+                <font>
+                 <pointsize>8</pointsize>
+                </font>
+               </property>
+               <property name="statusTip">
+                <string>Force-fill counterweight #2</string>
+               </property>
+               <property name="styleSheet">
+                <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
+QPushButton:hover {background-color: rgb(0, 102, 159);}
+QPushButton:pressed {background-color: rgb(0, 85, 133);}
+QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
+               </property>
+               <property name="text">
+                <string/>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+               <property name="flat">
+                <bool>false</bool>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="2">
+              <widget class="QLabel" name="static_l_drain">
+               <property name="text">
+                <string>DRAIN</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="static_l_fill">
+               <property name="text">
+                <string>FILL</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="1" colspan="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
+              <widget class="QPushButton" name="pb_autocomp_enable">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Enable fluid system operation</string>
+               </property>
+               <property name="layoutDirection">
+                <enum>Qt::LayoutDirection::LeftToRight</enum>
+               </property>
+               <property name="text">
+                <string>ENABLE</string>
+               </property>
+               <property name="checkable">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="2">
+            <layout class="QVBoxLayout" name="vl_counterweight_2">
+             <item alignment="Qt::AlignmentFlag::AlignHCenter">
+              <widget class="TankWidget" name="tw_fill_level_2" native="true">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>90</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>90</width>
+                 <height>90</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Estimated counterweight #2 fill level</string>
+               </property>
+               <property name="autoFillBackground">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignTop">
+              <widget class="QLabel" name="l_water2_status">
+               <property name="statusTip">
+                <string>Fluid system status</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QVBoxLayout" name="vl_counterweight_1">
+             <item alignment="Qt::AlignmentFlag::AlignHCenter">
+              <widget class="TankWidget" name="tw_fill_level_1" native="true">
+               <property name="enabled">
+                <bool>true</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>90</width>
+                 <height>90</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>90</width>
+                 <height>90</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Estimated counterweight #1 fill level</string>
+               </property>
+               <property name="autoFillBackground">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignTop">
+              <widget class="QLabel" name="l_water1_status">
+               <property name="statusTip">
+                <string>Fluid system status</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
         </item>
         <item>
-         <widget class="QLabel" name="static_l_ros2enabled">
-          <property name="statusTip">
-           <string>Whether this app was built with ROS2 support</string>
+         <widget class="QGroupBox" name="gb_manipulator">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
           </property>
-          <property name="text">
-           <string>BUILD_WITH_ROS2 = ...</string>
+          <property name="font">
+           <font>
+            <bold>false</bold>
+           </font>
           </property>
-          <property name="alignment">
-           <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
+          <property name="title">
+           <string>MANIPULATOR</string>
           </property>
+          <layout class="QGridLayout" name="gridLayout">
+           <property name="leftMargin">
+            <number>4</number>
+           </property>
+           <property name="topMargin">
+            <number>4</number>
+           </property>
+           <property name="rightMargin">
+            <number>4</number>
+           </property>
+           <property name="bottomMargin">
+            <number>4</number>
+           </property>
+           <item row="1" column="0">
+            <layout class="QHBoxLayout" name="hl_manip_servo_control">
+             <item alignment="Qt::AlignmentFlag::AlignTop">
+              <widget class="QPushButton" name="pb_manip_slow">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Start manipulator movement</string>
+               </property>
+               <property name="text">
+                <string>SLOW</string>
+               </property>
+              </widget>
+             </item>
+             <item alignment="Qt::AlignmentFlag::AlignTop">
+              <widget class="QPushButton" name="pb_manip_fast">
+               <property name="enabled">
+                <bool>false</bool>
+               </property>
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>80</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Start manipulator movement</string>
+               </property>
+               <property name="text">
+                <string>FAST</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+           <item row="0" column="0">
+            <layout class="QGridLayout" name="gl_manip_input">
+             <item row="2" column="2">
+              <widget class="QLabel" name="static_l_manip_tilt_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="4">
+              <widget class="QLabel" name="static_l_actual_manip_pan_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="0">
+              <widget class="QLabel" name="static_l_manip_tilt">
+               <property name="font">
+                <font>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Tilt</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="3">
+              <widget class="QLabel" name="l_actual_manip_base">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Manipulator pitch correction (automatic)</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="4">
+              <widget class="QLabel" name="static_l_actual_manip_base_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="3">
+              <widget class="QLabel" name="l_actual_manip_tilt">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Manipulator pitch joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="3">
+              <widget class="QLabel" name="l_actual_manip_pan">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>50</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Manipulator yaw joint</string>
+               </property>
+               <property name="text">
+                <string>...</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="1">
+              <widget class="QDoubleSpinBox" name="sb_manip_pan">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>65</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>65</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Range: -80,80  |  Interval: 10</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+               <property name="minimum">
+                <double>-80.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>80.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>10.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="4">
+              <widget class="QLabel" name="static_l_actual_manip_tilt_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="2">
+              <widget class="QLabel" name="static_l_manip_pan_u">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Minimum" vsizetype="Minimum">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="text">
+                <string>deg</string>
+               </property>
+              </widget>
+             </item>
+             <item row="2" column="1">
+              <widget class="QDoubleSpinBox" name="sb_manip_tilt">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>65</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>65</width>
+                 <height>25</height>
+                </size>
+               </property>
+               <property name="statusTip">
+                <string>Range: -80,80  |  Interval: 10</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+               </property>
+               <property name="minimum">
+                <double>-80.000000000000000</double>
+               </property>
+               <property name="maximum">
+                <double>80.000000000000000</double>
+               </property>
+               <property name="singleStep">
+                <double>10.000000000000000</double>
+               </property>
+              </widget>
+             </item>
+             <item row="0" column="0">
+              <widget class="QLabel" name="static_l_manip_base">
+               <property name="font">
+                <font>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Base</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item row="1" column="0">
+              <widget class="QLabel" name="static_l_manip_pan">
+               <property name="font">
+                <font>
+                 <bold>true</bold>
+                </font>
+               </property>
+               <property name="text">
+                <string>Pan</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignmentFlag::AlignCenter</set>
+               </property>
+              </widget>
+             </item>
+            </layout>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
-      </item>
-      <item row="3" column="3">
-       <widget class="QGroupBox" name="gb_water">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="title">
-         <string>WATER</string>
-        </property>
-        <layout class="QGridLayout" name="gl_water">
-         <property name="leftMargin">
-          <number>4</number>
-         </property>
-         <property name="topMargin">
-          <number>4</number>
-         </property>
-         <property name="rightMargin">
-          <number>4</number>
-         </property>
-         <property name="bottomMargin">
-          <number>4</number>
-         </property>
-         <item row="0" column="1">
-          <layout class="QGridLayout" name="gl_water_controls">
-           <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-            <widget class="QPushButton" name="pb_water_fill_1">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="statusTip">
-              <string>Force-fill counterweight #1</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
-QPushButton:hover {background-color: rgb(0, 102, 159);}
-QPushButton:pressed {background-color: rgb(0, 85, 133);}
-QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-            <widget class="QPushButton" name="pb_water_drain_1">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="statusTip">
-              <string>Force-drain counterweight #1</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
-QPushButton:hover {background-color: rgb(190, 85, 0);}
-QPushButton:pressed {background-color: rgb(160, 70, 0);}
-QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-            <widget class="QPushButton" name="pb_water_drain_2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="statusTip">
-              <string>Force-drain counterweight #2</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
-QPushButton:hover {background-color: rgb(190, 85, 0);}
-QPushButton:pressed {background-color: rgb(160, 70, 0);}
-QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-            <widget class="QPushButton" name="pb_water_fill_2">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>20</width>
-               <height>20</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>8</pointsize>
-              </font>
-             </property>
-             <property name="statusTip">
-              <string>Force-fill counterweight #2</string>
-             </property>
-             <property name="styleSheet">
-              <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
-QPushButton:hover {background-color: rgb(0, 102, 159);}
-QPushButton:pressed {background-color: rgb(0, 85, 133);}
-QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-             <property name="flat">
-              <bool>false</bool>
-             </property>
-            </widget>
-           </item>
-           <item row="2" column="2">
-            <widget class="QLabel" name="static_l_drain">
-             <property name="text">
-              <string>DRAIN</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="2">
-            <widget class="QLabel" name="static_l_fill">
-             <property name="text">
-              <string>FILL</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1" colspan="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-            <widget class="QPushButton" name="pb_water_enable">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Enable fluid system operation</string>
-             </property>
-             <property name="layoutDirection">
-              <enum>Qt::LayoutDirection::LeftToRight</enum>
-             </property>
-             <property name="text">
-              <string>ENABLE</string>
-             </property>
-             <property name="checkable">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item row="0" column="2">
-          <layout class="QVBoxLayout" name="vl_counterweight_2">
-           <item alignment="Qt::AlignmentFlag::AlignHCenter">
-            <widget class="TankWidget" name="tw_fill_level_2" native="true">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>90</width>
-               <height>90</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>90</width>
-               <height>90</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Estimated counterweight #2 fill level</string>
-             </property>
-             <property name="autoFillBackground">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QLabel" name="l_water2_status">
-             <property name="statusTip">
-              <string>Fluid system status</string>
-             </property>
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item row="0" column="0">
-          <layout class="QVBoxLayout" name="vl_counterweight_1">
-           <item alignment="Qt::AlignmentFlag::AlignHCenter">
-            <widget class="TankWidget" name="tw_fill_level_1" native="true">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Minimum" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>90</width>
-               <height>90</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>90</width>
-               <height>90</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Estimated counterweight #1 fill level</string>
-             </property>
-             <property name="autoFillBackground">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item alignment="Qt::AlignmentFlag::AlignTop">
-            <widget class="QLabel" name="l_water1_status">
-             <property name="statusTip">
-              <string>Fluid system status</string>
-             </property>
-             <property name="text">
-              <string>...</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
-      </item>
-      <item row="0" column="2" rowspan="3" colspan="2">
-       <widget class="QGroupBox" name="gb_camera">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="title">
-         <string>CAMERA</string>
-        </property>
-        <layout class="QGridLayout" name="gl_camera">
-         <property name="leftMargin">
-          <number>4</number>
-         </property>
-         <property name="topMargin">
-          <number>4</number>
-         </property>
-         <property name="rightMargin">
-          <number>4</number>
-         </property>
-         <property name="bottomMargin">
-          <number>4</number>
-         </property>
-         <item row="0" column="0">
-          <layout class="QGridLayout" name="gl_camera_feed">
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_camera_id">
-             <property name="minimumSize">
-              <size>
-               <width>25</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>25</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ID</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="pb_camera_refresh">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="1">
-            <widget class="QComboBox" name="cb_camera_id">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>100</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>200</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>OS-level device address</string>
-             </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-             </property>
-             <property name="placeholderText">
-              <string>...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <spacer name="h_spacer_11">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="2" column="0" colspan="4">
-            <widget class="QVideoWidget" name="vw_camera_viewfinder" native="true">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>256</width>
-               <height>144</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Live camera feed</string>
-             </property>
-            </widget>
-           </item>
-           <item row="1" column="1" colspan="3">
-            <widget class="QLabel" name="l_camera_name">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>0</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Human-readable device label</string>
-             </property>
-             <property name="frameShape">
-              <enum>QFrame::Shape::Box</enum>
-             </property>
-             <property name="text">
-              <string>...</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item row="1" column="0">
-          <layout class="QHBoxLayout" name="hl_camera_control">
-           <item>
-            <widget class="QPushButton" name="pb_camera_capture">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Save an image</string>
-             </property>
-             <property name="text">
-              <string>CAPTURE</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="pb_camera_record">
-             <property name="enabled">
-              <bool>false</bool>
-             </property>
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>80</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Save a video</string>
-             </property>
-             <property name="text">
-              <string>RECORD</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-        </layout>
-       </widget>
       </item>
      </layout>
     </item>
@@ -2913,7 +2917,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1001</width>
+     <width>1003</width>
      <height>19</height>
     </rect>
    </property>
@@ -3154,7 +3158,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
   <tabstop>sb_manip_tilt</tabstop>
   <tabstop>pb_manip_slow</tabstop>
   <tabstop>pb_manip_fast</tabstop>
-  <tabstop>pb_water_enable</tabstop>
+  <tabstop>pb_autocomp_enable</tabstop>
   <tabstop>pb_water_fill_1</tabstop>
   <tabstop>pb_water_drain_1</tabstop>
   <tabstop>pb_water_fill_2</tabstop>
