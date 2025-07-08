@@ -105,14 +105,15 @@ class MainWindow : public QMainWindow {
 
     void EnableDebugMode(const bool& enabled);
 
+    void EnableAutoTorqueComp(const bool& enabled);
+
     // --- Arduino Commands ---
 
-    void ConnectWater(QString port_name);
-    void CommandWater(double torque_dir);
-    void EnableFluidSystem(const bool& enabled);
+    void ConnectWater(const QString& port_name);
+    void CommandWater(const Water::Side& side, const Water::State& state);
 
 #if LIBRA_VERSION == 1
-    void ConnectManip(QString port_name);
+    void ConnectManip(const QString& port_name);
     void CommandManip(const double& arm_pitch, const double& pan,
                       const double& tilt, const bool& move_slow);
 #endif
@@ -120,8 +121,6 @@ class MainWindow : public QMainWindow {
     // --- Actuator Commands ---
 
     void CommandHebi(const std::vector<double>& deg);
-    void EnableAutoTorqueComp(const bool& enabled);
-
 #if LIBRA_VERSION == 2
     void CommandEpos(const std::vector<double>& deg);
 #endif
@@ -139,7 +138,7 @@ class MainWindow : public QMainWindow {
     //   (none)
 
     // Sensors Menu
-    // (most actions are handed off to signals, and thus don't need functions)
+    // (most actions are handled via signals, and thus don't need functions)
 
     void on_a_refresh_camera_list_triggered();
 
@@ -158,11 +157,16 @@ class MainWindow : public QMainWindow {
     // Arm
 
     void on_pb_arm_start_clicked();
+    // (pb_arm_stop is handled via signals)
+
+    void on_pb_autocomp_enable_toggled(bool checked);
 
     // Water
 
-    void on_pb_water_enable_toggled(bool checked);
-    void on_pb_water_drain_clicked();
+    void on_pb_water_fill_1_toggled(bool checked);
+    void on_pb_water_drain_1_toggled(bool checked);
+    void on_pb_water_fill_2_toggled(bool checked);
+    void on_pb_water_drain_2_toggled(bool checked);
 
     // Manipulator
 

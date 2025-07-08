@@ -275,7 +275,7 @@ void ArduinoManager::AttemptReconnects() {
 /**
  * @brief Sends the previously-assigned command to the SerialWater Arduino.
  *
- * @see SetWaterCommand
+ * @see MapTorqueToWaterCommand
  */
 void ArduinoManager::UpdateWater() {
     if (!ser_water_->isOpen()) {
@@ -394,7 +394,7 @@ void ArduinoManager::UpdateManip() {
  *
  * @param port_name The serial device address to connect to
  */
-void ArduinoManager::ConnectWater(QString port_name) {
+void ArduinoManager::ConnectWater(const QString& port_name) {
     // If there is already an active connection, gracefully terminate it
     DisconnectWater();
 
@@ -439,12 +439,14 @@ void ArduinoManager::DisconnectWater() {
 }
 
 /**
- * @brief Sets the operational state of the fluid system.
+ * @brief Sets the state of the fluid system's automatic torque compensation.
+ *
+ * @see MapTorqueToWaterCommand
  */
-void ArduinoManager::SetWaterState(const bool& enabled) {
-    water_en_ = enabled;
+void ArduinoManager::SetAutoCompensation(const bool& enabled) {
+    auto_comp_en_.store(enabled);
 
-    if (!water_en_) {
+    if (!enabled) {
         water_cmd_.clear();  // clear any active water commands
     }
 
@@ -453,58 +455,108 @@ void ArduinoManager::SetWaterState(const bool& enabled) {
 }
 
 /**
- * @brief Calculates counterweight fill/drain command based on torque acting
- *        upon central joint.
+ * @brief Determines counterweight fill/drain command based on direction of
+ *        torque acting upon central joint.
  *
  * @param torque_dir Direction of torque feedback, in radians (range: [-PI, PI])
  *
  * @note Command bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT.
  *
- * @note This function is only triggered under two situations:
- *   1) `HebiThread` emits the `ReportArmTorque` signal, which means
- *        automatic torque compensation is enabled.
- *   2) `MainWindow` emits the `CommandWater` signal, which in this case is only
- *        used to force fill or drain the counterweight(s).
- *
- * @see hebi_thread
+ * @see hebi_thread::run
  */
-void ArduinoManager::SetWaterCommand(double torque_dir) {
-    if (!ser_water_->isOpen()) {
-        logger_->Warn("Water - Cannot command Arduino: not connected!");
+void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
+    if (!auto_comp_en_.load()) {
+        // Only allow manual control (see ForceWaterCommand)
         return;
     }
 
-    uint8_t command;
+    if (!ser_water_->isOpen()) {
+        // Unlike other isOpen checks, do NOT log any messages here because this
+        // function can be called by HebiThread multiple times per second
+        return;
+    }
+
+    uint8_t command = 0;
 
 #if LIBRA_VERSION == 1
-    if (torque_dir > k7_8Pi || -k7_8Pi >= torque_dir) {  // W
-        command = kWestCmd;
-    } else if (torque_dir > k5_8Pi) {  // NW
-        command = kNorthWestCmd;
-    } else if (torque_dir > k3_8Pi) {  // N
-        command = kNorthCmd;
-    } else if (torque_dir > k1_8Pi) {  // NE
-        command = kNorthEastCmd;
-    } else if (torque_dir > -k1_8Pi) {  // E
-        command = kEastCmd;
-    } else if (torque_dir > -k3_8Pi) {  // SE
-        command = kSouthEastCmd;
-    } else if (torque_dir > -k5_8Pi) {  // S
-        command = kSouthCmd;
-    } else {  // SW
-        command = kSouthWestCmd;
+    // Set command based on radial direction
+    if (torque_dir > k7_8Pi || -k7_8Pi >= torque_dir) {
+        command = kWestCmd;  // kAIn | kBOut
+    } else if (torque_dir > k5_8Pi) {
+        command = kNorthWestCmd;  // kBOut
+    } else if (torque_dir > k3_8Pi) {
+        command = kNorthCmd;  // kAOut | kBOut
+    } else if (torque_dir > k1_8Pi) {
+        command = kNorthEastCmd;  // kAOut
+    } else if (torque_dir > -k1_8Pi) {
+        command = kEastCmd;  // kBIn | kAOut
+    } else if (torque_dir > -k3_8Pi) {
+        command = kSouthEastCmd;  // kBIn
+    } else if (torque_dir > -k5_8Pi) {
+        command = kSouthCmd;  // kAIn | kBIn
+    } else {
+        command = kSouthWestCmd;  // kAIn
     }
 #elif LIBRA_VERSION == 2
-    if (torque_dir == 0) {  // N
-        command = kNorthCmd;
-    } else {  // S
-        command = kSouthCmd;
+    // Set command regardless of which fluid system side is connected
+    if (torque_dir == 0) {
+        command = kNorthCmd;  // kAOut | kBOut
+    } else {
+        command = kSouthCmd;  // kAIn | kBIn
     }
 #endif
 
     water_cmd_ = QByteArray(1, static_cast<char>(command));
 
     logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
+                   + " (A_IN | B_IN | A_OUT | B_OUT)");
+}
+
+/**
+ * @brief Forces the state of a specific side of the fluid system.
+ *
+ * @param side The side to command
+ * @param Water::State The state to force
+ */
+void ArduinoManager::ForceWaterCommand(const Water::Side& side,
+                                       const Water::State& state) {
+    if (!ser_water_->isOpen()) {
+        logger_->Warn("Water - Cannot command Arduino: not connected!");
+        return;
+    }
+
+    // Force-disable auto compensation
+    SetAutoCompensation(false);
+
+    uint8_t command = 0;
+
+#if LIBRA_VERSION == 1
+    // Set command based on specified side
+    switch (side) {
+        case Water::Side::kA:
+            command = (state == Water::State::kFilling)    ? kAIn
+                      : (state == Water::State::kDraining) ? kAOut
+                                                           : 0;
+            break;
+        case Water::Side::kB:
+            command = (state == Water::State::kFilling)    ? kBIn
+                      : (state == Water::State::kDraining) ? kBOut
+                                                           : 0;
+            break;
+        default:
+            // Do nothing (since command is initialized at the top)
+            break;
+    }
+#elif LIBRA_VERSION == 2
+    // Set command regardless of which fluid system side is connected
+    command = (state == Water::State::kFilling)    ? kSouthCmd
+              : (state == Water::State::kDraining) ? kNorthCmd
+                                                   : 0;
+#endif
+
+    water_cmd_ = QByteArray(1, static_cast<char>(command));
+
+    logger_->Debug("Water - Forced command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
 
@@ -518,7 +570,7 @@ void ArduinoManager::SetWaterCommand(double torque_dir) {
  *
  * @param port_name The serial device address to connect to
  */
-void ArduinoManager::ConnectManip(QString port_name) {
+void ArduinoManager::ConnectManip(const QString& port_name) {
     // If there is already an active connection, gracefully terminate it
     DisconnectManip();
 
@@ -563,7 +615,7 @@ void ArduinoManager::DisconnectManip() {
 }
 
 /**
- * @brief TODO: documentation.
+ * @brief Sets movement targets for all manipulator servos.
  *
  * @param arm_pitch Angle of LIBRA-I arm pitch joint "J3"
  * @param target_pan Target yaw angle

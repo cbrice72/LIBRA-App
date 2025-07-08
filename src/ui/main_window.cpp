@@ -351,10 +351,10 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::ConnectWater);
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
             arduino_manager_, &ArduinoManager::DisconnectWater);
-    connect(this, &MainWindow::EnableFluidSystem,  // change water state
-            arduino_manager_, &ArduinoManager::SetWaterState);
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // change water state
+            arduino_manager_, &ArduinoManager::SetAutoCompensation);
     connect(this, &MainWindow::CommandWater,  // force update water command
-            arduino_manager_, &ArduinoManager::SetWaterCommand);
+            arduino_manager_, &ArduinoManager::ForceWaterCommand);
 
     // MainWindow slots
     connect(arduino_manager_, &ArduinoManager::ErrorThrown,  // handle errors
@@ -405,7 +405,7 @@ void MainWindow::InitializeThreads() {
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             hebi_thread_, &HebiThread::SetDebugMode);
     connect(this, &MainWindow::EnableAutoTorqueComp,  // update auto control
-            hebi_thread_, &HebiThread::SetAutoTorqueComp);
+            hebi_thread_, &HebiThread::SetTorqueControl);
 
     connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
             hebi_thread_, &HebiThread::Connect);
@@ -430,7 +430,7 @@ void MainWindow::InitializeThreads() {
 
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
-            arduino_manager_, &ArduinoManager::SetWaterCommand);
+            arduino_manager_, &ArduinoManager::MapTorqueToWaterCommand);
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits,
@@ -629,8 +629,6 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->a_water_connect->setEnabled(!connected);
     ui_->a_water_disconnect->setEnabled(connected);
-
-    ui_->pb_water_enable->setEnabled(connected);
 
     ui_->pb_water_fill_1->setEnabled(connected);
     ui_->pb_water_drain_1->setEnabled(connected);
@@ -961,38 +959,131 @@ void MainWindow::on_pb_arm_start_clicked() {
 #endif
 }
 
+/**
+ * @brief Toggles functionality related to automatic torque compensation. This
+ *        includes automatic torque control of the central arm joint and, by
+ *        association, automatic fluid system operation.
+ *
+ * @param checked Whether to enable automatic fluid system compensation
+ *
+ * @see on_pb_water_fill_1_toggled on_pb_water_drain_1_toggled
+ *      on_pb_water_fill_2_toggled on_pb_water_drain_2_toggled
+ */
+void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
+    emit EnableAutoTorqueComp(checked);
+
+    if (checked) {
+        // Cancel any conflicting states in UI
+        ui_->pb_water_fill_1->setChecked(false);
+        ui_->pb_water_drain_1->setChecked(false);
+        ui_->pb_water_fill_2->setChecked(false);
+        ui_->pb_water_drain_2->setChecked(false);
+
+        // Clearly display an "enabled" state
+        ui_->pb_camera_record->setText("DISABLE AUTO TORQUE COMP");
+        ui_->pb_camera_record->setStyleSheet(
+            QString("color: %1;").arg(Color::kRed));
+    } else {
+        // Revert to "disabled" state
+        ui_->pb_camera_record->setText("ENABLE AUTO TORQUE COMP");
+        ui_->pb_camera_record->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
+    }
+}
+
 //------------------------------------------------------------------------------
 // !Water
 //------------------------------------------------------------------------------
 
 /**
- * @brief Enable/disable fluid system operation (and, by association, automatic
- *        torque control of the central arm joint).
+ * @brief Toggles force-filling of counterweight #1. Implicitly disables
+ *        automatic torque compensation.
  *
- * @param checked Whether to enable automatic fluid system compensation
+ * @param checked Whether to force-fill the counterweight
+ *
+ * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_enable_toggled(bool checked) {
-    emit EnableFluidSystem(checked);
-    emit EnableAutoTorqueComp(checked);
-
+void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
     if (checked) {
-        // Clearly display an "enabled" state
-        ui_->pb_camera_record->setStyleSheet("color: red;");
-        ui_->pb_camera_record->setText("DISABLE");
+        // Cancel any conflicting states in UI
+        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_water_drain_1->setChecked(false);
+
+        // Send signal
+        emit CommandWater(Water::Side::kA, Water::State::kFilling);
     } else {
-        // Revert to "disabled" state
-        ui_->pb_camera_record->setStyleSheet("color: black;");
-        ui_->pb_camera_record->setText("ENABLE");
+        // Return to stable state
+        emit CommandWater(Water::Side::kB, Water::State::kStopped);
     }
 }
 
 /**
- * @brief Force-drain the counterweight(s).
+ * @brief Toggles force-draining of counterweight #1. Implicitly disables
+ *        automatic torque compensation.
+ *
+ * @param checked Whether to force-drain the counterweight
+ *
+ * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_clicked() {
-    emit EnableFluidSystem(true);
-    emit CommandWater(ArduinoManager::kDrain);
+void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
+    if (checked) {
+        // Cancel any conflicting states in UI
+        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_water_fill_1->setChecked(false);
+
+        // Send signal
+        emit CommandWater(Water::Side::kA, Water::State::kDraining);
+    } else {
+        // Return to stable state
+        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+    }
 }
+
+#if LIBRA_VERSION == 1
+/**
+ * @brief Toggles force-filling of counterweight #2. Implicitly disables
+ *        automatic torque compensation.
+ *
+ * @param checked Whether to force-fill the counterweight
+ *
+ * @see on_pb_autocomp_enable_toggled
+ */
+void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
+    if (checked) {
+        // Cancel any conflicting states in UI
+        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_water_drain_2->setChecked(false);
+
+        // Send signal
+        emit CommandWater(Water::Side::kB, Water::State::kFilling);
+    } else {
+        // Return to stable state
+        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+    }
+}
+
+/**
+ * @brief Toggles force-draining of counterweight #2. Implicitly disables
+ *        automatic torque compensation.
+ *
+ * @param checked Whether to force-drain the counterweight
+ *
+ * @see on_pb_autocomp_enable_toggled
+ */
+void MainWindow::on_pb_water_drain_2_toggled(bool checked) {
+    if (checked) {
+        // Cancel any conflicting states in UI
+        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_water_fill_2->setChecked(false);
+
+        // Send signal
+        emit CommandWater(Water::Side::kB, Water::State::kDraining);
+    } else {
+        // Return to stable state
+        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+    }
+}
+#endif
 
 //------------------------------------------------------------------------------
 // !Manipulator

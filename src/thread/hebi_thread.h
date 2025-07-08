@@ -58,14 +58,14 @@ class HebiThread : public AbstractActuatorThread
     void SetTarget(const std::vector<double>& deg) override;
     void Stop() override;
 
-    void SetAutoTorqueComp(const bool& enabled);
+    void SetTorqueControl(const bool& enabled);
 
   signals:
     // --- Actuator Updates ---
 
     // NOTE: see `AbstractActuatorThread`
 
-    void ReportArmTorque(double theta);
+    void ReportArmTorque(const double& theta);
 
   private:
     void run() override;

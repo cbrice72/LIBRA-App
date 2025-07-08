@@ -372,8 +372,8 @@ void HebiThread::run() {
             }
 
             if (arm_torque_r >= kTorqueCompLowerBound) {
-                // While arm torque remains above the specified lower bound, report
-                // magnitude and direction (if applicable) to arduino_thread
+                // While arm torque remains above the specified lower bound,
+                // report direction of torque to arduino_thread
                 emit ReportArmTorque(arm_torque_theta);
             } else {
                 // Re-enable movement when arm torque reaches an acceptable level
@@ -632,9 +632,11 @@ void HebiThread::Stop() {
 }
 
 /**
- * @brief TODO: documentation.
+ * @brief Sets the state of the central joint's torque control.
+ *
+ * @param enabled Whether to control torque experienced by the central joint
  */
-void HebiThread::SetAutoTorqueComp(const bool& enabled) {
+void HebiThread::SetTorqueControl(const bool& enabled) {
     torque_control_en_ = enabled;
 
     if (!torque_control_en_) {

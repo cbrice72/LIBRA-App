@@ -41,10 +41,6 @@ class ArduinoManager : public QObject {
     explicit ArduinoManager(QObject* parent, const bool& debug_mode);
     ~ArduinoManager() override;
 
-    // For use in "Force" SetWaterCommand() calls
-    static constexpr double kFill = -M_PI / 2.0;  // unused
-    static constexpr double kDrain = M_PI / 2.0;
-
   public slots:
 
     void SetDebugMode(const bool& enabled) {
@@ -54,13 +50,14 @@ class ArduinoManager : public QObject {
 
     // --- Arduino Commands ---
 
-    void ConnectWater(QString port_name);
+    void ConnectWater(const QString& port_name);
     void DisconnectWater();
-    void SetWaterState(const bool& enabled);
-    void SetWaterCommand(double torque_dir);
+    void SetAutoCompensation(const bool& enabled);
+    void MapTorqueToWaterCommand(const double& torque_dir);
+    void ForceWaterCommand(const Water::Side& side, const Water::State& state);
 
 #if LIBRA_VERSION == 1
-    void ConnectManip(QString port_name);
+    void ConnectManip(const QString& port_name);
     void DisconnectManip();
     void SetManipCommand(const double& arm_pitch, const double& target_pan,
                          const double& target_tilt, const bool& move_slow);
@@ -120,7 +117,7 @@ class ArduinoManager : public QObject {
 
     // Water state
 
-    bool water_en_{false};
+    std::atomic<bool> auto_comp_en_{false};
     QByteArray water_cmd_;  // only 4 bits used
 
 #if LIBRA_VERSION == 1
