@@ -55,7 +55,7 @@ constexpr bool kManipMoveFast = false;
 namespace {
 
 /**
- * @brief Checks whether app is running in Windows Subsystem for Linux (WSL2).
+ * @brief Checks if the app is running in Windows Subsystem for Linux (WSL2).
  */
 void CheckWslEnvironment() {
     const char* wsl_path = "/run/WSL";
@@ -969,7 +969,7 @@ void MainWindow::on_pb_arm_start_clicked() {
  * @brief Enable/disable fluid system operation (and, by association, automatic
  *        torque control of the central arm joint).
  *
- * @param checked Whether the fluid system is being enabled or disabled
+ * @param checked Whether to enable automatic fluid system compensation
  */
 void MainWindow::on_pb_water_enable_toggled(bool checked) {
     emit EnableFluidSystem(checked);

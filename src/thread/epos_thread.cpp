@@ -104,7 +104,7 @@ namespace {}  // namespace
  * @param interface_name Interface to communicate through
  * @param port_name Specific interface port where device is located
  * @param baud_rate Rate at which information will be transferred
- * @param debug_mode Whether verbose debug text should be output
+ * @param debug_mode Whether to output verbose debug text
  */
 EposThread::EposThread(QObject* parent, std::string device_name,
                        std::string protocol_name, std::string interface_name,

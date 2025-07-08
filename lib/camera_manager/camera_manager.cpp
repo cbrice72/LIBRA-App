@@ -72,7 +72,7 @@ std::string GetDateTimeStr() {
  *
  * @param id Camera location (e.g., `/dev/video0`); will be used to find the device
  * @param viewfinder The QVideoWidget object to display the camera feeed in
- * @param debug_mode Whether verbose debug text should be output
+ * @param debug_mode Whether to output verbose debug text
  * @param parent Owning Qt widget (default: nullptr)
  */
 CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,

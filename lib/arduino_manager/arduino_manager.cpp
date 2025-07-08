@@ -123,7 +123,7 @@ std::string BytesToStr(const QByteArray& bytes) {
  * @brief Standard constructor.
  *
  * @param parent Owning Qt widget
- * @param debug_mode Whether verbose debug text should be output
+ * @param debug_mode Whether to output verbose debug text
  */
 ArduinoManager::ArduinoManager(QObject* parent, const bool& debug_mode)
     : QObject(parent),
@@ -568,7 +568,7 @@ void ArduinoManager::DisconnectManip() {
  * @param arm_pitch Angle of LIBRA-I arm pitch joint "J3"
  * @param target_pan Target yaw angle
  * @param target_tilt Target pitch angle
- * @param move_slow Whether to use a slower, controlled trajectory
+ * @param move_slow Whether to use a slower, more controlled trajectory
  */
 void ArduinoManager::SetManipCommand(const double& arm_pitch,
                                      const double& target_pan,

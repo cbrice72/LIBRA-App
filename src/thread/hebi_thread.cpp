@@ -102,7 +102,7 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
  * @param parent Owning Qt widget
  * @param families Families of actuators to search for names in
  * @param names Names of actuators to connect to
- * @param debug_mode Whether verbose debug text should be output
+ * @param debug_mode Whether to output verbose debug text
  */
 HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)

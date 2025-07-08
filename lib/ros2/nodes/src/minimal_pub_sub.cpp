@@ -32,8 +32,8 @@ class MinimalPubSub : public rclcpp::Node {
      * @brief Conditional constructor, initializing one of two data
      *        communication mechanisms.
      *
-     * @param is_publisher Whether the node should be initialized as a publisher
-     *                     or a subscriber.
+     * @param is_publisher Whether to initialize the node as a publisher or a
+     *                     subscriber.
      */
     MinimalPubSub(bool is_publisher)
         : Node("minimal_pub_sub"), is_publisher_(is_publisher) {
