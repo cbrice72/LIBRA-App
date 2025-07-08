@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   ui_colors.h
+ * @file   colors.h
  * @brief  Colors for programmatic use in the LIBRA App; header-only.
  *
  * @author Christian Brice

@@ -9,7 +9,7 @@
 set(UI_SOURCE
     # UI Resources (icons, etc.)
     ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc
-    ${CMAKE_CURRENT_SOURCE_DIR}/ui_colors.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/colors.h
     # Main Window
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.h
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
