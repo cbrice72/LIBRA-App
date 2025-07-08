@@ -12,5 +12,8 @@
         "~/Qt/6.9.0/gcc_64/include",
         "${workspaceFolder}/build/**/include/**",
         "${workspaceFolder}/build/**/rosidl_generator_cpp/**/msg"
+    ],
+    "C_Cpp.codeAnalysis.clangTidy.checks.disabled": [
+        "readability-avoid-nested-conditional-operator"
     ]
 }
