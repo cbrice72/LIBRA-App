@@ -6,7 +6,7 @@
 ################################################################################
 
 # Add project modules
-add_subdirectory(thread) # actuator_thread, log_thread
+add_subdirectory(thread) # actuator_thread
 
 # Collect project source files
 add_subdirectory(ui) # UI_SOURCE, open_serial_dialog, open_epos_dialog

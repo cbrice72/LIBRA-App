@@ -176,7 +176,6 @@ MainWindow::~MainWindow() {
     };
 
     // Cleanup
-    StopThread(log_thread_);
     StopThread(hebi_thread_);
 #if LIBRA_VERSION == 2
     StopThread(epos_thread_);
@@ -392,25 +391,6 @@ void MainWindow::InitializeDeviceManagers() {
  * @note Only used in constructor - placed in own function to improve readability.
  */
 void MainWindow::InitializeThreads() {
-    // ========== Log Thread ==========
-
-    /*
-    log_thread_ = new LogThread(this, debug_mode_);
-
-    // MainWindow signals
-    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
-            log_thread_, &LogThread::SetDebugMode);
-
-    connect(ui_->pb_logshot, &QPushButton::clicked,  // log snapshot
-            log_thread_, &LogThread::TakeLogShot);
-
-    // Thread cleanup
-    connect(log_thread_, &LogThread::finished,      // when thread exits,
-            log_thread_, &LogThread::deleteLater);  // deallocate
-
-    log_thread_->start();
-    */
-
     // ========== HEBI Thread ==========
 
     hebi_thread_ = new HebiThread(this, {"LIBRA"},

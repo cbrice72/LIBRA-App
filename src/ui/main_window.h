@@ -18,7 +18,6 @@
 #include "arduino_manager.h"
 #include "camera_manager.h"
 #include "hebi_thread.h"
-#include "log_thread.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
 #endif
@@ -214,7 +213,6 @@ class MainWindow : public QMainWindow {
 
     // Threads
 
-    LogThread* log_thread_{nullptr};    // consolidated logging
     HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
 #if LIBRA_VERSION == 2
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control

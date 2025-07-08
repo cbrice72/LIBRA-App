@@ -218,7 +218,7 @@ add_custom_command(
 target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # Tell the linker which libraries to link against
-set(PROJECT_LIBRARIES arduino_manager camera_manager util actuator_thread log_thread open_serial_dialog)
+set(PROJECT_LIBRARIES arduino_manager camera_manager util actuator_thread open_serial_dialog)
 if(LIBRA_VERSION EQUAL 2)
     list(APPEND PROJECT_LIBRARIES open_epos_dialog)
 endif()
