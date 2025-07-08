@@ -930,7 +930,7 @@ void MainWindow::on_a_disconnect_all_triggered() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Send movement command signal to all actuators.
+ * @brief Sends movement command signal(s) to all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1

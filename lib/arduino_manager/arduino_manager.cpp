@@ -239,7 +239,7 @@ void ArduinoManager::RefreshUpdateTimerState() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Comprehensive device update callback.
+ * @brief Sends updated commands to all devices.
  */
 void ArduinoManager::UpdateDevices() {
     UpdateWater();

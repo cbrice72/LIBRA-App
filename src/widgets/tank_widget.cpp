@@ -213,7 +213,7 @@ void TankWidget::UpdateState(Water::State state) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Override `paintEvent()` to handle this widget's custom drawing.
+ * @brief Overrides `paintEvent()` to handle this widget's custom drawing.
  */
 void TankWidget::paintEvent(QPaintEvent*) {
     QPainter painter(this);

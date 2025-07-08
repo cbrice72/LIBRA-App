@@ -414,7 +414,7 @@ void OpenEposDialog::on_pb_connect_clicked() {
 }
 
 /**
- * @brief Give the user another way to close the window
+ * @brief Gives the user another way to close the window
  *        (in addition to the X in the menu bar).
  */
 void OpenEposDialog::on_pb_cancel_clicked() {

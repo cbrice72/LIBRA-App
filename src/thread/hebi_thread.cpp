@@ -260,7 +260,7 @@ QString HebiThread::GetStatus() const {
 
 #ifdef BUILD_WITH_ROS2
 /**
- * @brief Publish HEBI actuator state(s).
+ * @brief Publishes HEBI actuator state(s).
  *
  * @note Currently, this function only exists as an example, since the ROS2
  *       ecosystem cannot be made aware of interfaces or nodes created by the
