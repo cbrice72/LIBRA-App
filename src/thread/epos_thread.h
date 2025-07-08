@@ -58,7 +58,7 @@ class EposThread : public AbstractActuatorThread
   signals:
     // --- Actuator Updates ---
 
-    // NOTE: see `AbstractActuatorThread`
+    // NOTE: see AbstractActuatorThread for generic signals
 
   private:
     void run() override;
