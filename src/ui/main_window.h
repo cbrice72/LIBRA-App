@@ -177,7 +177,7 @@ class MainWindow : public QMainWindow {
 
     // Camera
 
-    void on_cb_camera_id_currentTextChanged(const QString& sel);
+    void on_cb_camera_name_currentTextChanged(const QString& sel);
     void on_pb_camera_capture_clicked();
     void on_pb_camera_record_clicked();
 
@@ -213,7 +213,7 @@ class MainWindow : public QMainWindow {
     ArduinoManager* arduino_manager_{nullptr};       // serial device control
     std::unique_ptr<CameraManager> camera_manager_;  // media device control
 
-    std::unordered_map<QString, QString> available_cameras_;  // ID, desc
+    std::unordered_map<QString, QString> available_cameras_;  // name, path
 
     // Threads
 

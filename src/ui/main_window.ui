@@ -122,46 +122,8 @@
          </property>
          <item row="0" column="0">
           <layout class="QGridLayout" name="gl_camera_feed">
-           <item row="0" column="0">
-            <widget class="QLabel" name="static_l_camera_id">
-             <property name="minimumSize">
-              <size>
-               <width>25</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>25</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="text">
-              <string>ID</string>
-             </property>
-             <property name="alignment">
-              <set>Qt::AlignmentFlag::AlignCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="2">
-            <widget class="QPushButton" name="pb_camera_refresh">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="text">
-              <string/>
-             </property>
-             <property name="icon">
-              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="1">
-            <widget class="QComboBox" name="cb_camera_id">
+            <widget class="QComboBox" name="cb_camera_name">
              <property name="enabled">
               <bool>true</bool>
              </property>
@@ -178,7 +140,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>OS-level device address</string>
+              <string>Human-readable device label</string>
              </property>
              <property name="sizeAdjustPolicy">
               <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
@@ -189,7 +151,7 @@
             </widget>
            </item>
            <item row="0" column="3">
-            <spacer name="h_spacer_11">
+            <spacer name="h_spacer_1">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -220,8 +182,36 @@
              </property>
             </widget>
            </item>
-           <item row="1" column="1" colspan="3">
-            <widget class="QLabel" name="l_camera_name">
+           <item row="0" column="0">
+            <widget class="QPushButton" name="pb_camera_refresh">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>25</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>25</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="2">
+            <widget class="QLabel" name="l_camera_id">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -235,7 +225,7 @@
               </size>
              </property>
              <property name="statusTip">
-              <string>Human-readable device label</string>
+              <string>OS-level device address</string>
              </property>
              <property name="frameShape">
               <enum>QFrame::Shape::Box</enum>
@@ -497,7 +487,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <spacer name="h_spacer_7">
+            <spacer name="h_spacer_2">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -918,7 +908,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <spacer name="h_spacer_8">
+            <spacer name="h_spacer_3">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -1046,7 +1036,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <spacer name="h_spacer_10">
+            <spacer name="h_spacer_4">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -1171,7 +1161,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <spacer name="h_spacer_9">
+            <spacer name="h_spacer_5">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -1744,7 +1734,7 @@
             </widget>
            </item>
            <item row="0" column="1">
-            <spacer name="h_spacer_5">
+            <spacer name="h_spacer_7">
              <property name="orientation">
               <enum>Qt::Orientation::Horizontal</enum>
              </property>
@@ -3150,8 +3140,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
   <tabstop>hs_arm_j3</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
-  <tabstop>pb_camera_refresh</tabstop>
-  <tabstop>cb_camera_id</tabstop>
+  <tabstop>cb_camera_name</tabstop>
   <tabstop>pb_camera_capture</tabstop>
   <tabstop>pb_camera_record</tabstop>
   <tabstop>sb_manip_pan</tabstop>

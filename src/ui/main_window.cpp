@@ -593,7 +593,7 @@ void MainWindow::ConnectWaterHelper() {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Reflects SerialServo connection status in UI.
+ * @brief Reflects SerialServo connection status in the UI.
  */
 void MainWindow::HandleManipConnChanged(const bool& connected) {
     if (connected) {
@@ -625,7 +625,7 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
 #endif
 
 /**
- * @brief Reflects SerialWater connection status in UI.
+ * @brief Reflects SerialWater connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->a_water_connect->setEnabled(!connected);
@@ -640,7 +640,7 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
 }
 
 /**
- * @brief Reflects fluid system status in UI.
+ * @brief Reflects fluid system status in the UI.
  *        - Primary visual feedback: formatted status string in "WATER" GroupBox
  *        - Secondary visual feedback: updates TankWidget(s) animation state
  *
@@ -672,7 +672,7 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
 }
 
 /**
- * @brief Reflects HEBI actuator connection status in UI.
+ * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
     ui_->a_hebi_connect->setEnabled(!connected);
@@ -690,7 +690,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Reflects EPOS (Maxon) actuator connection status in UI.
+ * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
     ui_->a_epos_connect->setEnabled(!connected);
@@ -829,32 +829,26 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 void MainWindow::on_a_refresh_camera_list_triggered() {
     qDebug() << "[INFO] Checking available video inputs...";
 
-    ui_->cb_camera_id->clear();  // existing list may be stale
+    ui_->cb_camera_name->clear();  // existing list may be stale
 
     const auto cameras = QMediaDevices::videoInputs();
     for (const auto& camera : cameras) {
-        auto id = QString(camera.id());
-
-        if (debug_mode_) {
-            qDebug() << "[DEBUG] Found camera at " << camera.id();
-        }
-
-        // Populate ComboBox
-        ui_->cb_camera_id->addItem(id);
-
-        // Populate internal map (used on ComboBox change)
-        available_cameras_[id] = camera.description();
+        auto desc = camera.description();
+        ui_->cb_camera_name->addItem(desc);  // populate ComboBox
+        available_cameras_[desc] = QString(camera.id());
     }
 
     // NOTE: the "CAPTURE" and "RECORD" buttons are only enabled when a camera
-    //       is selected (see the on_cb_camera_id_currentTextChanged() callback)
+    //       is selected (see on_cb_camera_name_currentTextChanged)
     if (available_cameras_.empty()) {
         ui_->pb_camera_capture->setEnabled(false);
         ui_->pb_camera_record->setEnabled(false);
 
         if (debug_mode_) {
-            qDebug() << "[DEBUG] No cameras were found";
+            qDebug() << "[INFO] No cameras were found";
         }
+    } else {
+        qDebug() << "[INFO] Found " << available_cameras_.size() << " cameras";
     }
 }
 
@@ -974,7 +968,7 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
     emit EnableAutoTorqueComp(checked);
 
     if (checked) {
-        // Cancel any conflicting states in UI
+        // Cancel any conflicting widget states
         ui_->pb_water_fill_1->setChecked(false);
         ui_->pb_water_drain_1->setChecked(false);
         ui_->pb_water_fill_2->setChecked(false);
@@ -1006,7 +1000,7 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
  */
 void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
     if (checked) {
-        // Cancel any conflicting states in UI
+        // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
         ui_->pb_water_drain_1->setChecked(false);
 
@@ -1028,7 +1022,7 @@ void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
  */
 void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
     if (checked) {
-        // Cancel any conflicting states in UI
+        // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
         ui_->pb_water_fill_1->setChecked(false);
 
@@ -1051,7 +1045,7 @@ void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
  */
 void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
     if (checked) {
-        // Cancel any conflicting states in UI
+        // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
         ui_->pb_water_drain_2->setChecked(false);
 
@@ -1073,7 +1067,7 @@ void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
  */
 void MainWindow::on_pb_water_drain_2_toggled(bool checked) {
     if (checked) {
-        // Cancel any conflicting states in UI
+        // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
         ui_->pb_water_fill_2->setChecked(false);
 
@@ -1116,8 +1110,16 @@ void MainWindow::on_pb_manip_fast_clicked() {
 
 /**
  * @brief Connects to the selected camera feed.
+ *
+ * @param sel Selected camera description
+ *
+ * @note The camera -description- is NOT what must be passed into CameraManager;
+ *       that would be the camera -ID-, which is the OS-level device address.
+ *       So `available_cameras_` must be used to "translate" the human-readable
+ *       description into the device address.
  */
-void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
+void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
+    // Only allow one camera manager to exist at a time (this is arbitrary)
     if (camera_manager_ != nullptr) {
         if (debug_mode_) {
             qDebug() << "[DEBUG] Resetting existing camera manager";
@@ -1125,16 +1127,16 @@ void MainWindow::on_cb_camera_id_currentTextChanged(const QString& sel) {
         camera_manager_.reset();
     }
 
-    // Show human-readable camera name
-    ui_->l_camera_name->setText(available_cameras_[sel]);
+    // Display corresponding device path
+    ui_->l_camera_id->setText(available_cameras_[sel]);
 
     // Open a connection to the camera
-    camera_manager_ = std::make_unique<CameraManager>(sel,
+    camera_manager_ = std::make_unique<CameraManager>(available_cameras_[sel],
                                                       ui_->vw_camera_viewfinder,
                                                       this);
     camera_manager_->Start();
 
-    // Enable relevant widgets in UI
+    // Enable relevant widgets
     ui_->pb_camera_capture->setEnabled(true);
     ui_->pb_camera_record->setEnabled(true);
 }
