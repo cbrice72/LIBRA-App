@@ -17,7 +17,6 @@
 #ifdef BUILD_WITH_ROS2
 # include <cv_bridge/cv_bridge.h>  // OpenCV
 # include <opencv2/imgcodecs.hpp>  // OpenCV
-# include <QProcess>               // Qt::Core
 # include <QVideoFrame>            // Qt::Multimedia
 #endif
 
@@ -80,7 +79,6 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     : QObject(parent),
       id_(std::move(id)),
       debug_mode_(debug_mode),
-      camera_(nullptr),
       output_dir_(QDir::currentPath().toStdString() + "/")
 #ifdef BUILD_WITH_ROS2
       ,
@@ -122,13 +120,6 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         logger_->Info("CameraManager - RealSense camera detected! Deferring to "
                       "ROS2 node...");
         use_ros2_node_ = true;
-
-        // Set up image subscription
-        image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-            kCameraRgbTopic, 10,
-            [this](const sensor_msgs::msg::Image::SharedPtr msg) {
-                this->ProcessRos2Image(msg);
-            });
 
         // Get video sink from the QVideoWidget for direct frame injection
         video_sink_ = viewfinder->videoSink();
@@ -180,7 +171,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         if (!selected) {
             logger_->Warn(
                 "CameraManager - This camera doesn't seem to support "
-                "a Jpeg 720p stream; defaulting to the first supported format");
+                "a JPEG 720p stream; defaulting to the first supported format");
             camera_->setCameraFormat(supported_formats.first());
         }
     }
@@ -191,7 +182,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     // Set output format for video
     QMediaFormat format(QMediaFormat::MPEG4);  // init with FileFormat
     // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
-    format.setVideoCodec(QMediaFormat::VideoCodec::MotionJPEG);
+    format.setVideoCodec(QMediaFormat::VideoCodec::H264);  // alt: MotionJPEG
 
     recorder_->setMediaFormat(format);
     recorder_->setQuality(QMediaRecorder::Quality::VeryHighQuality);
@@ -250,108 +241,35 @@ CameraManager::~CameraManager() {
  * @return false Camera is not initialized
  */
 bool CameraManager::CameraIsActive() {
-    return (use_ros2_node_) ? ros2_process_ != nullptr
-                                  && ros2_process_->state() == QProcess::Running
-                            : camera_ != nullptr;
+    return (use_ros2_node_) ? ros2_connected_ : camera_ != nullptr;
 }
 
 #ifdef BUILD_WITH_ROS2
 /**
  * @brief TODO: documentation.
- *
- * @note Only used in `Start()` - placed in own function to improve readability.
  */
-void CameraManager::StartRos2NodeViaLaunchFile() {
-    const QString launch_cmd =
-        "ros2 launch libra rtabmap_realsense_d456_stereo.launch.py";
-
-    ros2_process_ = new QProcess(this);
-
-    // Connect process error signal BEFORE starting
-    connect(ros2_process_, &QProcess::errorOccurred, this,
-            [this](QProcess::ProcessError qerror) {
-                QString err;
-                switch (qerror) {
-                    case QProcess::FailedToStart:
-                        err = "failed to start (i.e., executable not found or "
-                              "insufficient permissions)";
-                        break;
-                    case QProcess::Crashed:
-                        err = "crashed";
-                        break;
-                    case QProcess::Timedout:
-                        err = "timed out";
-                        break;
-                    default:
-                        err = "encountered unknown error";
-                }
-                logger_->Error("CameraManager - ROS2 process "
-                               + err.toStdString());
-            });
-
-    // Start realsense2_camera node (+ other related nodes) via launch file
-    ros2_process_->start("bash", QStringList() << "-c" << launch_cmd);
-
-    connect(ros2_process_, &QProcess::readyReadStandardOutput,  // output stdout
-            this, [this]() {                                    // ... to logger
-                logger_->Debug(
-                    "CameraManager ROS2 Process - "
-                    + ros2_process_->readAllStandardOutput().toStdString());
-            });
-
-    connect(ros2_process_, &QProcess::readyReadStandardError,  // output stdout
-            this, [this]() {                                   // ... to logger
-                logger_->Error(
-                    "CameraManager ROS2 Process - "
-                    + ros2_process_->readAllStandardError().toStdString());
-            });
-
-    connect(ros2_process_, &QProcess::finished,     // when thread exits
-            ros2_process_, &QObject::deleteLater);  // ... deallocate
-
-    connect(ros2_process_, &QObject::destroyed,  // to avoid invalid access
-            this, [this]() { ros2_process_ = nullptr; });  // ... nullify it
-
-    // Error checking
-    if (!ros2_process_->waitForStarted(kWaitForTimeout)) {
-        logger_->Error("CameraManager - Failed to start ROS2 process: "
-                       + ros2_process_->errorString().toStdString());
-        Stop();
-        return;
-    }
-
-    if (ros2_process_->state() != QProcess::Running) {
-        logger_->Error(
-            "CameraManager - ROS2 process not in running state after start");
-        Stop();
-        return;
-    }
-
-    // Start timer for periodic ROS2 spinning
-    // (NOTE: this is useful for, e.g., triggering subscriber callbacks)
-    spin_timer_ = new QTimer(this);
-    connect(spin_timer_, &QTimer::timeout, [this]() {
-        if (rclcpp::ok()) {
-            rclcpp::spin_some(this->get_node_base_interface());
-        }
-    });
-    spin_timer_->start(10);  // 100 Hz
-
-    // Check for publishers on the RGB topic
+void CameraManager::CheckRos2Connectivity() {
+    // TODO: the following line will need to change if I ever implement
+    //       multi-topic selection (e.g., RealSense has RGB, depth, infra, etc.)
     auto active_publishers = this->get_publishers_info_by_topic(kCameraRgbTopic);
-    if (active_publishers.empty()) {
-        logger_->Error(
-            "CameraManager - No publishers found for " + kCameraRgbTopic
-            + ", there may have been an issue starting the ROS2 process");
-        Stop();
-        return;
-    }
 
-    logger_->Debug("CameraManager - RealSense ROS2 node successfully launched");
+    const auto was_connected = ros2_connected_;    // save previous state
+    ros2_connected_ = !active_publishers.empty();  // get current state
+
+    if (was_connected && !ros2_connected_) {  // yes -> no
+        logger_->Warn("CameraManager - Lost connection to publishers on "
+                      + kCameraRgbTopic);
+    } else if (!was_connected && ros2_connected_) {  // no -> yes
+        logger_->Info("CameraManager - Connected to publishers on "
+                      + kCameraRgbTopic);
+    } else if (!was_connected && !ros2_connected_) {  // no
+        logger_->Debug("CameraManager - Not detecting publishers on "
+                       + kCameraRgbTopic);
+    }
 }
 
 /**
- * @brief Subscription callback for processing RGB image frames in a Qt GUI.
+ * @brief Processes RGB image frames in a Qt GUI.
  *
  * @param msg A ROS2 RGB image message (e.g., `/camera/color/image_raw`)
  */
@@ -423,8 +341,29 @@ void CameraManager::Start() {
 
     if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-        // Launch a Python launch file in a separate thread
-        StartRos2NodeViaLaunchFile();
+        // Set up image subscription
+        image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+            kCameraRgbTopic, 10,
+            [this](const sensor_msgs::msg::Image::SharedPtr msg) {
+                this->ProcessRos2Image(msg);
+            });
+
+        // Start timer for periodic ROS2 spinning
+        // (NOTE: this is useful for triggering ROS2 callbacks without blocking
+        //        the Qt event loop)
+        spin_timer_ = new QTimer(this);
+        connect(spin_timer_, &QTimer::timeout, [this]() {
+            if (rclcpp::ok()) {
+                rclcpp::spin_some(this->get_node_base_interface());
+            }
+        });
+        spin_timer_->start(10);  // ms (100 Hz)
+
+        // Set up periodic connectivity check
+        connectivity_timer_ = new QTimer(this);
+        connect(connectivity_timer_, &QTimer::timeout,
+                [this]() { CheckRos2Connectivity(); });
+        connectivity_timer_->start(5000);  // ms (0.2 Hz)
 #else
         logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
                        "to \"OFF\". You shouldn't be able to get here!");
@@ -447,7 +386,7 @@ void CameraManager::Start() {
 void CameraManager::Stop() {
     if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-        // Stop the spin timer first
+        // Gracefully stop the timers
         if (spin_timer_ != nullptr) {
             spin_timer_->stop();
             spin_timer_->deleteLater();
@@ -456,17 +395,12 @@ void CameraManager::Stop() {
             logger_->Debug("CameraManager - ROS2 spin timer stopped");
         }
 
-        // Attempt to gracefully terminate the realsense2_camera node
-        if (ros2_process_ != nullptr) {
-            ros2_process_->terminate();
-            if (!ros2_process_->waitForFinished(kWaitForTimeout)) {
-                // Force terminate if non-responsive
-                ros2_process_->kill();
-            }
+        if (connectivity_timer_ != nullptr) {
+            connectivity_timer_->stop();
+            connectivity_timer_->deleteLater();
+            connectivity_timer_ = nullptr;
 
-            logger_->Debug("CameraManager - ROS2 process stopped");
-        } else {
-            logger_->Debug("CameraManager - ROS2 [rpcess] already stopped");
+            logger_->Debug("CameraManager - ROS2 connectivity timer stopped");
         }
 #else
         logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "

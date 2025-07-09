@@ -2,13 +2,14 @@
 
 This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App. Please contact Christian Brice ([email](mailto:brice.c.67b9@m.isct.ac.jp)) with any questions or revision suggestions.
 
-If you wish to set up a virtual Linux container on **Windows**, follow the instructions in [docs/WINDOWS_SETUP.md](docs/WINDOWS_SETUP.md) before continuing.
+If you wish to set up a virtual Linux container on **Windows**, follow the instructions in [docs/WINDOWS_SETUP.md](./docs/WINDOWS_SETUP.md) before continuing.
 
 - [Network](#network)
     - [*Proxy Setup*](#proxy-setup)
     - [*HEBI Actuators*](#hebi-actuators)
 - [Required Software](#required-software)
     - [*System Packages*](#system-packages)
+    - [*ROS2 and SLAM*](#ros2-and-slam)
     - [*EPOS (Maxon) Library*](#epos-maxon-library)
 - [Recommended Applications](#recommended-applications)
     - [*VS Code*](#vs-code)
@@ -72,9 +73,13 @@ sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy c
 - `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
 - `libxcb-cursor0` & `libxcb-cursor-dev`: cursor-related convenience libraries, required by Qt ([link](https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor)).
 
+### *ROS2 and SLAM*
+
+If you plan to use the app with ROS2 functionality enabled, further package installation and system setup is required. See [LIBRA-ROS2-Tools/SETUP.md](./LIBRA-ROS2-Tools/SETUP.md) and [LIBRA-ROS2-Tools/docs/SLAM.md "Before You Start"](./LIBRA-ROS2-Tools/docs/SLAM.md#before-you-start) before continuing.
+
 ### *EPOS (Maxon) Library*
 
-If you are not building for the *LIBRA-II* system, you may skip ahead to [*Recommended Applications*](#recommended-applications).
+**This is only required if you are building for the *LIBRA-II* system.** Otherwise, skip ahead to [Recommended Applications](#recommended-applications).
 
 In order to link against the EPOS library during compilation (specifically, using the `-lEposCmd` flag), you must install the EPOS library files on your system.
 

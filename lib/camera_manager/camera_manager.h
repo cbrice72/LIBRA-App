@@ -58,7 +58,7 @@ class CameraManager : public QObject
     bool CameraIsActive();
 
 #ifdef BUILD_WITH_ROS2
-    void StartRos2NodeViaLaunchFile();
+    void CheckRos2Connectivity();
     void ProcessRos2Image(const sensor_msgs::msg::Image::SharedPtr msg);
 #endif
 
@@ -83,10 +83,13 @@ class CameraManager : public QObject
 
 #ifdef BUILD_WITH_ROS2
     const std::string kCameraRgbTopic = "/camera/color/image_raw";
+    const std::string kCameraDepthTopic = "/camera/depth/image_rect_raw";
+    const std::string kCameraInfraTopic = "/camera/infra1/image_rect_raw";
 
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
-    QProcess* ros2_process_{nullptr};
     QTimer* spin_timer_{nullptr};
+    QTimer* connectivity_timer_{nullptr};
+    bool ros2_connected_{false};
 
     std::atomic<bool> capture_requested_{false};
 

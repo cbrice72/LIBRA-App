@@ -24,7 +24,7 @@ Clone the git repo at [https://github.com/HebiRobotics/hebi-cpp-examples/tree/ma
 
 ### *Networking*
 
-> ***NOTE:*** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [WINDOWS_SETUP.md "WSL" -> "Networking Mode"](WINDOWS_SETUP.md#networking-mode) for more information.
+> ***NOTE:*** If you are using WSL and connecting the actuators via USB adapter, you **must** set your networking mode to `mirrored` to be able to see the extra networking adapter. See [WINDOWS_SETUP.md "WSL" -> "Networking Mode"](./WINDOWS_SETUP.md#networking-mode) for more information.
 
 HEBI actuators support both dynamic and static IP addressing (the former is known as [DHCP](https://en.wikipedia.org/wiki/Dynamic_Host_Configuration_Protocol)). Since Windows and Linux do not come with DHCP server capabilities by default, it is recommended that you use HEBI actuators with statically-assigned IP addresses. The following instructions will help you set up your computer so it can communicate with these actuators.
 

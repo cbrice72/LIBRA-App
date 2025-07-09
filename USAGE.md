@@ -38,18 +38,17 @@ The recommended IP address for your PC is `10.11.12.2` (see [docs/HEBI.md](./doc
 
 ### *Using LIBRA-I*
 
-(TODO: this will change once the Qt-based app is operational)
-
-1. Plug in LIBRA power cables
-2. Plug in LIBRA USB cable
-3. Start `LIBRA_App`
-    - This activates the HEBI motors so they can hold their position
-4. Connect to serial ports/COMs via terminal (see [docs/Arduino_COM_IDs.txt](./docs/Arduino_COM_IDs.txt))
-5. Disable water system (click `DISABLE`)
-6. Remove tape supports
-    - Around the furthest two links (1st floor)
-    - Around the mast and counterweight links (2nd floor)
-7. Slowly unfold LIBRA (see [docs/LIBRA-I_Unfolding_Angles.xlsx](./docs/LIBRA-I_Unfolding_Angles.xlsx))
+1. **Ensure all power cables are plugged in**
+    - TODO: explain which cables do what
+2. **Ensure all USB and Ethernet cables are plugged into your computer**
+    - TODO: explain which cables do what
+3. **Run `libra_app_gui` and click "Yes" on the startup popup** to automatically connect all actuators and peripherals. If you click "No", you will have to individually connect each device via the menu bar at the top of the GUI.
+    - Connecting to the HEBI actuators automatically commands them to hold their position
+    - Connecting to the RealSense camera requires that the all-in-one ROS2 launch file be run first (see [README.md "(2) ROS2 Nodes"](./README.md#2-ros2-nodes))
+4. **Remove tape supports** keeping the arm in place
+    - Around the furthest two arm links (1st floor)
+    - Around the suspension pipe and counterweight links (2nd floor)
+5. Using the GUI, **slowly deploy LIBRA to a horizontal position** (see [docs/LIBRA-I_Unfolding_Angles.xlsx](./docs/LIBRA-I_Unfolding_Angles.xlsx))
 
 ### *Using LIBRA-II (w/ ETA)*
 

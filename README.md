@@ -62,7 +62,7 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 ### *Building the App*
 
-If you want to get started as quickly as possible, you can run the provided build script via a terminal. If you are a developer, it's recommended you build the app via Qt Creator.
+If you want to get started as quickly as possible, you can run the provided build script via a terminal. If you are a developer, it's recommended you build the app and ROS2 tools separately via Qt Creator and colcon, respectively.
 
 - **Terminal** &ndash; Simply run the provided build script. It will automatically build the LIBRA ROS Tools submodule via colcon and source it, before building the main app via CMake.
 
@@ -70,18 +70,26 @@ If you want to get started as quickly as possible, you can run the provided buil
     ./tools/build-all.bash
     ```
 
-- **Qt Creator** &ndash; If you're building with ROS2 support, ensure you've sourced the relevant ROS2 environments in the *same* terminal you will use to launch Qt Creator. Then, click the gray "hammer" icon to build. Any errors will be output to the "Compile Output" tab at the bottom.
+- **Qt Creator & Colcon** &ndash; Provides a more fine-grained approach.
+    1) Use a terminal to build the `libra` package (and its dependencies) located in the `LIBRA-ROS2-Tools` submodule.
 
-    ```bash
-    # Setup a ROS2 environment
-    source /opt/ros/humble/setup.bash
-    # Add the "LIBRA ROS Tools" environment
-    source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
-    # Run Qt Creator
-    qtcreator
-    ```
+        ```bash
+        # Navigate to the ROS2 Tools workspace
+        cd LIBRA-ROS2-Tools/ros2_ws
+        # Setup a ROS2 environment and build the "libra" package
+        source /opt/ros/humble/setup.bash && colcon build --packages-up-to libra
+        ```
 
-> ***NOTE:*** If you're getting the error `"Unknown CMake command "qt_xxx""`, you likely have an older version of Qt installed; Qt-specific CMake commands (starting with `qt_`) were added in Qt6. You can check which version you have by running Qt Creator, opening the "Help" tab at the top, and clicking "System Information".
+    2) In the same terminal, source the newly-created environment and launch Qt Creator. Then, click the gray "hammer" icon at the bottom left to build the app. Any errors will be output to the "Compile Output" tab at the bottom.
+
+        ```bash
+        # Add the "LIBRA ROS Tools" environment
+        source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
+        # Run Qt Creator
+        qtcreator
+        ```
+
+        > ***NOTE:*** If you're getting the error `"Unknown CMake command "qt_xxx""`, you likely have an older version of Qt installed; Qt-specific CMake commands (starting with `qt_`) were added in Qt6. You can check which version you have by running Qt Creator, opening the "Help" tab at the top, and clicking "System Information".
 
 #### **Build Options**
 
@@ -94,14 +102,18 @@ The following CMake options can be used to easily select which version of the ap
 
 ### *Running the App*
 
-If you built the app with ROS2 support, you must first source the ROS2 environments.
+This subsection lists the basic steps to get up and running. For detailed usage instructions, see [USAGE.md](./USAGE.md).
+
+If you built the app with ROS2 support, you must first **source the ROS2 environments** in the terminals you will use for the following two steps.
 
 ```bash
 source /opt/ros/humble/setup.bash
 source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
 ```
 
-The app can then be launched via the terminal or, if you need easy access to debugging tools, via Qt Creator. For detailed usage instructions, see [USAGE.md](./USAGE.md).
+#### **(1) Graphical User Interface (GUI)**
+
+The app can be launched via a terminal or, if you need easy access to debugging tools, via Qt Creator.
 
 - **Terminal** &ndash; Simply run the `libra_app_gui` executable located in the build folder (the path is output to the terminal at the end of the CMake build step).
 
@@ -112,6 +124,20 @@ The app can then be launched via the terminal or, if you need easy access to deb
 - **Qt Creator** &ndash; Open QtCreator and click the green "run" arrow at the bottom left.
 
     > ***NOTE:*** If you haven't built the project yet, or have made changes to the source code, clicking the green "run" arrow will automatically build it for you.
+
+#### **(2) ROS2 Nodes**
+
+⚠️ **-WORK IN PROGRESS-** ⚠️
+
+Currently, the following instructions only run RTAB-Map with the RealSense RGB-D camera. Sensor fusion support with the 2D LIDAR is coming soon!
+
+All the nodes necessary to run RTAB-Map have been compiled into a single launch file. Ensure you've sourced both ROS2 environments, then run the following in a terminal.
+
+```bash
+ros2 launch libra rtabmap_realsense_d456_stereo.launch.py
+```
+
+This will also launch the `realsense-ros` node which provides the ROS2 topic(s) `CameraManager` needs to stream images from the RealSense camera.
 
 ### *Code Formatting*
 
