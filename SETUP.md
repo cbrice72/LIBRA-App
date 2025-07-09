@@ -1,6 +1,8 @@
 # Setup
 
-This document lists the necessary steps to set up an Ubuntu 22.04 development environment for the LIBRA App. Please contact Christian Brice ([email](mailto:brice.c.67b9@m.isct.ac.jp)) with any questions or revision suggestions.
+This document lists the necessary steps and other recommendations for setting up an Ubuntu 22.04 development environment for the LIBRA App. Please contact Christian Brice ([email](mailto:brice.c.67b9@m.isct.ac.jp)) with any questions or revision suggestions.
+
+**To get started as quickly as possible, just follow the "Network" and "Required Software" sections.**
 
 If you wish to set up a virtual Linux container on **Windows**, follow the instructions in [docs/WINDOWS_SETUP.md](./docs/WINDOWS_SETUP.md) before continuing.
 
@@ -73,9 +75,20 @@ sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy c
 - `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
 - `libxcb-cursor0` & `libxcb-cursor-dev`: cursor-related convenience libraries, required by Qt ([link](https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor)).
 
+> ***NOTE:*** Although this list includes `qt6-base-dev`, I'm not entirely sure what the names are for the other required Qt packages. In the meantime, please install them by following the instructions in the [*Qt Creator*](#qt-creator) section.
+
 ### *ROS2 and SLAM*
 
-If you plan to use the app with ROS2 functionality enabled, further package installation and system setup is required. See [LIBRA-ROS2-Tools/SETUP.md](./LIBRA-ROS2-Tools/SETUP.md) and [LIBRA-ROS2-Tools/docs/SLAM.md "Before You Start"](./LIBRA-ROS2-Tools/docs/SLAM.md#before-you-start) before continuing.
+If you plan to use the app with ROS2 functionality enabled, further package installation and system setup is required. First, initialize the `LIBRA-ROS2-Tools` submodule.
+
+```bash
+# To initialize the submodule
+git submodule update --init --recursive
+# (if needed) To pull the latest commit
+git submodule update --remote LIBRA-ROS2-Tools
+```
+
+Then, follow the instructions in [LIBRA-ROS2-Tools/SETUP.md](./LIBRA-ROS2-Tools/SETUP.md) and [LIBRA-ROS2-Tools/docs/SLAM.md "Before You Start"](./LIBRA-ROS2-Tools/docs/SLAM.md#before-you-start) before continuing.
 
 ### *EPOS (Maxon) Library*
 
