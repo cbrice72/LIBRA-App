@@ -59,6 +59,27 @@ enum class State { kStopped = 0, kFilling, kDraining };
 //------------------------------------------------------------------------------
 
 /**
+ * @brief Converts fluid system `Side` enum value to an equivalent string.
+ *
+ * @param side Fluid system side.
+ * @return QString Human-readable string.
+ *
+ * @note Only really useful for debugging.
+ */
+inline std::string SideEnumToString(Side side) {
+    switch (side) {
+        case Side::kA:
+            return "A";
+#if LIBRA_VERSION == 1
+        case Side::kB:
+            return "B";
+#endif
+        default:
+            return "Undefined";
+    }
+}
+
+/**
  * @brief Converts fluid system `State` enum value to an appropriately formatted
  *        string.
  *
@@ -78,7 +99,7 @@ inline QString StateEnumToString(State state) {
         case State::kDraining:
             return out_text;
         default:
-            return "Invalid State!";
+            return "Undefined";
     }
 }
 

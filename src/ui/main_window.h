@@ -18,6 +18,7 @@
 #include "arduino_manager.h"
 #include "camera_manager.h"
 #include "hebi_thread.h"
+#include "logger.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
 #endif
@@ -204,6 +205,7 @@ class MainWindow : public QMainWindow {
 
     Ui::MainWindow* ui_{nullptr};
 
+    std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
     FeedbackElementMapOfMaps feedback_element_map_;

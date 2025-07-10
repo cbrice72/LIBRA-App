@@ -51,7 +51,7 @@ enum Name {
     kYaw = 0,
     kPitch,
 #endif
-    kUndefined  // KEEP THIS LAST
+    kUndefined  // KEEP THIS LAST (used in StringToNameEnum)
 };
 
 /**
@@ -60,8 +60,10 @@ enum Name {
  * @see abstract_actuator_thread
  */
 enum Type {
-    kEpos = 0,  // EPOS4 (Maxon)
-    kHebi       // HEBI
+    kHebi = 0,  // HEBI
+#if LIBRA_VERSION == 2
+    kEpos  // EPOS4 (Maxon)
+#endif
 };
 
 /**
@@ -81,8 +83,8 @@ enum Feedback { kTargetPos = 0, kActualPos, kActualTorque };
 /**
  * @brief Converts actuator string name to its corresponding `Name` enum value.
  *
- * @param name_str Name of the actuator.
- * @return Actuator::Name Named enum value of the corresponding actuator.
+ * @param name_str Name of the actuator
+ * @return Actuator::Name Named enum value of the corresponding actuator
  */
 inline Name StringToNameEnum(const std::string& name_str) {
 #if LIBRA_VERSION == 1
@@ -110,8 +112,8 @@ inline Name StringToNameEnum(const std::string& name_str) {
 /**
  * @brief Converts actuator `Name` enum value to its corresponding string name.
  *
- * @param name Named enum value of the actuator.
- * @return std::string String name of the corresponding actuator.
+ * @param name Named enum value of the actuator
+ * @return std::string String name of the corresponding actuator
  *
  * @note Only really useful for debugging.
  */
@@ -141,6 +143,48 @@ inline std::string NameEnumToString(Name name) {
             return "Undefined";
     }
 #endif
+}
+
+/**
+ * @brief Converts actuator `Type` enum value to its corresponding string name.
+ *
+ * @param name Actuator implementation enum value
+ * @return std::string String name of the corresponding actuator type
+ *
+ * @note Only really useful for debugging.
+ */
+inline std::string TypeEnumToString(Type type) {
+    switch (type) {
+        case Type::kHebi:
+            return "HEBI";
+#if LIBRA_VERSION == 2
+        case Type::kEpos:
+            return "EPOS";
+#endif
+        default:
+            return "Undefined";
+    }
+}
+
+/**
+ * @brief Converts actuator `Feedback` enum value to its corresponding string name.
+ *
+ * @param feedback Feedback type
+ * @return std::string String feedback type
+ *
+ * @note Only really useful for debugging.
+ */
+inline std::string FeedbackEnumToString(Feedback feedback) {
+    switch (feedback) {
+        case Feedback::kTargetPos:
+            return "TargetPos";
+        case Feedback::kActualPos:
+            return "ActualPos";
+        case Feedback::kActualTorque:
+            return "ActualTorque";
+        default:
+            return "Undefined";
+    }
 }
 
 }  // namespace Actuator
