@@ -115,10 +115,11 @@ source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
 
 The app can be launched via a terminal or, if you need easy access to debugging tools, via Qt Creator.
 
-- **Terminal** &ndash; Simply run the `libra_app_gui` executable located in the build folder (the path is output to the terminal at the end of the CMake build step).
+- **Terminal** &ndash; Simply navigate to the build directory (the path is output to the terminal at the end of the CMake build step) and run the `libra_app_gui` executable. Since the app uses certain files at runtime (e.g., to set the HEBI actuators' safety parameters), the executabale *must* be run from the directory it is in.
 
     ```bash
-    ./<PATH-TO-BUILD-FOLDER>/libra_app_gui
+    cd <PATH-TO-BUILD-FOLDER>
+    ./libra_app_gui
     ```
 
 - **Qt Creator** &ndash; Open QtCreator and click the green "run" arrow at the bottom left.
