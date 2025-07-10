@@ -10,8 +10,6 @@
 
 // C++ Standard Library Headers
 #include <bitset>
-#include <iostream>  // TODO: remove once BytesToStr() TODOs are fulfilled
-#include <sstream>
 
 // Other Library Headers
 #include <QDebug>           // Qt::Core
@@ -90,25 +88,11 @@ namespace {
  * @return std::string A representation of the input QBitArray in binary format
  */
 std::string BytesToStr(const QByteArray& bytes) {
-    std::string str;
-
-    // TODO: check the result of this block against the new one before deleting it
-    // ---
-    std::string old_str;
-    for (const auto& byte : bytes) {
-        for (auto i = 7; i >= 0; --i) {  // hard-coded range of 0-7 = one byte
-            old_str += (byte & (1 << i)) ? '1' : '0';
-        }
-    }
-    // ---
+    std::string str("");
 
     for (auto byte : bytes) {
         str += std::bitset<8>(static_cast<unsigned char>(byte)).to_string();
     }
-
-    // TODO: temporary (see above TODO)
-    std::cout << "ArduinoManager - Old vs. New BytesToStr(): " << old_str
-              << " | " << str << std::endl;
 
     return str;
 }
