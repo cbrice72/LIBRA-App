@@ -19,14 +19,14 @@
 #include "group_feedback.hpp"  // HEBI
 #include "trajectory.hpp"      // HEBI
 #ifdef BUILD_WITH_ROS2
-# include <libra_app/msg/hebi_state.hpp>  // libra_interfaces
-# include <rclcpp/rclcpp.hpp>             // ROS2 Core
+# include <rclcpp/rclcpp.hpp>                // ROS2 Core
+# include <sensor_msgs/msg/joint_state.hpp>  // ROS2 Messages
 #endif
 
 // Project Headers
 #include "abstract_actuator_thread.h"
 
-typedef libra_app::msg::HebiState msgHebiState;
+typedef sensor_msgs::msg::JointState msgJointState;
 
 /**
  * @brief Control class for HEBI actuators.
@@ -112,7 +112,7 @@ class HebiThread : public AbstractActuatorThread
     std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;
 
 #ifdef BUILD_WITH_ROS2
-    rclcpp::Publisher<msgHebiState>::SharedPtr state_pub_;
-    msgHebiState state_msg_;  // reused for efficiency
+    rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;
+    msgJointState state_msg_;  // reused for efficiency
 #endif
 };

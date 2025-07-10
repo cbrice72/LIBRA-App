@@ -87,10 +87,5 @@ endif()
 
 if(BUILD_WITH_ROS2)
     # Additional includes and libraries for ROS2 integration
-    target_include_directories(
-        actuator_thread PUBLIC ${LIBRA_INTERFACES_INCLUDE_DIR}
-    )
-
-    target_link_libraries(actuator_thread PUBLIC ${LIBRA_INTERFACES_CPP_TARGET})
-    ament_target_dependencies(actuator_thread PUBLIC rclcpp)
+    ament_target_dependencies(actuator_thread PUBLIC rclcpp sensor_msgs)
 endif()

@@ -144,24 +144,14 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
-    state_pub_ = this->create_publisher<msgHebiState>("hebi/state", 10);
+    state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
 
-    state_msg_.header.frame_id = "hebi_actuators";
-    state_msg_.families = families_;
-    state_msg_.names = names_;
+    state_msg_.name = names_;
 
     // Resize message vectors to match number of actuators
-    state_msg_.target_pos.resize(num_actuators_);
-    state_msg_.actual_pos.resize(num_actuators_);
-    state_msg_.target_vel.resize(num_actuators_);
-    state_msg_.actual_vel.resize(num_actuators_);
-    state_msg_.target_trq.resize(num_actuators_);
-    state_msg_.actual_trq.resize(num_actuators_);
-    state_msg_.deflection.resize(num_actuators_);
-    state_msg_.deflection_vel.resize(num_actuators_);
-    state_msg_.voltage.resize(num_actuators_);
-    state_msg_.current.resize(num_actuators_);
-    state_msg_.motor_temp.resize(num_actuators_);
+    state_msg_.position.resize(num_actuators_);
+    state_msg_.velocity.resize(num_actuators_);
+    state_msg_.effort.resize(num_actuators_);
 #endif
 }
 
@@ -261,10 +251,6 @@ QString HebiThread::GetStatus() const {
 #ifdef BUILD_WITH_ROS2
 /**
  * @brief Publishes HEBI actuator state(s).
- *
- * @note Currently, this function only exists as an example, since the ROS2
- *       ecosystem cannot be made aware of interfaces or nodes created by the
- *       LIBRA CMake project (since we don't use `colcon build`).
  */
 void HebiThread::PublishState() {
     if (!state_pub_ || group_ == nullptr) {
@@ -272,33 +258,13 @@ void HebiThread::PublishState() {
     }
 
     // Update header timestamp
-    state_msg_.header.stamp = this->get_clock()->now();
+    state_msg_.header.stamp = this->now();
 
     // Populate the message and publish it
     for (int i = 0; i < num_actuators_; ++i) {
-        // Positions (convert from rad to deg)
-        state_msg_.target_pos[i] = feedback_->getPositionCommand()[i]
-                                   * kRadToDeg;
-        state_msg_.actual_pos[i] = feedback_->getPosition()[i] * kRadToDeg;
-
-        // Velocities (convert from rad/s to deg/s)
-        state_msg_.target_vel[i] = feedback_->getVelocityCommand()[i]
-                                   * kRadToDeg;
-        state_msg_.actual_vel[i] = feedback_->getVelocity()[i] * kRadToDeg;
-
-        // Efforts/Torques
-        state_msg_.target_trq[i] = feedback_->getEffortCommand()[i];
-        state_msg_.actual_trq[i] = feedback_->getEffort()[i];
-
-        // Additional sensor data
-        state_msg_.deflection[i] = feedback_->getDeflection()[i] * kRadToDeg;
-        state_msg_.deflection_vel[i] = feedback_->getDeflectionVelocity()[i]
-                                       * kRadToDeg;
-
-        state_msg_.voltage[i] = feedback_->getVoltage()[i];
-        state_msg_.current[i] = feedback_->getMotorCurrent()[i];
-
-        state_msg_.motor_temp[i] = feedback_->getMotorWindingTemperature()[i];
+        state_msg_.position[i] = feedback_->getPosition()[i];
+        state_msg_.velocity[i] = feedback_->getVelocity()[i];
+        state_msg_.effort[i] = feedback_->getEffort()[i];
     }
 
     state_pub_->publish(state_msg_);
