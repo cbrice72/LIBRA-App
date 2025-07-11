@@ -60,7 +60,7 @@ sudo apt update && sudo apt upgrade
 Install the following packages via the terminal.
 
 ```bash
-sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git libgl1-mesa-dev qt6-base-dev libxcb-cursor0 libxcb-cursor-dev
+sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git qt6-base-dev libqt6svg6 libgl1-mesa-dev libxcb-cursor0 libxcb-cursor-dev papirus-icon-theme
 ```
 
 - `build-essential`: programs and libraries necessary for basic software development.
@@ -71,9 +71,11 @@ sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy c
 - `cmake-format`: CMake formatter ([link](https://github.com/cheshirekow/cmake_format)).
 - `doxygen`: C++ documentation generator ([link](https://www.doxygen.nl/)).
 - `git`: popular open-source version control system ([link](https://git-scm.com)).
-- `libgl1-mesa-dev`: open-source graphics library, used by Qt ([link](https://www.mesa3d.org/)).
 - `qt6-base-dev`: Qt development libraries ([link](https://packages.ubuntu.com/jammy/qt6-base-dev)).
+- `libqt6svg6`: Qt libraries for rendering SVGs, e.g., icons ([link](https://doc.qt.io/qt-6/qtsvg-index.html))
+- `libgl1-mesa-dev`: open-source graphics library, required by Qt ([link](https://www.mesa3d.org/)).
 - `libxcb-cursor0` & `libxcb-cursor-dev`: cursor-related convenience libraries, required by Qt ([link](https://gitlab.freedesktop.org/xorg/lib/libxcb-cursor)).
+- `papirus-icon-theme`: icon theme used by the app ([link](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme))
 
 > ***NOTE:*** Although this list includes `qt6-base-dev`, I'm not entirely sure what the names are for the other required Qt packages. In the meantime, please install them by following the instructions in the [*Qt Creator*](#qt-creator) section.
 

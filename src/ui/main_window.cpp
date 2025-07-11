@@ -204,26 +204,24 @@ void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
     // Display build configuration: LIBRA_VERSION
-    QString ver_text =
-        "<span style='color: rgba(0, 0, 0, 0.6);'>LIBRA_VERSION = ";
+    QString ver_text = "<span>";
 #ifdef LIBRA_VERSION
     ver_text += QString("<b>%1</b>").arg(LIBRA_VERSION);
 #else
     ver_text += "<b>Unsupported</b>";
 #endif
     ver_text += "</span>";
-    ui_->static_l_libraversion->setText(ver_text);
+    ui_->l_libraversion_val->setText(ver_text);
 
     // Display build configuration: BUILD_WITH_ROS2
-    QString ros2en_text =
-        "<span style='color: rgba(0, 0, 0, 0.6);'>BUILD_WITH_ROS2 = ";
+    QString ros2en_text = "<span>";
 #ifdef BUILD_WITH_ROS2
     ros2en_text += "<b style='color: green;'>ON</b>";
 #else
     ros2en_text += "<b style='color: red;'>OFF</b>";
 #endif
     ros2en_text += "</span>";
-    ui_->static_l_ros2enabled->setText(ros2en_text);
+    ui_->l_ros2enabled_val->setText(ros2en_text);
 
     // ========== Menu Bar ==========
 
@@ -599,17 +597,13 @@ void MainWindow::ConnectWaterHelper() {
  * @brief Reflects SerialServo connection status in the UI.
  */
 void MainWindow::HandleManipConnChanged(const bool& connected) {
-    if (connected) {
-        ui_->a_manip_connect->setEnabled(false);
-        ui_->a_manip_disconnect->setEnabled(true);
-        ui_->pb_manip_slow->setEnabled(true);
-        ui_->pb_manip_fast->setEnabled(true);
-    } else {
-        ui_->a_manip_connect->setEnabled(true);
-        ui_->a_manip_disconnect->setEnabled(false);
-        ui_->pb_manip_slow->setEnabled(false);
-        ui_->pb_manip_fast->setEnabled(false);
-    }
+    // Menu bar
+    ui_->a_manip_connect->setEnabled(!connected);
+    ui_->a_manip_disconnect->setEnabled(connected);
+
+    // UI widgets
+    ui_->pb_manip_slow->setEnabled(connected);
+    ui_->pb_manip_fast->setEnabled(connected);
 }
 
 /**
@@ -631,15 +625,23 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects SerialWater connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_water_connect->setEnabled(!connected);
     ui_->a_water_disconnect->setEnabled(connected);
 
+    // UI widgets
     ui_->pb_water_fill_A->setEnabled(connected);
     ui_->pb_water_drain_A->setEnabled(connected);
 #if LIBRA_VERSION == 1
     ui_->pb_water_fill_B->setEnabled(connected);
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
+
+    if (!connected && ui_->a_hebi_connect->isEnabled()) {
+        // Since auto torque compensation is shared between ActuatorThread and
+        // ArduinoManager, disable this button if neither is connected
+        ui_->pb_autocomp_enable->setEnabled(false);
+    }
 }
 
 /**
@@ -678,16 +680,24 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_hebi_connect->setEnabled(!connected);
     ui_->a_hebi_disconnect->setEnabled(connected);
 
+    // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
         // NOTE: It is possible for multiple actuator types -- and, by
         //       extension, multiple HandleXConnChanged() calls -- to exist.
         //       Therefore, the "STOP" PushButton should only ever be enabled
         //       by such calls, since other actuators may still be connected.
-        ui_->pb_arm_stop->setEnabled(connected);
+        ui_->pb_arm_stop->setEnabled(true);
+    }
+
+    if (!connected && ui_->a_water_connect->isEnabled()) {
+        // Since auto torque compensation is shared between ActuatorThread and
+        // ArduinoManager, disable this button if neither is connected
+        ui_->pb_autocomp_enable->setEnabled(false);
     }
 }
 
@@ -696,9 +706,11 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_epos_connect->setEnabled(!connected);
     ui_->a_epos_disconnect->setEnabled(connected);
 
+    // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
         // NOTE: It is possible for multiple actuator types -- and, by
@@ -982,13 +994,13 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
         ui_->pb_water_drain_B->setChecked(false);
 
         // Clearly display an "enabled" state
-        ui_->pb_camera_record->setText("DISABLE AUTO TORQUE COMP");
-        ui_->pb_camera_record->setStyleSheet(
+        ui_->pb_autocomp_enable->setText(" DISABLE ATC");
+        ui_->pb_autocomp_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kRed));
     } else {
         // Revert to "disabled" state
-        ui_->pb_camera_record->setText("ENABLE AUTO TORQUE COMP");
-        ui_->pb_camera_record->setStyleSheet(
+        ui_->pb_autocomp_enable->setText(" ENABLE ATC");
+        ui_->pb_autocomp_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }
 }
@@ -1168,7 +1180,8 @@ void MainWindow::on_pb_camera_capture_clicked() {
 void MainWindow::on_pb_camera_record_clicked() {
     if (camera_manager_->Record()) {
         // Clearly display a "recording" state
-        ui_->pb_camera_record->setText("STOP");
+        ui_->pb_camera_record->setIcon(QIcon::fromTheme("media-playback-stop"));
+        ui_->pb_camera_record->setText(" STOP");
         ui_->pb_camera_record->setStyleSheet(
             QString("color: %1;").arg(Color::kRed));
     } else {
@@ -1177,7 +1190,8 @@ void MainWindow::on_pb_camera_record_clicked() {
                                  kInfoLifespan);
 
         // Revert to original state
-        ui_->pb_camera_record->setText("RECORD");
+        ui_->pb_camera_record->setIcon(QIcon::fromTheme("media-record"));
+        ui_->pb_camera_record->setText(" RECORD");
         ui_->pb_camera_record->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }

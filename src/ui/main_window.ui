@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1003</width>
-    <height>635</height>
+    <width>1033</width>
+    <height>652</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -122,66 +122,6 @@
          </property>
          <item row="0" column="0">
           <layout class="QGridLayout" name="gl_camera_feed">
-           <item row="0" column="1">
-            <widget class="QComboBox" name="cb_camera_name">
-             <property name="enabled">
-              <bool>true</bool>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>100</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="maximumSize">
-              <size>
-               <width>200</width>
-               <height>25</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Human-readable device label</string>
-             </property>
-             <property name="sizeAdjustPolicy">
-              <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
-             </property>
-             <property name="placeholderText">
-              <string>...</string>
-             </property>
-            </widget>
-           </item>
-           <item row="0" column="3">
-            <spacer name="h_spacer_1">
-             <property name="orientation">
-              <enum>Qt::Orientation::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item row="2" column="0" colspan="4">
-            <widget class="QVideoWidget" name="vw_camera_viewfinder" native="true">
-             <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-               <horstretch>0</horstretch>
-               <verstretch>0</verstretch>
-              </sizepolicy>
-             </property>
-             <property name="minimumSize">
-              <size>
-               <width>256</width>
-               <height>144</height>
-              </size>
-             </property>
-             <property name="statusTip">
-              <string>Live camera feed</string>
-             </property>
-            </widget>
-           </item>
            <item row="0" column="0">
             <widget class="QPushButton" name="pb_camera_refresh">
              <property name="sizePolicy">
@@ -206,8 +146,35 @@
               <string/>
              </property>
              <property name="icon">
-              <iconset resource="resources.qrc">
-               <normaloff>:/view-refresh</normaloff>:/view-refresh</iconset>
+              <iconset theme="QIcon::ThemeIcon::ViewRefresh"/>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="1">
+            <widget class="QComboBox" name="cb_camera_name">
+             <property name="enabled">
+              <bool>true</bool>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>100</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>400</width>
+               <height>25</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Human-readable device label</string>
+             </property>
+             <property name="sizeAdjustPolicy">
+              <enum>QComboBox::SizeAdjustPolicy::AdjustToContents</enum>
+             </property>
+             <property name="placeholderText">
+              <string>...</string>
              </property>
             </widget>
            </item>
@@ -236,6 +203,38 @@
              </property>
             </widget>
            </item>
+           <item row="2" column="0" colspan="4">
+            <widget class="QVideoWidget" name="vw_camera_viewfinder" native="true">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>256</width>
+               <height>144</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Live camera feed</string>
+             </property>
+            </widget>
+           </item>
+           <item row="0" column="3">
+            <spacer name="h_spacer_1">
+             <property name="orientation">
+              <enum>Qt::Orientation::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
           </layout>
          </item>
          <item row="1" column="0">
@@ -253,13 +252,13 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>80</width>
+               <width>100</width>
                <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
+               <width>100</width>
                <height>30</height>
               </size>
              </property>
@@ -267,7 +266,10 @@
               <string>Save an image</string>
              </property>
              <property name="text">
-              <string>CAPTURE</string>
+              <string> CAPTURE</string>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::CameraPhoto"/>
              </property>
             </widget>
            </item>
@@ -284,13 +286,13 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>80</width>
+               <width>100</width>
                <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
+               <width>100</width>
                <height>30</height>
               </size>
              </property>
@@ -298,7 +300,10 @@
               <string>Save a video</string>
              </property>
              <property name="text">
-              <string>RECORD</string>
+              <string> RECORD</string>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::MediaRecord"/>
              </property>
             </widget>
            </item>
@@ -324,27 +329,53 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <layout class="QVBoxLayout" name="vl_buildtype">
-        <item>
+       <layout class="QGridLayout" name="gl_buildtype">
+        <item row="0" column="0">
          <widget class="QLabel" name="static_l_libraversion">
           <property name="statusTip">
            <string>The LIBRA prototype version this app was built for</string>
           </property>
           <property name="text">
-           <string>LIBRA_VERSION = ...</string>
+           <string>LIBRA_VERSION:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing</set>
+          </property>
+         </widget>
+        </item>
+        <item row="1" column="0">
+         <widget class="QLabel" name="static_l_ros2enabled">
+          <property name="statusTip">
+           <string>Whether this app was built with ROS2 support</string>
+          </property>
+          <property name="text">
+           <string>BUILD_WITH_ROS2:</string>
+          </property>
+          <property name="alignment">
+           <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTop|Qt::AlignmentFlag::AlignTrailing</set>
+          </property>
+         </widget>
+        </item>
+        <item row="0" column="1">
+         <widget class="QLabel" name="l_libraversion_val">
+          <property name="statusTip">
+           <string>The LIBRA prototype version this app was built for</string>
+          </property>
+          <property name="text">
+           <string>...</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignBottom|Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft</set>
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="QLabel" name="static_l_ros2enabled">
+        <item row="1" column="1">
+         <widget class="QLabel" name="l_ros2enabled_val">
           <property name="statusTip">
            <string>Whether this app was built with ROS2 support</string>
           </property>
           <property name="text">
-           <string>BUILD_WITH_ROS2 = ...</string>
+           <string>...</string>
           </property>
           <property name="alignment">
            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
@@ -2078,13 +2109,13 @@
              </property>
              <property name="minimumSize">
               <size>
-               <width>80</width>
+               <width>90</width>
                <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
+               <width>90</width>
                <height>30</height>
               </size>
              </property>
@@ -2101,7 +2132,10 @@
 QPushButton:disabled {color: rgb(170, 200, 185);}</string>
              </property>
              <property name="text">
-              <string>START</string>
+              <string> START</string>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::MediaPlaybackStart"/>
              </property>
             </widget>
            </item>
@@ -2118,13 +2152,13 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
              </property>
              <property name="minimumSize">
               <size>
-               <width>80</width>
+               <width>90</width>
                <height>30</height>
               </size>
              </property>
              <property name="maximumSize">
               <size>
-               <width>80</width>
+               <width>90</width>
                <height>30</height>
               </size>
              </property>
@@ -2140,7 +2174,50 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
               <string notr="true">QPushButton {color: rgb(213, 94, 0);}QPushButton:disabled {color: rgb(220, 180, 160);}</string>
              </property>
              <property name="text">
-              <string>STOP</string>
+              <string> STOP</string>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::MediaPlaybackStop"/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QPushButton" name="pb_autocomp_enable">
+             <property name="enabled">
+              <bool>false</bool>
+             </property>
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>130</width>
+               <height>30</height>
+              </size>
+             </property>
+             <property name="maximumSize">
+              <size>
+               <width>130</width>
+               <height>30</height>
+              </size>
+             </property>
+             <property name="statusTip">
+              <string>Enable fluid system operation</string>
+             </property>
+             <property name="layoutDirection">
+              <enum>Qt::LayoutDirection::LeftToRight</enum>
+             </property>
+             <property name="text">
+              <string> ENABLE ATC</string>
+             </property>
+             <property name="icon">
+              <iconset theme="QIcon::ThemeIcon::MediaPlaylistRepeat"/>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
              </property>
             </widget>
            </item>
@@ -2210,9 +2287,9 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
-QPushButton:hover {background-color: rgb(0, 102, 159);}
-QPushButton:pressed {background-color: rgb(0, 85, 133);}
-QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
+QPushButton:hover {background-color: rgb(30, 145, 210);}
+QPushButton:pressed {background-color: rgb(0, 60, 100);}
+QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
                </property>
                <property name="text">
                 <string/>
@@ -2255,9 +2332,9 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
-QPushButton:hover {background-color: rgb(190, 85, 0);}
-QPushButton:pressed {background-color: rgb(160, 70, 0);}
-QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
+QPushButton:hover {background-color: rgb(240, 130, 40);}
+QPushButton:pressed {background-color: rgb(130, 50, 0);}
+QPushButton:disabled {background-color: rgb(120, 100, 90);}</string>
                </property>
                <property name="text">
                 <string/>
@@ -2300,9 +2377,9 @@ QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">QPushButton {background-color: rgb(213, 94, 0);}
-QPushButton:hover {background-color: rgb(190, 85, 0);}
-QPushButton:pressed {background-color: rgb(160, 70, 0);}
-QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
+QPushButton:hover {background-color: rgb(240, 130, 40);}
+QPushButton:pressed {background-color: rgb(130, 50, 0);}
+QPushButton:disabled {background-color: rgb(120, 100, 90);}</string>
                </property>
                <property name="text">
                 <string/>
@@ -2345,9 +2422,9 @@ QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
                </property>
                <property name="styleSheet">
                 <string notr="true">QPushButton {background-color: rgb(0, 114, 178);}
-QPushButton:hover {background-color: rgb(0, 102, 159);}
-QPushButton:pressed {background-color: rgb(0, 85, 133);}
-QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
+QPushButton:hover {background-color: rgb(30, 145, 210);}
+QPushButton:pressed {background-color: rgb(0, 60, 100);}
+QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
                </property>
                <property name="text">
                 <string/>
@@ -2377,43 +2454,6 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
                </property>
                <property name="alignment">
                 <set>Qt::AlignmentFlag::AlignCenter</set>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1" colspan="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QPushButton" name="pb_autocomp_enable">
-               <property name="enabled">
-                <bool>false</bool>
-               </property>
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="minimumSize">
-                <size>
-                 <width>80</width>
-                 <height>30</height>
-                </size>
-               </property>
-               <property name="maximumSize">
-                <size>
-                 <width>80</width>
-                 <height>30</height>
-                </size>
-               </property>
-               <property name="statusTip">
-                <string>Enable fluid system operation</string>
-               </property>
-               <property name="layoutDirection">
-                <enum>Qt::LayoutDirection::LeftToRight</enum>
-               </property>
-               <property name="text">
-                <string>ENABLE</string>
-               </property>
-               <property name="checkable">
-                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -2562,13 +2602,13 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
                </property>
                <property name="minimumSize">
                 <size>
-                 <width>80</width>
+                 <width>85</width>
                  <height>30</height>
                 </size>
                </property>
                <property name="maximumSize">
                 <size>
-                 <width>80</width>
+                 <width>85</width>
                  <height>30</height>
                 </size>
                </property>
@@ -2576,7 +2616,16 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
                 <string>Start manipulator movement</string>
                </property>
                <property name="text">
-                <string>SLOW</string>
+                <string> SLOW</string>
+               </property>
+               <property name="icon">
+                <iconset theme="QIcon::ThemeIcon::MediaPlaybackStart"/>
+               </property>
+               <property name="iconSize">
+                <size>
+                 <width>11</width>
+                 <height>11</height>
+                </size>
                </property>
               </widget>
              </item>
@@ -2607,7 +2656,10 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
                 <string>Start manipulator movement</string>
                </property>
                <property name="text">
-                <string>FAST</string>
+                <string> FAST</string>
+               </property>
+               <property name="icon">
+                <iconset theme="QIcon::ThemeIcon::MediaSeekForward"/>
                </property>
               </widget>
              </item>
@@ -2908,8 +2960,8 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1003</width>
-     <height>19</height>
+     <width>1033</width>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">
@@ -3148,7 +3200,6 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
   <tabstop>sb_manip_tilt</tabstop>
   <tabstop>pb_manip_slow</tabstop>
   <tabstop>pb_manip_fast</tabstop>
-  <tabstop>pb_autocomp_enable</tabstop>
   <tabstop>pb_water_fill_A</tabstop>
   <tabstop>pb_water_drain_A</tabstop>
   <tabstop>pb_water_fill_B</tabstop>

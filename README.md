@@ -174,8 +174,8 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
 
 ## Attribution
 
-Certain **icons** used in this application are part of the Adwaita icon set, &copy; GNOME Project. Licensed under the GNU LGPL v3.
-See: [https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master](https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master)
+The **icons** used in this application are part of the Papirus icon theme, &copy; Papirus Development Team. Licensed under the GNU General Public License v3.0.
+See: [https://github.com/PapirusDevelopmentTeam/papirus-icon-theme](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
 Most **colors** used in this application are compliant with Bang Wong's proposed colorblind-friendly palette.
 See: [https://doi.org/10.1038/nmeth.1618](https://doi.org/10.1038/nmeth.1618)
