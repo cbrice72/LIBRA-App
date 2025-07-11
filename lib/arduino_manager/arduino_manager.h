@@ -85,7 +85,11 @@ class ArduinoManager : public QObject {
   private:
     // --- Helper Functions ---
 
+    void ClearWaterCommand(Water::Side side = Water::Side::kAll);
+    void ModifyWaterCommand(uint8_t new_bits);
     void SendWaterStatus(Water::Side side);
+
+    // Timer helpers
 
     void RefreshUpdateTimerState();
     void UpdateWater();

@@ -42,11 +42,11 @@ namespace Water {  // class not necessary, but namespace improves readability
  * @brief Fluid system side (see individual constants for description).
  */
 enum class Side {
-    kA = 0  // LIBRA-I: left, LIBRA-II: only one
+    kA = 0,  // LIBRA-I: left, LIBRA-II: only one
 #if LIBRA_VERSION == 1
-    ,
-    kB  // LIBRA-I: right
+    kB,  // LIBRA-I: right
 #endif
+    kAll  // KEEP THIS LAST (declared for convenience - not usually practical)
 };
 
 /**
