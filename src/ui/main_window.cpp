@@ -296,9 +296,9 @@ void MainWindow::ConfigureUi() {
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
-    RemoveUiElement(ui_->vl_counterweight_2);
-    RemoveUiElement(ui_->pb_water_fill_2);
-    RemoveUiElement(ui_->pb_water_drain_2);
+    RemoveUiElement(ui_->vl_counterweight_B);
+    RemoveUiElement(ui_->pb_water_fill_B);
+    RemoveUiElement(ui_->pb_water_drain_B);
 #endif
 
     // Slots
@@ -634,11 +634,11 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->a_water_connect->setEnabled(!connected);
     ui_->a_water_disconnect->setEnabled(connected);
 
-    ui_->pb_water_fill_1->setEnabled(connected);
-    ui_->pb_water_drain_1->setEnabled(connected);
+    ui_->pb_water_fill_A->setEnabled(connected);
+    ui_->pb_water_drain_A->setEnabled(connected);
 #if LIBRA_VERSION == 1
-    ui_->pb_water_fill_2->setEnabled(connected);
-    ui_->pb_water_drain_2->setEnabled(connected);
+    ui_->pb_water_fill_B->setEnabled(connected);
+    ui_->pb_water_drain_B->setEnabled(connected);
 #endif
 }
 
@@ -655,13 +655,13 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
     // Display formatted status string - primary visual feedback
     switch (side) {
         case Water::Side::kA:
-            ui_->l_water1_status->setText(Water::StateEnumToString(state));
-            ui_->tw_fill_level_1->UpdateState(state);
+            ui_->l_water_status_A->setText(Water::StateEnumToString(state));
+            ui_->tw_water_level_A->UpdateState(state);
             break;
 #if LIBRA_VERSION == 1
         case Water::Side::kB:
-            ui_->l_water2_status->setText(Water::StateEnumToString(state));
-            ui_->tw_fill_level_2->UpdateState(state);
+            ui_->l_water_status_B->setText(Water::StateEnumToString(state));
+            ui_->tw_water_level_B->UpdateState(state);
             break;
 #endif
         default:
@@ -866,9 +866,9 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_empty_triggered() {
-    ui_->tw_fill_level_1->OverrideLevel(0.0);
+    ui_->tw_water_level_A->OverrideLevel(0.0);
 #if LIBRA_VERSION == 1
-    ui_->tw_fill_level_2->OverrideLevel(0.0);
+    ui_->tw_water_level_B->OverrideLevel(0.0);
 #endif
 }
 
@@ -879,9 +879,9 @@ void MainWindow::on_a_water_set_empty_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_full_triggered() {
-    ui_->tw_fill_level_1->OverrideLevel(1.0);
+    ui_->tw_water_level_A->OverrideLevel(1.0);
 #if LIBRA_VERSION == 1
-    ui_->tw_fill_level_2->OverrideLevel(1.0);
+    ui_->tw_water_level_B->OverrideLevel(1.0);
 #endif
 }
 
@@ -968,18 +968,18 @@ void MainWindow::on_pb_arm_start_clicked() {
  *
  * @param checked Whether to enable automatic fluid system compensation
  *
- * @see on_pb_water_fill_1_toggled on_pb_water_drain_1_toggled
- *      on_pb_water_fill_2_toggled on_pb_water_drain_2_toggled
+ * @see on_pb_water_fill_A_toggled on_pb_water_drain_A_toggled
+ *      on_pb_water_fill_B_toggled on_pb_water_drain_B_toggled
  */
 void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
     emit EnableAutoTorqueComp(checked);
 
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_water_fill_1->setChecked(false);
-        ui_->pb_water_drain_1->setChecked(false);
-        ui_->pb_water_fill_2->setChecked(false);
-        ui_->pb_water_drain_2->setChecked(false);
+        ui_->pb_water_fill_A->setChecked(false);
+        ui_->pb_water_drain_A->setChecked(false);
+        ui_->pb_water_fill_B->setChecked(false);
+        ui_->pb_water_drain_B->setChecked(false);
 
         // Clearly display an "enabled" state
         ui_->pb_camera_record->setText("DISABLE AUTO TORQUE COMP");
@@ -1005,17 +1005,17 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_A_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_drain_1->setChecked(false);
+        ui_->pb_water_drain_A->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kA, Water::State::kFilling);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+        emit CommandWater(Water::Side::kA, Water::State::kStopped);
     }
 }
 
@@ -1027,17 +1027,17 @@ void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_A_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_fill_1->setChecked(false);
+        ui_->pb_water_fill_A->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kA, Water::State::kDraining);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+        emit CommandWater(Water::Side::kA, Water::State::kStopped);
     }
 }
 
@@ -1050,11 +1050,11 @@ void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_B_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_drain_2->setChecked(false);
+        ui_->pb_water_drain_B->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kB, Water::State::kFilling);
@@ -1072,11 +1072,11 @@ void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_2_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_B_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_fill_2->setChecked(false);
+        ui_->pb_water_fill_B->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kB, Water::State::kDraining);

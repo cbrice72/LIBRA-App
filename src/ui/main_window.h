@@ -164,10 +164,10 @@ class MainWindow : public QMainWindow {
 
     // Water
 
-    void on_pb_water_fill_1_toggled(bool checked);
-    void on_pb_water_drain_1_toggled(bool checked);
-    void on_pb_water_fill_2_toggled(bool checked);
-    void on_pb_water_drain_2_toggled(bool checked);
+    void on_pb_water_fill_A_toggled(bool checked);
+    void on_pb_water_drain_A_toggled(bool checked);
+    void on_pb_water_fill_B_toggled(bool checked);
+    void on_pb_water_drain_B_toggled(bool checked);
 
     // Manipulator
 

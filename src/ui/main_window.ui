@@ -2178,7 +2178,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
            <item row="0" column="1">
             <layout class="QGridLayout" name="gl_water_controls">
              <item row="1" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QPushButton" name="pb_water_fill_1">
+              <widget class="QPushButton" name="pb_water_fill_A">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -2223,7 +2223,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
               </widget>
              </item>
              <item row="2" column="1" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QPushButton" name="pb_water_drain_1">
+              <widget class="QPushButton" name="pb_water_drain_A">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -2268,7 +2268,7 @@ QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
               </widget>
              </item>
              <item row="2" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QPushButton" name="pb_water_drain_2">
+              <widget class="QPushButton" name="pb_water_drain_B">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -2313,7 +2313,7 @@ QPushButton:disabled {background-color: rgb(220, 180, 160);}</string>
               </widget>
              </item>
              <item row="1" column="3" alignment="Qt::AlignmentFlag::AlignHCenter|Qt::AlignmentFlag::AlignVCenter">
-              <widget class="QPushButton" name="pb_water_fill_2">
+              <widget class="QPushButton" name="pb_water_fill_B">
                <property name="enabled">
                 <bool>false</bool>
                </property>
@@ -2420,9 +2420,9 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
             </layout>
            </item>
            <item row="0" column="2">
-            <layout class="QVBoxLayout" name="vl_counterweight_2">
+            <layout class="QVBoxLayout" name="vl_counterweight_B">
              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-              <widget class="TankWidget" name="tw_fill_level_2" native="true">
+              <widget class="TankWidget" name="tw_water_level_B" native="true">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -2453,7 +2453,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
               </widget>
              </item>
              <item alignment="Qt::AlignmentFlag::AlignTop">
-              <widget class="QLabel" name="l_water2_status">
+              <widget class="QLabel" name="l_water_status_B">
                <property name="statusTip">
                 <string>Fluid system status</string>
                </property>
@@ -2468,9 +2468,9 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
             </layout>
            </item>
            <item row="0" column="0">
-            <layout class="QVBoxLayout" name="vl_counterweight_1">
+            <layout class="QVBoxLayout" name="vl_counterweight_A">
              <item alignment="Qt::AlignmentFlag::AlignHCenter">
-              <widget class="TankWidget" name="tw_fill_level_1" native="true">
+              <widget class="TankWidget" name="tw_water_level_A" native="true">
                <property name="enabled">
                 <bool>true</bool>
                </property>
@@ -2501,7 +2501,7 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
               </widget>
              </item>
              <item alignment="Qt::AlignmentFlag::AlignTop">
-              <widget class="QLabel" name="l_water1_status">
+              <widget class="QLabel" name="l_water_status_A">
                <property name="statusTip">
                 <string>Fluid system status</string>
                </property>
@@ -3149,10 +3149,10 @@ QPushButton:disabled {background-color: rgb(150, 180, 200);}</string>
   <tabstop>pb_manip_slow</tabstop>
   <tabstop>pb_manip_fast</tabstop>
   <tabstop>pb_autocomp_enable</tabstop>
-  <tabstop>pb_water_fill_1</tabstop>
-  <tabstop>pb_water_drain_1</tabstop>
-  <tabstop>pb_water_fill_2</tabstop>
-  <tabstop>pb_water_drain_2</tabstop>
+  <tabstop>pb_water_fill_A</tabstop>
+  <tabstop>pb_water_drain_A</tabstop>
+  <tabstop>pb_water_fill_B</tabstop>
+  <tabstop>pb_water_drain_B</tabstop>
  </tabstops>
  <resources>
   <include location="resources.qrc"/>
