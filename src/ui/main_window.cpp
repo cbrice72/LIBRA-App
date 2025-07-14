@@ -858,11 +858,14 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
         available_cameras_[desc] = QString(camera.id());
     }
 
-    // NOTE: the "CAPTURE" and "RECORD" buttons are only enabled when a camera
+    // NOTE: the "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when a
+    // camera
     //       is selected (see on_cb_camera_name_currentTextChanged)
     if (available_cameras_.empty()) {
         ui_->pb_camera_capture->setEnabled(false);
         ui_->pb_camera_record->setEnabled(false);
+        ui_->pb_camera_flip_h->setEnabled(false);
+        ui_->pb_camera_flip_v->setEnabled(false);
 
         logger_->Info("No cameras were found");
     } else {
@@ -1146,6 +1149,17 @@ void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
     if (camera_manager_ != nullptr) {
         logger_->Debug("Resetting existing camera manager");
         camera_manager_.reset();
+
+        // Reset flip button states
+        ui_->pb_camera_flip_h->setEnabled(false);
+        ui_->pb_camera_flip_h->setIcon(QIcon::fromTheme("go-next"));
+        ui_->pb_camera_flip_h->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
+
+        ui_->pb_camera_flip_v->setEnabled(false);
+        ui_->pb_camera_flip_v->setIcon(QIcon::fromTheme("go-down"));
+        ui_->pb_camera_flip_v->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
     }
 
     // Initialize camera and begin streaming
@@ -1161,6 +1175,8 @@ void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
     ui_->l_camera_id->setText(available_cameras_[sel]);
     ui_->pb_camera_capture->setEnabled(true);
     ui_->pb_camera_record->setEnabled(true);
+    ui_->pb_camera_flip_h->setEnabled(true);  // TODO: only enable if RealSense
+    ui_->pb_camera_flip_v->setEnabled(true);  // TODO: only enable if RealSense
 }
 
 /**
@@ -1193,6 +1209,54 @@ void MainWindow::on_pb_camera_record_clicked() {
         ui_->pb_camera_record->setIcon(QIcon::fromTheme("media-record"));
         ui_->pb_camera_record->setText(" RECORD");
         ui_->pb_camera_record->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
+    }
+}
+
+/**
+ * @brief Toggles horizontal flipping of the camera feed.
+ */
+void MainWindow::on_pb_camera_flip_h_clicked() {
+    if (camera_manager_ == nullptr) {
+        return;
+    }
+
+    bool current_state = camera_manager_->IsHorizontalFlipped();
+    camera_manager_->FlipHorizontal(!current_state);
+
+    if (!current_state) {
+        // Clearly display a "flipped" state
+        ui_->pb_camera_flip_h->setIcon(QIcon::fromTheme("go-previous"));
+        ui_->pb_camera_flip_h->setStyleSheet(
+            QString("color: %1;").arg(Color::kRed));
+    } else {
+        // Revert to original state
+        ui_->pb_camera_flip_h->setIcon(QIcon::fromTheme("go-next"));
+        ui_->pb_camera_flip_h->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
+    }
+}
+
+/**
+ * @brief Toggles vertical flipping of the camera feed.
+ */
+void MainWindow::on_pb_camera_flip_v_clicked() {
+    if (camera_manager_ == nullptr) {
+        return;
+    }
+
+    bool current_state = camera_manager_->IsVerticalFlipped();
+    camera_manager_->FlipVertical(!current_state);
+
+    if (!current_state) {
+        // Clearly display a "flipped" state
+        ui_->pb_camera_flip_v->setIcon(QIcon::fromTheme("go-up"));
+        ui_->pb_camera_flip_v->setStyleSheet(
+            QString("color: %1;").arg(Color::kRed));
+    } else {
+        // Revert to original state
+        ui_->pb_camera_flip_v->setIcon(QIcon::fromTheme("go-down"));
+        ui_->pb_camera_flip_v->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }
 }

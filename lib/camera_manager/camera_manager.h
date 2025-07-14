@@ -52,6 +52,27 @@ class CameraManager : public QObject
     void Capture();
     bool Record();
 
+#ifdef BUILD_WITH_ROS2
+    // --- ROS2 Frame Transform Getters/Setters ---
+
+    // TODO: move these to .cpp and add Doxygen comments
+    void FlipHorizontal(bool enabled) {
+        flip_horizontal_ = enabled;
+    }
+
+    void FlipVertical(bool enabled) {
+        flip_vertical = enabled;
+    }
+
+    bool IsHorizontalFlipped() const {
+        return flip_horizontal_;
+    }
+
+    bool IsVerticalFlipped() const {
+        return flip_vertical;
+    }
+#endif
+
   private:
     // --- Helper Functions ---
 
@@ -59,6 +80,7 @@ class CameraManager : public QObject
 
 #ifdef BUILD_WITH_ROS2
     void CheckRos2Connectivity();
+    cv::Mat TransformImage(const cv::Mat& input) const;
     void ProcessRos2Image(const sensor_msgs::msg::Image::SharedPtr msg);
 #endif
 
@@ -91,10 +113,13 @@ class CameraManager : public QObject
     QTimer* connectivity_timer_{nullptr};
     bool ros2_connected_{false};
 
+    bool flip_horizontal_{false};
+    bool flip_vertical{false};
+
     std::atomic<bool> capture_requested_{false};
 
     QVideoSink* video_sink_{nullptr};  // for displaying in Qt
-    const int video_codec_;
+    const int video_codec_ = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
     cv::VideoWriter video_writer_;
 #endif
 };

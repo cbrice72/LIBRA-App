@@ -181,6 +181,8 @@ class MainWindow : public QMainWindow {
     void on_cb_camera_name_currentTextChanged(const QString& sel);
     void on_pb_camera_capture_clicked();
     void on_pb_camera_record_clicked();
+    void on_pb_camera_flip_h_clicked();
+    void on_pb_camera_flip_v_clicked();
 
     // Misc.
 

@@ -180,9 +180,9 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     camera_->start();
 
     // Set output format for video
-    QMediaFormat format(QMediaFormat::MPEG4);  // init with FileFormat
+    QMediaFormat format(QMediaFormat::MPEG4);
     // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
-    format.setVideoCodec(QMediaFormat::VideoCodec::H264);  // alt: MotionJPEG
+    format.setVideoCodec(QMediaFormat::VideoCodec::MPEG4);
 
     recorder_->setMediaFormat(format);
     recorder_->setQuality(QMediaRecorder::Quality::VeryHighQuality);
@@ -269,6 +269,26 @@ void CameraManager::CheckRos2Connectivity() {
 }
 
 /**
+ * @brief Applies the current flip states to an image.
+ *
+ * @param input The input image to transform
+ * @return The transformed image
+ */
+cv::Mat CameraManager::TransformImage(const cv::Mat& input) const {
+    if (!flip_horizontal_ && !flip_vertical)
+        return input;
+    cv::Mat result;
+    if (flip_horizontal_ && flip_vertical) {
+        cv::flip(input, result, -1);
+    } else if (flip_horizontal_) {
+        cv::flip(input, result, 1);
+    } else if (flip_vertical) {
+        cv::flip(input, result, 0);
+    }
+    return result;
+}
+
+/**
  * @brief Processes RGB image frames in a Qt GUI.
  *
  * @param msg A ROS2 RGB image message (e.g., `/camera/color/image_raw`)
@@ -283,10 +303,10 @@ void CameraManager::ProcessRos2Image(
         cv_bridge::CvImagePtr cv_ptr =
             cv_bridge::toCvCopy(msg, sensor_msgs::image_encodings::RGB8);
 
-        // Convert to QVideoFrame for streaming to GUI
+        // Flip frame if needed, then convert to QVideoFrame for streaming to GUI
+        cv::Mat frame = TransformImage(cv_ptr->image);
         if (video_sink_) {
-            QImage qimg(cv_ptr->image.data, cv_ptr->image.cols,
-                        cv_ptr->image.rows, cv_ptr->image.step,
+            QImage qimg(frame.data, frame.cols, frame.rows, frame.step,
                         QImage::Format_RGB888);
             QVideoFrame frame(qimg);
             video_sink_->setVideoFrame(frame);
