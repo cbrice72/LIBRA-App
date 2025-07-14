@@ -83,7 +83,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("camera_manager_" + id.section('/', -1).toStdString()),
-      video_codec_(cv::VideoWriter::fourcc('M', 'J', 'P', 'G'))
+      video_codec_(cv::VideoWriter::fourcc('H', '2', '6', '4'))
 #endif
 {
     // Initialize the logger
@@ -92,6 +92,16 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 #else
     logger_ = std::make_unique<QtLogger>(debug_mode_);
 #endif
+
+    // Ensure output directories exist
+    const QDir img_dir(QString::fromStdString(output_dir_ + "img"));
+    if (!img_dir.exists()) {
+        img_dir.mkpath(".");
+    }
+    const QDir vid_dir(QString::fromStdString(output_dir_ + "vid"));
+    if (!vid_dir.exists()) {
+        vid_dir.mkpath(".");
+    }
 
     // Find requested camera
     const auto cameras = QMediaDevices::videoInputs();
@@ -190,16 +200,6 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     const auto& camera_format = camera_->cameraFormat();
     recorder_->setVideoResolution(camera_format.resolution());
     recorder_->setVideoFrameRate(camera_format.maxFrameRate());
-
-    // Ensure output directories exist
-    const QDir img_dir(QString::fromStdString(output_dir_ + "img"));
-    if (!img_dir.exists()) {
-        img_dir.mkpath(".");
-    }
-    const QDir vid_dir(QString::fromStdString(output_dir_ + "vid"));
-    if (!vid_dir.exists()) {
-        vid_dir.mkpath(".");
-    }
 };
 
 /**
@@ -509,7 +509,7 @@ bool CameraManager::Record() {
             recorder_->record();
 
             if (recorder_->recorderState() != QMediaRecorder::RecordingState) {
-                logger_->Error("CameraManager - "
+                logger_->Error("CameraManager - QMediaRecorder error: "
                                + recorder_->errorString().toStdString());
                 return false;
             }

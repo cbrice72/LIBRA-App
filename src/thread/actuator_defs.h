@@ -20,7 +20,10 @@
  * !Helper Functions
  */
 
-namespace Actuator {  // class not necessary, but namespace improves readability
+/**
+ * @brief Common definitions for controlling LIBRA actuators.
+ */
+namespace Actuator {
 
 //------------------------------------------------------------------------------
 // !Constants
