@@ -348,14 +348,9 @@ void ArduinoManager::UpdateManip() {
     }
 
     try {
-        // Correct for LIBRA-I arm pitch
-        m_current_pos_.at(kPitch) = (m_current_pos_.at(kPitch) <= 0)
-                                        ? -m_current_pos_.at(kPitch)
-                                        : 180 - m_current_pos_.at(kPitch);
-
-        // If a "slow" movement command was specified, manually calculate the
-        // next step to achieve a leisurely pace
-        // (NOTE: loop starts at i = 1 since Pitch is calculated separately)
+        // For "slow" movement, manually calculate steps to achieve a slow pace
+        // (NOTE: since the manipulator's pitch is adjusted automatically based
+        //        on the arm's pitch, this loop starts at i = 1)
         for (auto i = 1; i < 3; ++i) {
             if (m_slow_direction_.at(i) != 0) {
                 // Increase by small arbitrary amount
@@ -644,12 +639,15 @@ void ArduinoManager::SetManipCommand(const double& arm_pitch,
         return;
     }
 
-    m_current_pos_.at(kPitch) = arm_pitch;  // TODO: should update continuously
+    // Correct for LIBRA-I arm pitch
+    // TODO: should update continuously
+    m_current_pos_.at(kPitch) = (arm_pitch <= 0) ? -arm_pitch : 180 - arm_pitch;
+
     m_target_pos_.at(kPan) = target_pan;
     m_target_pos_.at(kTilt) = target_tilt;
 
     if (move_slow) {
-        // Only calculate the direction (UpdateManip takes care of position)
+        // Only calculate the direction (position is set in UpdateManip)
         auto get_direction = [](double target, double current) {
             return (target > current) ? 1 : (target < current) ? -1 : 0;
         };
@@ -659,11 +657,12 @@ void ArduinoManager::SetManipCommand(const double& arm_pitch,
         m_slow_direction_.at(kTilt) = get_direction(target_tilt,
                                                     m_current_pos_.at(kTilt));
     } else {
+        // Ensure slow mode is disabled
         m_slow_direction_.at(kPan) = 0;
         m_slow_direction_.at(kTilt) = 0;
 
-        // Setting the commanded positions to the target values causes the
-        // servos to move at maximum speed (near-instant)
+        // NOTE: Setting the commanded positions to the target values causes the
+        //       servos to move at maximum speed (near-instant)
         m_current_pos_.at(kPan) = target_pan;
         m_current_pos_.at(kTilt) = target_tilt;
     }
