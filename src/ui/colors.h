@@ -17,14 +17,17 @@
  * !Constants
  */
 
-namespace Color {  // class not necessary, but namespace improves readability
+/**
+ * @brief Colorblind-friendly palette for text used in the LIBRA app. Based on
+ *        Bang Wong's proposal
+ *
+ * @see https://doi.org/10.1038/nmeth.1618
+ */
+namespace Color {
 
 //------------------------------------------------------------------------------
 // !Constants
 //------------------------------------------------------------------------------
-
-// Colorblind-friendly palette for text, based on Bang Wong's proposal
-// (see article for more information: https://doi.org/10.1038/nmeth.1618)
 
 inline constexpr const char* kBlack = "rgb(0, 0, 0)";
 inline constexpr const char* kOrange = "rgb(230, 159, 0)";

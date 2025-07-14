@@ -14,25 +14,17 @@
 #include <QString>  // Qt::Core
 
 /* --- TABLE OF CONTENTS ---
- * !Manip Constants
- * !Manip Helpers
  * !Water Constants
  * !Water Helpers
+ * !Manip Constants
+ * !Manip Helpers
  */
 
-namespace Manip {  // class not necessary, but namespace improves readability
-
-//------------------------------------------------------------------------------
-// !Manip Constants
-//------------------------------------------------------------------------------
-
-//------------------------------------------------------------------------------
-// !Manip Helpers
-//------------------------------------------------------------------------------
-
-}  // namespace Manip
-
-namespace Water {  // class not necessary, but namespace improves readability
+/**
+ * @brief Common definitions for controlling the "SerialWater" Arduino.
+ *
+ */
+namespace Water {
 
 //------------------------------------------------------------------------------
 // !Water Constants
@@ -104,3 +96,18 @@ inline QString StateEnumToString(State state) {
 }
 
 }  // namespace Water
+
+/**
+ * @brief Common definitions for controlling the "SerialServo" Arduino.
+ */
+namespace Manip {
+
+//------------------------------------------------------------------------------
+// !Manip Constants
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// !Manip Helpers
+//------------------------------------------------------------------------------
+
+}  // namespace Manip
