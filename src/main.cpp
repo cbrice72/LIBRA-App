@@ -35,7 +35,7 @@ int main(int argc, char* argv[]) {
 
     // Initialize the app
     QApplication app(argc, argv);
-    QIcon::setThemeName("Papirus");
+    QIcon::setThemeName("Papirus-Dark");  // "Papirus" for light theme
 
     // Display the main app window
     MainWindow w_main;
