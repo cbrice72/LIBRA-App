@@ -67,7 +67,7 @@ constexpr uint8_t kTilt = 2;
 
 // Manipulator Control
 
-constexpr double kManipSlowSpeed = 1.5;   // deg/s, arbitrary
+constexpr double kManipSlowSpeed = 3;     // deg/s, arbitrary
 constexpr double kManipUpdateSpeed = 60;  // Hz, assumed (see note below)
 constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
 // NOTE: the old LIBRA-I control app calculated the "Slow" speed using arbitrary
