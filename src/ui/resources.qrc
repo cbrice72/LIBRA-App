@@ -1,6 +1,5 @@
 <RCC>
     <qresource prefix="/">
         <file alias="LIBRA-App">res/icons/LIBRA-App.ico</file>
-        <file alias="view-refresh">res/icons/adwaita/view-refresh-symbolic.svg</file>
     </qresource>
 </RCC>

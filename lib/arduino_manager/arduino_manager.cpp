@@ -10,8 +10,6 @@
 
 // C++ Standard Library Headers
 #include <bitset>
-#include <iostream>  // TODO: remove once BytesToStr() TODOs are fulfilled
-#include <sstream>
 
 // Other Library Headers
 #include <QDebug>           // Qt::Core
@@ -30,23 +28,13 @@
  * !Manipulator Commands (slots)
  */
 
-// Bit Positions for water_cmd_ (see usage in following constexpr block)
+// Bit Positions for water_cmd_
 
+constexpr uint8_t kWaterCmdMask = 0x0F;  // lower 4 bits
 constexpr uint8_t kAIn = 0b1000;
 constexpr uint8_t kBIn = 0b0100;
 constexpr uint8_t kAOut = 0b0010;
 constexpr uint8_t kBOut = 0b0001;
-
-// Water Commands based on Torque Direction (where North = PI/2 = forward)
-
-constexpr uint8_t kWestCmd = kAIn | kBOut;    // 0b1001
-constexpr uint8_t kNorthWestCmd = kBOut;      // 0b0001
-constexpr uint8_t kNorthCmd = kAOut | kBOut;  // 0b0011
-constexpr uint8_t kNorthEastCmd = kAOut;      // 0b0010
-constexpr uint8_t kEastCmd = kBIn | kAOut;    // 0b0110
-constexpr uint8_t kSouthEastCmd = kBIn;       // 0b0100
-constexpr uint8_t kSouthCmd = kAIn | kBIn;    // 0b1100
-constexpr uint8_t kSouthWestCmd = kAIn;       // 0b1000
 
 // NOLINTBEGIN(readability-identifier-naming)
 // Angular Thresholds for Direction Determination
@@ -83,32 +71,19 @@ constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
 namespace {
 
 /**
- * @brief Converts a QByteArray to QString in binary format (for printing),
- *        since Qt doesn't seem to support this natively.
+ * @brief Stringifies the lower 4 bits of a byte array for printing, since Qt
+ *        doesn't seem to support this natively.
  *
  * @param bytes The QByteArray to convert
- * @return std::string A representation of the input QBitArray in binary format
+ * @return std::string String representation of the lower 4 bits
  */
 std::string BytesToStr(const QByteArray& bytes) {
-    std::string str;
-
-    // TODO: check the result of this block against the new one before deleting it
-    // ---
-    std::string old_str;
-    for (const auto& byte : bytes) {
-        for (auto i = 7; i >= 0; --i) {  // hard-coded range of 0-7 = one byte
-            old_str += (byte & (1 << i)) ? '1' : '0';
-        }
-    }
-    // ---
+    std::string str("");
 
     for (auto byte : bytes) {
-        str += std::bitset<8>(static_cast<unsigned char>(byte)).to_string();
+        str += std::bitset<4>(static_cast<unsigned char>(byte) & kWaterCmdMask)
+                   .to_string();
     }
-
-    // TODO: temporary (see above TODO)
-    std::cout << "ArduinoManager - Old vs. New BytesToStr(): " << old_str
-              << " | " << str << std::endl;
 
     return str;
 }
@@ -148,6 +123,10 @@ ArduinoManager::ArduinoManager(QObject* parent, const bool& debug_mode)
     reconnect_timer_->setInterval(kReconnectIntervalMs);
 
     logger_->Debug("Initialized ArduinoManager");
+
+    // Initialize Arduino-specific variables
+    water_cmd_.resize(1);  // only 4 bits needed, so reserve 1 byte
+    ClearWaterCommand();
 }
 
 /**
@@ -170,6 +149,54 @@ ArduinoManager::~ArduinoManager() {
 //------------------------------------------------------------------------------
 // !Class Helpers
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Clears the current water command.
+ *
+ * @param side The side of the fluid system to clear
+ */
+void ArduinoManager::ClearWaterCommand(Water::Side side) {
+    switch (side) {
+        case Water::Side::kA:
+            water_cmd_[0] &= static_cast<uint8_t>(~(kAIn | kAOut));
+            break;
+#if LIBRA_VERSION == 1
+        case Water::Side::kB:
+            water_cmd_[0] &= static_cast<uint8_t>(~(kBIn | kBOut));
+            break;
+#endif
+        case Water::Side::kAll:
+        default:
+            water_cmd_[0] = 0;
+            break;
+    }
+}
+
+/**
+ * @brief Modifies the current water command. Automatically enforces mutual
+ *        exclusivity between commands to the same fluid system side.
+ *
+ * @param new_bits The bit(s) corresponding to the new command(s)
+ *
+ * @see kAIn kBIn kAOut kBOut
+ */
+void ArduinoManager::ModifyWaterCommand(uint8_t new_bits) {
+    new_bits &= kWaterCmdMask;  // ensure only lower 4 bits are used
+
+    // Mutually exclusive: if a side's bit is modified, clear both bits first
+    if (new_bits & (kAIn | kAOut) != 0) {
+        ClearWaterCommand(Water::Side::kA);
+    }
+    if (new_bits & (kBIn | kBOut) != 0) {
+#if LIBRA_VERSION == 1
+        ClearWaterCommand(Water::Side::kB);
+#else
+        ClearWaterCommand(Water::Side::kAll);  // no kB if LIBRA_VERSION != 1
+#endif
+    }
+
+    water_cmd_[0] |= static_cast<char>(new_bits);
+}
 
 /**
  * @brief Parses the active water command based on the specified side and
@@ -208,30 +235,6 @@ void ArduinoManager::SendWaterStatus(Water::Side side) {
     }
 
     emit ReportWaterStatus(side, state);
-}
-
-/**
- * @brief Starts or stops the update timer depending on whether any devices are
- *        connected.
- */
-void ArduinoManager::RefreshUpdateTimerState() {
-    bool any_connected = false;
-
-    // Check if any devices are connected
-    any_connected |= ser_water_->isOpen();
-#if LIBRA_VERSION == 1
-    any_connected |= ser_manip_->isOpen();
-#endif
-
-    if (any_connected && !update_timer_->isActive()) {
-        // A device(s) has been connected, so start sending it commands
-        update_timer_->start();
-        logger_->Debug("ArduinoManager - Started update timer");
-    } else if (!any_connected && update_timer_->isActive()) {
-        // No devices are connected, so conserve resources
-        update_timer_->stop();
-        logger_->Debug("ArduinoManager - Stopped update timer");
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -273,7 +276,31 @@ void ArduinoManager::AttemptReconnects() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sends the previously-assigned command to the SerialWater Arduino.
+ * @brief Starts or stops the update timer depending on whether any devices are
+ *        connected.
+ */
+void ArduinoManager::RefreshUpdateTimerState() {
+    bool any_connected = false;
+
+    // Check if any devices are connected
+    any_connected |= ser_water_->isOpen();
+#if LIBRA_VERSION == 1
+    any_connected |= ser_manip_->isOpen();
+#endif
+
+    if (any_connected && !update_timer_->isActive()) {
+        // A device(s) has been connected, so start sending it commands
+        update_timer_->start();
+        logger_->Debug("ArduinoManager - Started update timer");
+    } else if (!any_connected && update_timer_->isActive()) {
+        // No devices are connected, so conserve resources
+        update_timer_->stop();
+        logger_->Debug("ArduinoManager - Stopped update timer");
+    }
+}
+
+/**
+ * @brief Sends the current command to the SerialWater Arduino.
  *
  * @see MapTorqueToWaterCommand
  */
@@ -311,7 +338,7 @@ void ArduinoManager::UpdateWater() {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Sends the previously-assigned command to the SerialServo Arduino.
+ * @brief Sends the current command to the SerialServo Arduino.
  *
  * @see SetManipCommand
  */
@@ -444,14 +471,15 @@ void ArduinoManager::DisconnectWater() {
  * @see MapTorqueToWaterCommand
  */
 void ArduinoManager::SetAutoCompensation(const bool& enabled) {
-    auto_comp_en_.store(enabled);
+    if (auto_comp_en_.load() != enabled) {
+        logger_->Debug("Water - "
+                       + std::string(enabled ? "Enabling" : "Disabling")
+                       + " automatic torque compensation");
 
-    if (!enabled) {
-        water_cmd_.clear();  // clear any active water commands
+        ClearWaterCommand();  // reset the previous command when switching modes
     }
 
-    logger_->Debug("Water - Fluid system "
-                   + std::string(enabled ? "enabled" : "disabled"));
+    auto_comp_en_.store(enabled);
 }
 
 /**
@@ -481,32 +509,32 @@ void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
 #if LIBRA_VERSION == 1
     // Set command based on radial direction
     if (torque_dir > k7_8Pi || -k7_8Pi >= torque_dir) {
-        command = kWestCmd;  // kAIn | kBOut
+        command = kAIn | kBOut;  // 0b1001
     } else if (torque_dir > k5_8Pi) {
-        command = kNorthWestCmd;  // kBOut
+        command = kBOut;  // 0b0001
     } else if (torque_dir > k3_8Pi) {
-        command = kNorthCmd;  // kAOut | kBOut
+        command = kAOut | kBOut;  // 0b0011
     } else if (torque_dir > k1_8Pi) {
-        command = kNorthEastCmd;  // kAOut
+        command = kAOut;  // 0b0010
     } else if (torque_dir > -k1_8Pi) {
-        command = kEastCmd;  // kBIn | kAOut
+        command = kBIn | kAOut;  // 0b0110
     } else if (torque_dir > -k3_8Pi) {
-        command = kSouthEastCmd;  // kBIn
+        command = kBIn;  // 0b0100
     } else if (torque_dir > -k5_8Pi) {
-        command = kSouthCmd;  // kAIn | kBIn
+        command = kAIn | kBIn;  // 0b1100
     } else {
-        command = kSouthWestCmd;  // kAIn
+        command = kAIn;  // 0b1000
     }
 #elif LIBRA_VERSION == 2
     // Set command regardless of which fluid system side is connected
     if (torque_dir == 0) {
-        command = kNorthCmd;  // kAOut | kBOut
+        command = kAOut | kBOut;  // 0b0011
     } else {
-        command = kSouthCmd;  // kAIn | kBIn
+        command = kAIn | kBIn;  // 0b1100
     }
 #endif
 
-    water_cmd_ = QByteArray(1, static_cast<char>(command));
+    ModifyWaterCommand(command);
 
     logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
@@ -528,33 +556,18 @@ void ArduinoManager::ForceWaterCommand(const Water::Side& side,
     // Force-disable auto compensation
     SetAutoCompensation(false);
 
-    uint8_t command = 0;
-
-#if LIBRA_VERSION == 1
-    // Set command based on specified side
-    switch (side) {
-        case Water::Side::kA:
-            command = (state == Water::State::kFilling)    ? kAIn
-                      : (state == Water::State::kDraining) ? kAOut
-                                                           : 0;
+    // Modify or clear corresponding command bits
+    switch (state) {
+        case Water::State::kFilling:
+            ModifyWaterCommand((side == Water::Side::kA) ? kAIn : kBIn);
             break;
-        case Water::Side::kB:
-            command = (state == Water::State::kFilling)    ? kBIn
-                      : (state == Water::State::kDraining) ? kBOut
-                                                           : 0;
+        case Water::State::kDraining:
+            ModifyWaterCommand((side == Water::Side::kA) ? kAOut : kBOut);
             break;
+        case Water::State::kStopped:
         default:
-            // Do nothing (since command is initialized at the top)
-            break;
+            ClearWaterCommand(side);
     }
-#elif LIBRA_VERSION == 2
-    // Set command regardless of which fluid system side is connected
-    command = (state == Water::State::kFilling)    ? kSouthCmd
-              : (state == Water::State::kDraining) ? kNorthCmd
-                                                   : 0;
-#endif
-
-    water_cmd_ = QByteArray(1, static_cast<char>(command));
 
     logger_->Debug("Water - Forced command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");

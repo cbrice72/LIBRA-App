@@ -204,26 +204,24 @@ void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
     // Display build configuration: LIBRA_VERSION
-    QString ver_text =
-        "<span style='color: rgba(0, 0, 0, 0.6);'>LIBRA_VERSION = ";
+    QString ver_text = "<span>";
 #ifdef LIBRA_VERSION
     ver_text += QString("<b>%1</b>").arg(LIBRA_VERSION);
 #else
     ver_text += "<b>Unsupported</b>";
 #endif
     ver_text += "</span>";
-    ui_->static_l_libraversion->setText(ver_text);
+    ui_->l_libraversion_val->setText(ver_text);
 
     // Display build configuration: BUILD_WITH_ROS2
-    QString ros2en_text =
-        "<span style='color: rgba(0, 0, 0, 0.6);'>BUILD_WITH_ROS2 = ";
+    QString ros2en_text = "<span>";
 #ifdef BUILD_WITH_ROS2
     ros2en_text += "<b style='color: green;'>ON</b>";
 #else
     ros2en_text += "<b style='color: red;'>OFF</b>";
 #endif
     ros2en_text += "</span>";
-    ui_->static_l_ros2enabled->setText(ros2en_text);
+    ui_->l_ros2enabled_val->setText(ros2en_text);
 
     // ========== Menu Bar ==========
 
@@ -296,9 +294,9 @@ void MainWindow::ConfigureUi() {
 
     // Unneeded widgets
 #if LIBRA_VERSION != 1
-    RemoveUiElement(ui_->vl_counterweight_2);
-    RemoveUiElement(ui_->pb_water_fill_2);
-    RemoveUiElement(ui_->pb_water_drain_2);
+    RemoveUiElement(ui_->vl_counterweight_B);
+    RemoveUiElement(ui_->pb_water_fill_B);
+    RemoveUiElement(ui_->pb_water_drain_B);
 #endif
 
     // Slots
@@ -599,17 +597,13 @@ void MainWindow::ConnectWaterHelper() {
  * @brief Reflects SerialServo connection status in the UI.
  */
 void MainWindow::HandleManipConnChanged(const bool& connected) {
-    if (connected) {
-        ui_->a_manip_connect->setEnabled(false);
-        ui_->a_manip_disconnect->setEnabled(true);
-        ui_->pb_manip_slow->setEnabled(true);
-        ui_->pb_manip_fast->setEnabled(true);
-    } else {
-        ui_->a_manip_connect->setEnabled(true);
-        ui_->a_manip_disconnect->setEnabled(false);
-        ui_->pb_manip_slow->setEnabled(false);
-        ui_->pb_manip_fast->setEnabled(false);
-    }
+    // Menu bar
+    ui_->a_manip_connect->setEnabled(!connected);
+    ui_->a_manip_disconnect->setEnabled(connected);
+
+    // UI widgets
+    ui_->pb_manip_slow->setEnabled(connected);
+    ui_->pb_manip_fast->setEnabled(connected);
 }
 
 /**
@@ -631,15 +625,23 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects SerialWater connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_water_connect->setEnabled(!connected);
     ui_->a_water_disconnect->setEnabled(connected);
 
-    ui_->pb_water_fill_1->setEnabled(connected);
-    ui_->pb_water_drain_1->setEnabled(connected);
+    // UI widgets
+    ui_->pb_water_fill_A->setEnabled(connected);
+    ui_->pb_water_drain_A->setEnabled(connected);
 #if LIBRA_VERSION == 1
-    ui_->pb_water_fill_2->setEnabled(connected);
-    ui_->pb_water_drain_2->setEnabled(connected);
+    ui_->pb_water_fill_B->setEnabled(connected);
+    ui_->pb_water_drain_B->setEnabled(connected);
 #endif
+
+    if (!connected && ui_->a_hebi_connect->isEnabled()) {
+        // Since auto torque compensation is shared between ActuatorThread and
+        // ArduinoManager, disable this button if neither is connected
+        ui_->pb_autocomp_enable->setEnabled(false);
+    }
 }
 
 /**
@@ -655,13 +657,13 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
     // Display formatted status string - primary visual feedback
     switch (side) {
         case Water::Side::kA:
-            ui_->l_water1_status->setText(Water::StateEnumToString(state));
-            ui_->tw_fill_level_1->UpdateState(state);
+            ui_->l_water_status_A->setText(Water::StateEnumToString(state));
+            ui_->tw_water_level_A->UpdateState(state);
             break;
 #if LIBRA_VERSION == 1
         case Water::Side::kB:
-            ui_->l_water2_status->setText(Water::StateEnumToString(state));
-            ui_->tw_fill_level_2->UpdateState(state);
+            ui_->l_water_status_B->setText(Water::StateEnumToString(state));
+            ui_->tw_water_level_B->UpdateState(state);
             break;
 #endif
         default:
@@ -678,16 +680,24 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_hebi_connect->setEnabled(!connected);
     ui_->a_hebi_disconnect->setEnabled(connected);
 
+    // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
         // NOTE: It is possible for multiple actuator types -- and, by
         //       extension, multiple HandleXConnChanged() calls -- to exist.
         //       Therefore, the "STOP" PushButton should only ever be enabled
         //       by such calls, since other actuators may still be connected.
-        ui_->pb_arm_stop->setEnabled(connected);
+        ui_->pb_arm_stop->setEnabled(true);
+    }
+
+    if (!connected && ui_->a_water_connect->isEnabled()) {
+        // Since auto torque compensation is shared between ActuatorThread and
+        // ArduinoManager, disable this button if neither is connected
+        ui_->pb_autocomp_enable->setEnabled(false);
     }
 }
 
@@ -696,9 +706,11 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    // Menu bar
     ui_->a_epos_connect->setEnabled(!connected);
     ui_->a_epos_disconnect->setEnabled(connected);
 
+    // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
         // NOTE: It is possible for multiple actuator types -- and, by
@@ -866,9 +878,9 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_empty_triggered() {
-    ui_->tw_fill_level_1->OverrideLevel(0.0);
+    ui_->tw_water_level_A->OverrideLevel(0.0);
 #if LIBRA_VERSION == 1
-    ui_->tw_fill_level_2->OverrideLevel(0.0);
+    ui_->tw_water_level_B->OverrideLevel(0.0);
 #endif
 }
 
@@ -879,9 +891,9 @@ void MainWindow::on_a_water_set_empty_triggered() {
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_full_triggered() {
-    ui_->tw_fill_level_1->OverrideLevel(1.0);
+    ui_->tw_water_level_A->OverrideLevel(1.0);
 #if LIBRA_VERSION == 1
-    ui_->tw_fill_level_2->OverrideLevel(1.0);
+    ui_->tw_water_level_B->OverrideLevel(1.0);
 #endif
 }
 
@@ -968,27 +980,27 @@ void MainWindow::on_pb_arm_start_clicked() {
  *
  * @param checked Whether to enable automatic fluid system compensation
  *
- * @see on_pb_water_fill_1_toggled on_pb_water_drain_1_toggled
- *      on_pb_water_fill_2_toggled on_pb_water_drain_2_toggled
+ * @see on_pb_water_fill_A_toggled on_pb_water_drain_A_toggled
+ *      on_pb_water_fill_B_toggled on_pb_water_drain_B_toggled
  */
 void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
     emit EnableAutoTorqueComp(checked);
 
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_water_fill_1->setChecked(false);
-        ui_->pb_water_drain_1->setChecked(false);
-        ui_->pb_water_fill_2->setChecked(false);
-        ui_->pb_water_drain_2->setChecked(false);
+        ui_->pb_water_fill_A->setChecked(false);
+        ui_->pb_water_drain_A->setChecked(false);
+        ui_->pb_water_fill_B->setChecked(false);
+        ui_->pb_water_drain_B->setChecked(false);
 
         // Clearly display an "enabled" state
-        ui_->pb_camera_record->setText("DISABLE AUTO TORQUE COMP");
-        ui_->pb_camera_record->setStyleSheet(
+        ui_->pb_autocomp_enable->setText(" DISABLE ATC");
+        ui_->pb_autocomp_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kRed));
     } else {
         // Revert to "disabled" state
-        ui_->pb_camera_record->setText("ENABLE AUTO TORQUE COMP");
-        ui_->pb_camera_record->setStyleSheet(
+        ui_->pb_autocomp_enable->setText(" ENABLE ATC");
+        ui_->pb_autocomp_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }
 }
@@ -1005,17 +1017,17 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_A_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_drain_1->setChecked(false);
+        ui_->pb_water_drain_A->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kA, Water::State::kFilling);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+        emit CommandWater(Water::Side::kA, Water::State::kStopped);
     }
 }
 
@@ -1027,17 +1039,17 @@ void MainWindow::on_pb_water_fill_1_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_A_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_fill_1->setChecked(false);
+        ui_->pb_water_fill_A->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kA, Water::State::kDraining);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kB, Water::State::kStopped);
+        emit CommandWater(Water::Side::kA, Water::State::kStopped);
     }
 }
 
@@ -1050,11 +1062,11 @@ void MainWindow::on_pb_water_drain_1_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_B_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_drain_2->setChecked(false);
+        ui_->pb_water_drain_B->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kB, Water::State::kFilling);
@@ -1072,11 +1084,11 @@ void MainWindow::on_pb_water_fill_2_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_2_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_B_toggled(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
-        ui_->pb_water_fill_2->setChecked(false);
+        ui_->pb_water_fill_B->setChecked(false);
 
         // Send signal
         emit CommandWater(Water::Side::kB, Water::State::kDraining);
@@ -1168,7 +1180,8 @@ void MainWindow::on_pb_camera_capture_clicked() {
 void MainWindow::on_pb_camera_record_clicked() {
     if (camera_manager_->Record()) {
         // Clearly display a "recording" state
-        ui_->pb_camera_record->setText("STOP");
+        ui_->pb_camera_record->setIcon(QIcon::fromTheme("media-playback-stop"));
+        ui_->pb_camera_record->setText(" STOP");
         ui_->pb_camera_record->setStyleSheet(
             QString("color: %1;").arg(Color::kRed));
     } else {
@@ -1177,7 +1190,8 @@ void MainWindow::on_pb_camera_record_clicked() {
                                  kInfoLifespan);
 
         // Revert to original state
-        ui_->pb_camera_record->setText("RECORD");
+        ui_->pb_camera_record->setIcon(QIcon::fromTheme("media-record"));
+        ui_->pb_camera_record->setText(" RECORD");
         ui_->pb_camera_record->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }

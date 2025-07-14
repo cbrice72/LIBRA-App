@@ -115,10 +115,11 @@ source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
 
 The app can be launched via a terminal or, if you need easy access to debugging tools, via Qt Creator.
 
-- **Terminal** &ndash; Simply run the `libra_app_gui` executable located in the build folder (the path is output to the terminal at the end of the CMake build step).
+- **Terminal** &ndash; Simply navigate to the build directory (the path is output to the terminal at the end of the CMake build step) and run the `libra_app_gui` executable. Since the app uses certain files at runtime (e.g., to set the HEBI actuators' safety parameters), the executabale *must* be run from the directory it is in.
 
     ```bash
-    ./<PATH-TO-BUILD-FOLDER>/libra_app_gui
+    cd <PATH-TO-BUILD-FOLDER>
+    ./libra_app_gui
     ```
 
 - **Qt Creator** &ndash; Open QtCreator and click the green "run" arrow at the bottom left.
@@ -173,8 +174,8 @@ The **[Gen Endo Laboratory](www.robotics.mech.e.titech.ac.jp/gendo/en/)** is aff
 
 ## Attribution
 
-Certain **icons** used in this application are part of the Adwaita icon set, &copy; GNOME Project. Licensed under the GNU LGPL v3.
-See: [https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master](https://gitlab.gnome.org/GNOME/adwaita-icon-theme/-/tree/master)
+The **icons** used in this application are part of the Papirus icon theme, &copy; Papirus Development Team. Licensed under the GNU General Public License v3.0.
+See: [https://github.com/PapirusDevelopmentTeam/papirus-icon-theme](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
 Most **colors** used in this application are compliant with Bang Wong's proposed colorblind-friendly palette.
 See: [https://doi.org/10.1038/nmeth.1618](https://doi.org/10.1038/nmeth.1618)
