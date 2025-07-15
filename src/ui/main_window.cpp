@@ -345,8 +345,10 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_manager_, &ArduinoManager::DisconnectManip);
-    connect(this, &MainWindow::CommandManip,  // update manip target(s)
-            arduino_manager_, &ArduinoManager::SetManipCommand);
+    connect(this, &MainWindow::InformPitch,  // update manip correction
+            arduino_manager_, &ArduinoManager::SetManipCorrection);
+    connect(this, &MainWindow::CommandManip,  // update manip targets
+            arduino_manager_, &ArduinoManager::SetManipTarget);
 #endif
 
     connect(this, &MainWindow::ConnectWater,  // connect water
@@ -759,6 +761,11 @@ void MainWindow::HandleActuatorFeedback(
             ->setText(
                 QString::number(-(ma_val - mb_val) / 2.0, 'f', kPrecision));
     }
+
+    // Special Case: Manipulator Arduino (SerialServo) corrects for J3's pitch
+    if (feedback_type == Actuator::Feedback::kActualPos) {
+        emit InformPitch(feedbacks.find(Actuator::Name::kJ3)->second);
+    }
 #endif
 
     // Handle regular 1-DoF joints
@@ -1108,20 +1115,24 @@ void MainWindow::on_pb_water_drain_B_toggled(bool checked) {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Moves manipulator servos at a leisurely pace.
+ * @brief Moves manipulator servos #2 and #3 at a slow speed.
+ *
+ * @note Manipulator servo #1 is a compensating pitch joint that offsets J3's
+ *       pitch; it is not directly commanded here.
  */
 void MainWindow::on_pb_manip_slow_clicked() {
-    emit CommandManip(ui_->l_actual_j3->text().toDouble(),
-                      ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
+    emit CommandManip(ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
                       kManipMoveSlow);
 }
 
 /**
- * @brief Moves manipulator servos at maximum speed (near-instant).
+ * @brief Moves manipulator servos #2 and #3 at maximum speed (near-instant).
+ *
+ * @note Manipulator servo #1 is a compensating pitch joint that offsets J3's
+ *       pitch; it is not directly commanded here.
  */
 void MainWindow::on_pb_manip_fast_clicked() {
-    emit CommandManip(ui_->l_actual_j3->text().toDouble(),
-                      ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
+    emit CommandManip(ui_->sb_manip_pan->value(), ui_->sb_manip_tilt->value(),
                       kManipMoveFast);
 }
 #endif
