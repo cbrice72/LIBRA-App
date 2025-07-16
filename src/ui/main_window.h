@@ -115,8 +115,9 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 1
     void ConnectManip(const QString& port_name);
-    void CommandManip(const double& arm_pitch, const double& pan,
-                      const double& tilt, const bool& move_slow);
+    void CommandManip(const double& pan, const double& tilt,
+                      const bool& move_slow);
+    void InformPitch(const double& angle);
 #endif
 
     // --- Actuator Commands ---

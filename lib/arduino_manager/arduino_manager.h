@@ -59,8 +59,9 @@ class ArduinoManager : public QObject {
 #if LIBRA_VERSION == 1
     void ConnectManip(const QString& port_name);
     void DisconnectManip();
-    void SetManipCommand(const double& arm_pitch, const double& target_pan,
-                         const double& target_tilt, const bool& move_slow);
+    void SetManipCorrection(const double& pitch);
+    void SetManipTarget(const double& pan, const double& tilt,
+                        const bool& move_slow);
 #endif
 
   signals:

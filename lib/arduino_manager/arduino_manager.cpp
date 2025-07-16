@@ -340,7 +340,7 @@ void ArduinoManager::UpdateWater() {
 /**
  * @brief Sends the current command to the SerialServo Arduino.
  *
- * @see SetManipCommand
+ * @see SetManipCorrection SetManipTarget
  */
 void ArduinoManager::UpdateManip() {
     if (!ser_manip_->isOpen()) {
@@ -544,7 +544,7 @@ void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
 void ArduinoManager::ForceWaterCommand(const Water::Side& side,
                                        const Water::State& state) {
     if (!ser_water_->isOpen()) {
-        logger_->Warn("Water - Cannot command Arduino: not connected!");
+        logger_->Warn("Water - Cannot force command: not connected!");
         return;
     }
 
@@ -623,28 +623,35 @@ void ArduinoManager::DisconnectManip() {
 }
 
 /**
- * @brief Sets movement targets for all manipulator servos.
+ * @brief Sets correction target for manipulator servo #1.
  *
- * @param arm_pitch Angle of LIBRA-I arm pitch joint "J3"
- * @param target_pan Target yaw angle
- * @param target_tilt Target pitch angle
- * @param move_slow Whether to use a slower, more controlled trajectory
+ * @param pitch Angle of LIBRA-I arm pitch joint "J3"
  */
-void ArduinoManager::SetManipCommand(const double& arm_pitch,
-                                     const double& target_pan,
-                                     const double& target_tilt,
-                                     const bool& move_slow) {
+void ArduinoManager::SetManipCorrection(const double& pitch) {
     if (!ser_manip_->isOpen()) {
-        logger_->Warn("Manip - Cannot command Arduino: not connected!");
+        logger_->Warn("Manip - Cannot set correction: not connected!");
         return;
     }
 
-    // Correct for LIBRA-I arm pitch
-    // TODO: should update continuously
-    m_current_pos_.at(kPitch) = (arm_pitch <= 0) ? -arm_pitch : 180 - arm_pitch;
+    m_current_pos_.at(kPitch) = (pitch <= 0) ? -pitch : 180 - pitch;
+}
 
-    m_target_pos_.at(kPan) = target_pan;
-    m_target_pos_.at(kTilt) = target_tilt;
+/**
+ * @brief Sets movement targets for manipulator servos #2 and #3.
+ *
+ * @param pan Target yaw angle
+ * @param tilt Target pitch angle
+ * @param move_slow Whether to use a slower, more controlled trajectory
+ */
+void ArduinoManager::SetManipTarget(const double& pan, const double& tilt,
+                                    const bool& move_slow) {
+    if (!ser_manip_->isOpen()) {
+        logger_->Warn("Manip - Cannot set targets: not connected!");
+        return;
+    }
+
+    m_target_pos_.at(kPan) = pan;
+    m_target_pos_.at(kTilt) = tilt;
 
     if (move_slow) {
         // Only calculate the direction (position is set in UpdateManip)
@@ -652,9 +659,8 @@ void ArduinoManager::SetManipCommand(const double& arm_pitch,
             return (target > current) ? 1 : (target < current) ? -1 : 0;
         };
 
-        m_slow_direction_.at(kPan) = get_direction(target_pan,
-                                                   m_current_pos_.at(kPan));
-        m_slow_direction_.at(kTilt) = get_direction(target_tilt,
+        m_slow_direction_.at(kPan) = get_direction(pan, m_current_pos_.at(kPan));
+        m_slow_direction_.at(kTilt) = get_direction(tilt,
                                                     m_current_pos_.at(kTilt));
     } else {
         // Ensure slow mode is disabled
@@ -663,11 +669,11 @@ void ArduinoManager::SetManipCommand(const double& arm_pitch,
 
         // NOTE: Setting the commanded positions to the target values causes the
         //       servos to move at maximum speed (near-instant)
-        m_current_pos_.at(kPan) = target_pan;
-        m_current_pos_.at(kTilt) = target_tilt;
+        m_current_pos_.at(kPan) = pan;
+        m_current_pos_.at(kTilt) = tilt;
     }
 
-    logger_->Debug("Manip - Set targets to " + std::to_string(target_pan) + " "
-                   + std::to_string(target_tilt) + " deg");
+    logger_->Debug("Manip - Set targets to " + std::to_string(pan) + " "
+                   + std::to_string(tilt) + " deg");
 }
 #endif
