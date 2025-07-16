@@ -185,8 +185,6 @@ MainWindow::~MainWindow() {
     StopThread(epos_thread_);
 #endif
 
-    disconnect();  // all MainWindow-related signals and slots, just in case
-
     delete ui_;
 }
 
