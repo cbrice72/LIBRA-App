@@ -90,7 +90,7 @@ sleep 2
 SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
 
 cd "$PROJECT_ROOT"
-mkdir -p build2 && cd build2
+mkdir -p build && cd build
 cmake ..
 cmake --build . --target all
 
