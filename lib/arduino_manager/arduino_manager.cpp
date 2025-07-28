@@ -628,6 +628,7 @@ void ArduinoManager::DisconnectManip() {
  * @param pitch Angle of LIBRA-I arm pitch joint "J3"
  */
 void ArduinoManager::SetManipCorrection(const double& pitch) {
+    // TODO: this outputs endlessly, maybe set a variable to only output once?
     if (!ser_manip_->isOpen()) {
         logger_->Warn("Manip - Cannot set correction: not connected!");
         return;
