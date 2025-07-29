@@ -3107,6 +3107,7 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
      <addaction name="a_manip_connect"/>
      <addaction name="a_manip_disconnect"/>
      <addaction name="separator"/>
+     <addaction name="a_manip_enable_auto_correction"/>
     </widget>
     <addaction name="m_epos"/>
     <addaction name="m_hebi"/>
@@ -3213,6 +3214,17 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
    </property>
    <property name="text">
     <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_manip_enable_auto_correction">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Enable pitch auto-correct</string>
    </property>
   </action>
   <action name="a_lidar_connect">

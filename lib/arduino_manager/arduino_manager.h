@@ -59,6 +59,7 @@ class ArduinoManager : public QObject {
 #if LIBRA_VERSION == 1
     void ConnectManip(const QString& port_name);
     void DisconnectManip();
+    void SetManipCorrectionEnabled(const bool& enabled);
     void SetManipCorrection(const double& pitch);
     void SetManipTarget(const double& pan, const double& tilt,
                         const bool& move_slow);
@@ -131,5 +132,7 @@ class ArduinoManager : public QObject {
     std::array<double, 3> m_current_pos_{0};
     std::array<double, 3> m_target_pos_{0};
     std::array<int, 3> m_slow_direction_{0};
+
+    std::atomic<bool> manip_correction_enabled_{true};
 #endif
 };

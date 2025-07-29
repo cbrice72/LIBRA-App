@@ -363,6 +363,8 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_manager_, &ArduinoManager::DisconnectManip);
+    connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // toggle
+            arduino_manager_, &ArduinoManager::SetManipCorrectionEnabled);
     connect(this, &MainWindow::InformPitch,  // update manip correction
             arduino_manager_, &ArduinoManager::SetManipCorrection);
     connect(this, &MainWindow::CommandManip,  // update manip targets

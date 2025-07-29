@@ -623,6 +623,18 @@ void ArduinoManager::DisconnectManip() {
 }
 
 /**
+ * @brief Sets the state of the manipulator pitch correction functionality.
+ *
+ * @param enabled Whether to enable pitch correction
+ */
+void ArduinoManager::SetManipCorrectionEnabled(const bool& enabled) {
+    logger_->Debug("Manip - " + std::string(enabled ? "Enabling" : "Disabling")
+                   + " auto-correction for arm pitch");
+
+    manip_correction_enabled_.store(enabled);
+}
+
+/**
  * @brief Sets correction target for manipulator servo #1.
  *
  * @param pitch Angle of LIBRA-I arm pitch joint "J3"
