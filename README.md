@@ -70,6 +70,13 @@ If you want to get started as quickly as possible, you can run the provided buil
     ./tools/build-all.bash
     ```
 
+    If you wish to only build the app, run the following commands.
+
+    ```bash
+    mkdir -p build && cd build
+    cmake .. && cmake --build . --target all
+    ```
+
 - **Qt Creator & Colcon** &ndash; Provides a more fine-grained approach.
     1) Use a terminal to build the `libra` package (and its dependencies) located in the `LIBRA-ROS2-Tools` submodule.
 
