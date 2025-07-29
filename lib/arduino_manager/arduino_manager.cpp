@@ -463,14 +463,15 @@ void ArduinoManager::DisconnectWater() {
 /**
  * @brief Sets the state of the fluid system's automatic torque compensation.
  *
+ * @param enabled Whether to enable auto-compensation
+ *
  * @see MapTorqueToWaterCommand
  */
 void ArduinoManager::SetAutoCompensation(const bool& enabled) {
-    if (auto_comp_en_.load() != enabled) {
-        logger_->Debug("Water - "
-                       + std::string(enabled ? "Enabling" : "Disabling")
-                       + " automatic torque compensation");
+    logger_->Debug("Water - " + std::string(enabled ? "Enabling" : "Disabling")
+                   + " automatic torque compensation");
 
+    if (auto_comp_en_.load() != enabled) {
         ClearWaterCommand();  // reset the previous command when switching modes
     }
 
@@ -642,7 +643,12 @@ void ArduinoManager::SetManipCorrectionEnabled(const bool& enabled) {
 void ArduinoManager::SetManipCorrection(const double& pitch) {
     // TODO: this outputs endlessly, maybe set a variable to only output once?
     if (!ser_manip_->isOpen()) {
-        logger_->Warn("Manip - Cannot set correction: not connected!");
+        // logger_->Warn("Manip - Cannot set correction: not connected!");
+        return;
+    }
+
+    // Do nothing if disabled
+    if (!manip_correction_enabled_.load()) {
         return;
     }
 
@@ -664,7 +670,7 @@ void ArduinoManager::SetManipTarget(const double& pan, const double& tilt,
     }
 
     m_target_pos_.at(kPan) = pan;
-    m_target_pos_.at(kTilt) = tilt;
+    m_target_pos_.at(kTilt) = -tilt;  // "+" should rotate "upwards"
 
     if (move_slow) {
         // Only calculate the direction (position is set in UpdateManip)
