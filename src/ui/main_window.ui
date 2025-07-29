@@ -3098,6 +3098,7 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
      <addaction name="a_hebi_connect"/>
      <addaction name="a_hebi_disconnect"/>
      <addaction name="separator"/>
+     <addaction name="a_hebi_override_limits"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3175,6 +3176,17 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
    </property>
    <property name="text">
     <string>Disconnect</string>
+   </property>
+  </action>
+  <action name="a_hebi_override_limits">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Override Pos. Limits</string>
    </property>
   </action>
   <action name="a_water_connect">

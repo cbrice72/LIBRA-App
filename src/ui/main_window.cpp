@@ -286,6 +286,26 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
+
+    // Store original limits for override functionality
+    original_limits_.pitch_min = ui_->sb_arm_pitch->minimum();
+    original_limits_.pitch_max = ui_->sb_arm_pitch->maximum();
+
+#if LIBRA_VERSION == 1
+    original_limits_.roll_min = ui_->sb_arm_roll->minimum();
+    original_limits_.roll_max = ui_->sb_arm_roll->maximum();
+
+    original_limits_.j1_min = ui_->sb_arm_j1->minimum();
+    original_limits_.j1_max = ui_->sb_arm_j1->maximum();
+
+    original_limits_.j2_min = ui_->sb_arm_j2->minimum();
+    original_limits_.j2_max = ui_->sb_arm_j2->maximum();
+
+    original_limits_.j3_min = ui_->sb_arm_j3->minimum();
+    original_limits_.j3_max = ui_->sb_arm_j3->maximum();
+#elif LIBRA_VERSION == 2
+    original_limits_.yaw_min = ui_->sb_arm_yaw->minimum();
+    original_limits_.yaw_max = ui_->sb_arm_yaw->maximum();
 #endif
 
     // ========== Water ==========
@@ -845,6 +865,68 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 
     // Propagate to all children
     emit EnableDebugMode(checked);
+}
+
+/**
+ * @brief Event handler for "Actuators/HEBI" menu action "Override Pos. Limits".
+ *        Toggles input SpinBox and Slider limits.
+ */
+void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
+    if (checked) {
+        // Set override limits (-360 to 360 degrees)
+        ui_->hs_arm_pitch->setRange(-360, 360);
+        ui_->sb_arm_pitch->setRange(-360.0, 360.0);
+
+#if LIBRA_VERSION != 1
+        ui_->hs_arm_yaw->setRange(-360, 360);
+        ui_->sb_arm_yaw->setRange(-360.0, 360.0);
+#elif LIBRA_VERSION != 2
+        ui_->hs_arm_roll->setRange(-360, 360);
+        ui_->sb_arm_roll->setRange(-360.0, 360.0);
+
+        ui_->hs_arm_j1->setRange(-360, 360);
+        ui_->sb_arm_j1->setRange(-360.0, 360.0);
+
+        ui_->hs_arm_j2->setRange(-360, 360);
+        ui_->sb_arm_j2->setRange(-360.0, 360.0);
+
+        ui_->hs_arm_j3->setRange(-360, 360);
+        ui_->sb_arm_j3->setRange(-360.0, 360.0);
+#endif
+    } else {
+        // Restore original limits
+        ui_->hs_arm_pitch->setRange(original_limits_.pitch_min,
+                                    original_limits_.pitch_max);
+        ui_->sb_arm_pitch->setRange(original_limits_.pitch_min,
+                                    original_limits_.pitch_max);
+
+#if LIBRA_VERSION != 1
+        ui_->hs_arm_yaw->setRange(original_limits_.yaw_min,
+                                  original_limits_.yaw_max);
+        ui_->sb_arm_yaw->setRange(original_limits_.yaw_min,
+                                  original_limits_.yaw_max);
+#elif LIBRA_VERSION != 2
+        ui_->hs_arm_roll->setRange(original_limits_.roll_min,
+                                   original_limits_.roll_max);
+        ui_->sb_arm_roll->setRange(original_limits_.roll_min,
+                                   original_limits_.roll_max);
+
+        ui_->hs_arm_j1->setRange(original_limits_.j1_min,
+                                 original_limits_.j1_max);
+        ui_->sb_arm_j1->setRange(original_limits_.j1_min,
+                                 original_limits_.j1_max);
+
+        ui_->hs_arm_j2->setRange(original_limits_.j2_min,
+                                 original_limits_.j2_max);
+        ui_->sb_arm_j2->setRange(original_limits_.j2_min,
+                                 original_limits_.j2_max);
+
+        ui_->hs_arm_j3->setRange(original_limits_.j3_min,
+                                 original_limits_.j3_max);
+        ui_->sb_arm_j3->setRange(original_limits_.j3_min,
+                                 original_limits_.j3_max);
+#endif
+    }
 }
 
 /**

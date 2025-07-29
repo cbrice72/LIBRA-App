@@ -137,7 +137,7 @@ class MainWindow : public QMainWindow {
 
     // Actuators Menu
 
-    //   (none)
+    void on_a_hebi_override_limits_toggled(bool checked);
 
     // Sensors Menu
     // (most actions are handled via signals, and thus don't need functions)
@@ -226,4 +226,24 @@ class MainWindow : public QMainWindow {
 #if LIBRA_VERSION == 2
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
 #endif
+
+    // Temporary Value Holders
+
+    struct ArmLimits {
+        double pitch_min{-180.0};
+        double pitch_max{180.0};
+#if LIBRA_VERSION != 1
+        double yaw_min{-180.0};
+        double yaw_max{180.0};
+#elif LIBRA_VERSION != 2
+        double roll_min{-180.0};
+        double roll_max{180.0};
+        double j1_min{-180.0};
+        double j1_max{180.0};
+        double j2_min{-180.0};
+        double j2_max{180.0};
+        double j3_min{-180.0};
+        double j3_max{180.0};
+#endif
+    } original_limits_;
 };
