@@ -261,12 +261,7 @@ void MainWindow::ConfigureUi() {
     connect(ui_->sb_arm_pitch, &QDoubleSpinBox::valueChanged,  // when changed,
             ui_->hs_arm_pitch, &QAbstractSlider::setValue);    // update slider
 
-#if LIBRA_VERSION != 1
-    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
-            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
-    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
-            ui_->hs_arm_yaw, &QAbstractSlider::setValue);
-#elif LIBRA_VERSION != 2
+#if LIBRA_VERSION == 1
     connect(ui_->hs_arm_roll, &QAbstractSlider::sliderMoved,  // "
             ui_->sb_arm_roll, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_roll, &QDoubleSpinBox::valueChanged,  // "
@@ -286,6 +281,12 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_j3, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_j3, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_j3, &QAbstractSlider::setValue);
+#elif LIBRA_VERSION == 2
+    connect(ui_->hs_arm_yaw, &QAbstractSlider::sliderMoved,  // "
+            ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
+    connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
+            ui_->hs_arm_yaw, &QAbstractSlider::setValue);
+#endif
 
     // Store original limits for override functionality
     original_limits_.pitch_min = ui_->sb_arm_pitch->minimum();
@@ -862,6 +863,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     logger_->SetDebugMode(debug_mode_);
 
     if (debug_mode_) {
+        // Always print this message when debug mode is enabled
         logger_->Info("Debug mode enabled");
     }
 
@@ -875,6 +877,8 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
  */
 void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
     if (checked) {
+        logger_->Debug("Overriding HEBI position limits");
+
         // Set override limits (-360 to 360 degrees)
         ui_->hs_arm_pitch->setRange(-360, 360);
         ui_->sb_arm_pitch->setRange(-360.0, 360.0);
@@ -896,6 +900,8 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
         ui_->sb_arm_j3->setRange(-360.0, 360.0);
 #endif
     } else {
+        logger_->Debug("Restoring HEBI position limits");
+
         // Restore original limits
         ui_->hs_arm_pitch->setRange(original_limits_.pitch_min,
                                     original_limits_.pitch_max);
