@@ -361,25 +361,6 @@ void HebiThread::run() {
 
                 logger_->Debug("HEBI - Trajectory complete");
             }
-        } else {
-            // Add compensating effort/torque to resist external forces
-            Eigen::VectorXd effort = Eigen::VectorXd::Zero(num_actuators_);
-            for (int i = 0; i < num_actuators_; i++) {
-                // Virtual spring-damper
-                auto pos_error = command_->getPosition()[i]
-                                 - feedback_->getPosition()[i];
-                auto vel_damping = -feedback_->getVelocity()[i];
-                effort(i) = (kStiffness * pos_error) + (kDamping * vel_damping);
-            }
-            command_->setEffort(effort);
-
-            // NOTE: this is problematic since it counteracts the actuator's
-            //       internal PID controller (see gains.xml)
-            /*
-            // Counter measured angular velocity
-            vel_cmd = -feedback_->getGyro().col(2);  // z-axis (same as output)
-            command_->setVelocity(vel_cmd);
-            */
         }
 
         // Send movement command
