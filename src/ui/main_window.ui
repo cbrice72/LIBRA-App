@@ -3187,7 +3187,7 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Override Pos. Limits</string>
+    <string>Override pos. limits</string>
    </property>
   </action>
   <action name="a_water_connect">
@@ -3252,8 +3252,11 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Debug Mode</string>
+    <string>Enable debug mode</string>
    </property>
   </action>
   <action name="a_water_set_empty">
@@ -3268,17 +3271,17 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
   </action>
   <action name="a_connect_all">
    <property name="text">
-    <string>Connect All</string>
+    <string>Connect all</string>
    </property>
   </action>
   <action name="a_disconnect_all">
    <property name="text">
-    <string>Disconnect All</string>
+    <string>Disconnect all</string>
    </property>
   </action>
   <action name="a_refresh_camera_list">
    <property name="text">
-    <string>Refresh Camera List</string>
+    <string>Refresh camera list</string>
    </property>
   </action>
  </widget>
