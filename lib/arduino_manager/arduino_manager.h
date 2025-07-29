@@ -112,10 +112,8 @@ class ArduinoManager : public QObject {
     // Timer management
 
     QTimer* update_timer_{nullptr};
-    static constexpr int kUpdateIntervalMs = 500;  // 2 Hz
 
     QTimer* reconnect_timer_{nullptr};
-    static constexpr int kReconnectIntervalMs = 3000;  // 3 sec
     bool water_needs_reconnect_{false};
 #if LIBRA_VERSION == 1
     bool manip_needs_reconnect_{false};

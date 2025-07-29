@@ -28,6 +28,11 @@
  * !Manipulator Commands (slots)
  */
 
+// Thread Timer Intervals
+
+constexpr int kUpdateIntervalMs = 500;      // 0.5 sec, 2 Hz
+constexpr int kReconnectIntervalMs = 3000;  // 3 sec
+
 // Bit Positions for water_cmd_
 
 constexpr uint8_t kWaterCmdMask = 0x0F;  // lower 4 bits
@@ -55,13 +60,12 @@ constexpr uint8_t kTilt = 2;
 
 // Manipulator Control
 
-constexpr double kManipSlowSpeed = 3;     // deg/s, arbitrary
-constexpr double kManipUpdateSpeed = 60;  // Hz, assumed (see note below)
-constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateSpeed;
-// NOTE: the old LIBRA-I control app calculated the "Slow" speed using arbitrary
-//       "magic" numbers. I think this results in a nice speed, though, so I try
-//       to make sense of it using the constants defined above. For reference,
-//       the servos are rated at a speed of 60 deg / 0.18 sec (at 5.0 V).
+constexpr double kManipSlowSpeed = 1.5;                          // deg/s
+constexpr double kManipUpdateRate = 1000.0 / kUpdateIntervalMs;  // Hz
+constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateRate;
+// NOTE: the original code used 90.0 / (60.0 * 60.0) = 0.025 deg per update which,
+//       likely running at 60 Hz, gives 1.5 deg/s. Since that was a nice speed,
+//       we use known constants to recreate it here.
 #endif
 
 //------------------------------------------------------------------------------
