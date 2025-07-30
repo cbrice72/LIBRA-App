@@ -259,17 +259,22 @@ void ArduinoManager::UpdateDevices() {
  * @brief Attempts to reconnect devices, if necessary.
  */
 void ArduinoManager::AttemptReconnects() {
+    bool all_reconnected = true;
+
     if (water_needs_reconnect_) {
         ConnectWater(ser_water_->portName());
     }
+    all_reconnected &= !water_needs_reconnect_;
+
 #if LIBRA_VERSION == 1
     if (manip_needs_reconnect_) {
         ConnectManip(ser_manip_->portName());
     }
+    all_reconnected &= !manip_needs_reconnect_;
 #endif
 
     // Stop timer if no devices need reconnect
-    if (!water_needs_reconnect_ && !manip_needs_reconnect_) {
+    if (all_reconnected) {
         reconnect_timer_->stop();
         logger_->Debug("ArduinoManager - Stopped reconnect timer");
     }
