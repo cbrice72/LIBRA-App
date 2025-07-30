@@ -188,10 +188,10 @@ void ArduinoManager::ModifyWaterCommand(uint8_t new_bits) {
     new_bits &= kWaterCmdMask;  // ensure only lower 4 bits are used
 
     // Mutually exclusive: if a side's bit is modified, clear both bits first
-    if (new_bits & (kAIn | kAOut) != 0) {
+    if ((new_bits & (kAIn | kAOut)) != 0) {
         ClearWaterCommand(Water::Side::kA);
     }
-    if (new_bits & (kBIn | kBOut) != 0) {
+    if ((new_bits & (kBIn | kBOut)) != 0) {
 #if LIBRA_VERSION == 1
         ClearWaterCommand(Water::Side::kB);
 #else
