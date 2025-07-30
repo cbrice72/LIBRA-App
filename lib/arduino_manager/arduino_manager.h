@@ -121,7 +121,7 @@ class ArduinoManager : public QObject {
 
     // Water state
 
-    std::atomic<bool> auto_comp_en_{false};
+    bool auto_comp_en_{false};
     QByteArray water_cmd_;  // only 4 bits used
 
 #if LIBRA_VERSION == 1
@@ -131,6 +131,6 @@ class ArduinoManager : public QObject {
     std::array<double, 3> m_target_pos_{0};
     std::array<int, 3> m_slow_direction_{0};
 
-    std::atomic<bool> manip_correction_enabled_{true};
+    bool manip_correction_enabled_{true};
 #endif
 };

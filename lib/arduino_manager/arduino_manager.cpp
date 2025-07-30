@@ -475,11 +475,10 @@ void ArduinoManager::SetAutoCompensation(const bool& enabled) {
     logger_->Debug("Water - " + std::string(enabled ? "Enabling" : "Disabling")
                    + " automatic torque compensation");
 
-    if (auto_comp_en_.load() != enabled) {
+    if (auto_comp_en_ != enabled) {
         ClearWaterCommand();  // reset the previous command when switching modes
     }
-
-    auto_comp_en_.store(enabled);
+    auto_comp_en_ = enabled;
 }
 
 /**
@@ -493,7 +492,7 @@ void ArduinoManager::SetAutoCompensation(const bool& enabled) {
  * @see hebi_thread::run
  */
 void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
-    if (!auto_comp_en_.load()) {
+    if (!auto_comp_en_) {
         // Only allow manual control (see ForceWaterCommand)
         return;
     }
@@ -636,7 +635,7 @@ void ArduinoManager::SetManipCorrectionEnabled(const bool& enabled) {
     logger_->Debug("Manip - " + std::string(enabled ? "Enabling" : "Disabling")
                    + " auto-correction for arm pitch");
 
-    manip_correction_enabled_.store(enabled);
+    manip_correction_enabled_ = enabled;
 }
 
 /**
@@ -652,7 +651,7 @@ void ArduinoManager::SetManipCorrection(const double& pitch) {
     }
 
     // Do nothing if disabled
-    if (!manip_correction_enabled_.load()) {
+    if (!manip_correction_enabled_) {
         return;
     }
 
