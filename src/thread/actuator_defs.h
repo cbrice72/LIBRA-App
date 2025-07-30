@@ -42,6 +42,13 @@ constexpr int kJointCountEpos = 0;
 
 /**
  * @brief LIBRA actuator names.
+ *
+ * @note HEBI actuator names -MUST- start at 0 and be in the same order as their
+ *       string equivalents fed in at HebiThread object construction. I know
+ *       this is terrible design, but I have more important things to do right
+ *       now than refactor this...
+ *
+ * @see HebiThread::run()
  */
 enum Name {
 #if LIBRA_VERSION == 1
@@ -51,8 +58,8 @@ enum Name {
     kJ2,
     kJ3,
 #elif LIBRA_VERSION == 2
-    kYaw = 0,
-    kPitch,
+    kPitch = 0,
+    kYaw,
 #endif
     kUndefined  // KEEP THIS LAST (used in StringToNameEnum)
 };
