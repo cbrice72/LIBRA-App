@@ -458,6 +458,7 @@ void EposThread::Disconnect() {
         emit ErrorThrown("EPOS - Problem closing device!\n"
                          + util::GetFormattedEposErrTxt("VCS_CloseDevice",
                                                         err_code, kNodeID));
+        handle_ = nullptr;  // avoid dangling pointer in case of error
         return;
     }
 

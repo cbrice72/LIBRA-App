@@ -397,6 +397,7 @@ void OpenEposDialog::on_pb_connect_clicked() {
     if (handle_ == nullptr || err_code != 0) {
         qCritical() << util::GetFormattedEposErrTxt("VCS_OpenDevice", err_code);
         VCS_CloseDevice(handle_, &err_code);
+        handle_ = nullptr;  // always null after cleanup
         return;
     }
 
@@ -406,6 +407,7 @@ void OpenEposDialog::on_pb_connect_clicked() {
         qCritical() << util::GetFormattedEposErrTxt(
             "VCS_SetProtocolStackSettings", err_code);
         VCS_CloseDevice(handle_, &err_code);
+        handle_ = nullptr;  // always null after cleanup
         return;
     }
 
