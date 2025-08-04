@@ -135,7 +135,7 @@ The app can be launched via a terminal or, if you need easy access to debugging 
 
 #### **(2) ROS2 Nodes**
 
-⚠️ **-WORK IN PROGRESS-** ⚠️
+⚠️ **TODO** ⚠️
 
 Currently, the following instructions only run RTAB-Map with the RealSense RGB-D camera. Sensor fusion support with the 2D LIDAR is coming soon!
 
