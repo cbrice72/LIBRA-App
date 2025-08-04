@@ -571,11 +571,11 @@ void MainWindow::InitializeFeedbackElementMap() {
  */
 void MainWindow::ConnectManipHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog open_port_dlg(this, QString("SerialServo"));
+    OpenSerialDialog dialog(this, QString("SerialServo"));
     QString port_name;
 
-    if (open_port_dlg.exec() == QDialog::Accepted) {
-        port_name = open_port_dlg.GetSelectedPortName();
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
 
         if (port_name.isEmpty()) {
             logger_->Error("No port selected!");
@@ -596,11 +596,11 @@ void MainWindow::ConnectManipHelper() {
  */
 void MainWindow::ConnectWaterHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog open_port_dlg(this, QString("SerialWater"));
+    OpenSerialDialog dialog(this, QString("SerialWater"));
     QString port_name;
 
-    if (open_port_dlg.exec() == QDialog::Accepted) {
-        port_name = open_port_dlg.GetSelectedPortName();
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
 
         if (port_name.isEmpty()) {
             logger_->Error("No port selected!");

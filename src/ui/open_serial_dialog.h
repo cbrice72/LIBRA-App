@@ -39,7 +39,7 @@ class OpenSerialDialog : public QDialog {
 
     // NOLINTBEGIN: Qt-generated
   private slots:
-    // --- Main Window ---
+    // --- Dialog Window ---
 
     void on_cb_ports_currentIndexChanged(int sel);
 

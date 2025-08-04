@@ -39,7 +39,7 @@ class OpenEposDialog : public QDialog {
 
     // NOLINTBEGIN: Qt-generated
   private slots:
-    // --- Main Window ---
+    // --- Dialog Window ---
 
     void on_cb_device_name_textActivated(const QString& sel);
     void on_cb_protocol_name_textActivated(const QString& sel);
