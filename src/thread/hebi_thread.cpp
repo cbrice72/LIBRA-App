@@ -49,11 +49,6 @@ constexpr double kMaxVel = 0.1;      // rad/s
 constexpr double kStiffness = 50.0;  // Nm/rad
 constexpr double kDamping = 1.0;     // Nm/rad/s
 
-// LIBRA Control
-
-constexpr double kTorqueCompUpperBound = 6.0;  // Nm
-constexpr double kTorqueCompLowerBound = 3.0;  // Nm
-
 // Status Message Formatting
 
 constexpr int kLabelWidth = 21;  // longest label = 19 char, +2 for visuals
@@ -332,12 +327,12 @@ void HebiThread::run() {
             arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
 #endif
 
-            if (arm_torque_r > kTorqueCompUpperBound) {
+            if (arm_torque_r > torque_comp_upper_bound_) {
                 // Disable movement if arm torque is too high
                 movement_en_ = false;
             }
 
-            if (arm_torque_r >= kTorqueCompLowerBound) {
+            if (arm_torque_r >= torque_comp_lower_bound_) {
                 // While arm torque remains above the specified lower bound,
                 // report direction of torque to arduino_thread
                 emit ReportArmTorque(arm_torque_theta);
@@ -584,10 +579,29 @@ void HebiThread::Stop() {
  * @param enabled Whether to control torque experienced by the central joint
  */
 void HebiThread::SetTorqueControl(const bool& enabled) {
+    logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
+                   + " torque-based movement control");
+
     torque_control_en_ = enabled;
 
     if (!torque_control_en_) {
         // "Manual" mode: only force allow movement if torque compensation is disabled
         movement_en_ = true;
     }
+}
+
+/**
+ * @brief Sets the bounds for the central joint's torque control.
+ *
+ * @param lower_bound Upper torque bound, in Nm
+ * @param upper_bound Lower torque bound, in Nm
+ */
+void HebiThread::SetTorqueCompBounds(const double& lower_bound,
+                                     const double& upper_bound) {
+    torque_comp_lower_bound_ = lower_bound;
+    torque_comp_upper_bound_ = upper_bound;
+
+    logger_->Debug("HEBI - Torque compensation bounds updated: lower="
+                   + std::to_string(lower_bound)
+                   + " Nm, upper=" + std::to_string(upper_bound) + " Nm");
 }

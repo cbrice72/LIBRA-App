@@ -28,6 +28,10 @@
 
 typedef sensor_msgs::msg::JointState msgJointState;
 
+// Torque compensation constants
+constexpr double kTorqueCompLowerBound = 3.0;  // Nm
+constexpr double kTorqueCompUpperBound = 6.0;  // Nm
+
 /**
  * @brief Control class for HEBI actuators.
  *
@@ -59,6 +63,7 @@ class HebiThread : public AbstractActuatorThread
     void Stop() override;
 
     void SetTorqueControl(const bool& enabled);
+    void SetTorqueCompBounds(const double& lower, const double& upper);
 
   signals:
     // --- Actuator Updates ---
@@ -103,9 +108,11 @@ class HebiThread : public AbstractActuatorThread
 
     // Enables logic that uses torque feedback hysteresis to control trajectory
     // movement state (see `movement_en_`)
-    bool torque_control_en_{true};
+    bool torque_control_en_{false};
+    double torque_comp_lower_bound_{kTorqueCompLowerBound};  // Nm
+    double torque_comp_upper_bound_{kTorqueCompUpperBound};  // Nm
+
     // Enables trajectory-based movement
-    // (NOTE: movement compensating for external forces is always allowed)
     bool movement_en_{true};
 
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;

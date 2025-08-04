@@ -3099,6 +3099,7 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
      <addaction name="a_hebi_disconnect"/>
      <addaction name="separator"/>
      <addaction name="a_hebi_override_limits"/>
+     <addaction name="a_hebi_torque_comp_settings"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3188,6 +3189,11 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
    </property>
    <property name="text">
     <string>Override pos. limits</string>
+   </property>
+  </action>
+  <action name="a_hebi_torque_comp_settings">
+   <property name="text">
+    <string>Torque compensation settings...</string>
    </property>
   </action>
   <action name="a_water_connect">

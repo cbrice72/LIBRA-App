@@ -123,6 +123,8 @@ class MainWindow : public QMainWindow {
     // --- Actuator Commands ---
 
     void CommandHebi(const std::vector<double>& deg);
+    void UpdateHebiTorqueCompBounds(const double& upper_bound,
+                                    const double& lower_bound);
 #if LIBRA_VERSION == 2
     void CommandEpos(const std::vector<double>& deg);
 #endif
@@ -138,6 +140,7 @@ class MainWindow : public QMainWindow {
     // Actuators Menu
 
     void on_a_hebi_override_limits_toggled(bool checked);
+    void on_a_hebi_torque_comp_settings_triggered();
 
     // Sensors Menu
     // (most actions are handled via signals, and thus don't need functions)

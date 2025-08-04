@@ -45,6 +45,34 @@ target_link_libraries(
     PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
 )
 
+# ========================= TORQUE COMP DIALOG =========================
+
+# Create and configure the module
+qt_add_library(
+    torque_comp_dialog
+    STATIC
+    # UI Resources (icons, etc.)
+    ${CMAKE_CURRENT_SOURCE_DIR}/resources.qrc
+    # Dialog
+    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.ui
+)
+
+# Ensure this module packages the necessary headers
+target_include_directories(
+    torque_comp_dialog
+    # Make this directory available to consumers
+    INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Tell the linker which libraries to link against
+target_link_libraries(
+    torque_comp_dialog
+    # Qt
+    PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
+)
+
 if(LIBRA_VERSION EQUAL 2)
     # ========================= OPEN EPOS DIALOG =========================
 
