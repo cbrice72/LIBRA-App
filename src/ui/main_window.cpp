@@ -663,10 +663,10 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
 
-    if (!connected && ui_->a_hebi_connect->isEnabled()) {
+    if (connected || (!connected && ui_->a_hebi_connect->isEnabled())) {
         // Since auto torque compensation is shared between ActuatorThread and
         // ArduinoManager, disable this button if neither is connected
-        ui_->pb_autocomp_enable->setEnabled(false);
+        ui_->pb_autocomp_enable->setEnabled(connected);
     }
 }
 
@@ -720,10 +720,10 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
         ui_->pb_arm_stop->setEnabled(true);
     }
 
-    if (!connected && ui_->a_water_connect->isEnabled()) {
+    if (connected || (!connected && ui_->a_water_connect->isEnabled())) {
         // Since auto torque compensation is shared between ActuatorThread and
         // ArduinoManager, disable this button if neither is connected
-        ui_->pb_autocomp_enable->setEnabled(false);
+        ui_->pb_autocomp_enable->setEnabled(connected);
     }
 }
 
