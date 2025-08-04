@@ -1001,10 +1001,10 @@ void MainWindow::on_a_water_set_full_triggered() {
  */
 void MainWindow::on_a_connect_all_triggered() {
     // Arduinos
+    ConnectWaterHelper();
 #if LIBRA_VERSION == 1
     ConnectManipHelper();
 #endif
-    ConnectWaterHelper();
 
     // Actuators
     ui_->a_hebi_connect->trigger();
