@@ -90,7 +90,7 @@ git submodule update --init --recursive
 git submodule update --remote LIBRA-ROS2-Tools
 ```
 
-Then, follow the instructions in [LIBRA-ROS2-Tools/SETUP.md](./LIBRA-ROS2-Tools/SETUP.md) and [LIBRA-ROS2-Tools/docs/SLAM.md "Before You Start"](./LIBRA-ROS2-Tools/docs/SLAM.md#before-you-start) before continuing.
+Then, follow the instructions in [LIBRA-ROS2-Tools/SETUP.md](./LIBRA-ROS2-Tools/SETUP.md) and [LIBRA-ROS2-Tools/docs/RTAB-MAP.md "Before You Start"](./LIBRA-ROS2-Tools/docs/RTAB-MAP.md#before-you-start) before continuing.
 
 ### *EPOS (Maxon) Library*
 
