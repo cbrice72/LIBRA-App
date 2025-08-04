@@ -5,8 +5,8 @@
   <position>
     <!-- 170 deg ~= 2.97 rad -->
     <!-- NOTE: the MA-MB relationship is a bit more complicated, so just give them "infinite" limits -->
-    <min_limit>-1000 -1000 -2.97 -2.97 -2.97</min_limit>
-    <max_limit>1000 1000  2.97  2.97  2.97</max_limit>
+    <min_limit>-1000 -1000 -3.1416 -3.1416 -3.1416</min_limit>
+    <max_limit>1000 1000 3.1416 3.1416 3.1416</max_limit>
   </position>
   <velocity>
     <!-- 28 deg/s ~= 0.5 rad (default) -->
