@@ -365,6 +365,7 @@ void EposThread::Connect() {
         emit ErrorThrown(QString::fromStdString(
             "EPOS - Unsupported baud rate; expecting: " + valid_str.str()));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
@@ -376,6 +377,7 @@ void EposThread::Connect() {
             + util::GetFormattedEposErrTxt("VCS_SetProtocolStackSettings",
                                            err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
@@ -385,6 +387,7 @@ void EposThread::Connect() {
                          + util::GetFormattedEposErrTxt("VCS_ClearFault",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
@@ -395,6 +398,7 @@ void EposThread::Connect() {
                          + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
     target_ = last_target_ = a_pos * kIncToDeg;
@@ -407,6 +411,7 @@ void EposThread::Connect() {
                          + util::GetFormattedEposErrTxt("VCS_SetOperationMode",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
@@ -419,6 +424,7 @@ void EposThread::Connect() {
             + util::GetFormattedEposErrTxt("VCS_SetPositionProfile", err_code,
                                            kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
@@ -428,6 +434,7 @@ void EposThread::Connect() {
                          + util::GetFormattedEposErrTxt("VCS_SetEnableState",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
         return;
     }
 
