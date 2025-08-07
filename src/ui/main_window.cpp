@@ -753,6 +753,11 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
  *
  * @param feedbacks Unordered map of joint(s) and their corresponding feedback
  * @param feedback_type The type of primary feedback provided
+ *
+ * @note To improve ease of use, LIBRA-I arm actuator angles (J1, J2, J3) in the
+ *       UI are shown relative to a forward-facing perspective directly behind
+ *       the robot, where "0" is directly forward, and counterclockwise movement
+ *       is considered "+" (positive).
  */
 void MainWindow::HandleActuatorFeedback(
     const std::unordered_map<Actuator::Name, double>& feedbacks,
@@ -799,6 +804,11 @@ void MainWindow::HandleActuatorFeedback(
         if (feedback.first == Actuator::Name::kMA
             || feedback.first == Actuator::Name::kMB) {
             continue;
+        }
+
+        // Ensure the mechanically-inverted J2 matches operator perspective
+        if (feedback.first == Actuator::Name::kJ2) {
+            feedback.second = -feedback.second;
         }
 #endif
         try {
@@ -1076,6 +1086,11 @@ void MainWindow::on_a_disconnect_all_triggered() {
 
 /**
  * @brief Sends movement command signal(s) to all actuators.
+ *
+ * @note To improve ease of use, LIBRA-I arm actuator angles (J1, J2, J3) in the
+ *       UI are shown relative to a forward-facing perspective directly behind
+ *       the robot, where "0" is directly forward, and counterclockwise movement
+ *       is considered "+" (positive).
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
@@ -1084,12 +1099,9 @@ void MainWindow::on_pb_arm_start_clicked() {
     auto val_ma = (-ui_->sb_arm_roll->value() - ui_->sb_arm_pitch->value());
     auto val_mb = (-ui_->sb_arm_roll->value() + ui_->sb_arm_pitch->value());
 
-    // To improve ease of use, arm actuator angles in the UI are shown
-    // relative to a perspective directly behind the robot, where 0 is
-    // directly forward. Adjust for actual J1, J2 and J3 angles here
     // TODO: confirm this
     auto val_j1 = ui_->sb_arm_j1->value();
-    auto val_j2 = -ui_->sb_arm_j2->value();
+    auto val_j2 = -ui_->sb_arm_j2->value();  // match operator perspective
     auto val_j3 = ui_->sb_arm_j3->value();
 
     emit CommandHebi({val_ma, val_mb, val_j1, val_j2, val_j3});
