@@ -161,9 +161,10 @@ class MainWindow : public QMainWindow {
 
     // Arm
 
+    void on_pb_quick_input_clicked();
+
     void on_pb_arm_start_clicked();
     // (pb_arm_stop is handled via signals)
-
     void on_pb_autocomp_enable_toggled(bool checked);
 
     // Water

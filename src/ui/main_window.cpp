@@ -14,8 +14,9 @@
 #include <sys/stat.h>
 
 // Other Library Headers
-#include <QDateTime>    // Qt::Core
-#include <QMessageBox>  // Qt::Widgets
+#include <QDateTime>                    // Qt::Core
+#include <QMessageBox>                  // Qt::Widgets
+#include <QRegularExpressionValidator>  // Qt::Gui
 
 // Project Headers
 #include "colors.h"
@@ -309,6 +310,18 @@ void MainWindow::ConfigureUi() {
     original_limits_.yaw_min = ui_->sb_arm_yaw->minimum();
     original_limits_.yaw_max = ui_->sb_arm_yaw->maximum();
 #endif
+
+    // Set up validation for the "Quick Input" Line Edit
+    {
+        // Explanation of the regex:
+        // - "^-?": optional minus sign
+        // - "\d{1,3}": 1–3 digit number
+        // - "(,-?\d{1,3}){0,4}": up to 4 more integers, each preceded by a comma
+        QRegularExpression regex("(^-?\\d{1,3}(,-?\\d{1,3}){0,4}$)");
+        QRegularExpressionValidator* validator =
+            new QRegularExpressionValidator(regex, this);
+        ui_->le_quick_input->setValidator(validator);
+    }
 
     // ========== Water ==========
 
@@ -713,10 +726,12 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
-        // NOTE: It is possible for multiple actuator types -- and, by
-        //       extension, multiple HandleXConnChanged() calls -- to exist.
-        //       Therefore, the "STOP" PushButton should only ever be enabled
-        //       by such calls, since other actuators may still be connected.
+        // NOTE: It's possible for multiple actuator types -- and, by extension,
+        //       multiple HandleXConnChanged() calls -- to exist. Therefore, in
+        //       this function, the following elements can only ever be enabled;
+        //       we can't disable them since other actuators may still be connected.
+        ui_->le_quick_input->setEnabled(true);
+        ui_->pb_quick_input->setEnabled(true);
         ui_->pb_arm_stop->setEnabled(true);
     }
 
@@ -739,11 +754,13 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
     // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
-        // NOTE: It is possible for multiple actuator types -- and, by
-        //       extension, multiple HandleXConnChanged() calls -- to exist.
-        //       Therefore, the "STOP" PushButton should only ever be enabled
-        //       by such calls, since other actuators may still be connected.
-        ui_->pb_arm_stop->setEnabled(connected);
+        // NOTE: It's possible for multiple actuator types -- and, by extension,
+        //       multiple HandleXConnChanged() calls -- to exist. Therefore, in
+        //       this function, the following elements can only ever be enabled;
+        //       we can't disable them since other actuators may still be connected.
+        ui_->le_quick_input->setEnabled(true);
+        ui_->pb_quick_input->setEnabled(true);
+        ui_->pb_arm_stop->setEnabled(true);
     }
 }
 #endif
@@ -1083,6 +1100,49 @@ void MainWindow::on_a_disconnect_all_triggered() {
 //------------------------------------------------------------------------------
 // !Arm
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Sets all actuator target values in the UI using a comma-delimited
+ *        string of values.
+ *
+ * @note This is a stop-gap approach, since end-effector tracking (i.e., inverse
+ *       kinematics) is not yet implemented.
+ */
+void MainWindow::on_pb_quick_input_clicked() {
+    const auto input = ui_->le_quick_input->text();
+
+    if (input.isEmpty()) {
+        logger_->Error("No values entered!");
+        return;
+    }
+
+    // Parse input (format and delimiter are automatically validated)
+    const auto values = input.split(',', Qt::SkipEmptyParts);
+
+    constexpr auto expected_count = Actuator::kJointCountHebi
+                                    + Actuator::kJointCountEpos;
+    if (values.size() != expected_count) {
+        logger_->Error("Provided values (" + std::to_string(values.size())
+                       + ") != No. of actuators ("
+                       + std::to_string(expected_count) + ")!");
+        return;
+    }
+
+    // Set UI values (each Spin Box's min/max is automatically respected)
+#if LIBRA_VERSION == 1
+    ui_->sb_arm_roll->setValue(values[0].toDouble());
+    ui_->sb_arm_pitch->setValue(values[1].toDouble());
+    ui_->sb_arm_j1->setValue(values[2].toDouble());
+    ui_->sb_arm_j2->setValue(values[3].toDouble());
+    ui_->sb_arm_j3->setValue(values[4].toDouble());
+#elif LIBRA_VERSION == 2
+    ui_->sb_arm_yaw->setValue(values[0].toDouble());
+    ui_->sb_arm_pitch->setValue(values[1].toDouble());
+#endif
+
+    // Clear the input box
+    ui_->le_quick_input->clear();
+}
 
 /**
  * @brief Sends movement command signal(s) to all actuators.

@@ -149,7 +149,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Dependencies (installed on system)
-set(QT_PACKAGES Core Multimedia MultimediaWidgets SerialPort Widgets)
+set(QT_PACKAGES Core Gui Multimedia MultimediaWidgets SerialPort Widgets)
 find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
@@ -234,6 +234,7 @@ target_link_libraries(
     # Why does this happen? I don't know. I'm tired.
     # ~~~
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
+    PRIVATE Qt${QT_VERSION_MAJOR}::Gui
     PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia
     PRIVATE Qt${QT_VERSION_MAJOR}::MultimediaWidgets
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
