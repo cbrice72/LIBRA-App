@@ -204,24 +204,28 @@ void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
 
     // Display build configuration: LIBRA_VERSION
-    QString ver_text = "<span>";
+    {
+        QString ver_text = "<span>";
 #ifdef LIBRA_VERSION
-    ver_text += QString("<b>%1</b>").arg(LIBRA_VERSION);
+        ver_text += QString("<b>%1</b>").arg(LIBRA_VERSION);
 #else
-    ver_text += "<b>Unsupported</b>";
+        ver_text += "<b>Unsupported</b>";
 #endif
-    ver_text += "</span>";
-    ui_->l_libraversion_val->setText(ver_text);
+        ver_text += "</span>";
+        ui_->l_libraversion_val->setText(ver_text);
+    }
 
     // Display build configuration: BUILD_WITH_ROS2
-    QString ros2en_text = "<span>";
+    {
+        QString ros2en_text = "<span>";
 #ifdef BUILD_WITH_ROS2
-    ros2en_text += "<b style='color: green;'>ON</b>";
+        ros2en_text += "<b style='color: green;'>ON</b>";
 #else
-    ros2en_text += "<b style='color: red;'>OFF</b>";
+        ros2en_text += "<b style='color: red;'>OFF</b>";
 #endif
-    ros2en_text += "</span>";
-    ui_->l_ros2enabled_val->setText(ros2en_text);
+        ros2en_text += "</span>";
+        ui_->l_ros2enabled_val->setText(ros2en_text);
+    }
 
     // ========== Menu Bar ==========
 
