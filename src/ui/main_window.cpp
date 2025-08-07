@@ -828,7 +828,10 @@ void MainWindow::HandleActuatorFeedback(
         }
 
         // Ensure the mechanically-inverted J2 matches operator perspective
-        double sign = (feedback.first == Actuator::Name::kJ2) ? -1.0 : 1.0;
+        double sign = ((feedback.first == Actuator::Name::kJ2)
+                       || (feedback.first == Actuator::Name::kJ3))
+                          ? -1.0
+                          : 1.0;
 #endif
         try {
             // Index into relevant UI label using the map-of-maps initialized
@@ -1165,7 +1168,7 @@ void MainWindow::on_pb_arm_start_clicked() {
     // TODO: confirm this
     auto val_j1 = ui_->sb_arm_j1->value();
     auto val_j2 = -ui_->sb_arm_j2->value();  // match operator perspective
-    auto val_j3 = ui_->sb_arm_j3->value();
+    auto val_j3 = -ui_->sb_arm_j3->value();  // match operator perspective
 
     emit CommandHebi({val_ma, val_mb, val_j1, val_j2, val_j3});
 #elif LIBRA_VERSION == 2
