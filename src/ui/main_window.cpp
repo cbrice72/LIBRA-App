@@ -886,10 +886,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
         ui_->hs_arm_pitch->setRange(-360, 360);
         ui_->sb_arm_pitch->setRange(-360.0, 360.0);
 
-#if LIBRA_VERSION != 1
-        ui_->hs_arm_yaw->setRange(-360, 360);
-        ui_->sb_arm_yaw->setRange(-360.0, 360.0);
-#elif LIBRA_VERSION != 2
+#if LIBRA_VERSION == 1
         ui_->hs_arm_roll->setRange(-360, 360);
         ui_->sb_arm_roll->setRange(-360.0, 360.0);
 
@@ -901,6 +898,9 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
 
         ui_->hs_arm_j3->setRange(-360, 360);
         ui_->sb_arm_j3->setRange(-360.0, 360.0);
+#elif LIBRA_VERSION == 2
+        ui_->hs_arm_yaw->setRange(-360, 360);
+        ui_->sb_arm_yaw->setRange(-360.0, 360.0);
 #endif
     } else {
         logger_->Debug("Restoring HEBI position limits");
@@ -911,12 +911,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
         ui_->sb_arm_pitch->setRange(original_limits_.pitch_min,
                                     original_limits_.pitch_max);
 
-#if LIBRA_VERSION != 1
-        ui_->hs_arm_yaw->setRange(original_limits_.yaw_min,
-                                  original_limits_.yaw_max);
-        ui_->sb_arm_yaw->setRange(original_limits_.yaw_min,
-                                  original_limits_.yaw_max);
-#elif LIBRA_VERSION != 2
+#if LIBRA_VERSION == 1
         ui_->hs_arm_roll->setRange(original_limits_.roll_min,
                                    original_limits_.roll_max);
         ui_->sb_arm_roll->setRange(original_limits_.roll_min,
@@ -936,6 +931,11 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
                                  original_limits_.j3_max);
         ui_->sb_arm_j3->setRange(original_limits_.j3_min,
                                  original_limits_.j3_max);
+#elif LIBRA_VERSION == 2
+        ui_->hs_arm_yaw->setRange(original_limits_.yaw_min,
+                                  original_limits_.yaw_max);
+        ui_->sb_arm_yaw->setRange(original_limits_.yaw_min,
+                                  original_limits_.yaw_max);
 #endif
     }
 }
