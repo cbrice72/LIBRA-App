@@ -824,9 +824,7 @@ void MainWindow::HandleActuatorFeedback(
         }
 
         // Ensure the mechanically-inverted J2 matches operator perspective
-        if (feedback.first == Actuator::Name::kJ2) {
-            feedback.second = -feedback.second;
-        }
+        double sign = (feedback.first == Actuator::Name::kJ2) ? -1.0 : 1.0;
 #endif
         try {
             // Index into relevant UI label using the map-of-maps initialized
@@ -834,7 +832,8 @@ void MainWindow::HandleActuatorFeedback(
             // for 1:1 cases)
             feedback_element_map_.at(static_cast<Joint>(feedback.first))
                 .at(feedback_type)
-                ->setText(QString::number(feedback.second, 'f', kPrecision));
+                ->setText(
+                    QString::number(feedback.second * sign, 'f', kPrecision));
         } catch (const std::out_of_range&) {
             logger_->Error(
                 "No UI element mapped to joint "
