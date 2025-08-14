@@ -4,7 +4,7 @@
   <position>
     <kp>400 400 200 200 200</kp>
     <ki>0 0 0 0 0</ki>
-    <kd>10 10 0 5 5</kd>l
+    <kd>10 10 0 5 5</kd>
     <feed_forward>0 0 0 0 0</feed_forward>
     <dead_zone>0 0 0 0 0</dead_zone>
     <i_clamp>1 1 1 1 1</i_clamp>
