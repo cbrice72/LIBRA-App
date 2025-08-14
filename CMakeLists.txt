@@ -31,7 +31,7 @@ message(STATUS "ROS2 integration: ${BUILD_WITH_ROS2}")
 
 # Project options (private, i.e, shouldn't need to be changed by user)
 set(HEBI_DIR
-    "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1"
+    "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.13.0"
     CACHE PATH "Path to the HEBI API" FORCE # included in this project
 )
 

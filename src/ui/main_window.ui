@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1033</width>
-    <height>658</height>
+    <width>1053</width>
+    <height>697</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -2863,7 +2863,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
               <double>5.000000000000000</double>
              </property>
              <property name="value">
-              <double>-150.000000000000000</double>
+              <double>150.000000000000000</double>
              </property>
             </widget>
            </item>
@@ -3143,8 +3143,8 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1033</width>
-     <height>19</height>
+     <width>1053</width>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">
