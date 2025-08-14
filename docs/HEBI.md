@@ -61,7 +61,7 @@ Under "IP assignment", click "Edit" and manually assign IPv4 settings according 
 
 ## Usage
 
-In your root `CMakeLists.txt`, simply use the the `add_subdirectory()` command to add the HEBI C++ project path (e.g., `${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.11.1`). Make sure you do this before you add any of your project source files. Then, in your call to `target_link_libraries()`, add `hebi hebic++ m pthread` as dependencies.
+In your root `CMakeLists.txt`, simply use the the `add_subdirectory()` command to add the HEBI C++ project path (e.g., `${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.13.0`). Make sure you do this before you add any of your project source files. Then, in your call to `target_link_libraries()`, add `hebi hebic++ m pthread` as dependencies.
 
 When you build your CMake project, the HEBI C++ API will automatically be built for you.
 
