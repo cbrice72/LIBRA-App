@@ -182,7 +182,7 @@ HebiThread::~HebiThread() {
 std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
     const std::vector<double>& feedback) {
     std::unordered_map<Actuator::Name, double> feedback_map;
-    for (auto i = 0; i < joint_order_.size(); i++) {
+    for (auto i = 0; i < joint_order_.size(); ++i) {
         feedback_map[joint_order_[i]] = feedback[i];
     }
     return feedback_map;

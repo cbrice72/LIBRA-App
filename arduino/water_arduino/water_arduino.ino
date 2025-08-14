@@ -8,7 +8,7 @@ const int pin[4] = {2, 4, 7, 8};
  * @note Required Arduino function (called once, at startup).
  */
 void setup() {
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; ++i) {
         pinMode(pin[i], OUTPUT);
         digitalWrite(pin[i], LOW);
     }
@@ -30,7 +30,7 @@ void loop() {
     // 受信データがある場合 - If there is incoming data...
     if (Serial.available()) {
         byte data = Serial.read();  // ... 1バイト読み込む - read 1 byte
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             // i番目のピンの状態を、読み込んだデータの上からi番目のビットの状態にする
             // Set state of i-th pin to state of i-th bit (from beginning of data)
             digitalWrite(pin[i], bool(data & (1 << (3 - i))));
@@ -40,7 +40,7 @@ void loop() {
     } else if ((millis() - timestamp)
                > 5000) {  // 受信データがない状態が5000ms続いた場合
                           // If no data has been received for 5000 ms...
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; ++i) {
             digitalWrite(pin[i],
                          LOW);  // ... 全ピンをLOWにする - set all pins LOW
         }
