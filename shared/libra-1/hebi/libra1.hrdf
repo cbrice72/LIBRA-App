@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot version="1.4.0">
+
+  <rigid-body mass="2.056" tag="2dStator" output_rot="Rx(pi)"/>
+  <actuator type="X8-16" tag="MA"/>
+  <actuator type="X8-16" tag="MB"/>
+  <rigid-body mass="1.643" tag="2dRotor" output_rot="Rx(pi)"/>
+
+  <rigid-body mass="0.587" tag="L1" output_trans="0.936 0 0"/>
+  <actuator type="X8-16" tag="J1"/>
+
+  <rigid-body mass="0.756" tag="L2" output_trans="1.012 0 0" output_rot="Rx(-pi)"/>
+  <actuator type="X8-16" tag="J2"/>
+
+  <rigid-body mass="0.887" tag="L3" output_trans="1.029 0.045 0" output_rot="Rx(pi/2)"/>
+  <actuator type="X8-16" tag="J3"/>
+
+  <rigid-body mass="0.587" tag="L4" output_trans="0.956 0 0"/>
+  <end-effector type="Custom" mass="0.550" tag="Payload"/>
+
+</robot>
