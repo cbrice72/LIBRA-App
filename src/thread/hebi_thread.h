@@ -14,9 +14,11 @@
 #include <vector>
 
 // Other Library Headers
+#include "Eigen/Core"          // Eigen
 #include "group.hpp"           // HEBI
 #include "group_command.hpp"   // HEBI
 #include "group_feedback.hpp"  // HEBI
+#include "robot_model.hpp"     // HEBI
 #include "trajectory.hpp"      // HEBI
 #ifdef BUILD_WITH_ROS2
 # include <rclcpp/rclcpp.hpp>                // ROS2 Core
@@ -91,7 +93,7 @@ class HebiThread : public AbstractActuatorThread
     std::vector<std::string> names_;
 
     std::shared_ptr<hebi::Group> group_;
-    const int num_actuators_;  // set in constructor initializer list
+    const int n_actuators_;  // set in constructor initializer list
 
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
@@ -114,9 +116,14 @@ class HebiThread : public AbstractActuatorThread
 
     // Enables trajectory-based movement
     bool movement_en_{true};
-
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
-    std::chrono::time_point<std::chrono::system_clock> trajectory_start_time_;
+    std::chrono::time_point<std::chrono::steady_clock> trajectory_start_time_;
+
+    // Enables logic that uses the HEBI library to calculate dynamic effort
+    // compensation values to assist the trajectory
+    bool dynamic_comp_en_{true};
+    std::unique_ptr<hebi::robot_model::RobotModel> model_;
+    Eigen::VectorXd model_masses_;
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;

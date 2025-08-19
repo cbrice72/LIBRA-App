@@ -17,7 +17,6 @@
 #include <thread>
 
 // Other Library Headers
-#include "Eigen/Core"    // Eigen
 #include "log_file.hpp"  // HEBI
 #include "lookup.hpp"    // HEBI
 #include <QDir>          // Qt::Core
@@ -105,8 +104,8 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
-      num_actuators_(names_.size()),
-      trajectory_start_time_(std::chrono::system_clock::now())
+      n_actuators(names_.size()),
+      trajectory_start_time_(std::chrono::steady_clock::now())
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("hebi_node")
@@ -120,8 +119,8 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #endif
 
     // Initialize HEBI objects
-    command_ = std::make_shared<hebi::GroupCommand>(num_actuators_);
-    feedback_ = std::make_shared<hebi::GroupFeedback>(num_actuators_);
+    command_ = std::make_shared<hebi::GroupCommand>(n_actuators);
+    feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators);
 
     // Define joint order for organizing feedback
     assert(names_.size() == joint_order_.size());
@@ -129,13 +128,14 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
         joint_order_[i] = Actuator::StringToNameEnum(names_[i]);
     }
 
-    // Resize status vectors to match number of actuators
-    status_a_vel_.resize(num_actuators_);
-    status_defl_.resize(num_actuators_);
-    status_defl_vel_.resize(num_actuators_);
-    status_volt_.resize(num_actuators_);
-    status_curr_.resize(num_actuators_);
-    status_temp_.resize(num_actuators_);
+    // Resize vectors to match number of actuators
+    model_masses_.resize(n_actuators);
+    status_a_vel_.resize(n_actuators);
+    status_defl_.resize(n_actuators);
+    status_defl_vel_.resize(n_actuators);
+    status_volt_.resize(n_actuators);
+    status_curr_.resize(n_actuators);
+    status_temp_.resize(n_actuators);
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
@@ -144,9 +144,9 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     state_msg_.name = names_;
 
     // Resize message vectors to match number of actuators
-    state_msg_.position.resize(num_actuators_);
-    state_msg_.velocity.resize(num_actuators_);
-    state_msg_.effort.resize(num_actuators_);
+    state_msg_.position.resize(n_actuators);
+    state_msg_.velocity.resize(n_actuators);
+    state_msg_.effort.resize(n_actuators);
 #endif
 }
 
@@ -216,7 +216,7 @@ QString HebiThread::GetStatus() const {
     // (alternatively, `getBoardTemperature()` for electronics)
 
     // Convert data, if necessary
-    for (int i = 0; i < num_actuators_; ++i) {
+    for (int i = 0; i < n_actuators; ++i) {
         status_a_vel_[i] = vel[i] * kRadToDeg;
         status_defl_[i] = defl[i] * kRadToDeg;
         status_defl_vel_[i] = defl_vel[i] * kRadToDeg;
@@ -227,7 +227,7 @@ QString HebiThread::GetStatus() const {
 
     // Format header row
     ss << std::setw(kLabelWidth) << "Actuator Name";
-    for (int i = 0; i < num_actuators_; ++i) {
+    for (int i = 0; i < n_actuators; ++i) {
         ss << std::left << std::setw(kValueWidth) << "[" + names_[i] + "]";
     }
     ss << "\n";
@@ -256,7 +256,7 @@ void HebiThread::PublishState() {
     state_msg_.header.stamp = this->now();
 
     // Populate the message and publish it
-    for (int i = 0; i < num_actuators_; ++i) {
+    for (int i = 0; i < n_actuators; ++i) {
         state_msg_.position[i] = feedback_->getPosition()[i];
         state_msg_.velocity[i] = feedback_->getVelocity()[i];
         state_msg_.effort[i] = feedback_->getEffort()[i];
@@ -272,24 +272,33 @@ void HebiThread::PublishState() {
 
 /**
  * @brief Main command loop.
+ *        Has three major responsibilities: Torque Control, Movement, and
+ *        Feedback. Local variables used in each iteration are pre-initialized
+ *        for efficiency.
  */
 void HebiThread::run() {
     logger_->Debug("Initialized HebiThread");
 
     // Initialize thread variables for efficiency
-    Eigen::VectorXd pos_cmd(num_actuators_);
-    Eigen::VectorXd vel_cmd(num_actuators_);
-    // Eigen::VectorXd trq_cmd(num_actuators_);  // not currently used
+    const Eigen::Vector3d gravity_vec(0, 0, -9.81);
 
-    std::vector<double> t_pos(num_actuators_);
-    std::vector<double> a_pos(num_actuators_);
-    std::vector<double> a_trq(num_actuators_);
+    Eigen::VectorXd pos_cmd(n_actuators);
+    Eigen::VectorXd vel_cmd(n_actuators);
+    Eigen::VectorXd acc_cmd(n_actuators);  // <- trajectory (DynamicComp only)
+    Eigen::VectorXd eff_cmd(n_actuators);  // -> command (DynamicComp only)
+
+    std::vector<double> t_pos(n_actuators);
+    std::vector<double> a_pos(n_actuators);
+    std::vector<double> a_eff(n_actuators);
 
     double arm_torque_r{0};      // magnitude of torque exerted on central joint
     double arm_torque_theta{0};  // angle of torque exerted on central joint
 
-    std::chrono::duration<double> time(std::chrono::system_clock::now()
-                                       - trajectory_start_time_);
+    // For trajectory planning (elapsed time)
+    std::chrono::duration<double> t(std::chrono::steady_clock::now()
+                                    - trajectory_start_time_);
+    // For dynamic compensation (time step)
+    auto last_loop_time = std::chrono::steady_clock::now();
 
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
@@ -299,8 +308,15 @@ void HebiThread::run() {
             continue;
         }
 
+        // Calculate dt (only used in DynamicComp)
+        auto now = std::chrono::steady_clock::now();
+        std::chrono::duration<double> dt = now - last_loop_time;
+        last_loop_time = now;
+
         // Update feedback object
         group_->getNextFeedback(*feedback_);
+
+        // ========== Torque Control ==========
 
         // Control the overall torque experienced by the central joint
         // (LIBRA-I: 2-DoF joint, LIBRA-II: pitch joint)
@@ -342,24 +358,50 @@ void HebiThread::run() {
             }
         }
 
-        // Determine movement command
+        // ========== Movement ==========
+
         if (movement_en_ && trajectory_ != nullptr) {
-            time = std::chrono::system_clock::now() - trajectory_start_time_;
-            if (time.count() < trajectory_->getDuration()) {
+            t = std::chrono::steady_clock::now() - trajectory_start_time_;
+            if (t.count() < trajectory_->getDuration()) {
+                // --- MODE 1: TRAJECTORY FOLLOWING ---
+
                 // Build next step of trajectory
-                trajectory_->getState(time.count(), &pos_cmd, &vel_cmd, nullptr);
+                trajectory_->getState(t.count(), &pos_cmd, &vel_cmd, &acc_cmd);
                 command_->setPosition(pos_cmd);
                 command_->setVelocity(vel_cmd);
+
+                // Calculate effort commands to assist with trajectory tracking
+                if (dynamic_comp_en_ && model_ != nullptr) {
+                    // TODO: test this!!
+                    model_->getDynamicCompEfforts(feedback_->getPosition(),
+                                                  pos_cmd, vel_cmd, acc_cmd,
+                                                  eff_cmd, dt.count());
+                    command_->setEffort(eff_cmd);
+                }
             } else {
+                // --- MODE 2: POSITION HOLDING ---
+
                 // Trajectory is complete
                 trajectory_.reset();
 
                 logger_->Debug("HEBI - Trajectory complete");
+
+                // Calculate effort commands to counteract gravity
+                if (dynamic_comp_en_ && model_ != nullptr) {
+                    // TODO: test this!!
+                    // NOTE: this may be problematic... I deleted it for a
+                    //       reason (although previously there was no model)
+                    model_->getGravCompEfforts(pos_cmd, gravity_vec, eff_cmd);
+                    command_->setVelocity(Eigen::VectorXd());  // clear
+                    command_->setEffort(eff_cmd);
+                }
             }
         }
 
         // Send movement command
         group_->sendCommand(*command_);
+
+        // ========== Feedback ==========
 
 #ifdef BUILD_WITH_ROS2
         // Make actuator state info available to other ROS2 nodes
@@ -380,9 +422,9 @@ void HebiThread::run() {
         emit ReportFeedback(GetFeedbackMap(a_pos),
                             Actuator::Feedback::kActualPos);
 
-        Eigen::Map<Eigen::VectorXd>(a_trq.data(),
-                                    a_trq.size()) = feedback_->getEffort();
-        emit ReportFeedback(GetFeedbackMap(a_trq),
+        Eigen::Map<Eigen::VectorXd>(a_eff.data(),
+                                    a_eff.size()) = feedback_->getEffort();
+        emit ReportFeedback(GetFeedbackMap(a_eff),
                             Actuator::Feedback::kActualTorque);
 
         // Report miscellaneous statuses in one batch
@@ -458,6 +500,15 @@ void HebiThread::Connect() {
     logger_->Debug("HEBI - Connection successful");
     emit Connected(true);
 
+    // Load robot kinematics
+    model_ = hebi::robot_model::RobotModel::loadHRDF(
+        "./bin/shared/hebi/libra.hrdf");
+    if (model_ == nullptr) {
+        emit ErrorThrown("HEBI - Failed to load HRDF!");
+        return;
+    }
+    model_->getMasses(model_masses_);
+
     // Command actuator(s) to hold current position
     group_ = group;
     group_->getNextFeedback(*feedback_);
@@ -516,17 +567,17 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
 
     // Validate input
-    if (target.size() != num_actuators_) {
+    if (target.size() != n_actuators) {
         emit ErrorThrown("HEBI - Size of command vector != number of "
                          "connected actuators!");
         return;
     }
 
     // Make position, velocity, and acceleration commands for start & end points
-    Eigen::MatrixXd pos(num_actuators_, 2);
-    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
-    Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
-    Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(num_actuators_, 2);  // default
+    Eigen::MatrixXd pos(n_actuators, 2);
+    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(n_actuators, 2, kMaxVel);
+    Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(n_actuators, 2);  // default
+    Eigen::MatrixXd acc = Eigen::MatrixXd::Zero(n_actuators, 2);  // default
 
     std::stringstream trajectory_ss;  // for debug only
 
@@ -541,20 +592,20 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
 
     // Determine greatest change in position for calculating trajectory times
-    double max_difference = 0;
-    for (auto i = 0; i < num_actuators_; i++) {
-        max_difference = std::max(abs(pos(i, 1) - pos(i, 0)), max_difference);
+    double pos_max_diff = 0;
+    for (auto i = 0; i < n_actuators; i++) {
+        pos_max_diff = std::max(abs(pos(i, 1) - pos(i, 0)), pos_max_diff);
     }
 
     // Calculate trajectory start and end times
-    Eigen::VectorXd time(2);
-    time << 0, max_difference / kMaxVel;
+    Eigen::VectorXd t(2);
+    t << 0, pos_max_diff / kMaxVel;
 
     // Log start time and create trajectory
-    trajectory_start_time_ = std::chrono::system_clock::now();
-    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
+    trajectory_start_time_ = std::chrono::steady_clock::now();
+    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(t, pos,
                                                                       &vel,
-                                                                      &accel);
+                                                                      &acc);
 
     logger_->Debug("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
