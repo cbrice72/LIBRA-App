@@ -121,7 +121,7 @@ class HebiThread : public AbstractActuatorThread
 
     // Enables logic that uses the HEBI library to calculate dynamic effort
     // compensation values to assist the trajectory
-    bool dynamic_comp_en_{true};
+    bool dynamic_comp_en_{false};  // TODO: enable this once signal/slot is in
     std::unique_ptr<hebi::robot_model::RobotModel> model_;
     Eigen::VectorXd model_masses_;
 
