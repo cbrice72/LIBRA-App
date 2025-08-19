@@ -11,6 +11,7 @@
     -->
     <rigid-body mass="2.056" tag="2dStator" output_rot="Rx(pi)"/>
     <actuator type="X8-16" tag="MA"/>
+    <rigid-body mass="0.001" tag="PseudoConnector" output_trans="0.001 0 0"/>
     <actuator type="X8-16" tag="MB"/>
     <rigid-body mass="1.643" tag="2dRotor" output_rot="Rx(pi)"/>
     <!-- Arm Segment #1 -->
