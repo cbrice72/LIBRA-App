@@ -143,7 +143,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 
     state_msg_.name = names_;
 
-    // Resize message vectors to match number of actuators
+    // Resize additional vectors to match number of actuators
     state_msg_.position.resize(n_actuators_);
     state_msg_.velocity.resize(n_actuators_);
     state_msg_.effort.resize(n_actuators_);
