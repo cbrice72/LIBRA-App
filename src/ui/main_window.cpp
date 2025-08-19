@@ -449,8 +449,8 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::SetDebugMode);
     connect(this, &MainWindow::EnableAutoTorqueComp,  // central joint comp
             hebi_thread_, &HebiThread::SetTorqueControl);
-    connect(ui_->a_hebi_intertia_gravity_comp, &QAction::toggled,  // auto-comp
-            hebi_thread_, &HebiThread::SetTorqueCompBounds);
+    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // auto-comp
+            hebi_thread_, &HebiThread::SetModelBasedComp);
 
     connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
             hebi_thread_, &HebiThread::Connect);

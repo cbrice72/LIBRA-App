@@ -250,7 +250,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             command_->setVelocity(cmd_vel);
 
             // Calculate effort commands to assist with trajectory tracking
-            if (dynamic_comp_en_ && model_ != nullptr) {
+            if (model_based_comp_en_ && model_ != nullptr) {
                 // TODO: test this!!
                 model_->getDynamicCompEfforts(feedback_->getPosition(), cmd_pos,
                                               cmd_vel, cmd_acc, cmd_eff,
@@ -266,7 +266,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             logger_->Debug("HEBI - Trajectory complete");
 
             // Calculate effort commands to counteract gravity
-            if (dynamic_comp_en_ && model_ != nullptr) {
+            if (model_based_comp_en_ && model_ != nullptr) {
                 // TODO: test this!!
                 // NOTE: this may be problematic... I deleted it for a
                 //       reason (although previously there was no model)
@@ -677,15 +677,16 @@ void HebiThread::Stop() {
 }
 
 /**
- * @brief Sets the state of automatic dynamic/gravity compensation.
+ * @brief Sets the state of automatic dynamic/gravity compensation based on the
+ *        loaded HRDF model.
  *
  * @param enabled Whether to compensate for inertia/gravity
  */
-void HebiThread::SetDynamicCompensation(const bool& enabled) {
+void HebiThread::SetModelBasedComp(const bool& enabled) {
     logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
-                   + " dynamic compensation");
+                   + " model-based dynamic compensation");
 
-    dynamic_comp_en_ = enabled;
+    model_based_comp_en_ = enabled;
 }
 
 /**
