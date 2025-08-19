@@ -104,7 +104,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
       families_(std::move(families)),
       names_(std::move(names)),
       group_(nullptr),
-      n_actuators(names_.size()),
+      n_actuators_(names_.size()),
       trajectory_start_time_(std::chrono::steady_clock::now())
 #ifdef BUILD_WITH_ROS2
       ,
@@ -119,8 +119,8 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #endif
 
     // Initialize HEBI objects
-    command_ = std::make_shared<hebi::GroupCommand>(n_actuators);
-    feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators);
+    command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
+    feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators_);
 
     // Define joint order for organizing feedback
     assert(names_.size() == joint_order_.size());
@@ -129,13 +129,13 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     }
 
     // Resize vectors to match number of actuators
-    model_masses_.resize(n_actuators);
-    status_a_vel_.resize(n_actuators);
-    status_defl_.resize(n_actuators);
-    status_defl_vel_.resize(n_actuators);
-    status_volt_.resize(n_actuators);
-    status_curr_.resize(n_actuators);
-    status_temp_.resize(n_actuators);
+    model_masses_.resize(n_actuators_);
+    status_a_vel_.resize(n_actuators_);
+    status_defl_.resize(n_actuators_);
+    status_defl_vel_.resize(n_actuators_);
+    status_volt_.resize(n_actuators_);
+    status_curr_.resize(n_actuators_);
+    status_temp_.resize(n_actuators_);
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
@@ -144,9 +144,9 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     state_msg_.name = names_;
 
     // Resize message vectors to match number of actuators
-    state_msg_.position.resize(n_actuators);
-    state_msg_.velocity.resize(n_actuators);
-    state_msg_.effort.resize(n_actuators);
+    state_msg_.position.resize(n_actuators_);
+    state_msg_.velocity.resize(n_actuators_);
+    state_msg_.effort.resize(n_actuators_);
 #endif
 }
 
@@ -201,7 +201,7 @@ std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
  */
 QString HebiThread::GetStatus() const {
     if (group_ == nullptr) {
-        return QString("Not Connected");
+        return {"Not Connected"};
     }
 
     std::ostringstream ss;
@@ -216,7 +216,7 @@ QString HebiThread::GetStatus() const {
     // (alternatively, `getBoardTemperature()` for electronics)
 
     // Convert data, if necessary
-    for (int i = 0; i < n_actuators; ++i) {
+    for (int i = 0; i < n_actuators_; ++i) {
         status_a_vel_[i] = vel[i] * kRadToDeg;
         status_defl_[i] = defl[i] * kRadToDeg;
         status_defl_vel_[i] = defl_vel[i] * kRadToDeg;
@@ -227,7 +227,7 @@ QString HebiThread::GetStatus() const {
 
     // Format header row
     ss << std::setw(kLabelWidth) << "Actuator Name";
-    for (int i = 0; i < n_actuators; ++i) {
+    for (int i = 0; i < n_actuators_; ++i) {
         ss << std::left << std::setw(kValueWidth) << "[" + names_[i] + "]";
     }
     ss << "\n";
@@ -256,7 +256,7 @@ void HebiThread::PublishState() {
     state_msg_.header.stamp = this->now();
 
     // Populate the message and publish it
-    for (int i = 0; i < n_actuators; ++i) {
+    for (int i = 0; i < n_actuators_; ++i) {
         state_msg_.position[i] = feedback_->getPosition()[i];
         state_msg_.velocity[i] = feedback_->getVelocity()[i];
         state_msg_.effort[i] = feedback_->getEffort()[i];
@@ -282,14 +282,14 @@ void HebiThread::run() {
     // Initialize thread variables for efficiency
     const Eigen::Vector3d gravity_vec(0, 0, -9.81);
 
-    Eigen::VectorXd pos_cmd(n_actuators);
-    Eigen::VectorXd vel_cmd(n_actuators);
-    Eigen::VectorXd acc_cmd(n_actuators);  // <- trajectory (DynamicComp only)
-    Eigen::VectorXd eff_cmd(n_actuators);  // -> command (DynamicComp only)
+    Eigen::VectorXd pos_cmd(n_actuators_);
+    Eigen::VectorXd vel_cmd(n_actuators_);
+    Eigen::VectorXd acc_cmd(n_actuators_);  // <- trajectory (DynamicComp only)
+    Eigen::VectorXd eff_cmd(n_actuators_);  // -> command (DynamicComp only)
 
-    std::vector<double> t_pos(n_actuators);
-    std::vector<double> a_pos(n_actuators);
-    std::vector<double> a_eff(n_actuators);
+    std::vector<double> t_pos(n_actuators_);
+    std::vector<double> a_pos(n_actuators_);
+    std::vector<double> a_eff(n_actuators_);
 
     double arm_torque_r{0};      // magnitude of torque exerted on central joint
     double arm_torque_theta{0};  // angle of torque exerted on central joint
@@ -516,7 +516,7 @@ void HebiThread::Connect() {
     command_->setPosition(feedback_->getPosition());
 
     // Ensure a log directory exists (or else group_->startLog()  will fail!)
-    QDir log_dir("./log");
+    const QDir log_dir("./log");
     if (!log_dir.exists()) {
         if (!log_dir.mkpath(".")) {
             emit ErrorThrown("HEBI - Failed to create log directory");
@@ -568,14 +568,14 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
 
     // Validate input
-    if (target.size() != n_actuators) {
+    if (target.size() != n_actuators_) {
         emit ErrorThrown("HEBI - Size of command vector != number of "
                          "connected actuators!");
         return;
     }
 
     // Populate positions
-    Eigen::MatrixXd pos(num_actuators_, 2);
+    Eigen::MatrixXd pos(n_actuators_, 2);
 
     group_->getNextFeedback(*feedback_);
     pos.col(0) = feedback_->getPosition();  // start (current value)
@@ -590,11 +590,11 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
 
     // Create velocity and acceleration constraints
-    Eigen::VectorXd max_vel(num_actuators_);
+    Eigen::VectorXd max_vel(n_actuators_);
     // TODO: although these are identical to safety.xml, no hard-coding!!
     max_vel << 0.157, 0.157, 0.157, 0.157, 0.079;  // rad/s, ~= 9.0 & 4.5 deg/s
 
-    Eigen::VectorXd max_acc(num_actuators_);
+    Eigen::VectorXd max_acc(n_actuators_);
     max_acc.setConstant(0.2);  // rad/s^2, ~= 11.5 deg/s^2 (arbitrary)
 
     // Use HEBI's trajectory time estimation
@@ -610,7 +610,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     /*
     // Compute trajectory duration for each joint to find the max
     double pos_max_diff = 0;
-    for (auto i = 0; i < n_actuators; i++) {
+    for (auto i = 0; i < n_actuators_; i++) {
         pos_max_diff = std::max(abs(pos(i, 1) - pos(i, 0)), pos_max_diff);
     }
 
@@ -621,7 +621,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     // Log start time and create trajectory
     // NOTE: let QP solver handle vel and accel by setting the parameters
     //       "velocities" and "accelerations" to nullptr
-    trajectory_start_time_ = std::chrono::system_clock::now();
+    trajectory_start_time_ = std::chrono::steady_clock::now();
     trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint,
                                                                       pos,
                                                                       nullptr,
