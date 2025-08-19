@@ -73,7 +73,7 @@ int split(String data, char delimiter, String* dst, int arraySize) {
     int datalength = data.length();
 
     // Iterate over every character in input data
-    for (int i = 0; i < datalength; i++) {
+    for (int i = 0; i < datalength; ++i) {
         char tmp = data.charAt(i);
         // If delimiter found...
         if (tmp == delimiter) {

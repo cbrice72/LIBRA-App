@@ -182,7 +182,7 @@ HebiThread::~HebiThread() {
 std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
     const std::vector<double>& feedback) {
     std::unordered_map<Actuator::Name, double> feedback_map;
-    for (auto i = 0; i < joint_order_.size(); i++) {
+    for (auto i = 0; i < joint_order_.size(); ++i) {
         feedback_map[joint_order_[i]] = feedback[i];
     }
     return feedback_map;
@@ -478,7 +478,8 @@ void HebiThread::Connect() {
     }
 
     // Load safety parameters
-    if (!command_->readSafetyParameters("./bin/shared/hebi/safety.xml")) {
+    if (!command_->readSafetyParameters(
+            "./bin/shared/hebi/safety_conservative.xml")) {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
@@ -573,39 +574,58 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
         return;
     }
 
-    // Make position, velocity, and acceleration commands for start & end points
-    Eigen::MatrixXd pos(n_actuators, 2);
-    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(n_actuators, 2, kMaxVel);
-    Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(n_actuators, 2);  // default
-    Eigen::MatrixXd acc = Eigen::MatrixXd::Zero(n_actuators, 2);  // default
-
-    std::stringstream trajectory_ss;  // for debug only
-
     // Populate positions
+    Eigen::MatrixXd pos(num_actuators_, 2);
+
     group_->getNextFeedback(*feedback_);
     pos.col(0) = feedback_->getPosition();  // start (current value)
-    for (auto i = 0; i < target.size(); i++) {
+
+    std::stringstream trajectory_ss;  // for debug only
+    group_->getNextFeedback(*feedback_);
+    for (auto i = 0; i < target.size(); ++i) {
         pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
         if (debug_mode_) {
             trajectory_ss << std::to_string(pos(i, 1)) << "";
         }
     }
 
-    // Determine greatest change in position for calculating trajectory times
+    // Create velocity and acceleration constraints
+    Eigen::VectorXd max_vel(num_actuators_);
+    // TODO: although these are identical to safety.xml, no hard-coding!!
+    max_vel << 0.157, 0.157, 0.157, 0.157, 0.079;  // rad/s, ~= 9.0 & 4.5 deg/s
+
+    Eigen::VectorXd max_acc(num_actuators_);
+    max_acc.setConstant(0.2);  // rad/s^2, ~= 11.5 deg/s^2 (arbitrary)
+
+    // Use HEBI's trajectory time estimation
+    Eigen::VectorXd t_segment =
+        hebi::trajectory::Trajectory::estimateSegmentTimesTrapezoidal(pos,
+                                                                      max_vel,
+                                                                      max_acc);
+
+    Eigen::VectorXd t_waypoint =
+        hebi::trajectory::Trajectory::segmentTimesToWaypointTimes(t_segment);
+
+    // TODO: I'd like to compare this with the HEBI-generated times above
+    /*
+    // Compute trajectory duration for each joint to find the max
     double pos_max_diff = 0;
     for (auto i = 0; i < n_actuators; i++) {
         pos_max_diff = std::max(abs(pos(i, 1) - pos(i, 0)), pos_max_diff);
     }
 
-    // Calculate trajectory start and end times
     Eigen::VectorXd t(2);
     t << 0, pos_max_diff / kMaxVel;
+    */
 
     // Log start time and create trajectory
-    trajectory_start_time_ = std::chrono::steady_clock::now();
-    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(t, pos,
-                                                                      &vel,
-                                                                      &acc);
+    // NOTE: let QP solver handle vel and accel by setting the parameters
+    //       "velocities" and "accelerations" to nullptr
+    trajectory_start_time_ = std::chrono::system_clock::now();
+    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint,
+                                                                      pos,
+                                                                      nullptr,
+                                                                      nullptr);
 
     logger_->Debug("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
