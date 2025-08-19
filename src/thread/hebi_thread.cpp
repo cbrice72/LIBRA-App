@@ -677,6 +677,18 @@ void HebiThread::Stop() {
 }
 
 /**
+ * @brief Sets the state of automatic dynamic/gravity compensation.
+ *
+ * @param enabled Whether to compensate for inertia/gravity
+ */
+void HebiThread::SetDynamicCompensation(const bool& enabled) {
+    logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
+                   + " dynamic compensation");
+
+    dynamic_comp_en_ = enabled;
+}
+
+/**
  * @brief Sets the state of the central joint's torque control.
  *
  * @param enabled Whether to control torque experienced by the central joint

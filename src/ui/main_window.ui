@@ -3189,7 +3189,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_hebi_disconnect"/>
      <addaction name="separator"/>
      <addaction name="a_hebi_override_limits"/>
-     <addaction name="a_hebi_torque_comp_settings"/>
+     <addaction name="a_hebi_inertia_gravity_comp"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3378,6 +3378,14 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
   <action name="a_refresh_camera_list">
    <property name="text">
     <string>Refresh camera list</string>
+   </property>
+  </action>
+  <action name="a_hebi_inertia_gravity_comp">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Inertia/Gravity compensation</string>
    </property>
   </action>
  </widget>

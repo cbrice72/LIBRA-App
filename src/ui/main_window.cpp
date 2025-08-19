@@ -447,8 +447,10 @@ void MainWindow::InitializeThreads() {
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             hebi_thread_, &HebiThread::SetDebugMode);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // update auto control
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // update 2-DoF control
             hebi_thread_, &HebiThread::SetTorqueControl);
+    connect(ui_->a_hebi_intertia_gravity_comp, &QAction::toggled,  // auto-comp
+            hebi_thread_, &HebiThread::SetTorqueCompBounds);
 
     connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
             hebi_thread_, &HebiThread::Connect);
