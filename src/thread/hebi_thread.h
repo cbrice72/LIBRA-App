@@ -79,6 +79,12 @@ class HebiThread : public AbstractActuatorThread
 
     // --- Helper Functions ---
 
+    void CheckTorqueControl();
+    void ExecuteMovement(std::chrono::duration<double> dt,
+                         Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
+                         Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
+    void PublishFeedback();
+
     std::unordered_map<Actuator::Name, double> GetFeedbackMap(
         const std::vector<double>& feedback);
     QString GetStatus() const;

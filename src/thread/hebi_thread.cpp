@@ -168,6 +168,157 @@ HebiThread::~HebiThread() {
 //------------------------------------------------------------------------------
 
 /**
+ * @brief Check torque on the central joint and enforce movement limits.
+ *        (central joint = 2-DoF joint (LIBRA-I) -or- pitch joint (LIBRA-II).)
+ */
+void HebiThread::CheckTorqueControl() {
+    if (!torque_control_en_) {
+        return;
+    }
+
+    // Retrieve torque magnitude and direction (i.e., polar coords)
+    const auto& eff = feedback_->getEffort();
+
+#if LIBRA_VERSION == 1
+    const double arm_torque_r = std::max(std::abs(eff[Actuator::Name::kMA]),
+                                         std::abs(eff[Actuator::Name::kMB]));
+
+    const double arm_torque_theta =
+        std::atan2(-eff[Actuator::Name::kMA]
+                       + eff[Actuator::Name::kMB],  // pitch
+                   -eff[Actuator::Name::kMA]
+                       - eff[Actuator::Name::kMB]);  // roll
+#elif LIBRA_VERSION == 2
+    const double arm_torque_r = std::abs(eff[Actuator::Name::kPitch]);
+    const double arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
+#endif
+
+    // Apply hysteresis logic
+    // TODO: the current "algorithm" is just simple hysteresis which
+    //       stops ALL arm movement until the counterweight is full
+    //       enough. This is not ideal, and we should be predicting how
+    //       arm movement will affect the central joint torque.
+    if (arm_torque_r > torque_comp_upper_bound_) {
+        // Disable movement if arm torque is too high
+        movement_en_ = false;
+    }
+
+    if (arm_torque_r >= torque_comp_lower_bound_) {
+        // While arm torque remains above the specified lower bound,
+        // report direction of torque to arduino_thread
+        emit ReportArmTorque(arm_torque_theta);
+    } else {
+        // Re-enable movement when arm torque reaches an acceptable level
+        movement_en_ = true;
+    }
+}
+
+/**
+ * @brief Execute trajectory following or position hold with dynamic/gravity
+ *        compensation.
+ *
+ * @param dt Time since last command loop
+ * @param cmd_pos Position command buffer
+ * @param cmd_vel Velocity command buffer
+ * @param cmd_acc Acceleration command buffer
+ * @param cmd_eff Effort command buffer
+ *
+ * @note Command buffers are reused to avoid repeated allocations at 100 Hz.
+ */
+void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
+                                 Eigen::VectorXd& cmd_pos,
+                                 Eigen::VectorXd& cmd_vel,
+                                 Eigen::VectorXd& cmd_acc,
+                                 Eigen::VectorXd& cmd_eff) {
+    // Initialize persistent variables
+    static std::chrono::duration<double> t_trajectory(
+        std::chrono::steady_clock::now() - trajectory_start_time_);
+    static const Eigen::Vector3d gravity_vec(0, 0, -9.81);
+
+    // Determine movement command
+    if (movement_en_ && trajectory_ != nullptr) {
+        t_trajectory = std::chrono::steady_clock::now()
+                       - trajectory_start_time_;
+
+        if (t_trajectory.count() < trajectory_->getDuration()) {
+            // --- MODE 1: TRAJECTORY FOLLOWING ---
+
+            // Build next step of trajectory
+            trajectory_->getState(t_trajectory.count(), &cmd_pos, &cmd_vel,
+                                  &cmd_acc);
+            command_->setPosition(cmd_pos);
+            command_->setVelocity(cmd_vel);
+
+            // Calculate effort commands to assist with trajectory tracking
+            if (dynamic_comp_en_ && model_ != nullptr) {
+                // TODO: test this!!
+                model_->getDynamicCompEfforts(feedback_->getPosition(), cmd_pos,
+                                              cmd_vel, cmd_acc, cmd_eff,
+                                              dt.count());
+                command_->setEffort(cmd_eff);
+            }
+        } else {
+            // --- MODE 2: POSITION HOLDING ---
+
+            // Trajectory is complete
+            trajectory_.reset();
+
+            logger_->Debug("HEBI - Trajectory complete");
+
+            // Calculate effort commands to counteract gravity
+            if (dynamic_comp_en_ && model_ != nullptr) {
+                // TODO: test this!!
+                // NOTE: this may be problematic... I deleted it for a
+                //       reason (although previously there was no model)
+                model_->getGravCompEfforts(cmd_pos, gravity_vec, cmd_eff);
+                command_->setVelocity(Eigen::VectorXd());  // clear
+                command_->setEffort(cmd_eff);
+            }
+        }
+    }
+
+    // Send movement command
+    group_->sendCommand(*command_);
+}
+
+/**
+ * @brief Publishes actuator feedback (Qt/ROS2).
+ *
+ * @note Command buffers are reused to avoid repeated allocations at 100 Hz.
+ */
+void HebiThread::PublishFeedback() {
+    // Initialize persistent containers
+    static std::vector<double> t_pos(n_actuators_);
+    static std::vector<double> a_pos(n_actuators_);
+    static std::vector<double> a_eff(n_actuators_);
+
+    // Report important statuses individually
+    // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
+    //       `get` functions return Eigen types. We use Eigen's `Map` to
+    //       convert its `VectorXd` to a `std::vector` without copying.
+    Eigen::Map<Eigen::VectorXd>(t_pos.data(), n_actuators_) =
+        feedback_->getPositionCommand() *= kRadToDeg;  // also convert to deg
+    emit ReportFeedback(GetFeedbackMap(t_pos), Actuator::Feedback::kTargetPos);
+
+    Eigen::Map<Eigen::VectorXd>(a_pos.data(), n_actuators_) =
+        feedback_->getPosition() *= kRadToDeg;  // also convert to deg
+    emit ReportFeedback(GetFeedbackMap(a_pos), Actuator::Feedback::kActualPos);
+
+    Eigen::Map<Eigen::VectorXd>(a_eff.data(),
+                                n_actuators_) = feedback_->getEffort();
+    emit ReportFeedback(GetFeedbackMap(a_eff),
+                        Actuator::Feedback::kActualTorque);
+
+    // Report miscellaneous statuses in one batch
+    emit ReportStatus(GetStatus(), type_);
+
+#ifdef BUILD_WITH_ROS2
+    // Make actuator state info available to other ROS2 nodes
+    PublishState();
+#endif
+}
+
+/**
  * @brief Convenience function for matching individual actuator feedback to the
  *        corresponding `Actuator::Name`. Facilitates reporting to `MainWindow`.
  *
@@ -272,32 +423,22 @@ void HebiThread::PublishState() {
 
 /**
  * @brief Main command loop.
- *        Has three major responsibilities: Torque Control, Movement, and
- *        Feedback. Local variables used in each iteration are pre-initialized
- *        for efficiency.
+ *
+ *        Delegates torque checks, movement (trajectory/dynamics), and feedback
+ *        publishing to helper functions for readability.
+ *
+ * @see CheckTorqueControl(), ExecuteMovement(), PublishFeedback()
  */
 void HebiThread::run() {
     logger_->Debug("Initialized HebiThread");
 
-    // Initialize thread variables for efficiency
-    const Eigen::Vector3d gravity_vec(0, 0, -9.81);
+    // Initialize buffers for loop efficiency
+    Eigen::VectorXd cmd_pos(n_actuators_);
+    Eigen::VectorXd cmd_vel(n_actuators_);
+    Eigen::VectorXd cmd_acc(n_actuators_);  // <- trajectory (DynamicComp only)
+    Eigen::VectorXd cmd_eff(n_actuators_);  // -> command (DynamicComp only)
 
-    Eigen::VectorXd pos_cmd(n_actuators_);
-    Eigen::VectorXd vel_cmd(n_actuators_);
-    Eigen::VectorXd acc_cmd(n_actuators_);  // <- trajectory (DynamicComp only)
-    Eigen::VectorXd eff_cmd(n_actuators_);  // -> command (DynamicComp only)
-
-    std::vector<double> t_pos(n_actuators_);
-    std::vector<double> a_pos(n_actuators_);
-    std::vector<double> a_eff(n_actuators_);
-
-    double arm_torque_r{0};      // magnitude of torque exerted on central joint
-    double arm_torque_theta{0};  // angle of torque exerted on central joint
-
-    // For trajectory planning (elapsed time)
-    std::chrono::duration<double> t(std::chrono::steady_clock::now()
-                                    - trajectory_start_time_);
-    // For dynamic compensation (time step)
+    // For dynamic compensation (DynamicComp)
     auto last_loop_time = std::chrono::steady_clock::now();
 
     // Loop until MainWindow calls QThread::requestInterruption()
@@ -308,7 +449,7 @@ void HebiThread::run() {
             continue;
         }
 
-        // Calculate dt (only used in DynamicComp)
+        // Calculate time since last loop (only used in DynamicComp)
         auto now = std::chrono::steady_clock::now();
         std::chrono::duration<double> dt = now - last_loop_time;
         last_loop_time = now;
@@ -316,119 +457,10 @@ void HebiThread::run() {
         // Update feedback object
         group_->getNextFeedback(*feedback_);
 
-        // ========== Torque Control ==========
-
-        // Control the overall torque experienced by the central joint
-        // (LIBRA-I: 2-DoF joint, LIBRA-II: pitch joint)
-        if (torque_control_en_) {
-            // TODO: the current "algorithm" is just simple hysteresis which
-            //       stops ALL arm movement until the counterweight is full
-            //       enough. This is not ideal, and we should be predicting how
-            //       arm movement will affect the central joint torque.
-
-            // Retrieve torque magnitude and direction (i.e., polar coords)
-#if LIBRA_VERSION == 1
-            arm_torque_r =
-                std::max(std::abs(feedback_->getEffort()[Actuator::Name::kMA]),
-                         std::abs(feedback_->getEffort()[Actuator::Name::kMB]));
-
-            arm_torque_theta = std::atan2(
-                -feedback_->getEffort()[Actuator::Name::kMA]
-                    + feedback_->getEffort()[Actuator::Name::kMB],  // pitch
-                -feedback_->getEffort()[Actuator::Name::kMA]
-                    - feedback_->getEffort()[Actuator::Name::kMB]);  // roll
-#elif LIBRA_VERSION == 2
-            arm_torque_r = std::abs(
-                feedback_->getEffort()[Actuator::Name::kPitch]);
-            arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
-#endif
-
-            if (arm_torque_r > torque_comp_upper_bound_) {
-                // Disable movement if arm torque is too high
-                movement_en_ = false;
-            }
-
-            if (arm_torque_r >= torque_comp_lower_bound_) {
-                // While arm torque remains above the specified lower bound,
-                // report direction of torque to arduino_thread
-                emit ReportArmTorque(arm_torque_theta);
-            } else {
-                // Re-enable movement when arm torque reaches an acceptable level
-                movement_en_ = true;
-            }
-        }
-
-        // ========== Movement ==========
-
-        if (movement_en_ && trajectory_ != nullptr) {
-            t = std::chrono::steady_clock::now() - trajectory_start_time_;
-            if (t.count() < trajectory_->getDuration()) {
-                // --- MODE 1: TRAJECTORY FOLLOWING ---
-
-                // Build next step of trajectory
-                trajectory_->getState(t.count(), &pos_cmd, &vel_cmd, &acc_cmd);
-                command_->setPosition(pos_cmd);
-                command_->setVelocity(vel_cmd);
-
-                // Calculate effort commands to assist with trajectory tracking
-                if (dynamic_comp_en_ && model_ != nullptr) {
-                    // TODO: test this!!
-                    model_->getDynamicCompEfforts(feedback_->getPosition(),
-                                                  pos_cmd, vel_cmd, acc_cmd,
-                                                  eff_cmd, dt.count());
-                    command_->setEffort(eff_cmd);
-                }
-            } else {
-                // --- MODE 2: POSITION HOLDING ---
-
-                // Trajectory is complete
-                trajectory_.reset();
-
-                logger_->Debug("HEBI - Trajectory complete");
-
-                // Calculate effort commands to counteract gravity
-                if (dynamic_comp_en_ && model_ != nullptr) {
-                    // TODO: test this!!
-                    // NOTE: this may be problematic... I deleted it for a
-                    //       reason (although previously there was no model)
-                    model_->getGravCompEfforts(pos_cmd, gravity_vec, eff_cmd);
-                    command_->setVelocity(Eigen::VectorXd());  // clear
-                    command_->setEffort(eff_cmd);
-                }
-            }
-        }
-
-        // Send movement command
-        group_->sendCommand(*command_);
-
-        // ========== Feedback ==========
-
-#ifdef BUILD_WITH_ROS2
-        // Make actuator state info available to other ROS2 nodes
-        PublishState();
-#endif
-
-        // Report important statuses individually
-        // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
-        //       `get` functions return Eigen types. We use Eigen's `Map` to
-        //       convert its `VectorXd` to a `std::vector` without copying.
-        Eigen::Map<Eigen::VectorXd>(t_pos.data(), t_pos.size()) =
-            feedback_->getPositionCommand() *= kRadToDeg;  // also convert to deg
-        emit ReportFeedback(GetFeedbackMap(t_pos),
-                            Actuator::Feedback::kTargetPos);
-
-        Eigen::Map<Eigen::VectorXd>(a_pos.data(), a_pos.size()) =
-            feedback_->getPosition() *= kRadToDeg;  // also convert to deg
-        emit ReportFeedback(GetFeedbackMap(a_pos),
-                            Actuator::Feedback::kActualPos);
-
-        Eigen::Map<Eigen::VectorXd>(a_eff.data(),
-                                    a_eff.size()) = feedback_->getEffort();
-        emit ReportFeedback(GetFeedbackMap(a_eff),
-                            Actuator::Feedback::kActualTorque);
-
-        // Report miscellaneous statuses in one batch
-        emit ReportStatus(GetStatus(), type_);
+        // Execute control logic
+        CheckTorqueControl();
+        ExecuteMovement(dt, cmd_pos, cmd_vel, cmd_acc, cmd_eff);
+        PublishFeedback();
 
         // Don't overwhelm network
         QThread::msleep(10);  // 100 Hz
@@ -581,7 +613,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     pos.col(0) = feedback_->getPosition();  // start (current value)
 
     std::stringstream trajectory_ss;  // for debug only
-    group_->getNextFeedback(*feedback_);
+
     for (auto i = 0; i < target.size(); ++i) {
         pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
         if (debug_mode_) {
@@ -614,8 +646,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
         pos_max_diff = std::max(abs(pos(i, 1) - pos(i, 0)), pos_max_diff);
     }
 
-    Eigen::VectorXd t(2);
-    t << 0, pos_max_diff / kMaxVel;
+    Eigen::VectorXd t_trajectory(2);
+    t_trajectory << 0, pos_max_diff / kMaxVel;
     */
 
     // Log start time and create trajectory
