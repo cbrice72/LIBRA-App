@@ -50,8 +50,8 @@ constexpr double kDamping = 1.0;     // Nm/rad/s
 
 // Status Message Formatting
 
-constexpr int kLabelWidth = 21;  // longest label = 19 char, +2 for visuals
-constexpr int kValueWidth = 8;  // format is [sign][#,3][.][#,2], +1 for visuals
+constexpr int kLabelWidth = 20;  // longest label = 19 char, +1 for visuals
+constexpr int kValueWidth = 6;  // format is [sign][#,2][.][#,2], +1 for visuals
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -377,9 +377,9 @@ QString HebiThread::GetStatus() const {
     }
 
     // Format header row
-    ss << std::setw(kLabelWidth) << "Actuator Name";
+    ss << std::left << std::setw(kLabelWidth) << "Actuator Name";
     for (int i = 0; i < n_actuators_; ++i) {
-        ss << std::left << std::setw(kValueWidth) << "[" + names_[i] + "]";
+        ss << std::right << std::setw(kValueWidth) << "[" + names_[i] + "]";
     }
     ss << "\n";
 
