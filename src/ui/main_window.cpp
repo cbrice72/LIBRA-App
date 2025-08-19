@@ -382,7 +382,7 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::ConnectManip);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
             arduino_manager_, &ArduinoManager::DisconnectManip);
-    connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // toggle
+    connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // leveling
             arduino_manager_, &ArduinoManager::SetManipCorrectionEnabled);
     connect(this, &MainWindow::InformPitch,  // update manip correction
             arduino_manager_, &ArduinoManager::SetManipCorrection);
@@ -447,7 +447,7 @@ void MainWindow::InitializeThreads() {
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             hebi_thread_, &HebiThread::SetDebugMode);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // update 2-DoF control
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // central joint comp
             hebi_thread_, &HebiThread::SetTorqueControl);
     connect(ui_->a_hebi_intertia_gravity_comp, &QAction::toggled,  // auto-comp
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
@@ -979,7 +979,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
  * @brief Event handler for "Actuators/HEBI" menu action "Torque compensation
  *        settings". Opens a dialog to configure torque compensation bounds.
  */
-void MainWindow::on_a_hebi_torque_comp_settings_triggered() {
+void MainWindow::on_a_hebi_central_torque_comp_triggered() {
     if (hebi_thread_ == nullptr) {
         logger_->Warn("HEBI thread not available - cannot edit torque bounds");
         return;

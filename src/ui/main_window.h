@@ -140,7 +140,7 @@ class MainWindow : public QMainWindow {
     // Actuators Menu
 
     void on_a_hebi_override_limits_toggled(bool checked);
-    void on_a_hebi_torque_comp_settings_triggered();
+    void on_a_hebi_central_torque_comp_triggered();
 
     // Sensors Menu
     // (most actions are handled via signals, and thus don't need functions)
