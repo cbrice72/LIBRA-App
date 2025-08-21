@@ -178,6 +178,70 @@ HebiThread::~HebiThread() {
 //------------------------------------------------------------------------------
 
 /**
+ * @brief Converts raw feedback to effective joint values, handling special
+ *        cases like differential joints.
+ *
+ * @param feedback Raw feedback from actuators
+ * @param type Type of feedback (e.g., position, velocity, effort)
+ */
+std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
+    const std::shared_ptr<hebi::GroupFeedback>& feedback,
+    const Actuator::Feedback type) {
+    std::unordered_map<Joint::Name, double> joint_feedback_map;
+
+    for (int i = 0; i < n_actuators_; ++i) {
+        double val;
+
+        // Retrieve value based on feedback type
+        if (type == Actuator::Feedback::kTargetPos) {
+            val = feedback->getPositionCommand()[i] * kRadToDeg;
+        } else if (type == Actuator::Feedback::kActualPos) {
+            val = feedback->getPosition()[i] * kRadToDeg;
+        } else if (type == Actuator::Feedback::kActualVel) {
+            val = feedback->getVelocity()[i] * kRadToDeg;
+        } else if (type == Actuator::Feedback::kActualTorque) {
+            val = feedback->getEffort()[i];
+        } else {
+            continue;  // unknown type
+        }
+
+#if LIBRA_VERSION == 1
+        // Handle complex joints first
+        if (enum_names_[i] == Actuator::Name::kMA) {
+            // MA and MB differential drive -> Roll and Pitch
+            const double ma_val = val;
+            const double mb_val = feedback->getVelocity()[Actuator::Name::kMB]
+                                  * kRadToDeg;
+
+            joint_feedback_map[Joint::Name::kRoll] =
+                Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
+                                                   mb_val);
+            joint_feedback_map[Joint::Name::kPitch] =
+                Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma_val,
+                                                   mb_val);
+            continue;
+        }
+
+        if (enum_names_[i] == Actuator::Name::kMB) {
+            // MB is handled with MA, so do nothing
+            continue;
+        }
+#endif
+        // Regular 1-DoF joints should be 1-to-1
+        auto name = static_cast<Joint::Name>(enum_names_[i]);
+        joint_feedback_map[name] = Joint::ActuatorToJointSimple(name, val);
+    }
+
+    // Send J3 position for manipulator pitch correction
+    if (type == Actuator::Feedback::kActualPos) {
+        emit InformPitch(feedback->getPosition()[Actuator::Name::kJ3]
+                         * kRadToDeg);
+    }
+
+    return joint_feedback_map;
+}
+
+/**
  * @brief Check torque on the central joint and enforce movement limits.
  *        (central joint = 2-DoF joint (LIBRA-I) -or- pitch joint (LIBRA-II).)
  */
@@ -292,31 +356,20 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
 }
 
 /**
- * @brief Publishes actuator feedback (Qt/ROS2).
+ * @brief Sends actuator feedback to whoever's listening (Qt/ROS2).
  *
  * @note Command buffers are reused to avoid repeated allocations at 100 Hz.
  */
-void HebiThread::PublishFeedback() {
-    // Initialize persistent containers
-    static std::vector<double> t_pos(n_actuators_);
-    static std::vector<double> a_pos(n_actuators_);
-    static std::vector<double> a_eff(n_actuators_);
-
+void HebiThread::SendFeedback() {
     // Report important statuses individually
-    // NOTE: we want vectors of doubles for ease of use, but GroupFeedback's
-    //       `get` functions return Eigen types. We use Eigen's `Map` to
-    //       convert its `VectorXd` to a `std::vector` without copying.
-    Eigen::Map<Eigen::VectorXd>(t_pos.data(), n_actuators_) =
-        feedback_->getPositionCommand() *= kRadToDeg;  // also convert to deg
-    emit ReportFeedback(GetFeedbackMap(t_pos), Actuator::Feedback::kTargetPos);
-
-    Eigen::Map<Eigen::VectorXd>(a_pos.data(), n_actuators_) =
-        feedback_->getPosition() *= kRadToDeg;  // also convert to deg
-    emit ReportFeedback(GetFeedbackMap(a_pos), Actuator::Feedback::kActualPos);
-
-    Eigen::Map<Eigen::VectorXd>(a_eff.data(),
-                                n_actuators_) = feedback_->getEffort();
-    emit ReportFeedback(GetFeedbackMap(a_eff),
+    emit ReportFeedback(GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kTargetPos),
+                        Actuator::Feedback::kTargetPos);
+    emit ReportFeedback(GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kActualPos),
+                        Actuator::Feedback::kActualPos);
+    emit ReportFeedback(GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kActualTorque),
                         Actuator::Feedback::kActualTorque);
 
     // Report miscellaneous statuses in one batch
@@ -326,23 +379,6 @@ void HebiThread::PublishFeedback() {
     // Make actuator state info available to other ROS2 nodes
     PublishState();
 #endif
-}
-
-/**
- * @brief Convenience function for matching individual actuator feedback to the
- *        corresponding `Actuator::Name`. Facilitates reporting to `MainWindow`.
- *
- * @param feedback Actuator values (ideally, already converted to desired units)
- *
- * @see MainWindow::HandleActuatorFeedback
- */
-std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
-    const std::vector<double>& feedback) {
-    std::unordered_map<Actuator::Name, double> feedback_map;
-    for (auto i = 0; i < enum_names_.size(); ++i) {
-        feedback_map[enum_names_[i]] = feedback[i];
-    }
-    return feedback_map;
 }
 
 /**
@@ -412,28 +448,19 @@ void HebiThread::PublishState() {
     // Update header timestamp
     state_msg_.header.stamp = this->now();
 
-    // Define a lambda to make actuator-to-joint value conversion via loop easier
-    auto get_joint_value = [&](uint8_t i, double val) {
-        // NOTE: index-wise, we assume MA = Roll and MB = Pitch for simplicity
-        auto joint = static_cast<Joint::Name>(i);
-        if (joint == Joint::Name::kRoll || joint == Joint::Name::kPitch) {
-            // Special case: MA and MB differential drive -> Roll and Pitch
-            double ma_val = eedback_->getPosition()[static_cast<uint8_t>(
-                Actuator::Name::kMA)];
-            double mb_val = feedback_->getPosition()[static_cast<uint8_t>(
-                Actuator::Name::kMB)];
-            return Joint::ActuatorToJointDifferential(joint, ma_val, mb_val);
-        } else {
-            // Regular 1-DoF joints
-            return Joint::ActuatorToJointSimple(joint, val);
-        }
-    };
+    // Get the joint-space feedback
+    const auto actual_pos_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualPos);
+    const auto actual_vel_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualVel);
+    const auto actual_eff_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualTorque);
 
     // Populate the message and publish it
     for (uint8_t i = 0; i < n_actuators_; ++i) {
-        state_msg_.position[i] = get_joint_value(i, feedback_->getPosition()[i]);
-        state_msg_.velocity[i] = get_joint_value(i, feedback_->getVelocity()[i]);
-        state_msg_.effort[i] = get_joint_value(i, feedback_->getEffort()[i]);
+        state_msg_.position[i] = actual_pos_map.at(static_cast<Joint::Name>(i));
+        state_msg_.velocity[i] = actual_vel_map.at(static_cast<Joint::Name>(i));
+        state_msg_.effort[i] = actual_eff_map.at(static_cast<Joint::Name>(i));
     }
 
     state_pub_->publish(state_msg_);
@@ -450,7 +477,7 @@ void HebiThread::PublishState() {
  *        Delegates torque checks, movement (trajectory/dynamics), and feedback
  *        publishing to helper functions for readability.
  *
- * @see CheckTorqueControl(), ExecuteMovement(), PublishFeedback()
+ * @see CheckTorqueControl(), ExecuteMovement(), SendFeedback()
  */
 void HebiThread::run() {
     logger_->Debug("Initialized HebiThread");
@@ -483,7 +510,7 @@ void HebiThread::run() {
         // Execute control logic
         CheckTorqueControl();
         ExecuteMovement(dt, cmd_pos, cmd_vel, cmd_acc, cmd_eff);
-        PublishFeedback();
+        SendFeedback();
 
         // Don't overwhelm network
         QThread::msleep(10);  // 100 Hz

@@ -75,22 +75,26 @@ class HebiThread : public AbstractActuatorThread
     // NOTE: see AbstractActuatorThread for generic signals
 
     void ReportArmTorque(const double& theta);
+#if LIBRA_VERSION == 1
+    void InformPitch(const double& angle);
+#endif
 
   private:
     void run() override;
 
     // --- Helper Functions ---
 
+    std::unordered_map<Joint::Name, double> GetJointFeedbackMap(
+        const std::shared_ptr<hebi::GroupFeedback>& feedback,
+        const Actuator::Feedback feedback_type);
+
     void CheckTorqueControl();
     void ExecuteMovement(std::chrono::duration<double> dt,
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
-    void PublishFeedback();
 
-    std::unordered_map<Actuator::Name, double> GetFeedbackMap(
-        const std::vector<double>& feedback);
+    void SendFeedback();
     QString GetStatus() const;
-
 #ifdef BUILD_WITH_ROS2
     void PublishState();
 #endif

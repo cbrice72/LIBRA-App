@@ -384,8 +384,6 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::DisconnectManip);
     connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // leveling
             arduino_manager_, &ArduinoManager::SetManipCorrectionEnabled);
-    connect(this, &MainWindow::InformPitch,  // update manip correction
-            arduino_manager_, &ArduinoManager::SetManipCorrection);
     connect(this, &MainWindow::CommandManip,  // update manip targets
             arduino_manager_, &ArduinoManager::SetManipTarget);
 #endif
@@ -474,6 +472,8 @@ void MainWindow::InitializeThreads() {
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
             arduino_manager_, &ArduinoManager::MapTorqueToWaterCommand);
+    connect(hebi_thread_, &HebiThread::InformPitch,  // update manip correction
+            arduino_manager_, &ArduinoManager::SetManipCorrection);
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits,
@@ -779,54 +779,25 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
  *       is considered "+" (positive).
  */
 void MainWindow::HandleActuatorFeedback(
-    const std::unordered_map<Actuator::Name, double>& feedbacks,
+    const std::unordered_map<Joint::Name, double>& feedbacks,
     const Actuator::Feedback feedback_type) {
-    // Simple lambda to wrap the try-catch for updating the UI label
-    auto update_ui = [&](Joint::Name joint, double value) {
+    for (const auto& feedback : feedbacks) {
+        const auto& joint = feedback.first;
+        const auto& val = feedback.second;
+
+        // Index into matching label using map-of-maps initialized in constructor
         try {
-            // Index into matching label using map-of-maps initialized in constructor
             feedback_element_map_.at(joint)
                 .at(feedback_type)
-                ->setText(QString::number(value, 'f', kPrecision));
+                ->setText(QString::number(val, 'f', kPrecision));
         } catch (const std::out_of_range&) {
             logger_->Error(
-                "No UI element mapped to joint " + NameEnumToString(joint)
+                "No UI element mapped to joint " + Joint::NameEnumToString(joint)
                 + " (" + std::to_string(static_cast<int>(joint))
-                + ") and feedback type " + FeedbackEnumToString(feedback_type)
-                + " (" + std::to_string(static_cast<int>(feedback_type)) + ")");
+                + ") and feedback type "
+                + Actuator::FeedbackEnumToString(feedback_type) + " ("
+                + std::to_string(static_cast<int>(feedback_type)) + ")");
         }
-    };
-
-    // Handle complex joints first
-#if LIBRA_VERSION == 1
-    // Special Case: MA and MB differential drive -> Roll and Pitch
-    const double ma = feedbacks.at(Actuator::Name::kMA)->second;
-    const double mb = feedbacks.at(Actuator::Name::kMB)->second;
-
-    update_ui(Joint::Name::kRoll,
-              Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma, mb));
-    update_ui(Joint::Name::kPitch,
-              Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma, mb));
-
-    // Special Case: Manipulator Arduino (SerialServo) corrects for J3's pitch
-    if (feedback_type == Actuator::Feedback::kActualPos) {
-        emit InformPitch(feedbacks.at(Actuator::Name::kJ3)->second);
-    }
-#endif
-
-    // Handle regular 1-DoF joints
-    for (const auto& feedback : feedbacks) {
-#if LIBRA_VERSION == 1
-        // Skip special cases (already processed)
-        if (feedback.first == Actuator::Name::kMA
-            || feedback.first == Actuator::Name::kMB) {
-            continue;
-        }
-#endif
-
-        // Update the UI using the joint name derived from the actuator name
-        update_ui(static_cast<Joint::Name>(feedback.first),
-                  Joint::ActuatorToJointSimple(feedback.first, feedback.second));
     }
 }
 

@@ -90,7 +90,6 @@ class MainWindow : public QMainWindow {
     void ConnectManip(const QString& port_name);
     void CommandManip(const double& pan, const double& tilt,
                       const bool& move_slow);
-    void InformPitch(const double& angle);
 #endif
 
     // --- Actuator Commands ---
