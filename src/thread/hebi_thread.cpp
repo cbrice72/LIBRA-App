@@ -151,7 +151,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
 
-    state_msg_.name = names_;
+    state_msg_.name = Joint::GetHebiStrings();
 
     // Resize additional vectors to match number of actuators
     state_msg_.position.resize(n_actuators_);
@@ -412,11 +412,35 @@ void HebiThread::PublishState() {
     // Update header timestamp
     state_msg_.header.stamp = this->now();
 
+    // Define a lambda to make actuator-to-joint value conversion via loop easier
+    auto get_joint_value = [&](uint8_t i, double val) {
+        // NOTE: index-wise, we assume MA = Roll and MB = Pitch for simplicity
+        auto actuator = static_cast<Actuator::Name>(i);
+        if (actuator == Actuator::Name::kMA) {
+            // Get Roll
+            double ma_val = val;
+            double mb_val = feedback_->getPosition()[static_cast<uint8_t>(
+                Actuator::Name::kMB)];
+            return Joint::ActuatorToJointDifferential(Joint::Name::kRoll,
+                                                      ma_val, mb_val);
+        } else if (actuator == Actuator::Name::kMB) {
+            // Get Pitch
+            double ma_val = feedback_->getPosition()[static_cast<uint8_t>(
+                Actuator::Name::kMA)];
+            double mb_val = val;
+            return Joint::ActuatorToJointDifferential(Joint::Name::kPitch,
+                                                      ma_val, mb_val);
+        } else {
+            // All others
+            return Joint::ActuatorToJointSimple(actuator, val);
+        }
+    };
+
     // Populate the message and publish it
-    for (int i = 0; i < n_actuators_; ++i) {
-        state_msg_.position[i] = feedback_->getPosition()[i];
-        state_msg_.velocity[i] = feedback_->getVelocity()[i];
-        state_msg_.effort[i] = feedback_->getEffort()[i];
+    for (uint8_t i = 0; i < n_actuators_; ++i) {
+        state_msg_.position[i] = get_joint_value(i, feedback_->getPosition()[i]);
+        state_msg_.velocity[i] = get_joint_value(i, feedback_->getVelocity()[i]);
+        state_msg_.effort[i] = get_joint_value(i, feedback_->getEffort()[i]);
     }
 
     state_pub_->publish(state_msg_);
