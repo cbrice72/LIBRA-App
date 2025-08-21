@@ -436,7 +436,9 @@ void MainWindow::InitializeDeviceManagers() {
 void MainWindow::InitializeThreads() {
     // ========== HEBI Thread ==========
 
-    hebi_thread_ = new HebiThread(this, debug_mode_);  // use easy constructor
+    // NOTE: this constructor automatically determines the actuator family and
+    //       names based on the LIBRA_VERSION the app is built with
+    hebi_thread_ = new HebiThread(this, debug_mode_);
 
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode

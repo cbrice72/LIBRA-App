@@ -91,21 +91,15 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
 //------------------------------------------------------------------------------
 
 /**
- * @brief Delegating constructor. Alutomatically configures the appropriate
- * HebiThread based on LIBRA_VERSION.
+ * @brief Delegating constructor. Automatically configures HebiThread based on
+ *        `LIBRA_VERSION`.
  *
  * @param parent Owning Qt widget
  * @param debug_mode Whether to output verbose debug text
  */
 HebiThread::HebiThread(QObject* parent, const bool& debug_mode)
-    : HebiThread(parent, {"LIBRA"},
-#if LIBRA_VERSION == 1
-                 {"MA", "MB", "J1", "J2", "J3"},  // names
-#elif LIBRA_VERSION == 2
-                 {"Pitch"},  // names
-#endif
-                 debug_mode) {
-}
+    : HebiThread(parent, {"LIBRA"}, Actuator::GetDefaultHebiActuatorList(),
+                 debug_mode) {}
 
 /**
  * @brief Standard constructor.

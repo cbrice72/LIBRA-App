@@ -17,6 +17,7 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Constants
+ * !Conversion Functions
  * !Helper Functions
  */
 
@@ -29,6 +30,7 @@ namespace Actuator {
 // !Constants
 //------------------------------------------------------------------------------
 
+// Total count of each actuator type
 #if LIBRA_VERSION == 1
 constexpr int kJointCountHebi = 5;
 constexpr int kJointCountEpos = 0;
@@ -41,33 +43,9 @@ constexpr int kJointCountEpos = 0;
 #endif
 
 /**
- * @brief LIBRA actuator names.
- *
- * @note HEBI actuator names -MUST- start at 0 and be in the same order as their
- *       string equivalents fed in at HebiThread object construction. I know
- *       this is terrible design, but I have more important things to do right
- *       now than refactor this...
- *
- * @see HebiThread::run()
- */
-enum Name {
-#if LIBRA_VERSION == 1
-    kMA = 0,
-    kMB,
-    kJ1,
-    kJ2,
-    kJ3,
-#elif LIBRA_VERSION == 2
-    kPitch = 0,
-    kYaw,
-#endif
-    kUndefined  // KEEP THIS LAST (used in StringToNameEnum)
-};
-
-/**
  * @brief Actuator implementations.
  *
- * @see abstract_actuator_thread
+ * @see AbstractActuatorThread MainWindow::HandleActuatorStatus
  */
 enum Type {
     kHebi = 0,  // HEBI
@@ -77,7 +55,30 @@ enum Type {
 };
 
 /**
- * @brief Important actuator feedback types.
+ * @brief Canonical actuator names.
+ *
+ * @note HEBI actuator names MUST start at 0 for `GetDefaultHebiActuatorList()`
+ *       to work properly. I know this is terrible design, but I have more
+ *       important things to do right now than refactor this...
+ *
+ * @see GetDefaultHebiActuatorList HebiThread::run
+ */
+enum Name {
+#if LIBRA_VERSION == 1
+    kMA = 0,  // HEBI
+    kMB,      // HEBI
+    kJ1,      // HEBI
+    kJ2,      // HEBI
+    kJ3,      // HEBI
+#elif LIBRA_VERSION == 2
+    kPitch = 0,  // HEBI
+    kYaw,        // EPOS4
+#endif
+    kUndefined  // keep this last!
+};
+
+/**
+ * @brief Primary actuator feedback types.
  *
  * @note Secondary feedback should go in each actuator implementation's
  *       `ReportStatus()` override.
@@ -87,7 +88,7 @@ enum Type {
 enum Feedback { kTargetPos = 0, kActualPos, kActualTorque };
 
 //------------------------------------------------------------------------------
-// !Helper Functions
+// !Conversion Functions
 //------------------------------------------------------------------------------
 
 /**
@@ -124,12 +125,10 @@ inline Name StringToNameEnum(const std::string& name_str) {
  *
  * @param name Named enum value of the actuator
  * @return std::string String name of the corresponding actuator
- *
- * @note Only really useful for debugging.
  */
 inline std::string NameEnumToString(Name name) {
-#if LIBRA_VERSION == 1
     switch (name) {
+#if LIBRA_VERSION == 1
         case Name::kMA:
             return "MA";
         case Name::kMB:
@@ -140,19 +139,15 @@ inline std::string NameEnumToString(Name name) {
             return "J2";
         case Name::kJ3:
             return "J3";
-        default:
-            return "Undefined";
-    }
 #elif LIBRA_VERSION == 2
-    switch (name) {
         case Name::kYaw:
             return "Yaw";
         case Name::kPitch:
             return "Pitch";
+#endif
         default:
             return "Undefined";
     }
-#endif
 }
 
 /**
@@ -160,8 +155,6 @@ inline std::string NameEnumToString(Name name) {
  *
  * @param name Actuator implementation enum value
  * @return std::string String name of the corresponding actuator type
- *
- * @note Only really useful for debugging.
  */
 inline std::string TypeEnumToString(Type type) {
     switch (type) {
@@ -181,8 +174,6 @@ inline std::string TypeEnumToString(Type type) {
  *
  * @param feedback Feedback type
  * @return std::string String feedback type
- *
- * @note Only really useful for debugging.
  */
 inline std::string FeedbackEnumToString(Feedback feedback) {
     switch (feedback) {
@@ -195,6 +186,27 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
         default:
             return "Undefined";
     }
+}
+
+//------------------------------------------------------------------------------
+// !Helper Functions
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Returns the default HEBI actuator names based on the `LIBRA_VERSION`
+ *        the app is built with.
+ *
+ * @return std::vector<std::string> Ordered list of HEBI actuators
+ */
+inline std::vector<std::string> GetDefaultHebiActuatorList() {
+    std::vector<std::string> names;
+
+    names.reserve(Actuator::kJointCountHebi);  // for efficiency
+    for (int i = 0; i < Actuator::kJointCountHebi; ++i) {
+        names.push_back(NameEnumToString(static_cast<Name>(i)));
+    }
+
+    return names;
 }
 
 }  // namespace Actuator
