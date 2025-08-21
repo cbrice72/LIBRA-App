@@ -99,13 +99,12 @@ class HebiThread : public AbstractActuatorThread
 
     std::vector<std::string> families_;
     std::vector<std::string> names_;
-
-    std::shared_ptr<hebi::Group> group_;
+    std::vector<Actuator::Name> enum_names_;
     const int n_actuators_;  // set in constructor initializer list
 
+    std::shared_ptr<hebi::Group> group_;
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
-    std::array<Actuator::Name, Actuator::kJointCountHebi> joint_order_;
 
     /* Improve performance of GetStatus() by allocating these vectors here
       (the `mutable` keyword allows a const function to modify class members) */

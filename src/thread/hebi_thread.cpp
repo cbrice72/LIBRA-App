@@ -139,10 +139,10 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators_);
 
-    // Define joint order for organizing feedback
-    assert(names_.size() == joint_order_.size());
-    for (std::size_t i = 0; i < names_.size(); ++i) {
-        joint_order_[i] = Actuator::StringToNameEnum(names_[i]);
+    // "Translate" string names into corresponding enums for feedback_map
+    enum_names_.resize(n_actuators_);
+    for (std::size_t i = 0; i < n_actuators_; ++i) {
+        enum_names_[i] = Actuator::StringToNameEnum(names_[i]);
     }
 
     // Resize vectors to match number of actuators
@@ -341,17 +341,13 @@ void HebiThread::PublishFeedback() {
  *
  * @param feedback Actuator values (ideally, already converted to desired units)
  *
- * @note The enum vector `joint_order_`, defined in the constructor, should have
- *       the same order as the strings in `names_`. Otherwise, this function
- *       will almost certainly obfuscate debugging efforts!
- *
  * @see MainWindow::HandleActuatorFeedback
  */
 std::unordered_map<Actuator::Name, double> HebiThread::GetFeedbackMap(
     const std::vector<double>& feedback) {
     std::unordered_map<Actuator::Name, double> feedback_map;
-    for (auto i = 0; i < joint_order_.size(); ++i) {
-        feedback_map[joint_order_[i]] = feedback[i];
+    for (auto i = 0; i < enum_names_.size(); ++i) {
+        feedback_map[enum_names_[i]] = feedback[i];
     }
     return feedback_map;
 }
