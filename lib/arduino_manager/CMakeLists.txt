@@ -14,7 +14,6 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 qt_add_library(
     arduino_manager
     STATIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/arduino_defs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/arduino_manager.h
     ${CMAKE_CURRENT_SOURCE_DIR}/arduino_manager.cpp
 )
@@ -29,7 +28,7 @@ target_include_directories(
 target_link_libraries(
     arduino_manager
     # Project
-    PUBLIC logger
+    PUBLIC common logger
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
     PRIVATE Qt${QT_VERSION_MAJOR}::SerialPort

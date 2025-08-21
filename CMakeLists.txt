@@ -218,15 +218,21 @@ add_custom_command(
 target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src)
 
 # Tell the linker which libraries to link against
-set(PROJECT_LIBRARIES arduino_manager camera_manager util actuator_thread open_serial_dialog torque_comp_dialog)
+set(LIBRA_LIBRARIES arduino_manager camera_manager common logger util)
+
+set(LIBRA_THREADS actuator_thread)
 if(LIBRA_VERSION EQUAL 2)
-    list(APPEND PROJECT_LIBRARIES open_epos_dialog)
+    list(APPEND LIBRA_THREADS open_epos_dialog)
 endif()
+
+set(LIBRA_DIALOGS open_serial_dialog torque_comp_dialog)
 
 target_link_libraries(
     libra_app_gui
     # Project
-    PRIVATE ${PROJECT_LIBRARIES}
+    PRIVATE ${LIBRA_LIBRARIES}
+    PRIVATE ${LIBRA_THREADS}
+    PRIVATE ${LIBRA_DIALOGS}
     # Qt
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to

@@ -24,8 +24,7 @@ endif()
 
 # Create and configure the module
 set(SRC_FILES
-    # Actuator Definitions
-    ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
+    # Actuator Template
     ${CMAKE_CURRENT_SOURCE_DIR}/abstract_actuator_thread.h
     # HEBI
     ${CMAKE_CURRENT_SOURCE_DIR}/hebi_thread.h
@@ -61,7 +60,7 @@ target_include_directories(
 target_link_libraries(
     actuator_thread
     # Project
-    PUBLIC logger util
+    PUBLIC common logger util
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Core
     # HEBI

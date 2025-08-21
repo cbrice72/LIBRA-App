@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   actuator_defs.h
- * @brief  Common definitions for LIBRA actuators; header-only.
+ * @brief  Common definitions for physical LIBRA actuators; header-only.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -9,7 +9,6 @@
 
 // C++ Standard Library Headers
 #include <string>
-#include <variant>
 #include <vector>
 
 // Other Library Headers
@@ -50,7 +49,7 @@ constexpr int kJointCountEpos = 0;
 enum Type {
     kHebi = 0,  // HEBI
 #if LIBRA_VERSION == 2
-    kEpos  // EPOS4 (Maxon)
+    kEpos  // EPOS (Maxon)
 #endif
 };
 
@@ -72,7 +71,7 @@ enum Name {
     kJ3,      // HEBI
 #elif LIBRA_VERSION == 2
     kPitch = 0,  // HEBI
-    kYaw,        // EPOS4
+    kYaw,        // EPOS
 #endif
     kUndefined  // keep this last!
 };
