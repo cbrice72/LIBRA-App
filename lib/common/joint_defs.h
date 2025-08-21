@@ -71,19 +71,19 @@ enum class Name : uint8_t {
  *       By extension, positive roll = leftward, positive pitch = upward, and
  *       positive yaw = leftward.
  *
- * @param actuator The actuator in question
+ * @param joint Which joint to calculate for
  * @param val The value to convert
  * @return double Effective position of the joint
  *
  * @see HebiThread::PublishState
  */
-inline double ActuatorToJointSimple(Actuator::Name actuator, double val) {
-    switch (actuator) {
+inline double ActuatorToJointSimple(Joint::Name joint, double val) {
+    switch (joint) {
 #if LIBRA_VERSION == 1
-        case Actuator::Name::kMA:
-        case Actuator::Name::kMB:
+        case Joint::Name::kRoll:
+        case Joint::Name::kPitch:
             std::cerr
-                << "[ERROR] ActuatorToJointSimple: This actuator is part of a "
+                << "[ERROR] ActuatorToJointSimple: This joint is part of a "
                    "complex system! Please use ActuatorToJointDifferential."
                 << std::endl;
             return 0;
@@ -100,7 +100,7 @@ inline double ActuatorToJointSimple(Actuator::Name actuator, double val) {
             return val;  // TODO: verify this
 #endif
         default:
-            std::cerr << "[ERROR] ActuatorToJointSimple: Unknown actuator!"
+            std::cerr << "[ERROR] ActuatorToJointSimple: Unknown joint!"
                       << std::endl;
             return 0;
     }
@@ -110,19 +110,19 @@ inline double ActuatorToJointSimple(Actuator::Name actuator, double val) {
  * @brief Converts a simple joint's effective position to its corresponding
  *        actuator's real position.
  *
- * @param joint The joint in question
+ * @param actuator Which actuator to calculate for
  * @param val The value to convert
  * @return double Real position of the actuator
  *
  * @note Currently unused; provided for completeness
  */
-inline double JointToActuatorSimple(Joint::Name joint, double val) {
-    switch (joint) {
+inline double JointToActuatorSimple(Actuator::Name actuator, double val) {
+    switch (actuator) {
 #if LIBRA_VERSION == 1
-        case Joint::Name::Roll:
-        case Joint::Name::Pitch:
+        case Actuator::Name::kMA:
+        case Actuator::Name::kMB:
             std::cerr
-                << "[ERROR] JointToActuatorSimple: This joint is part of a "
+                << "[ERROR] JointToActuatorSimple: This actuator is part of a "
                    "complex system! Please use JointToActuatorDifferential."
                 << std::endl;
             return 0;
@@ -139,7 +139,7 @@ inline double JointToActuatorSimple(Joint::Name joint, double val) {
             return val;  // TODO: verify this
 #endif
         default:
-            std::cerr << "[ERROR] JointToActuatorSimple: Unknown joint!"
+            std::cerr << "[ERROR] JointToActuatorSimple: Unknown actuator!"
                       << std::endl;
             return 0;
     }
@@ -161,9 +161,9 @@ inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
                                           double mb) {
     switch (joint) {
         case Joint::Name::kRoll:
-            return -(ma + mb) / 2;
+            return -(ma + mb) / 2.0;
         case Joint::Name::kPitch:
-            return -(ma - mb) / 2;
+            return -(ma - mb) / 2.0;
         default:
             std::cerr << "[ERROR] ActuatorToJointDifferential: Provided joint "
                          "name is not part of a known complex system!"
@@ -185,10 +185,10 @@ inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
  */
 inline double JointToActuatorDifferential(Actuator::Name actuator, double roll,
                                           double pitch) {
-    switch (joint) {
-        case Actuator::Name::MA:
-            return -roll - MB;
-        case Actuator::Name::kPitch:
+    switch (actuator) {
+        case Actuator::Name::kMA:
+            return -roll - pitch;
+        case Actuator::Name::kMB:
             return -roll + pitch;
         default:
             std::cerr
