@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <cstdint>
 #include <string>
 
 // Other Library Headers
@@ -33,18 +34,18 @@ namespace Water {
 /**
  * @brief Fluid system side (see individual constants for description).
  */
-enum class Side {
+enum class Side : uint8_t {
     kA = 0,  // LIBRA-I: left, LIBRA-II: only one
 #if LIBRA_VERSION == 1
     kB,  // LIBRA-I: right
 #endif
-    kAll  // KEEP THIS LAST (declared for convenience - not usually practical)
+    kAll  // keep this last!
 };
 
 /**
  * @brief Fluid system state.
  */
-enum class State { kStopped = 0, kFilling, kDraining };
+enum class State : uint8_t { kStopped = 0, kFilling, kDraining };
 
 //------------------------------------------------------------------------------
 // !Water Helpers

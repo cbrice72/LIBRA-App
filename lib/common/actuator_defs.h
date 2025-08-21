@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -46,7 +47,7 @@ constexpr int kJointCountEpos = 0;
  *
  * @see AbstractActuatorThread MainWindow::HandleActuatorStatus
  */
-enum Type {
+enum class Type : uint8_t {
     kHebi = 0,  // HEBI
 #if LIBRA_VERSION == 2
     kEpos  // EPOS (Maxon)
@@ -56,13 +57,13 @@ enum Type {
 /**
  * @brief Canonical actuator names.
  *
- * @note HEBI actuator names MUST start at 0 for `GetDefaultHebiActuatorList()`
- *       to work properly. I know this is terrible design, but I have more
- *       important things to do right now than refactor this...
+ * @note HEBI actuator names MUST start at 0 for `GetHebiDefault()` to work
+ *       properly. I know this is terrible design, but I have more important
+ *       things to do right now than refactor this...
  *
- * @see GetDefaultHebiActuatorList HebiThread::run
+ * @see GetHebiDefault HebiThread::run
  */
-enum Name {
+enum class Name : uint8_t {
 #if LIBRA_VERSION == 1
     kMA = 0,  // HEBI
     kMB,      // HEBI
@@ -84,7 +85,7 @@ enum Name {
  *
  * @see AbstractActuatorThread::ReportStatus
  */
-enum Feedback { kTargetPos = 0, kActualPos, kActualTorque };
+enum class Feedback : uint8_t { kTargetPos = 0, kActualPos, kActualTorque };
 
 //------------------------------------------------------------------------------
 // !Conversion Functions
@@ -111,12 +112,12 @@ inline Name StringToNameEnum(const std::string& name_str) {
     }
 #elif LIBRA_VERSION == 2
     if (name_str == "Yaw") {
-        return kYaw;
+        return Name::kYaw;
     } else if (name_str == "Pitch") {
-        return kPitch;
+        return Name::kPitch;
     }
 #endif
-    return kUndefined;
+    return Name::kUndefined;
 }
 
 /**
@@ -197,7 +198,7 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
  *
  * @return std::vector<std::string> Ordered list of HEBI actuators
  */
-inline std::vector<std::string> GetDefaultHebiActuatorList() {
+inline std::vector<std::string> GetHebiDefault() {
     std::vector<std::string> names;
 
     names.reserve(Actuator::kJointCountHebi);  // for efficiency

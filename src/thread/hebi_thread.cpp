@@ -98,8 +98,7 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
  * @param debug_mode Whether to output verbose debug text
  */
 HebiThread::HebiThread(QObject* parent, const bool& debug_mode)
-    : HebiThread(parent, {"LIBRA"}, Actuator::GetDefaultHebiActuatorList(),
-                 debug_mode) {}
+    : HebiThread(parent, {"LIBRA"}, Actuator::GetHebiDefault(), debug_mode) {}
 
 /**
  * @brief Standard constructor.
