@@ -70,7 +70,7 @@ class MainWindow : public QMainWindow {
 #endif
 
     void HandleActuatorFeedback(
-        const std::unordered_map<Actuator::Name, double>& feedbacks,
+        const std::unordered_map<Joint::Name, double>& feedbacks,
         const Actuator::Feedback feedback_type);
     void HandleActuatorStatus(const QString& status, const Actuator::Type type);
 

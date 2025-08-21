@@ -6,7 +6,8 @@
 ################################################################################
 
 # Add module subdirectories
-# - Top-level dependencies
+# - Top-level dependencies (order matters!)
+add_subdirectory(common)
 add_subdirectory(util)
 add_subdirectory(logger)
 # - "Manager"-type modules

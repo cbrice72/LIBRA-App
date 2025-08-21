@@ -63,7 +63,7 @@ enum class Type : uint8_t {
  *
  * @see GetHebiDefault HebiThread::run
  */
-enum class Name : uint8_t {
+enum Name : uint8_t {
 #if LIBRA_VERSION == 1
     kMA = 0,  // HEBI
     kMB,      // HEBI
@@ -85,7 +85,12 @@ enum class Name : uint8_t {
  *
  * @see AbstractActuatorThread::ReportStatus
  */
-enum class Feedback : uint8_t { kTargetPos = 0, kActualPos, kActualTorque };
+enum Feedback : uint8_t {
+    kTargetPos = 0,
+    kActualPos,
+    kActualVel,
+    kActualTorque
+};
 
 //------------------------------------------------------------------------------
 // !Conversion Functions

@@ -274,7 +274,7 @@ void EposThread::run() {
                                                err_code, kNodeID));
         }
         // clang-format off
-        emit ReportFeedback({{Actuator::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
+        emit ReportFeedback({{Joint::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
                             Actuator::Feedback::kTargetPos);
         // clang-format on
 
@@ -284,7 +284,7 @@ void EposThread::run() {
                                                             err_code, kNodeID));
         }
         // clang-format off
-        emit ReportFeedback({{Actuator::Name::kYaw, a_pos * kIncToDeg}},
+        emit ReportFeedback({{Joint::Name::kYaw, a_pos * kIncToDeg}},
                             Actuator::Feedback::kActualPos);
         // clang-format on
 

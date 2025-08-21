@@ -45,7 +45,7 @@ enum class Type : uint8_t { kRoll = 0, kPitch, kYaw };
  *
  * @see Actuator::Name
  */
-enum class Name : uint8_t {
+enum Name : uint8_t {
 #if LIBRA_VERSION == 1
     kRoll = 0,
     kPitch,
@@ -62,6 +62,36 @@ enum class Name : uint8_t {
 //------------------------------------------------------------------------------
 // !Conversion Functions
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Converts joint `Name` enum value to its corresponding string name.
+ *
+ * @param name Named enum value of the joint
+ * @return std::string String name of the corresponding joint
+ */
+inline std::string NameEnumToString(Name name) {
+    switch (name) {
+#if LIBRA_VERSION == 1
+        case Name::kRoll:
+            return "Roll";
+        case Name::kPitch:
+            return "Pitch";
+        case Name::kJ1:
+            return "J1";
+        case Name::kJ2:
+            return "J2";
+        case Name::kJ3:
+            return "J3";
+#elif LIBRA_VERSION == 2
+        case Name::kYaw:
+            return "Yaw";
+        case Name::kPitch:
+            return "Pitch";
+#endif
+        default:
+            return "Undefined";
+    }
+}
 
 /**
  * @brief Converts a 1-DoF actuator's real position to its joint's effective
@@ -87,16 +117,16 @@ inline double ActuatorToJointSimple(Joint::Name joint, double val) {
                    "complex system! Please use ActuatorToJointDifferential."
                 << std::endl;
             return 0;
-        case Actuator::Name::kJ1:
+        case Joint::Name::kJ1:
             return val;
-        case Actuator::Name::kJ2:
+        case Joint::Name::kJ2:
             return -val;
-        case Actuator::Name::kJ3:
+        case Joint::Name::kJ3:
             return -val;
 #elif LIBRA_VERSION == 2
-        case Actuator::Name::kPitch:
+        case Joint::Name::kPitch:
             return val;  // TODO: verify this
-        case Actuator::Name::kYaw:
+        case Joint::Name::kYaw:
             return val;  // TODO: verify this
 #endif
         default:

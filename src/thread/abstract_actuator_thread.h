@@ -16,6 +16,7 @@
 
 // Project Headers
 #include "actuator_defs.h"
+#include "joint_defs.h"
 #include "logger.h"
 
 /**
@@ -60,9 +61,8 @@ class AbstractActuatorThread : public QThread {
 
     void Connected(const bool& connected);
 
-    void ReportFeedback(
-        const std::unordered_map<Actuator::Name, double>& feedbacks,
-        const Actuator::Feedback feedback_type);
+    void ReportFeedback(const std::unordered_map<Joint::Name, double>& feedbacks,
+                        const Actuator::Feedback feedback_type);
     void ReportStatus(const QString& status, const Actuator::Type type);
 
     void ErrorThrown(const QString& err);
