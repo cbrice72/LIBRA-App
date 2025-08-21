@@ -31,37 +31,10 @@ class MainWindow;
 
 QT_END_NAMESPACE
 
-/**
- * @brief LIBRA joint names (not to be confused with -actuator- names).
- *
- * @note In most cases, a joint name will be identical to the actuator's name.
- *       However, more complex joints (those driven by multiple actuators, such
- *       as a differential drive) will differ in names. Since the user commands
- *       joint angles -- NOT actuator angles -- a distinction must be made.
- *
- * @note To keep logic simple, joints with the same name as their corresponding
- *       actuator are defined first. For all other joints, let the compiler
- *       decide what the enum resolves to.
- *
- * @see Actuator::Name
- */
-enum Joint {
-#if LIBRA_VERSION == 1
-    kJ1 = Actuator::Name::kJ1,
-    kJ2 = Actuator::Name::kJ2,
-    kJ3 = Actuator::Name::kJ3,
-    kRoll,
-    kPitch,
-#elif LIBRA_VERSION == 2
-    kYaw = Actuator::Name::kYaw,
-    kPitch = Actuator::Name::kPitch
-#endif
-};
-
 // Type alias for conveniently accessing a feedback label, where rows are
-// joints and columns are feedback types (order follows MainWindow UI layout)
-using FeedbackElementMapOfMaps =
-    std::unordered_map<Joint, std::unordered_map<Actuator::Feedback, QLabel*>>;
+// joints and columns are feedback types
+using FeedbackElementMapOfMaps = std::unordered_map<
+    Joint::Name, std::unordered_map<Actuator::Feedback, QLabel*>>;
 
 /**
  * @brief The main command app window.

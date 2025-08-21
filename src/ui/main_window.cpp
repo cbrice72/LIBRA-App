@@ -527,54 +527,54 @@ void MainWindow::InitializeThreads() {
  *
  * @note Only used in constructor - placed in own function to improve readability.
  *
- * @see Joint::Name Actuator::Feedback
+ * @see Joint::Name Actuator::Feedback HandleActuatorFeedback
  */
 void MainWindow::InitializeFeedbackElementMap() {
     // Central joint
 #if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kTargetPos] =
         ui_->l_target_roll;
-    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualPos] =
         ui_->l_actual_roll;
-    feedback_element_map_[Joint::kRoll][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_roll;
 #elif LIBRA_VERSION == 2
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kTargetPos] =
         ui_->l_target_yaw;
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualPos] =
         ui_->l_actual_yaw;
-    feedback_element_map_[Joint::kYaw][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_yaw;
 #endif
 
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kTargetPos] =
         ui_->l_target_pitch;
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualPos] =
         ui_->l_actual_pitch;
-    feedback_element_map_[Joint::kPitch][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_pitch;
 
     // Arm
 #if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j1;
-    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j1;
-    feedback_element_map_[Joint::kJ1][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j1;
 
-    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j2;
-    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j2;
-    feedback_element_map_[Joint::kJ2][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j2;
 
-    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kTargetPos] =
         ui_->l_target_j3;
-    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kActualPos] =
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j3;
-    feedback_element_map_[Joint::kJ3][Actuator::Feedback::kActualTorque] =
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j3;
 #endif
 }
@@ -781,38 +781,36 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
 void MainWindow::HandleActuatorFeedback(
     const std::unordered_map<Actuator::Name, double>& feedbacks,
     const Actuator::Feedback feedback_type) {
+    // Simple lambda to wrap the try-catch for updating the UI label
+    auto update_ui = [&](Joint::Name joint, double value) {
+        try {
+            // Index into matching label using map-of-maps initialized in constructor
+            feedback_element_map_.at(joint)
+                .at(feedback_type)
+                ->setText(QString::number(value, 'f', kPrecision));
+        } catch (const std::out_of_range&) {
+            logger_->Error(
+                "No UI element mapped to joint " + NameEnumToString(joint)
+                + " (" + std::to_string(static_cast<int>(joint))
+                + ") and feedback type " + FeedbackEnumToString(feedback_type)
+                + " (" + std::to_string(static_cast<int>(feedback_type)) + ")");
+        }
+    };
+
     // Handle complex joints first
 #if LIBRA_VERSION == 1
     // Special Case: MA and MB differential drive -> Roll and Pitch
-    const auto ma = feedbacks.find(Actuator::Name::kMA);
-    const auto mb = feedbacks.find(Actuator::Name::kMB);
+    const double ma = feedbacks.at(Actuator::Name::kMA)->second;
+    const double mb = feedbacks.at(Actuator::Name::kMB)->second;
 
-    if (ma != feedbacks.end() && mb != feedbacks.end()) {
-        const double ma_val = ma->second;
-        const double mb_val = mb->second;
-
-        /*
-         * From our forward mapping at the `emit CommandHebi()` call:
-         *   MA = -roll - pitch
-         *   MB = -roll + pitch
-         * Combine the equations and solve:
-         *   MA + MB = -2 * roll    ->   roll  = -(MA + MB) / 2
-         *   MA - MB = -2 * pitch   ->   pitch = -(MA - MB) / 2
-         */
-        feedback_element_map_.at(Joint::kRoll)
-            .at(feedback_type)
-            ->setText(
-                QString::number(-(ma_val + mb_val) / 2.0, 'f', kPrecision));
-
-        feedback_element_map_.at(Joint::kPitch)
-            .at(feedback_type)
-            ->setText(
-                QString::number(-(ma_val - mb_val) / 2.0, 'f', kPrecision));
-    }
+    update_ui(Joint::Name::kRoll,
+              Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma, mb));
+    update_ui(Joint::Name::kPitch,
+              Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma, mb));
 
     // Special Case: Manipulator Arduino (SerialServo) corrects for J3's pitch
     if (feedback_type == Actuator::Feedback::kActualPos) {
-        emit InformPitch(feedbacks.find(Actuator::Name::kJ3)->second);
+        emit InformPitch(feedbacks.at(Actuator::Name::kJ3)->second);
     }
 #endif
 
@@ -824,29 +822,11 @@ void MainWindow::HandleActuatorFeedback(
             || feedback.first == Actuator::Name::kMB) {
             continue;
         }
-
-        // Ensure the mechanically-inverted J2 matches operator perspective
-        double sign = ((feedback.first == Actuator::Name::kJ2)
-                       || (feedback.first == Actuator::Name::kJ3))
-                          ? -1.0
-                          : 1.0;
 #endif
-        try {
-            // Index into relevant UI label using the map-of-maps initialized
-            // in the constructor (we can static cast Actuator::Name to Joint
-            // for 1:1 cases)
-            feedback_element_map_.at(static_cast<Joint>(feedback.first))
-                .at(feedback_type)
-                ->setText(
-                    QString::number(feedback.second * sign, 'f', kPrecision));
-        } catch (const std::out_of_range&) {
-            logger_->Error(
-                "No UI element mapped to joint "
-                + NameEnumToString(feedback.first) + " ("
-                + std::to_string(static_cast<int>(feedback.first))
-                + ") and feedback type " + FeedbackEnumToString(feedback_type)
-                + " (" + std::to_string(static_cast<int>(feedback_type)) + ")");
-        }
+
+        // Update the UI using the joint name derived from the actuator name
+        update_ui(static_cast<Joint::Name>(feedback.first),
+                  Joint::ActuatorToJointSimple(feedback.first, feedback.second));
     }
 }
 
