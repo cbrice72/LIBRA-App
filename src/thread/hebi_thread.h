@@ -50,6 +50,7 @@ class HebiThread : public AbstractActuatorThread
     // NOLINTEND
 
   public:
+    explicit HebiThread(QObject* parent, const bool& debug_mode = false);
     explicit HebiThread(QObject* parent, std::vector<std::string> families,
                         std::vector<std::string> names,
                         const bool& debug_mode = false);

@@ -436,13 +436,7 @@ void MainWindow::InitializeDeviceManagers() {
 void MainWindow::InitializeThreads() {
     // ========== HEBI Thread ==========
 
-    hebi_thread_ = new HebiThread(this, {"LIBRA"},
-#if LIBRA_VERSION == 1
-                                  {"MA", "MB", "J1", "J2", "J3"},
-#elif LIBRA_VERSION == 2
-                                  {"Pitch"},
-#endif
-                                  debug_mode_);
+    hebi_thread_ = new HebiThread(this, debug_mode_);  // use easy constructor
 
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
