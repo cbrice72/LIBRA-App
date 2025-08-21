@@ -415,24 +415,17 @@ void HebiThread::PublishState() {
     // Define a lambda to make actuator-to-joint value conversion via loop easier
     auto get_joint_value = [&](uint8_t i, double val) {
         // NOTE: index-wise, we assume MA = Roll and MB = Pitch for simplicity
-        auto actuator = static_cast<Actuator::Name>(i);
-        if (actuator == Actuator::Name::kMA) {
-            // Get Roll
-            double ma_val = val;
+        auto joint = static_cast<Joint::Name>(i);
+        if (joint == Joint::Name::kRoll || joint == Joint::Name::kPitch) {
+            // Special case: MA and MB differential drive -> Roll and Pitch
+            double ma_val = eedback_->getPosition()[static_cast<uint8_t>(
+                Actuator::Name::kMA)];
             double mb_val = feedback_->getPosition()[static_cast<uint8_t>(
                 Actuator::Name::kMB)];
-            return Joint::ActuatorToJointDifferential(Joint::Name::kRoll,
-                                                      ma_val, mb_val);
-        } else if (actuator == Actuator::Name::kMB) {
-            // Get Pitch
-            double ma_val = feedback_->getPosition()[static_cast<uint8_t>(
-                Actuator::Name::kMA)];
-            double mb_val = val;
-            return Joint::ActuatorToJointDifferential(Joint::Name::kPitch,
-                                                      ma_val, mb_val);
+            return Joint::ActuatorToJointDifferential(joint, ma_val, mb_val);
         } else {
-            // All others
-            return Joint::ActuatorToJointSimple(actuator, val);
+            // Regular 1-DoF joints
+            return Joint::ActuatorToJointSimple(joint, val);
         }
     };
 
