@@ -1019,9 +1019,9 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
         ui_->pb_camera_flip_h->setEnabled(false);
         ui_->pb_camera_flip_v->setEnabled(false);
 
-        logger_->Info("No cameras were found");
+        logger_->Info("  No cameras found");
     } else {
-        logger_->Debug("Found " + std::to_string(available_cameras_.size())
+        logger_->Debug("  Found " + std::to_string(available_cameras_.size())
                        + " cameras");
     }
 }
