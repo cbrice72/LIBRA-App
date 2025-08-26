@@ -585,6 +585,10 @@ void HebiThread::Connect() {
     emit Connected(true);
 
     // Load robot kinematics
+    // TODO: this doesn't seem to help at all since the HRDF format is too
+    //       limited to model the LIBRA-I's differential joint. However, it may
+    //       be useful for LIBRA-II.
+    /*
     model_ = hebi::robot_model::RobotModel::loadHRDF(
         "./bin/shared/hebi/libra.hrdf");
     if (model_ == nullptr) {
@@ -592,6 +596,7 @@ void HebiThread::Connect() {
         return;
     }
     model_->getMasses(model_masses_);
+    */
 
     // Command actuator(s) to hold current position
     group_ = group;
@@ -639,6 +644,11 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                          "connected actuators!");
         return;
     }
+
+    /* NOTE: the following trajectory generation method is theoretically better
+             (it was added in a newer version of the HEBI API), but in practice
+             it results in very unstable oscillations. Therefore, a simpler
+             method is used below.
 
     // Populate positions
     Eigen::MatrixXd pos(n_actuators_, 2);
