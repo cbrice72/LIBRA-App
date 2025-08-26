@@ -651,6 +651,8 @@ void MainWindow::HandleManipConnChanged(const bool& connected) {
     ui_->a_manip_connect->setEnabled(!connected);
     ui_->a_manip_disconnect->setEnabled(connected);
 
+    ui_->a_manip_enable_auto_correction->setEnabled(connected);
+
     // UI widgets
     ui_->pb_manip_slow->setEnabled(connected);
     ui_->pb_manip_fast->setEnabled(connected);
@@ -678,6 +680,9 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     // Menu bar
     ui_->a_water_connect->setEnabled(!connected);
     ui_->a_water_disconnect->setEnabled(connected);
+
+    ui_->a_water_set_empty->setEnabled(connected);
+    ui_->a_water_set_full->setEnabled(connected);
 
     // UI widgets
     ui_->pb_water_fill_A->setEnabled(connected);
@@ -966,7 +971,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
 
 /**
  * @brief Event handler for "Actuators/HEBI" menu action "Torque compensation
- *        settings". Opens a dialog to configure torque compensation bounds.
+ *        bounds...". Opens a dialog to configure torque compensation bounds.
  */
 void MainWindow::on_a_hebi_central_torque_comp_triggered() {
     if (hebi_thread_ == nullptr) {
@@ -990,8 +995,8 @@ void MainWindow::on_a_hebi_central_torque_comp_triggered() {
 }
 
 /**
- * @brief Event handler for "Sensors/RealSense" menu action "Refresh Camera
- *        List". Populates the "Camera" tab's ComboBox with all detected cameras.
+ * @brief Event handler for "Sensors/Camera" menu action "Refresh Camera List".
+ *        Populates the "Camera" tab's ComboBox with all detected cameras.
  */
 void MainWindow::on_a_refresh_camera_list_triggered() {
     logger_->Debug("Checking available video inputs...");

@@ -3213,9 +3213,9 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
     <property name="title">
      <string>Sensors</string>
     </property>
-    <widget class="QMenu" name="m_realsense">
+    <widget class="QMenu" name="m_camera">
      <property name="title">
-      <string>RealSense</string>
+      <string>Camera</string>
      </property>
      <addaction name="separator"/>
      <addaction name="a_refresh_camera_list"/>
@@ -3227,9 +3227,8 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_lidar_connect"/>
      <addaction name="a_lidar_disconnect"/>
      <addaction name="separator"/>
-     <addaction name="a_lidar_about"/>
     </widget>
-    <addaction name="m_realsense"/>
+    <addaction name="m_camera"/>
     <addaction name="m_lidar"/>
    </widget>
    <widget class="QMenu" name="m_quick_actions">
@@ -3350,14 +3349,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
     <string>Disconnect</string>
    </property>
   </action>
-  <action name="a_lidar_about">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>About</string>
-   </property>
-  </action>
   <action name="a_debug_mode">
    <property name="checkable">
     <bool>true</bool>
@@ -3370,11 +3361,17 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    </property>
   </action>
   <action name="a_water_set_empty">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Set empty (0%)</string>
    </property>
   </action>
   <action name="a_water_set_full">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Set full (100%)</string>
    </property>
