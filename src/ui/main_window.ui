@@ -3188,9 +3188,13 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_hebi_connect"/>
      <addaction name="a_hebi_disconnect"/>
      <addaction name="separator"/>
+     <addaction name="a_hebi_load_gains"/>
+     <addaction name="a_hebi_log_start"/>
+     <addaction name="a_hebi_log_stop"/>
+     <addaction name="separator"/>
      <addaction name="a_hebi_override_limits"/>
-     <addaction name="a_hebi_model_based_comp"/>
      <addaction name="a_hebi_central_torque_comp"/>
+     <addaction name="a_hebi_model_based_comp"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3278,11 +3282,17 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    <property name="checked">
     <bool>false</bool>
    </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Override pos. limits</string>
    </property>
   </action>
   <action name="a_hebi_central_torque_comp">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Torque compensation bounds...</string>
    </property>
@@ -3319,6 +3329,9 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    </property>
    <property name="checked">
     <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Enable pitch auto-correct</string>
@@ -3385,8 +3398,35 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Model-based compensation</string>
+   </property>
+  </action>
+  <action name="a_hebi_load_gains">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Load new gains...</string>
+   </property>
+  </action>
+  <action name="a_hebi_log_start">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Start Hebilog</string>
+   </property>
+  </action>
+  <action name="a_hebi_log_stop">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Stop Hebilog</string>
    </property>
   </action>
  </widget>

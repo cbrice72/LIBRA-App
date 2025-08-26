@@ -65,8 +65,14 @@ class HebiThread : public AbstractActuatorThread
     void SetTarget(const std::vector<double>& deg) override;
     void Stop() override;
 
-    void SetModelBasedComp(const bool& enabled);
-    void SetTorqueControl(const bool& enabled);
+    void LoadGains(const QString& file_path);
+    void StartHebiLog();
+    void StopHebiLog();
+
+    // --- Control Algorithm Settings ---
+
+    void EnableModelBasedComp(const bool& enabled);
+    void EnableTorqueControl(const bool& enabled);
     void SetTorqueCompBounds(const double& lower, const double& upper);
 
   signals:
@@ -109,6 +115,8 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<hebi::Group> group_;
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
+
+    bool logging_active_{false};
 
     /* Improve performance of GetStatus() by allocating these vectors here
       (the `mutable` keyword allows a const function to modify class members) */

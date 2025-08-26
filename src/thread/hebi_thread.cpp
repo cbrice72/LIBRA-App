@@ -34,6 +34,7 @@
  * !Class Helpers
  * !Thread Overrides
  * !Actuator Commands (slots)
+ * !Control Algorithm Settings (slots)
  */
 
 // Improving Readability of Conversions
@@ -597,23 +598,7 @@ void HebiThread::Connect() {
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());
 
-    // Ensure a log directory exists (or else group_->startLog()  will fail!)
-    const QDir log_dir("./log");
-    if (!log_dir.exists()) {
-        if (!log_dir.mkpath(".")) {
-            emit ErrorThrown("HEBI - Failed to create log directory");
-            return;
-        }
-    }
-
-    // Start logging
-    const std::string log_path = group_->startLog("./log");
-    if (log_path.empty()) {
-        emit ErrorThrown("HEBI - Log directory (log/) does not exist in CWD!");
-        return;
-    }
-
-    logger_->Debug("HEBI - Creating log file at" + log_path);
+    StartHebiLog();
 }
 
 /**
@@ -627,8 +612,7 @@ void HebiThread::Disconnect() {
     Stop();
 
     if (group_ != nullptr) {
-        // Stop logging
-        group_->stopLog();
+        StopHebiLog();
 
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
@@ -727,12 +711,102 @@ void HebiThread::Stop() {
 }
 
 /**
+ * @brief Loads new PID gains for the connected actuators.
+ *
+ * @param file_path Path to an XML gains file
+ */
+void HebiThread::LoadGains(const QString& file_path) {
+    if (group_ == nullptr) {
+        emit ErrorThrown("HEBI - Can't load gains; not connected!");
+        return;
+    }
+
+    if (!command_->readGains(file_path.toStdString())) {
+        emit ErrorThrown("HEBI - Failed to load gains from: " + file_path);
+        return;
+    }
+
+    if (!group_->sendCommandWithAcknowledgement(*command_, kTimeout)) {
+        emit ErrorThrown(
+            "HEBI - Didn't receive acknowledgement from gains update!");
+        return;
+    }
+
+    command_->clear();
+    logger_->Info("HEBI - Successfully loaded gains from: "
+                  + file_path.toStdString());
+}
+
+/**
+ * @brief Starts HEBI logging.
+ *
+ * @note Hebilog file names default to the following format:
+ *       `log_file_YYYY-MM-DD_HH-MM-SS.MSS.hebilog`
+ */
+void HebiThread::StartHebiLog() {
+    if (group_ == nullptr) {
+        emit ErrorThrown("HEBI - Can't start logging; not connected!");
+        return;
+    }
+
+    if (logging_active_) {
+        logger_->Warn("HEBI - Logging is already active");
+        return;
+    }
+
+    // Ensure a log directory exists (or else group_->startLog() will fail!)
+    const QDir log_dir("./log");
+    if (!log_dir.exists()) {
+        if (!log_dir.mkpath(".")) {
+            emit ErrorThrown("HEBI - Failed to create log directory");
+            return;
+        }
+    }
+
+    // Start logging
+    const std::string log_path = group_->startLog("./log");
+    if (log_path.empty()) {
+        emit ErrorThrown("HEBI - Failed to start logging! Ensure log directory "
+                         "(log/) exists in CWD.");
+        return;
+    }
+    logging_active_ = true;
+
+    logger_->Info("HEBI - Started logging to: " + log_path);
+}
+
+/**
+ * @brief Stops HEBI logging.
+ */
+void HebiThread::StopHebiLog() {
+    if (group_ == nullptr) {
+        logger_->Warn("HEBI - Can't stop logging; not connected!");
+        return;
+    }
+
+    if (!logging_active_) {
+        logger_->Warn("HEBI - Logging is not currently active");
+        return;
+    }
+
+    // Stop logging
+    group_->stopLog();
+    logging_active_ = false;
+
+    logger_->Info("HEBI - Stopped logging");
+}
+
+//------------------------------------------------------------------------------
+// !Control Algorithm Settings (slots)
+//------------------------------------------------------------------------------
+
+/**
  * @brief Sets the state of automatic dynamic/gravity compensation based on the
  *        loaded HRDF model.
  *
  * @param enabled Whether to compensate for inertia/gravity
  */
-void HebiThread::SetModelBasedComp(const bool& enabled) {
+void HebiThread::EnableModelBasedComp(const bool& enabled) {
     logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
                    + " model-based dynamic compensation");
 
@@ -744,7 +818,7 @@ void HebiThread::SetModelBasedComp(const bool& enabled) {
  *
  * @param enabled Whether to control torque experienced by the central joint
  */
-void HebiThread::SetTorqueControl(const bool& enabled) {
+void HebiThread::EnableTorqueControl(const bool& enabled) {
     logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
                    + " torque-based movement control");
 

@@ -15,6 +15,7 @@
 
 // Other Library Headers
 #include <QDateTime>                    // Qt::Core
+#include <QFileDialog>                  // Qt::Widgets
 #include <QMessageBox>                  // Qt::Widgets
 #include <QRegularExpressionValidator>  // Qt::Gui
 
@@ -441,10 +442,6 @@ void MainWindow::InitializeThreads() {
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             hebi_thread_, &HebiThread::SetDebugMode);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // central joint comp
-            hebi_thread_, &HebiThread::SetTorqueControl);
-    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // auto-comp
-            hebi_thread_, &HebiThread::SetModelBasedComp);
 
     connect(ui_->a_hebi_connect, &QAction::triggered,  // connect to HEBI
             hebi_thread_, &HebiThread::Connect);
@@ -453,10 +450,22 @@ void MainWindow::InitializeThreads() {
 
     connect(this, &MainWindow::CommandHebi,  // update HEBI target(s)
             hebi_thread_, &HebiThread::SetTarget);
-    connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
-            hebi_thread_, &HebiThread::SetTorqueCompBounds);
     connect(ui_->pb_arm_stop, &QPushButton::clicked,  // stop ALL actuators
             hebi_thread_, &HebiThread::Stop);
+
+    connect(this, &MainWindow::LoadHebiGains,  // load new gains
+            hebi_thread_, &HebiThread::LoadGains);
+    connect(ui_->a_hebi_log_start, &QAction::triggered,  // start new hebilog
+            hebi_thread_, &HebiThread::StartHebiLog);
+    connect(ui_->a_hebi_log_stop, &QAction::triggered,  // stop current hebilog
+            hebi_thread_, &HebiThread::StopHebiLog);
+
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // central joint comp
+            hebi_thread_, &HebiThread::EnableTorqueControl);
+    connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
+            hebi_thread_, &HebiThread::SetTorqueCompBounds);
+    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // auto-comp
+            hebi_thread_, &HebiThread::EnableModelBasedComp);
 
     // MainWindow slots
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
@@ -725,6 +734,14 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     ui_->a_hebi_connect->setEnabled(!connected);
     ui_->a_hebi_disconnect->setEnabled(connected);
 
+    ui_->a_hebi_load_gains->setEnabled(connected);
+    ui_->a_hebi_log_start->setEnabled(connected);
+    ui_->a_hebi_log_start->setEnabled(connected);
+
+    ui_->a_hebi_override_limits->setEnabled(connected);
+    ui_->a_hebi_central_torque_comp->setEnabled(connected);
+    ui_->a_hebi_model_based_comp->setEnabled(connected);
+
     // UI widgets
     ui_->pb_arm_start->setEnabled(connected);
     if (connected) {
@@ -857,14 +874,38 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 }
 
 /**
- * @brief Event handler for "Actuators/HEBI" menu action "Override Pos. Limits".
+ * @brief Event handler for "Actuators/HEBI" menu action "Load new gains...".
+ *        Opens a file dialog to select and load a new gains file.
+ */
+void MainWindow::on_a_hebi_load_gains_triggered() {
+    if (hebi_thread_ == nullptr) {
+        logger_->Warn("HEBI thread not available - cannot load gains");
+        return;
+    }
+
+    QString file_path = QFileDialog::getOpenFileName(this,
+                                                     "Select HEBI Gains File",
+                                                     "./bin/shared/hebi/",
+                                                     "XML Files (*.xml)");
+
+    if (file_path.isEmpty()) {
+        logger_->Debug("Gains file selection cancelled by user");
+        return;
+    }
+
+    emit LoadHebiGains(file_path);
+}
+
+/**
+ * @brief Event handler for "Actuators/HEBI" menu action "Override pos. limits".
  *        Toggles input SpinBox and Slider limits.
  */
 void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
     if (checked) {
         logger_->Debug("Overriding HEBI position limits");
 
-        // Set override limits (-360 to 360 degrees)
+        // Set override limits (full circle in either direction)
+        // NOLINTBEGIN(readability-magic-numbers)
         ui_->hs_arm_pitch->setRange(-360, 360);
         ui_->sb_arm_pitch->setRange(-360.0, 360.0);
 
@@ -884,6 +925,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
         ui_->hs_arm_yaw->setRange(-360, 360);
         ui_->sb_arm_yaw->setRange(-360.0, 360.0);
 #endif
+        // NOLINTEND(readability-magic-numbers)
     } else {
         logger_->Debug("Restoring HEBI position limits");
 
