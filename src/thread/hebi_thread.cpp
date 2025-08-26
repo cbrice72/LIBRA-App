@@ -672,26 +672,48 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     Eigen::VectorXd t_waypoint =
         hebi::trajectory::Trajectory::segmentTimesToWaypointTimes(t_segment);
 
-    // TODO: I'd like to compare this with the HEBI-generated times above
-    /*
-    // Compute trajectory duration for each joint to find the max
-    double pos_max_diff = 0;
-    for (auto i = 0; i < n_actuators_; i++) {
-        pos_max_diff = std::max(abs(pos(i, 1) - pos(i, 0)), pos_max_diff);
-    }
-
-    Eigen::VectorXd t_trajectory(2);
-    t_trajectory << 0, pos_max_diff / kMaxVel;
-    */
-
     // Log start time and create trajectory
     // NOTE: let QP solver handle vel and accel by setting the parameters
     //       "velocities" and "accelerations" to nullptr
     trajectory_start_time_ = std::chrono::steady_clock::now();
-    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint,
-                                                                      pos,
-                                                                      nullptr,
-                                                                      nullptr);
+    trajectory_ =
+        hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint, pos,
+                                                            nullptr, nullptr);
+    */
+
+    // Make position, velocity, and acceleration commands for start & end points
+    Eigen::MatrixXd pos(n_actuators_, 2);
+    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
+    Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(n_actuators_, 2);    // default
+    Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(n_actuators_, 2);  // default
+
+    std::stringstream trajectory_ss;  // for debug only
+
+    // Populate positions
+    group_->getNextFeedback(*feedback_);
+    pos.col(0) = feedback_->getPosition();  // start (current value)
+    for (auto i = 0; i < target.size(); ++i) {
+        pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
+        if (debug_mode_) {
+            trajectory_ss << std::to_string(pos(i, 1)) << "";
+        }
+    }
+
+    // Determine greatest change in position for calculating trajectory times
+    double max_difference = 0;
+    for (auto i = 0; i < n_actuators_; i++) {
+        max_difference = std::max(abs(pos(i, 1) - pos(i, 0)), max_difference);
+    }
+
+    // Calculate trajectory start and end times
+    Eigen::VectorXd time(2);
+    time << 0, max_difference / kMaxVel;
+
+    // Log start time and create trajectory
+    trajectory_start_time_ = std::chrono::steady_clock::now();
+    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
+                                                                      &vel,
+                                                                      &accel);
 
     logger_->Debug("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
