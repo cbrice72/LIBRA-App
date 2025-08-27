@@ -588,6 +588,30 @@ void MainWindow::InitializeFeedbackElementMap() {
 #endif
 }
 
+/**
+ * @brief Allows user to select a physical serial device and commands
+ *        ArduinoManager to connect to it as the "SerialWater" device.
+ */
+void MainWindow::ConnectWaterHelper() {
+    // Prompt user to select a serial device
+    OpenSerialDialog dialog(this, QString("SerialWater"));
+    QString port_name;
+
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            logger_->Error("No port selected!");
+            return;
+        }
+    } else {
+        logger_->Debug("Port selection cancelled by user");
+        return;
+    }
+
+    emit ConnectWater(port_name);
+}
+
 #if LIBRA_VERSION == 1
 /**
  * @brief Allows user to select a physical serial device and commands
@@ -613,30 +637,6 @@ void MainWindow::ConnectManipHelper() {
     emit ConnectManip(port_name);
 }
 #endif
-
-/**
- * @brief Allows user to select a physical serial device and commands
- *        ArduinoManager to connect to it as the "SerialWater" device.
- */
-void MainWindow::ConnectWaterHelper() {
-    // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialWater"));
-    QString port_name;
-
-    if (dialog.exec() == QDialog::Accepted) {
-        port_name = dialog.GetSelectedPortName();
-
-        if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
-            return;
-        }
-    } else {
-        logger_->Debug("Port selection cancelled by user");
-        return;
-    }
-
-    emit ConnectWater(port_name);
-}
 
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
