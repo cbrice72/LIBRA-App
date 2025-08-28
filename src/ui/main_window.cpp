@@ -621,7 +621,8 @@ void MainWindow::InitializeFeedbackElementMap() {
  */
 void MainWindow::ConnectWaterHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialWater"), QString("TODO"));
+    OpenSerialDialog dialog(this, QString("SerialWater"),
+                            QString("Arduino Nano Every"));
     QString port_name;
 
     if (dialog.exec() == QDialog::Accepted) {
@@ -646,7 +647,8 @@ void MainWindow::ConnectWaterHelper() {
  */
 void MainWindow::ConnectManipHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialServo"), QString("TODO"));
+    OpenSerialDialog dialog(this, QString("SerialServo"),
+                            QString("Seeed XIAO M0"));
     QString port_name;
 
     if (dialog.exec() == QDialog::Accepted) {
