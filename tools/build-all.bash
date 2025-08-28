@@ -9,6 +9,7 @@ LIBRA_ROS2_TOOLS_DIR="$PROJECT_ROOT/LIBRA-ROS2-Tools"
 ROS2_WS_DIR="$LIBRA_ROS2_TOOLS_DIR/ros2_ws"
 INSTALL_DIR="$ROS2_WS_DIR/install"
 
+# Helper function for colorized output
 color_echo() {
   local level=$1
   shift
@@ -51,7 +52,7 @@ fi
 #-------------------------
 color_echo INFO "Sourcing ROS2 Humble environment..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 source /opt/ros/humble/setup.bash 2>/dev/null || {
     color_echo ERROR "> Unable to source a ROS2 Humble environment!\n          Please ensure it is installed at \"/opt/ros/humble\"."
@@ -62,7 +63,7 @@ color_echo INFO "Sourcing ROS2 Humble environment... SUCCESS"
 #-------------------------
 color_echo INFO "Building ROS2 workspace..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 cd "$ROS2_WS_DIR"
 colcon build --packages-up-to libra
@@ -71,7 +72,7 @@ color_echo INFO "Building ROS2 workspace... SUCCESS"
 #-------------------------
 color_echo INFO "Sourcing LIBRA ROS Tools environment..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 source $INSTALL_DIR/setup.bash 2>/dev/null || {
     color_echo ERROR "> Unable to source the LIBRA ROS Tools environment!\n          See colcon output for errors."
@@ -86,7 +87,7 @@ color_echo INFO "Sourcing LIBRA ROS Tools environment... SUCCESS"
 #-------------------------
 color_echo INFO "Building LIBRA App..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 cd "$PROJECT_ROOT"
 mkdir -p build && cd build
@@ -112,4 +113,4 @@ F_ELAPSED_TIME=$(printf "Script finished in %.2f s" "$ELAPSED_TIME")
 color_echo INFO "$F_ELAPSED_TIME"
 
 echo -e "\nYou may now run the app with the following command:"
-echo "  source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && ./build/<BUILD_TYPE>/libra_app_gui"
+echo "  source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && ./build/libra_app_gui"

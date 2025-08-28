@@ -9,7 +9,7 @@
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${PROJECT_ROOT}/cmake-format.yaml"
 
-# Helper function for colored output
+# Helper function for colorized output
 color_echo() {
   local level=$1
   shift
@@ -52,7 +52,7 @@ fi
 #-------------------------
 color_echo INFO "Globbing CMakeLists (excluding thirdparty)..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 # Explanation:
 #   "-path ..." matches a directory, and "-prune" tells it to not descend into the matched directory.
@@ -69,7 +69,7 @@ color_echo INFO "Globbing CMakeLists (excluding thirdparty)... SUCCESS"
 #-------------------------
 color_echo INFO "Formatting CMakeLists..."
 sleep 1
-SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
+SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
 for FILE in $CMAKE_FILES; do
   echo "Formatting: $FILE"
