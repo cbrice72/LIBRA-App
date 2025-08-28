@@ -8,6 +8,7 @@
 #   "cd ... && pwd" changes to the specified directory and gets its absolute path
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_FILE="${PROJECT_ROOT}/cmake-format.yaml"
+EXCLUDE_DIRS=("thirdparty" "LIBRA-ROS2-Tools" "lightwarelidar2" "realsense-ros")
 
 # Helper function for colorized output
 color_echo() {
@@ -50,18 +51,23 @@ if [[ ! -f "$CONFIG_FILE" ]]; then
   exit 1
 fi
 #-------------------------
-color_echo INFO "Globbing CMakeLists (excluding thirdparty)..."
+color_echo INFO "Globbing CMakeLists..."
 sleep 1
 SLEEP_TIME=$(echo "$SLEEP_TIME + 1" | bc)
 
+PRUNE_EXPR=""
+for DIR in "${EXCLUDE_DIRS[@]}"; do
+  # Explanation:
+  #   "-path ..." matches a directory, and "-prune" tells it to not descend into it.
+  #   "-o" is logical OR, so if a directory isn't matched, proceed to the next search.
+  PRUNE_EXPR="$PRUNE_EXPR -path $PROJECT_ROOT/$DIR -prune -o"
+done
 # Explanation:
-#   "-path ..." matches a directory, and "-prune" tells it to not descend into the matched directory.
-#   "-o" is logical OR, so if the directory isn't matched, proceed to the next search.
 #   "-type f -name ..." matches any files with the specified name.
 #   "-print" ensures that the path is saved only if the necessary match clause is met.
-CMAKE_FILES=$(find "$PROJECT_ROOT" -path "$PROJECT_ROOT/thirdparty" -prune -o -type f -name "CMakeLists.txt" -print)
+CMAKE_FILES=$(find "$PROJECT_ROOT" $PRUNE_EXPR -type f -name "CMakeLists.txt" -print)
 
-color_echo INFO "Globbing CMakeLists (excluding thirdparty)... SUCCESS"
+color_echo INFO "Globbing CMakeLists... SUCCESS"
 #-------------------------
 
 # ==================== (2) FORMAT ALL FILES ====================
