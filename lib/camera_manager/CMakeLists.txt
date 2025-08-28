@@ -12,7 +12,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
     # Additional dependencies for ROS2 integration
-    # - ROS2 Core, Messages
+    
+    # (1) ROS2 Core, Messages
     set(ROS_CORE_PACKAGES ament_cmake rclcpp)
     foreach(PKG ${ROS_CORE_PACKAGES})
         find_package(${PKG} REQUIRED)
@@ -23,7 +24,7 @@ if(BUILD_WITH_ROS2)
         find_package(${PKG} REQUIRED)
     endforeach()
 
-    # - ROS2-adjacent libraries
+    # (2) ROS2-adjacent libraries
     find_package(cv_bridge REQUIRED)
     find_package(OpenCV REQUIRED)
 endif()
@@ -57,5 +58,7 @@ if(BUILD_WITH_ROS2)
     # Additional includes and libraries for ROS2 integration
     target_include_directories(camera_manager PUBLIC ${OpenCV_INCLUDE_DIRS})
     target_link_libraries(camera_manager PRIVATE ${OpenCV_LIBS})
-    ament_target_dependencies(camera_manager PUBLIC rclcpp sensor_msgs cv_bridge)
+    ament_target_dependencies(
+        camera_manager PUBLIC rclcpp sensor_msgs cv_bridge
+    )
 endif()

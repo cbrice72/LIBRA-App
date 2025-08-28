@@ -9,5 +9,5 @@
 ################################################################################
 
 # Register interfaces (e.g., messages) before the nodes that use them
-add_subdirectory(interfaces)  # libra_interfaces (unused)
-add_subdirectory(nodes)  # minimal_pub_sub
+add_subdirectory(interfaces) # libra_interfaces (unused)
+add_subdirectory(nodes) # minimal_pub_sub

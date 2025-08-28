@@ -6,10 +6,12 @@
 ################################################################################
 
 # Add module subdirectories
-# - Top-level dependencies (order matters!)
+
+# (1) Top-level dependencies (order matters!)
 add_subdirectory(common)
 add_subdirectory(util)
 add_subdirectory(logger)
-# - "Manager"-type modules
+
+# (2) "Manager"-type modules
 add_subdirectory(arduino_manager)
 add_subdirectory(camera_manager)
