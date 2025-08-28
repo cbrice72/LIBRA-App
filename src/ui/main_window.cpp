@@ -378,6 +378,15 @@ void MainWindow::InitializeDeviceManagers() {
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             arduino_manager_, &ArduinoManager::SetDebugMode);
 
+    connect(this, &MainWindow::ConnectWater,  // connect water
+            arduino_manager_, &ArduinoManager::ConnectWater);
+    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
+            arduino_manager_, &ArduinoManager::DisconnectWater);
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // change water state
+            arduino_manager_, &ArduinoManager::SetAutoCompensation);
+    connect(this, &MainWindow::CommandWater,  // force update water command
+            arduino_manager_, &ArduinoManager::ForceWaterCommand);
+
 #if LIBRA_VERSION == 1
     connect(this, &MainWindow::ConnectManip,  // connect servos
             arduino_manager_, &ArduinoManager::ConnectManip);
@@ -389,18 +398,41 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::SetManipTarget);
 #endif
 
-    connect(this, &MainWindow::ConnectWater,  // connect water
-            arduino_manager_, &ArduinoManager::ConnectWater);
-    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
-            arduino_manager_, &ArduinoManager::DisconnectWater);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // change water state
-            arduino_manager_, &ArduinoManager::SetAutoCompensation);
-    connect(this, &MainWindow::CommandWater,  // force update water command
-            arduino_manager_, &ArduinoManager::ForceWaterCommand);
+    // TankWidget signals
+    connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
+            this, [this]() {
+                arduino_manager_->ForceWaterCommand(Water::Side::kA,
+                                                    Water::State::kStopped);
+            });
+
+    connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
+            this, [this]() {
+                arduino_manager_->ForceWaterCommand(Water::Side::kA,
+                                                    Water::State::kStopped);
+            });
+
+#if LIBRA_VERSION == 1
+    connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
+            this, [this]() {
+                arduino_manager_->ForceWaterCommand(Water::Side::kB,
+                                                    Water::State::kStopped);
+            });
+
+    connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
+            this, [this]() {
+                arduino_manager_->ForceWaterCommand(Water::Side::kB,
+                                                    Water::State::kStopped);
+            });
+#endif
 
     // MainWindow slots
     connect(arduino_manager_, &ArduinoManager::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
+
+    connect(arduino_manager_, &ArduinoManager::WaterConnected,  // update UI
+            this, &MainWindow::HandleWaterConnChanged);
+    connect(arduino_manager_, &ArduinoManager::ReportWaterStatus,  // get state
+            this, &MainWindow::HandleWaterStatus);
 
 #if LIBRA_VERSION == 1
     connect(arduino_manager_, &ArduinoManager::ManipConnected,  // update UI
@@ -408,11 +440,6 @@ void MainWindow::InitializeDeviceManagers() {
     connect(arduino_manager_, &ArduinoManager::ReportPosition,  // get position
             this, &MainWindow::HandleManipPosition);
 #endif
-
-    connect(arduino_manager_, &ArduinoManager::WaterConnected,  // update UI
-            this, &MainWindow::HandleWaterConnChanged);
-    connect(arduino_manager_, &ArduinoManager::ReportWaterStatus,  // get state
-            this, &MainWindow::HandleWaterStatus);
 
     // ========== Camera Manager ==========
 
@@ -702,14 +729,13 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
 /**
  * @brief Reflects fluid system status in the UI.
  *        - Primary visual feedback: formatted status string in "WATER" GroupBox
- *        - Secondary visual feedback: updates TankWidget(s) animation state
+ *        - Secondary visual feedback: updates animation state of TankWidget(s)
  *
  * @param side The side of the fluid system
  * @param state The flow state of the fluid system
  */
 void MainWindow::HandleWaterStatus(const Water::Side& side,
                                    const Water::State& state) {
-    // Display formatted status string - primary visual feedback
     switch (side) {
         case Water::Side::kA:
             ui_->l_water_status_A->setText(Water::StateEnumToString(state));
@@ -727,8 +753,6 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
                            + SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
     }
-
-    // Pass along to TankWidget(s) - secondary visual feedback
 }
 
 /**
