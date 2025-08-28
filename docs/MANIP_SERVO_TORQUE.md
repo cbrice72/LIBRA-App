@@ -1,5 +1,7 @@
 # Torque on Manipulator Servo No. 1
 
+**This document refers specifically to the first version of the LIBRA-I manipulator, which uses the weaker TowerPro "MG996R" servos.**
+
 After replacement of the USB webcam with the RealSense D456 and addition of the 2D LIDAR, the base tilt servo on the manipulator would rarely operate as expected. This document attempts to provide an explanation.
 
 ## Specifications
