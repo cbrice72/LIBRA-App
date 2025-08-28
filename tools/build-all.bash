@@ -35,7 +35,6 @@ color_echo() {
 
 # ==================== SCRIPT START ====================
 
-
 echo "Building LIBRA App with ROS2 integration..."
 sleep 1;  # let user see this message
 
@@ -51,7 +50,7 @@ if [ ! -d "$LIBRA_ROS2_TOOLS_DIR" ] || [ ! "$(ls -A "$LIBRA_ROS2_TOOLS_DIR" 2>/d
 fi
 #-------------------------
 color_echo INFO "Sourcing ROS2 Humble environment..."
-sleep 2
+sleep 1
 SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
 
 source /opt/ros/humble/setup.bash 2>/dev/null || {
@@ -62,7 +61,7 @@ source /opt/ros/humble/setup.bash 2>/dev/null || {
 color_echo INFO "Sourcing ROS2 Humble environment... SUCCESS"
 #-------------------------
 color_echo INFO "Building ROS2 workspace..."
-sleep 2
+sleep 1
 SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
 
 cd "$ROS2_WS_DIR"
@@ -71,7 +70,7 @@ colcon build --packages-up-to libra
 color_echo INFO "Building ROS2 workspace... SUCCESS"
 #-------------------------
 color_echo INFO "Sourcing LIBRA ROS Tools environment..."
-sleep 2
+sleep 1
 SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
 
 source $INSTALL_DIR/setup.bash 2>/dev/null || {
@@ -86,7 +85,7 @@ color_echo INFO "Sourcing LIBRA ROS Tools environment... SUCCESS"
 
 #-------------------------
 color_echo INFO "Building LIBRA App..."
-sleep 2
+sleep 1
 SLEEP_TIME=$(echo "$SLEEP_TIME + 2" | bc)
 
 cd "$PROJECT_ROOT"
@@ -104,13 +103,13 @@ fi
 
 color_echo INFO "Building LIBRA App... SUCCESS"
 #-------------------------
-END_TIME=$(date +%s.%N)
-ELAPSED_TIME=$(echo "$END_TIME - $START_TIME - $SLEEP_TIME" | bc -l)
-F_ELAPSED_TIME=$(printf "Total build time: %.2f s" "$ELAPSED_TIME")
-color_echo INFO "$F_ELAPSED_TIME"
-#-------------------------
 
 # ==================== SCRIPT END ====================
+
+END_TIME=$(date +%s.%N)
+ELAPSED_TIME=$(echo "$END_TIME - $START_TIME - $SLEEP_TIME" | bc -l)
+F_ELAPSED_TIME=$(printf "Script finished in %.2f s" "$ELAPSED_TIME")
+color_echo INFO "$F_ELAPSED_TIME"
 
 echo -e "\nYou may now run the app with the following command:"
 echo "  source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && ./build/<BUILD_TYPE>/libra_app_gui"
