@@ -32,7 +32,8 @@ class OpenSerialDialog : public QDialog {
 
   public:
     explicit OpenSerialDialog(QWidget* parent = nullptr,
-                              QString device_to_prompt = "Serial");
+                              QString device_to_prompt = "Serial",
+                              QString wanted_device_desc = "");
     ~OpenSerialDialog();
 
     QString GetSelectedPortName();  // has to be public so MainWindow can access it
@@ -48,10 +49,12 @@ class OpenSerialDialog : public QDialog {
     // --- Helper Functions ---
 
     void PopulatePorts();
+    void AutoSelectWantedDevice();
 
     // --- Data Members ---
 
     Ui::OpenSerialDialog* ui_{nullptr};
+    QString wanted_device_desc_;
 
     QList<QSerialPortInfo> valid_ports_;
 };

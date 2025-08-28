@@ -594,7 +594,7 @@ void MainWindow::InitializeFeedbackElementMap() {
  */
 void MainWindow::ConnectWaterHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialWater"));
+    OpenSerialDialog dialog(this, QString("SerialWater"), QString("TODO"));
     QString port_name;
 
     if (dialog.exec() == QDialog::Accepted) {
@@ -619,7 +619,7 @@ void MainWindow::ConnectWaterHelper() {
  */
 void MainWindow::ConnectManipHelper() {
     // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialServo"));
+    OpenSerialDialog dialog(this, QString("SerialServo"), QString("TODO"));
     QString port_name;
 
     if (dialog.exec() == QDialog::Accepted) {

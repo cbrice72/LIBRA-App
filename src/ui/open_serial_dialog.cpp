@@ -39,12 +39,17 @@ namespace {}
 /**
  * @brief Standard constructor.
  *
- * @param parent Owning Qt widget (default: nullptr)
+ * @param parent Owning Qt widget
  * @param device_to_prompt Label for informing the user which device will be
  *                         opened with the result of this dialog box
+ * @param wanted_device_desc Device description (human-readable name) to
+ *                           automatically search for
  */
-OpenSerialDialog::OpenSerialDialog(QWidget* parent, QString device_to_prompt)
-    : QDialog(parent), ui_(new Ui::OpenSerialDialog) {
+OpenSerialDialog::OpenSerialDialog(QWidget* parent, QString device_to_prompt,
+                                   QString wanted_device_desc)
+    : QDialog(parent),
+      ui_(new Ui::OpenSerialDialog),
+      wanted_device_desc_(wanted_device_desc) {
     ui_->setupUi(this);
 
     // Set dialog title to include the port label
@@ -52,6 +57,9 @@ OpenSerialDialog::OpenSerialDialog(QWidget* parent, QString device_to_prompt)
 
     // Populate ports on creation
     PopulatePorts();
+
+    // Search for wanted device, close dialog if found
+    AutoSelectWantedDevice();  // does nothing if wanted_device_desc_ is empty
 }
 
 /**
@@ -86,6 +94,45 @@ void OpenSerialDialog::PopulatePorts() {
         ui_->l_port_description->setText(valid_ports_[0].description());
     } else {
         ui_->l_port_description->setText("No valid ports found!");
+    }
+}
+
+/**
+ * @brief Searches for a device with matching description and auto-selects it.
+ *        If exactly one matching device is found: selects it and closes the dialog.
+ */
+void OpenSerialDialog::AutoSelectWantedDevice() {
+    if (wanted_device_desc_.isEmpty()) {
+        return;
+    }
+
+    int match_idx = -1;
+    int num_match = 0;
+
+    // Search for devices with matching description
+    for (auto i = 0; i < valid_ports_.size(); ++i) {
+        if (valid_ports_[i].description().contains(wanted_device_desc_,
+                                                   Qt::CaseInsensitive)) {
+            match_idx = i;
+            num_match++;
+        }
+    }
+
+    // If at least one match was found, select it
+    if (num_match >= 1) {
+        qDebug() << "Found" << num_match
+                 << "device(s) matching description:" << wanted_device_desc_;
+
+        ui_->cb_ports->setCurrentIndex(match_idx);
+        ui_->l_port_description->setText(valid_ports_[match_idx].description());
+
+        // If exactly one match was found, go ahead and close the dialog
+        if (num_match == 1) {
+            accept();
+        }
+    } else {
+        qDebug() << "No matching device found for description:"
+                 << wanted_device_desc_;
     }
 }
 
