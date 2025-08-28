@@ -45,7 +45,7 @@ constexpr uint kTimeout = 100;  // ms
  * @brief Standard constructor.
  *        Also populates the "Device" combo box and enables it.
  *
- * @param parent Owning Qt widget (default: nullptr)
+ * @param parent Owning Qt widget
  */
 OpenEposDialog::OpenEposDialog(QWidget* parent)
     : QDialog(parent), ui_(new Ui::OpenEposDialog) {

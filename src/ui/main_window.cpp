@@ -139,7 +139,7 @@ void RemoveUiElement(T*& element) {
 /**
  * @brief Standard constructor.
  *
- * @param parent Owning Qt widget (default: nullptr)
+ * @param parent Owning Qt widget
  */
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
