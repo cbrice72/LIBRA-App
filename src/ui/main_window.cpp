@@ -507,7 +507,7 @@ void MainWindow::InitializeThreads() {
 
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
-            arduino_manager_, &ArduinoManager::MapTorqueToWaterCommand);
+            arduino_manager_, &ArduinoManager::UpdateWaterControl);
     connect(hebi_thread_, &HebiThread::InformPitch,  // update manip correction
             arduino_manager_, &ArduinoManager::SetManipCorrection);
 

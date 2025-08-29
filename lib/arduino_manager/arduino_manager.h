@@ -8,7 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
+#include <optional>
 
 // Other Library Headers
 #include <QByteArray>   // Qt::Core
@@ -53,7 +53,7 @@ class ArduinoManager : public QObject {
     void ConnectWater(const QString& port_name);
     void DisconnectWater();
     void SetAutoCompensation(const bool& enabled);
-    void MapTorqueToWaterCommand(const double& torque_dir);
+    void UpdateWaterControl(const std::optional<double>& torque_dir);
     void ForceWaterCommand(const Water::Side& side, const Water::State& state);
 
 #if LIBRA_VERSION == 1
@@ -89,6 +89,8 @@ class ArduinoManager : public QObject {
 
     void ClearWaterCommand(Water::Side side = Water::Side::kAll);
     void ModifyWaterCommand(uint8_t new_bits);
+    void MapTorqueToWaterCommand(const double& torque_dir);
+
     void SendWaterStatus(Water::Side side);
 
     // Timer helpers

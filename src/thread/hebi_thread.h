@@ -10,6 +10,7 @@
 // C++ Standard Library Headers
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -80,7 +81,7 @@ class HebiThread : public AbstractActuatorThread
 
     // NOTE: see AbstractActuatorThread for generic signals
 
-    void ReportArmTorque(const double& theta);
+    void ReportArmTorque(const std::optional<double>& theta);
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #endif

@@ -203,6 +203,64 @@ void ArduinoManager::ModifyWaterCommand(uint8_t new_bits) {
 }
 
 /**
+ * @brief Determines counterweight fill/drain command based on direction of
+ *        torque acting upon central joint.
+ *
+ * @param torque_dir Direction of torque feedback, in radians (range: [-PI, PI])
+ *
+ * @note Command bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT.
+ *
+ * @see hebi_thread::run
+ */
+void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
+    if (!auto_comp_en_) {
+        // Only allow manual control (see ForceWaterCommand)
+        return;
+    }
+
+    if (!ser_water_->isOpen()) {
+        // Unlike other isOpen checks, do NOT log any messages here because this
+        // function can be called by HebiThread multiple times per second
+        return;
+    }
+
+    uint8_t command = 0;
+
+#if LIBRA_VERSION == 1
+    // Set command based on radial direction
+    if (torque_dir > k7_8Pi || -k7_8Pi >= torque_dir) {
+        command = kAIn | kBOut;  // 0b1001
+    } else if (torque_dir > k5_8Pi) {
+        command = kBOut;  // 0b0001
+    } else if (torque_dir > k3_8Pi) {
+        command = kAOut | kBOut;  // 0b0011
+    } else if (torque_dir > k1_8Pi) {
+        command = kAOut;  // 0b0010
+    } else if (torque_dir > -k1_8Pi) {
+        command = kBIn | kAOut;  // 0b0110
+    } else if (torque_dir > -k3_8Pi) {
+        command = kBIn;  // 0b0100
+    } else if (torque_dir > -k5_8Pi) {
+        command = kAIn | kBIn;  // 0b1100
+    } else {
+        command = kAIn;  // 0b1000
+    }
+#elif LIBRA_VERSION == 2
+    // Set command regardless of which fluid system side is connected
+    if (torque_dir == 0) {
+        command = kAOut | kBOut;  // 0b0011
+    } else {
+        command = kAIn | kBIn;  // 0b1100
+    }
+#endif
+
+    ModifyWaterCommand(command);
+
+    logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
+                   + " (A_IN | B_IN | A_OUT | B_OUT)");
+}
+
+/**
  * @brief Parses the active water command based on the specified side and
  *        reports its status.
  *
@@ -487,61 +545,17 @@ void ArduinoManager::SetAutoCompensation(const bool& enabled) {
 }
 
 /**
- * @brief Determines counterweight fill/drain command based on direction of
- *        torque acting upon central joint.
+ * @brief Automatically updates the water command based on torque feedback.
+ *        If no value is provided, the current command is cleared.
  *
  * @param torque_dir Direction of torque feedback, in radians (range: [-PI, PI])
- *
- * @note Command bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT.
- *
- * @see hebi_thread::run
  */
-void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
-    if (!auto_comp_en_) {
-        // Only allow manual control (see ForceWaterCommand)
-        return;
-    }
-
-    if (!ser_water_->isOpen()) {
-        // Unlike other isOpen checks, do NOT log any messages here because this
-        // function can be called by HebiThread multiple times per second
-        return;
-    }
-
-    uint8_t command = 0;
-
-#if LIBRA_VERSION == 1
-    // Set command based on radial direction
-    if (torque_dir > k7_8Pi || -k7_8Pi >= torque_dir) {
-        command = kAIn | kBOut;  // 0b1001
-    } else if (torque_dir > k5_8Pi) {
-        command = kBOut;  // 0b0001
-    } else if (torque_dir > k3_8Pi) {
-        command = kAOut | kBOut;  // 0b0011
-    } else if (torque_dir > k1_8Pi) {
-        command = kAOut;  // 0b0010
-    } else if (torque_dir > -k1_8Pi) {
-        command = kBIn | kAOut;  // 0b0110
-    } else if (torque_dir > -k3_8Pi) {
-        command = kBIn;  // 0b0100
-    } else if (torque_dir > -k5_8Pi) {
-        command = kAIn | kBIn;  // 0b1100
+void ArduinoManager::UpdateWaterControl(const std::optional<double>& torque_dir) {
+    if (torque_dir.has_value()) {
+        MapTorqueToWaterCommand(torque_dir.value());
     } else {
-        command = kAIn;  // 0b1000
+        ClearWaterCommand();
     }
-#elif LIBRA_VERSION == 2
-    // Set command regardless of which fluid system side is connected
-    if (torque_dir == 0) {
-        command = kAOut | kBOut;  // 0b0011
-    } else {
-        command = kAIn | kBIn;  // 0b1100
-    }
-#endif
-
-    ModifyWaterCommand(command);
-
-    logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
-                   + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
 
 /**
