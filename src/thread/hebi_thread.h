@@ -118,6 +118,9 @@ class HebiThread : public AbstractActuatorThread
 
     bool logging_active_{false};
 
+    double last_roll_filtered_{0.0};
+    double last_pitch_filtered_{0.0};
+
     /* Improve performance of GetStatus() by allocating these vectors here
       (the `mutable` keyword allows a const function to modify class members) */
     mutable std::vector<double> status_a_vel_;

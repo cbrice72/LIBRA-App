@@ -189,7 +189,8 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
 #if LIBRA_VERSION == 1
-    double ma_val = 0;  // for differential joint
+    const double alpha = 0.2;  // arbitrary smoothing factor (0.0-1.0)
+    double ma_val = 0;         // storage for differential drive calculation
 #endif
 
     for (int i = 0; i < n_actuators_; ++i) {
@@ -208,9 +209,8 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
             continue;  // unknown type
         }
 
-#if LIBRA_VERSION == 1
         // Handle complex joints first
-
+#if LIBRA_VERSION == 1
         // MA and MB differential drive -> Roll and Pitch
         if (enum_names_[i] == Actuator::Name::kMA) {
             ma_val = val;
@@ -219,12 +219,25 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         if (enum_names_[i] == Actuator::Name::kMB) {
             const double mb_val = val;
 
-            joint_feedback_map[Joint::Name::kRoll] =
+            const double raw_roll =
                 Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
                                                    mb_val);
-            joint_feedback_map[Joint::Name::kPitch] =
+            const double raw_pitch =
                 Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma_val,
                                                    mb_val);
+
+            // clang-format off
+            // Apply simple low-pass filter to reduce noise
+            joint_feedback_map[Joint::Name::kRoll] =
+                alpha * raw_roll + (1.0 - alpha) * last_roll_filtered_;
+            joint_feedback_map[Joint::Name::kPitch] =
+                alpha * raw_pitch + (1.0 - alpha) * last_pitch_filtered_;
+            // clang-format on
+
+            // Update filtered values for next iteration
+            last_roll_filtered_ = joint_feedback_map[Joint::Name::kRoll];
+            last_pitch_filtered_ = joint_feedback_map[Joint::Name::kPitch];
+
             continue;
         }
 #endif
