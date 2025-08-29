@@ -231,24 +231,12 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         if (enum_names_[i] == Actuator::Name::kMB) {
             const double mb_val = val;
 
-            const double raw_roll =
+            joint_feedback_map[Joint::Name::kRoll] =
                 Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
                                                    mb_val);
-            const double raw_pitch =
+            joint_feedback_map[Joint::Name::kPitch] =
                 Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma_val,
                                                    mb_val);
-
-            // clang-format off
-            // Apply simple low-pass filter to reduce noise
-            joint_feedback_map[Joint::Name::kRoll] =
-                alpha * raw_roll + (1.0 - alpha) * last_roll_filtered_;
-            joint_feedback_map[Joint::Name::kPitch] =
-                alpha * raw_pitch + (1.0 - alpha) * last_pitch_filtered_;
-            // clang-format on
-
-            // Update filtered values for next iteration
-            last_roll_filtered_ = joint_feedback_map[Joint::Name::kRoll];
-            last_pitch_filtered_ = joint_feedback_map[Joint::Name::kPitch];
 
             continue;
         }
