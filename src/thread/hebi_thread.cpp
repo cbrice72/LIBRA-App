@@ -44,10 +44,8 @@ constexpr double kRadToDeg = 180 / M_PI;
 
 // HEBI Functions
 
-constexpr int32_t kTimeout = 3000;   // ms
-constexpr double kMaxVel = 0.1;      // rad/s
-constexpr double kStiffness = 50.0;  // Nm/rad
-constexpr double kDamping = 1.0;     // Nm/rad/s
+constexpr int32_t kTimeout = 3000;  // ms
+constexpr double kMaxVel = 0.052;   // rad/s (~3 deg/s)
 
 // Status Message Formatting
 
@@ -668,7 +666,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     // Create velocity and acceleration constraints
     Eigen::VectorXd max_vel(n_actuators_);
     // TODO: although these are identical to safety.xml, no hard-coding!!
-    max_vel << 0.157, 0.157, 0.157, 0.157, 0.079;  // rad/s, ~= 9.0 & 4.5 deg/s
+    max_vel << 0.052, 0.052, 0.052, 0.052, 0.018;  // rad/s, ~= 3 & 1 deg/s
 
     Eigen::VectorXd max_acc(n_actuators_);
     max_acc.setConstant(0.2);  // rad/s^2, ~= 11.5 deg/s^2 (arbitrary)
