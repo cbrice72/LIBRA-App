@@ -751,18 +751,18 @@ void HebiThread::LoadGains(const QString& file_path) {
         return;
     }
 
-    if (!command_->readGains(file_path.toStdString())) {
+    hebi::GroupCommand gain_cmd(group_->size());
+    if (!gain_cmd.readGains(file_path.toStdString())) {
         emit ErrorThrown("HEBI - Failed to load gains from: " + file_path);
         return;
     }
 
-    if (!group_->sendCommandWithAcknowledgement(*command_, kTimeout)) {
+    if (!group_->sendCommandWithAcknowledgement(gain_cmd, kTimeout)) {
         emit ErrorThrown(
             "HEBI - Didn't receive acknowledgement from gains update!");
         return;
     }
 
-    command_->clear();
     logger_->Info("HEBI - Successfully loaded gains from: "
                   + file_path.toStdString());
 }
