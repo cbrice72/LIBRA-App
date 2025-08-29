@@ -188,8 +188,12 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     const Actuator::Feedback type) {
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
+#if LIBRA_VERSION == 1
+    double ma_val = 0;  // for differential joint
+#endif
+
     for (int i = 0; i < n_actuators_; ++i) {
-        double val;
+        double val = 0;
 
         // Retrieve value based on feedback type
         if (type == Actuator::Feedback::kTargetPos) {
@@ -206,11 +210,14 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
 
 #if LIBRA_VERSION == 1
         // Handle complex joints first
+
+        // MA and MB differential drive -> Roll and Pitch
         if (enum_names_[i] == Actuator::Name::kMA) {
-            // MA and MB differential drive -> Roll and Pitch
-            const double ma_val = val;
-            const double mb_val = feedback->getVelocity()[Actuator::Name::kMB]
-                                  * kRadToDeg;
+            ma_val = val;
+            continue;  // MA will be handled with MB, so do nothing
+        }
+        if (enum_names_[i] == Actuator::Name::kMB) {
+            const double mb_val = val;
 
             joint_feedback_map[Joint::Name::kRoll] =
                 Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
@@ -218,11 +225,6 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
             joint_feedback_map[Joint::Name::kPitch] =
                 Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma_val,
                                                    mb_val);
-            continue;
-        }
-
-        if (enum_names_[i] == Actuator::Name::kMB) {
-            // MB is handled with MA, so do nothing
             continue;
         }
 #endif
