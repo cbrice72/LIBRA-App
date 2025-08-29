@@ -1669,22 +1669,22 @@ QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
               <enum>Qt::FocusPolicy::NoFocus</enum>
              </property>
              <property name="statusTip">
-              <string>Range: -10,90  |  Interval: 10</string>
+              <string>Range: -90,20  |  Interval: 10</string>
              </property>
              <property name="autoFillBackground">
               <bool>true</bool>
              </property>
              <property name="minimum">
-              <number>-10</number>
+              <number>-90</number>
              </property>
              <property name="maximum">
-              <number>90</number>
+              <number>20</number>
              </property>
              <property name="singleStep">
               <number>10</number>
              </property>
              <property name="value">
-              <number>90</number>
+              <number>-80</number>
              </property>
              <property name="tracking">
               <bool>true</bool>
@@ -1749,7 +1749,7 @@ QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
               </size>
              </property>
              <property name="statusTip">
-              <string>Range: -10,90  |  Interval: 5</string>
+              <string>Range: -90,20  |  Interval: 5</string>
              </property>
              <property name="alignment">
               <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
@@ -1758,16 +1758,16 @@ QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
               <number>0</number>
              </property>
              <property name="minimum">
-              <double>-10.000000000000000</double>
+              <double>-90.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>90.000000000000000</double>
+              <double>20.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
              </property>
              <property name="value">
-              <double>90.000000000000000</double>
+              <double>-80.000000000000000</double>
              </property>
             </widget>
            </item>
