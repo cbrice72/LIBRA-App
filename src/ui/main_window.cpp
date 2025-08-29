@@ -1182,12 +1182,13 @@ void MainWindow::on_pb_quick_input_clicked() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
-    // Roll and Pitch are controlled by actuators MA and MB via differential drive
-    // TODO: confirm this
-    auto val_ma = (-ui_->sb_arm_roll->value() - ui_->sb_arm_pitch->value());
-    auto val_mb = (-ui_->sb_arm_roll->value() + ui_->sb_arm_pitch->value());
+    // TODO: this shouldn't be necessary because joint_defs exists and it's all
+    // done in HebiThread now
 
-    // TODO: confirm this
+    // Roll and Pitch are controlled by actuators MA and MB via differential drive
+    auto val_ma = (-ui_->sb_arm_roll->value() + ui_->sb_arm_pitch->value());
+    auto val_mb = (-ui_->sb_arm_roll->value() - ui_->sb_arm_pitch->value());
+
     auto val_j1 = ui_->sb_arm_j1->value();
     auto val_j2 = -ui_->sb_arm_j2->value();  // match operator perspective
     auto val_j3 = -ui_->sb_arm_j3->value();  // match operator perspective
