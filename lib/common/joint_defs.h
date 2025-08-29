@@ -191,9 +191,9 @@ inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
                                           double mb) {
     switch (joint) {
         case Joint::Name::kRoll:
-            return -(ma + mb) / 2.0;
+            return -(ma + mb) / 2.0;  // positive roll = leftward
         case Joint::Name::kPitch:
-            return -(ma - mb) / 2.0;
+            return (ma - mb) / 2.0;  // positive pitch = upward
         default:
             std::cerr << "[ERROR] ActuatorToJointDifferential: Provided joint "
                          "name is not part of a known complex system!"
@@ -217,9 +217,9 @@ inline double JointToActuatorDifferential(Actuator::Name actuator, double roll,
                                           double pitch) {
     switch (actuator) {
         case Actuator::Name::kMA:
-            return -roll - pitch;
-        case Actuator::Name::kMB:
             return -roll + pitch;
+        case Actuator::Name::kMB:
+            return -roll - pitch;
         default:
             std::cerr
                 << "[ERROR] JointToActuatorDifferential: Provided actuator "
