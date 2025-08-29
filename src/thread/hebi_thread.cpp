@@ -150,12 +150,24 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
 
+    // TODO: temporarily place static joint in this publisher.
+
+    auto hebi_names = Joint::GetHebiStrings();
+    hebi_names.push_back("Static-Manip");
+    state_msg_.name = hebi_names;
+
+    state_msg_.position.resize(n_actuators_ + 1);
+    state_msg_.velocity.resize(n_actuators_ + 1);
+    state_msg_.effort.resize(n_actuators_ + 1);
+
+    /*
     state_msg_.name = Joint::GetHebiStrings();
 
     // Resize additional vectors to match number of actuators
     state_msg_.position.resize(n_actuators_);
     state_msg_.velocity.resize(n_actuators_);
     state_msg_.effort.resize(n_actuators_);
+    */
 #endif
 }
 
@@ -484,6 +496,11 @@ void HebiThread::PublishState() {
         state_msg_.velocity[i] = actual_vel_map.at(static_cast<Joint::Name>(i));
         state_msg_.effort[i] = actual_eff_map.at(static_cast<Joint::Name>(i));
     }
+
+    // TODO: temporary static manipulator joint
+    state_msg_.position[n_actuators_ + 1] = 0.0;
+    state_msg_.velocity[n_actuators_ + 1] = 0.0;
+    state_msg_.effort[n_actuators_ + 1] = 0.0;
 
     state_pub_->publish(state_msg_);
 }
