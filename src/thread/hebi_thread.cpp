@@ -638,8 +638,6 @@ void HebiThread::Connect() {
     group_ = group;
     group_->getNextFeedback(*feedback_);
     command_->setPosition(feedback_->getPosition());
-
-    StartHebiLog();
 }
 
 /**
