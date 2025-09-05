@@ -288,11 +288,14 @@ void HebiThread::CheckTorqueControl() {
     //       arm movement will affect the central joint torque.
     if (arm_torque_r > torque_comp_upper_bound_) {
         // If arm torque is too high, disable movement
-        movement_en_ = false;
+        if (movement_en_) {
+            movement_en_ = false;
 
-        logger_->Debug("HEBI - Movement disabled due to high torque ("
-                       + std::to_string(arm_torque_r) + " Nm > "
-                       + std::to_string(torque_comp_upper_bound_) + " Nm)");
+            logger_->Debug("HEBI - Movement disabled due to high torque ("
+                           + std::to_string(arm_torque_r) + " Nm > "
+                           + std::to_string(torque_comp_upper_bound_) + " Nm)");
+        }
+
     } else if (arm_torque_r >= torque_comp_lower_bound_) {
         // While significant arm torque exists, keep movement disabled and report
         // direction of torque to arduino_thread for fluid system balancing
@@ -301,11 +304,13 @@ void HebiThread::CheckTorqueControl() {
         // Once arm torque reaches an acceptable level, disable fluid system
         // balancing and re-enable movement
         emit ReportArmTorque(std::nullopt);
-        movement_en_ = true;
+        if (!movement_en_) {
+            movement_en_ = true;
 
-        logger_->Debug("HEBI - Movement re-enabled ("
-                       + std::to_string(arm_torque_r) + " Nm < "
-                       + std::to_string(torque_comp_lower_bound_) + " Nm)");
+            logger_->Debug("HEBI - Movement re-enabled ("
+                           + std::to_string(arm_torque_r) + " Nm < "
+                           + std::to_string(torque_comp_lower_bound_) + " Nm)");
+        }
     }
 }
 
