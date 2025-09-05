@@ -551,6 +551,10 @@ void ArduinoManager::SetAutoCompensation(const bool& enabled) {
  * @param torque_dir Direction of torque feedback, in radians (range: [-PI, PI])
  */
 void ArduinoManager::UpdateWaterControl(const std::optional<double>& torque_dir) {
+    if (!auto_comp_en_) {
+        return;  // don't interfere with manual control
+    }
+
     if (torque_dir.has_value()) {
         MapTorqueToWaterCommand(torque_dir.value());
     } else {
