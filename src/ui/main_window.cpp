@@ -368,7 +368,7 @@ void MainWindow::ConfigureUi() {
 void MainWindow::InitializeDeviceManagers() {
     // ========== Arduino Manager ==========
 
-    // NOTE: since ArduinoManager is QTimer-driven and asynchronous, we set up
+    // NOTE: Since ArduinoManager is QTimer-driven and asynchronous, we set up
     //       signal/slot connections much like we do with QThreads. This is not
     //       necessary with CameraManager, which is different by nature.
 
@@ -462,7 +462,7 @@ void MainWindow::InitializeDeviceManagers() {
 void MainWindow::InitializeThreads() {
     // ========== HEBI Thread ==========
 
-    // NOTE: this constructor automatically determines the actuator family and
+    // NOTE: This constructor automatically determines the actuator family and
     //       names based on the LIBRA_VERSION the app is built with
     hebi_thread_ = new HebiThread(this, debug_mode_);
 
@@ -1036,7 +1036,7 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
         available_cameras_[desc] = QString(camera.id());
     }
 
-    // NOTE: the "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when a
+    // NOTE: The "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when a
     // camera
     //       is selected (see on_cb_camera_name_currentTextChanged)
     if (available_cameras_.empty()) {

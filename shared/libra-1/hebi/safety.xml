@@ -4,7 +4,7 @@
   <mstop />
   <position>
     <!-- 3.142 rad ~= 180 deg -->
-    <!-- NOTE: the MA-MB relationship is a bit more complicated, so just give them "infinite" limits -->
+    <!-- NOTE: The MA-MB relationship is a bit more complicated, so just give them "infinite" limits -->
     <min_limit>-1000 -1000 -3.142 -3.142 -3.142</min_limit>
     <max_limit>1000 1000 3.142 3.142 3.142</max_limit>
   </position>
@@ -16,7 +16,7 @@
   </velocity>
   <effort>
     <!-- For X8-16: Cont. Torque = 16 Nm, Peak Torque = 38 Nm -->
-    <!-- NOTE: give J1 higher limits since it bears the brunt of the arm torque -->
+    <!-- NOTE: Give J1 higher limits since it bears the brunt of the arm torque -->
     <min_limit>-20 -20 -40 -20 -20</min_limit>
     <max_limit>20 20 40 20 20</max_limit>
   </effort>

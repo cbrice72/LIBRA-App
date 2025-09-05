@@ -372,7 +372,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             // Calculate effort commands to counteract gravity
             if (model_based_comp_en_ && model_ != nullptr) {
                 // TODO: test this!!
-                // NOTE: this may be problematic... I deleted it for a
+                // NOTE: This may be problematic... I deleted it for a
                 //       reason (although previously there was no model)
                 model_->getGravCompEfforts(cmd_pos, gravity_vec, cmd_eff);
                 command_->setVelocity(Eigen::VectorXd());  // clear
@@ -488,7 +488,7 @@ void HebiThread::PublishState() {
 
     // Populate the message and publish it
     for (uint8_t i = 0; i < n_actuators_; ++i) {
-        // NOTE: first we must undo the JointToActuator conversion logic for
+        // NOTE: First we must undo the JointToActuator conversion logic for
         //       certain joints, since I flip the values to aid operator UX.
         double actual_pos = 0.0;
         switch (static_cast<Joint::Name>(i)) {
@@ -604,7 +604,7 @@ void HebiThread::Connect() {
     }
 
     // Filter lookup for relevant actuator(s)
-    // NOTE: don't save to class member `group_` until checks have passed
+    // NOTE: Don't save to class member `group_` until checks have passed
     auto group = lookup.getGroupFromNames(families_, names_, kTimeout);
     if (group == nullptr) {
         emit ErrorThrown("HEBI - Requested actuator families/names not found!");
@@ -694,7 +694,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
         return;
     }
 
-    /* NOTE: the following trajectory generation method is theoretically better
+    /* NOTE: The following trajectory generation method is theoretically better
              (it was added in a newer version of the HEBI API), but in practice
              it results in very unstable oscillations. Therefore, a simpler
              method is used below.
@@ -732,7 +732,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
         hebi::trajectory::Trajectory::segmentTimesToWaypointTimes(t_segment);
 
     // Log start time and create trajectory
-    // NOTE: let QP solver handle vel and accel by setting the parameters
+    // NOTE: Let QP solver handle vel and accel by setting the parameters
     //       "velocities" and "accelerations" to nullptr
     trajectory_start_time_ = std::chrono::steady_clock::now();
     trajectory_ =

@@ -63,7 +63,7 @@ constexpr uint8_t kTilt = 2;
 constexpr double kManipSlowSpeed = 1.5;                          // deg/s
 constexpr double kManipUpdateRate = 1000.0 / kUpdateIntervalMs;  // Hz
 constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateRate;
-// NOTE: the original code used 90.0 / (60.0 * 60.0) = 0.025 deg per update which,
+// NOTE: The original code used 90.0 / (60.0 * 60.0) = 0.025 deg per update which,
 //       likely running at 60 Hz, gives 1.5 deg/s. Since that was a nice speed,
 //       we use known constants to recreate it here.
 #endif
@@ -416,7 +416,7 @@ void ArduinoManager::UpdateManip() {
 
     try {
         // For "slow" movement, manually calculate steps to achieve a slow pace
-        // (NOTE: since the manipulator's pitch is adjusted automatically based
+        // (NOTE: Since the manipulator's pitch is adjusted automatically based
         //        on the arm's pitch, this loop starts at i = 1)
         for (auto i = 1; i < 3; ++i) {
             if (m_slow_direction_.at(i) != 0) {
@@ -426,7 +426,7 @@ void ArduinoManager::UpdateManip() {
 
                 // If target has been reached, reset relevant variables
                 /*
-                // NOTE: there is no check for moving in a "negative"
+                // NOTE: There is no check for moving in a "negative"
                 //       direction because the servos do not take negative
                 //       values. This conversion is handled in the file
                 //       `arduino/servo_arduino/servo_arduino.ino`, function

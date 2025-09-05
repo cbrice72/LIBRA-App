@@ -221,7 +221,7 @@ CameraManager::~CameraManager() {
 #endif
     }
 
-    // NOTE: raw pointers to QObjects (such as camera_) are automatically
+    // NOTE: Raw pointers to QObjects (such as camera_) are automatically
     //       cleaned up by virtue of Qt's parenting structure (passing in "this"
     //       as a constructor parameter)
 
@@ -369,7 +369,7 @@ void CameraManager::Start() {
             });
 
         // Start timer for periodic ROS2 spinning
-        // (NOTE: this is useful for triggering ROS2 callbacks without blocking
+        // (NOTE: This is useful for triggering ROS2 callbacks without blocking
         //        the Qt event loop)
         spin_timer_ = new QTimer(this);
         connect(spin_timer_, &QTimer::timeout, [this]() {
@@ -449,7 +449,7 @@ void CameraManager::Capture() {
     // Capture a single frame
     if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-        // NOTE: this does not immediately save the current frame! Rather, it
+        // NOTE: This does not immediately save the current frame! Rather, it
         //       sets a bool that is checked by the ROS2 subscriber callback
         //       ProcessRos2Image(), which then saves the latest frame.
         //       Although this ensures the "freshness" of the image data, it
@@ -492,7 +492,7 @@ bool CameraManager::Record() {
         // Start recording
         if (use_ros2_node_) {
 #ifdef BUILD_WITH_ROS2
-            // NOTE: similarly to Capture(), we simply need to set a bool that
+            // NOTE: Similarly to Capture(), we simply need to set a bool that
             //       is checked by the subscriber callback ProcessRos2Image().
             //       Since, in Record(), this bool is also used by the non-ROS2
             //       branch, it is set after this conditional block. In other

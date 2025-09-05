@@ -46,7 +46,7 @@ constexpr double kSlewGearReduction = static_cast<double>(kSlewRingTeeth)
 constexpr long kDegPerRotation = 360;
 constexpr long kSecPerMin = 60;
 
-// NOTE: in the following conversions, encoder resolution is multiplied by 4
+// NOTE: In the following conversions, encoder resolution is multiplied by 4
 //       because it is a quadrature encoder (see EPOS4 Firmware Specification
 //       "Digital incremental encoder" section, p. 156)
 constexpr double kDegToInc = (kEncoderResolution * 4.0 * kGearheadReduction
@@ -456,7 +456,7 @@ void EposThread::Disconnect() {
     Stop();
 
     // Acquire a mutex lock on handle before doing sensitive operations
-    // (NOTE: automatically unlocked when function ends)
+    // (NOTE: Automatically unlocked when function ends)
     std::lock_guard<std::mutex> lock(handle_mutex_);
 
     // Close the connection via the EPOS API

@@ -182,7 +182,7 @@ set(HEBI_INCLUDE_DIRS "${HEBI_DIR}/src" "${HEBI_DIR}/hebi/include"
 )
 
 if(LIBRA_VERSION EQUAL 2)
-    # NOTE: there is no `add_subdirectory()` call for EPOS since it doesn't
+    # NOTE: There is no `add_subdirectory()` call for EPOS since it doesn't
     # provide a CMakeLists.txt, only a binary to link against
     set(EPOS_INCLUDE_DIRS "${EPOS_DIR}/include")
 endif()

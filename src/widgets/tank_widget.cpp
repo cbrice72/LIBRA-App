@@ -43,6 +43,7 @@ static constexpr double kCapacity = 38;          // L
 static constexpr double kFillRate = 0.129;   // L/s
 static constexpr double kDrainRate = 0.061;  // L/s
 static constexpr double kCapacity = 19;      // L
+
 /*
 // - 3L + 2*6L + 2*10L
 
@@ -196,7 +197,7 @@ void TankWidget::UpdateState(Water::State state) {
         case Water::State::kFilling:
         case Water::State::kDraining:
             // Start filling or draining the tank
-            // (NOTE: automatically stops when full/empty)
+            // (NOTE: Automatically stops when full/empty)
             if (!animation_timer_->isActive()) {
                 animation_timer_->start();
             }

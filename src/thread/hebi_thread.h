@@ -79,7 +79,7 @@ class HebiThread : public AbstractActuatorThread
   signals:
     // --- Actuator Updates ---
 
-    // NOTE: see AbstractActuatorThread for generic signals
+    // NOTE: See AbstractActuatorThread for generic signals
 
     void ReportArmTorque(const std::optional<double>& theta);
 #if LIBRA_VERSION == 1
