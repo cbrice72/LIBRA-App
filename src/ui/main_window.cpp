@@ -767,7 +767,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
     ui_->a_hebi_load_gains->setEnabled(connected);
     ui_->a_hebi_log_start->setEnabled(connected);
-    ui_->a_hebi_log_start->setEnabled(connected);
+    ui_->a_hebi_log_stop->setEnabled(connected);
 
     ui_->a_hebi_override_limits->setEnabled(connected);
     ui_->a_hebi_central_torque_comp->setEnabled(connected);
