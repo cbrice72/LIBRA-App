@@ -488,8 +488,23 @@ void HebiThread::PublishState() {
 
     // Populate the message and publish it
     for (uint8_t i = 0; i < n_actuators_; ++i) {
-        state_msg_.position[i] = actual_pos_map.at(static_cast<Joint::Name>(i))
-                                 * kDegToRad;
+        // NOTE: first we must undo the JointToActuator conversion logic for
+        //       certain joints, since I flip the values to aid operator UX.
+        double actual_pos = 0.0;
+        switch (static_cast<Joint::Name>(i)) {
+            case Joint::Name::kPitch:
+            case Joint::Name::kJ2:
+            case Joint::Name::kJ3:
+                // Sign flip required to match actuator's real-world orientation
+                actual_pos = -actual_pos_map.at(static_cast<Joint::Name>(i));
+                break;
+            default:
+                // Fine as-is
+                actual_pos = actual_pos_map.at(static_cast<Joint::Name>(i));
+                break;
+        }
+
+        state_msg_.position[i] = actual_pos * kDegToRad;
         state_msg_.velocity[i] = actual_vel_map.at(static_cast<Joint::Name>(i))
                                  * kDegToRad;
         state_msg_.effort[i] = actual_eff_map.at(static_cast<Joint::Name>(i));
