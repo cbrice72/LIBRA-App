@@ -508,8 +508,10 @@ void MainWindow::InitializeThreads() {
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
             arduino_manager_, &ArduinoManager::UpdateWaterControl);
+#if LIBRA_VERSION == 1
     connect(hebi_thread_, &HebiThread::InformPitch,  // update manip correction
             arduino_manager_, &ArduinoManager::SetManipCorrection);
+#endif
 
     // Thread cleanup
     connect(hebi_thread_, &HebiThread::finished,      // when thread exits,

@@ -246,11 +246,13 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         joint_feedback_map[name] = Joint::ActuatorToJointSimple(name, val);
     }
 
+#if LIBRA_VERSION == 1
     // Send J3 position for manipulator pitch correction
     if (type == Actuator::Feedback::kActualPos) {
         emit InformPitch(feedback->getPosition()[Actuator::Name::kJ3]
                          * kRadToDeg);
     }
+#endif
 
     return joint_feedback_map;
 }
@@ -492,14 +494,17 @@ void HebiThread::PublishState() {
         //       certain joints, since I flip the values to aid operator UX.
         double actual_pos = 0.0;
         switch (static_cast<Joint::Name>(i)) {
+# if LIBRA_VERSION == 1
             case Joint::Name::kPitch:
             case Joint::Name::kJ2:
             case Joint::Name::kJ3:
                 // Sign flip required to match actuator's real-world orientation
                 actual_pos = -actual_pos_map.at(static_cast<Joint::Name>(i));
                 break;
+# endif
             default:
                 // Fine as-is
+                // TODO: is this correct for LIBRA-II's pitch joint?
                 actual_pos = actual_pos_map.at(static_cast<Joint::Name>(i));
                 break;
         }
