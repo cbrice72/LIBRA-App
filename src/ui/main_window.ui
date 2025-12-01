@@ -3144,7 +3144,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <x>0</x>
      <y>0</y>
      <width>1053</width>
-     <height>23</height>
+     <height>19</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">
@@ -3180,6 +3180,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_epos_connect"/>
      <addaction name="a_epos_disconnect"/>
      <addaction name="separator"/>
+     <addaction name="a_epos_usedefaults"/>
     </widget>
     <widget class="QMenu" name="m_hebi">
      <property name="title">
@@ -3426,6 +3427,23 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
     <string>Stop Hebilog</string>
    </property>
   </action>
+  <action name="a_epos_usedefaults">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Use defaults</string>
+   </property>
+   <property name="statusTip">
+    <string>Cannot be toggled when a connection is active</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -3468,8 +3486,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
   <tabstop>pb_manip_fast</tabstop>
  </tabstops>
  <resources>
-  <include location="resources.qrc"/>
-  <include location="resources.qrc"/>
   <include location="resources.qrc"/>
  </resources>
  <connections/>

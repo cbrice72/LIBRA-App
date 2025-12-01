@@ -112,19 +112,19 @@ OpenEposDialog::~OpenEposDialog() {
  */
 void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     // Save selected device name
-    device_name_ = sel.toStdString();
+    params_.device_name = sel.toStdString();
 
     // Ensure all "downstream" selections and combo boxes are cleared
-    protocol_name_.clear();
+    params_.protocol_name.clear();
     ui_->cb_protocol_name->clear();
     ui_->cb_protocol_name->setEnabled(false);
-    interface_name_.clear();
+    params_.interface_name.clear();
     ui_->cb_interface_name->clear();
     ui_->cb_interface_name->setEnabled(false);
-    port_name_.clear();
+    params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
-    baud_rate_ = 0;
+    params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
 
@@ -134,18 +134,19 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     int end_of_sel = 0;
     uint err_code = 0;
 
-    if (VCS_GetProtocolStackNameSelection(device_name_.data(), kMaxonTrue, name,
-                                          kMaxCharBufSize, &end_of_sel,
-                                          &err_code)
+    if (VCS_GetProtocolStackNameSelection(params_.device_name.data(),
+                                          kMaxonTrue, name, kMaxCharBufSize,
+                                          &end_of_sel, &err_code)
         > 0) {
         protocols << name;
 
         // Get names of other protocols on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetProtocolStackNameSelection(device_name_.data(), kMaxonFalse,
-                                              name, kMaxCharBufSize,
-                                              &end_of_sel, &err_code);
+            VCS_GetProtocolStackNameSelection(params_.device_name.data(),
+                                              kMaxonFalse, name,
+                                              kMaxCharBufSize, &end_of_sel,
+                                              &err_code);
             protocols << name;
         }
     }
@@ -159,7 +160,7 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
 
     if (protocols.empty()) {
         qWarning() << "No protocols in use by "
-                   << QString::fromStdString(device_name_);
+                   << QString::fromStdString(params_.device_name);
         return;
     }
 
@@ -182,16 +183,16 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
  */
 void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     // Save selected protocol name
-    protocol_name_ = sel.toStdString();
+    params_.protocol_name = sel.toStdString();
 
     // Ensure all "downstream" selections and combo boxes are cleared
-    interface_name_.clear();
+    params_.interface_name.clear();
     ui_->cb_interface_name->clear();
     ui_->cb_interface_name->setEnabled(false);
-    port_name_.clear();
+    params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
-    baud_rate_ = 0;
+    params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
 
@@ -201,19 +202,20 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     int end_of_sel = 0;
     uint err_code = 0;
 
-    if (VCS_GetInterfaceNameSelection(device_name_.data(),
-                                      protocol_name_.data(), kMaxonTrue, name,
-                                      kMaxCharBufSize, &end_of_sel, &err_code)
+    if (VCS_GetInterfaceNameSelection(params_.device_name.data(),
+                                      params_.protocol_name.data(), kMaxonTrue,
+                                      name, kMaxCharBufSize, &end_of_sel,
+                                      &err_code)
         > 0) {
         interfaces << name;
 
         // Get names of other interfaces on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetInterfaceNameSelection(device_name_.data(),
-                                          protocol_name_.data(), kMaxonFalse,
-                                          name, kMaxCharBufSize, &end_of_sel,
-                                          &err_code);
+            VCS_GetInterfaceNameSelection(params_.device_name.data(),
+                                          params_.protocol_name.data(),
+                                          kMaxonFalse, name, kMaxCharBufSize,
+                                          &end_of_sel, &err_code);
             interfaces << name;
         }
     }
@@ -227,7 +229,7 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
 
     if (interfaces.empty()) {
         qWarning() << "No interfaces found running "
-                   << QString::fromStdString(protocol_name_);
+                   << QString::fromStdString(params_.protocol_name);
         return;
     }
 
@@ -250,13 +252,13 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
  */
 void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     // Save selected interface name
-    interface_name_ = sel.toStdString();
+    params_.interface_name = sel.toStdString();
 
     // Ensure all "downstream" selections and combo boxes are cleared
-    port_name_.clear();
+    params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
-    baud_rate_ = 0;
+    params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
 
@@ -266,18 +268,21 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     int end_of_sel = 0;
     uint err_code = 0;
 
-    if (VCS_GetPortNameSelection(device_name_.data(), protocol_name_.data(),
-                                 interface_name_.data(), kMaxonTrue, name,
-                                 kMaxCharBufSize, &end_of_sel, &err_code)
+    if (VCS_GetPortNameSelection(params_.device_name.data(),
+                                 params_.protocol_name.data(),
+                                 params_.interface_name.data(), kMaxonTrue,
+                                 name, kMaxCharBufSize, &end_of_sel, &err_code)
         > 0) {
         ports << name;
 
         // Get names of other ports on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetPortNameSelection(device_name_.data(), protocol_name_.data(),
-                                     interface_name_.data(), kMaxonFalse, name,
-                                     kMaxCharBufSize, &end_of_sel, &err_code);
+            VCS_GetPortNameSelection(params_.device_name.data(),
+                                     params_.protocol_name.data(),
+                                     params_.interface_name.data(), kMaxonFalse,
+                                     name, kMaxCharBufSize, &end_of_sel,
+                                     &err_code);
             ports << name;
         }
     }
@@ -291,7 +296,7 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
 
     if (ports.empty()) {
         qWarning() << "No ports found on "
-                   << QString::fromStdString(interface_name_);
+                   << QString::fromStdString(params_.interface_name);
     }
 
     // Populate Port combo box and enable it
@@ -313,10 +318,10 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
  */
 void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     // Save selected port name
-    port_name_ = sel.toStdString();
+    params_.port_name = sel.toStdString();
 
     // Ensure all "downstream" selections and combo boxes are cleared
-    baud_rate_ = 0;
+    params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
 
@@ -326,19 +331,22 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     int end_of_sel = 0;
     uint err_code = 0;
 
-    if (VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
-                                 interface_name_.data(), port_name_.data(),
-                                 kMaxonTrue, &rate, &end_of_sel, &err_code)
+    if (VCS_GetBaudrateSelection(params_.device_name.data(),
+                                 params_.protocol_name.data(),
+                                 params_.interface_name.data(),
+                                 params_.port_name.data(), kMaxonTrue, &rate,
+                                 &end_of_sel, &err_code)
         > 0) {
         bauds << QString::number(rate);
 
         // Get other baud rates for port, if any
         while (end_of_sel == 0) {
             rate = 0;
-            VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
-                                     interface_name_.data(), port_name_.data(),
-                                     kMaxonFalse, &rate, &end_of_sel,
-                                     &err_code);
+            VCS_GetBaudrateSelection(params_.device_name.data(),
+                                     params_.protocol_name.data(),
+                                     params_.interface_name.data(),
+                                     params_.port_name.data(), kMaxonFalse,
+                                     &rate, &end_of_sel, &err_code);
             bauds << QString::number(rate);
         }
     }
@@ -352,7 +360,7 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
 
     if (bauds.empty()) {
         qWarning() << "No baud rates available for "
-                   << QString::fromStdString(port_name_);
+                   << QString::fromStdString(params_.port_name);
     }
 
     // Populate Baud Rate combo box and enable it
@@ -374,50 +382,26 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
  */
 void OpenEposDialog::on_cb_baud_rate_textActivated(const QString& sel) {
     // Save selected baud rate
-    baud_rate_ = sel.toUInt();
+    params_.baud_rate = sel.toUInt();
+    params_.is_set = true;  // finished selecting all params
 
     // Since all device parameters have been specified, enable Connect button
-    ui_->pb_connect->setEnabled(true);
+    ui_->pb_confirm->setEnabled(true);
 }
 
 /**
- * @brief Event handler for "Connect" button (single click).
- *        Opens the EPOS device specified by the selections in the four combo
- *        boxes, sets baud rate and timeout, and clears residual faults.
+ * @brief Event handler for "Connect" button. Simply closes the window, as EPOS
+ *        connection should, in principle, be handled by the object which will
+ *        command the device.
  */
-void OpenEposDialog::on_pb_connect_clicked() {
-    // Connect to specified controller
-    uint err_code = 0;
-
-    handle_ = VCS_OpenDevice(device_name_.data(), protocol_name_.data(),
-                             interface_name_.data(), port_name_.data(),
-                             &err_code);
-
-    // Validation
-    if (handle_ == nullptr || err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt("VCS_OpenDevice", err_code);
-        VCS_CloseDevice(handle_, &err_code);
-        handle_ = nullptr;  // always null after cleanup
-        return;
-    }
-
-    // Set controller baud rate and timeout
-    if (VCS_SetProtocolStackSettings(handle_, baud_rate_, kTimeout, &err_code)
-        <= 0) {
-        qCritical() << util::GetFormattedEposErrTxt(
-            "VCS_SetProtocolStackSettings", err_code);
-        VCS_CloseDevice(handle_, &err_code);
-        handle_ = nullptr;  // always null after cleanup
-        return;
-    }
-
+void OpenEposDialog::on_pb_confirm_clicked() {
     // Close the dialog and return `QDialog::Accepted`
     OpenEposDialog::accept();
 }
 
 /**
- * @brief Gives the user another way to close the window
- *        (in addition to the X in the menu bar).
+ * @brief Event handler for "Cancel" button. Gives the user another way to close
+ *        the window (in addition to the X in the menu bar).
  */
 void OpenEposDialog::on_pb_cancel_clicked() {
     // Close the dialog and return `QDialog::Rejected`
@@ -429,12 +413,13 @@ void OpenEposDialog::on_pb_cancel_clicked() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns the handle used to communicate with the EPOS controller
+ * @brief Returns the necessary device parameters for opening a connection to
+ *        the EPOS controller.
  *
- * @return void* Handle for port access
+ * @return EposDeviceParams Convenience struct grouping all device parameters
  */
-void* OpenEposDialog::GetEPOSHandle() {
-    return handle_;
+EposDeviceParams OpenEposDialog::GetDeviceParams() {
+    return std::move(params_);
 }
 
 //------------------------------------------------------------------------------

@@ -229,6 +229,9 @@ if(LIBRA_VERSION EQUAL 2)
 endif()
 
 set(LIBRA_DIALOGS open_serial_dialog torque_comp_dialog)
+if(LIBRA_VERSION EQUAL 2)
+    list(APPEND LIBRA_DIALOGS open_epos_dialog)
+endif()
 
 target_link_libraries(
     libra_app_gui

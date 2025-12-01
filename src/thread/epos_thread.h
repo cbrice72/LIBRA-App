@@ -40,11 +40,18 @@ class EposThread : public AbstractActuatorThread
     // NOLINTEND
 
   public:
+    explicit EposThread(QObject* parent, const bool& debug_mode = false);
     explicit EposThread(QObject* parent, std::string device_name,
                         std::string protocol_name, std::string interface_name,
                         std::string port_name, uint baud_rate,
                         const bool& debug_mode = false);
     ~EposThread() override;
+
+    // --- Getters & Setters ---
+
+    void SetDeviceParams(std::string device_name, std::string protocol_name,
+                         std::string interface_name, std::string port_name,
+                         uint baud_rate);
 
   public slots:
     // --- Actuator Commands ---
