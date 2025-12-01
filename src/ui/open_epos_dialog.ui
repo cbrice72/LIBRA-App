@@ -167,12 +167,12 @@
      </spacer>
     </item>
     <item>
-     <widget class="QPushButton" name="pb_connect">
+     <widget class="QPushButton" name="pb_confirm">
       <property name="enabled">
        <bool>false</bool>
       </property>
       <property name="text">
-       <string>Connect</string>
+       <string>Confirm</string>
       </property>
       <property name="icon">
        <iconset theme="list-add"/>

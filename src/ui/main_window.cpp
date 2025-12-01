@@ -21,6 +21,9 @@
 
 // Project Headers
 #include "colors.h"
+#if LIBRA_VERSION == 2
+# include "open_epos_dialog.h"
+#endif
 #include "open_serial_dialog.h"
 #include "qt_logger.h"
 #include "torque_comp_dialog.h"
@@ -62,7 +65,7 @@ namespace {
 /**
  * @brief Checks if the app is running in Windows Subsystem for Linux (WSL2).
  */
-void CheckWslEnvironment() {
+bool IsWslEnvironment() {
     const char* wsl_path = "/run/WSL";
 
     struct stat buf {};
@@ -71,7 +74,10 @@ void CheckWslEnvironment() {
         qWarning()
             << "[WARN] You seem to be running this on WSL2. Please ensure "
                "you have properly forwarded your USB connections.";
+        return true;
     }
+
+    return false;
 }
 
 /**
@@ -149,7 +155,7 @@ MainWindow::MainWindow(QWidget* parent)
     logger_ = std::make_unique<QtLogger>(debug_mode_);
 
     // Runtime checks
-    CheckWslEnvironment();
+    IsWslEnvironment();  // only warns, no action needed
 
     // GUI configuration
     ConfigureUi();
@@ -338,8 +344,7 @@ void MainWindow::ConfigureUi() {
 #endif
 
     // Slots
-    connect(ui_->a_water_connect, &QAction::triggered,  // set up water connect
-            this, &MainWindow::ConnectWaterHelper);
+    // (none)
 
     // ========== Manipulator ==========
 
@@ -350,8 +355,7 @@ void MainWindow::ConfigureUi() {
 
     // Slots
 #if LIBRA_VERSION == 1
-    connect(ui_->a_manip_connect, &QAction::triggered,  // set up servo connect
-            this, &MainWindow::ConnectManipHelper);
+    // (none)
 #endif
 
     // ========== Camera ==========
@@ -522,14 +526,13 @@ void MainWindow::InitializeThreads() {
     // ========== EPOS Thread ==========
 
 #if LIBRA_VERSION == 2
-    epos_thread_ = new EposThread(this, "EPOS4", "MAXON SERIAL V2", "USB",
-                                  "USB0", 1000000, debug_mode_);
+    epos_thread_ = new EposThread(this, debug_mode_);
 
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             epos_thread_, &EposThread::SetDebugMode);
 
-    connect(ui_->a_epos_connect, &QAction::triggered,  // connect to EPOS
+    connect(this, &MainWindow::ConnectEpos,  // connect to EPOS
             epos_thread_, &EposThread::Connect);
     connect(ui_->a_epos_disconnect, &QAction::triggered,  // disconnect EPOS
             epos_thread_, &EposThread::Disconnect);
@@ -617,58 +620,6 @@ void MainWindow::InitializeFeedbackElementMap() {
 #endif
 }
 
-/**
- * @brief Allows user to select a physical serial device and commands
- *        ArduinoManager to connect to it as the "SerialWater" device.
- */
-void MainWindow::ConnectWaterHelper() {
-    // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialWater"),
-                            QString("Arduino Nano Every"));
-    QString port_name;
-
-    if (dialog.exec() == QDialog::Accepted) {
-        port_name = dialog.GetSelectedPortName();
-
-        if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
-            return;
-        }
-    } else {
-        logger_->Debug("Port selection cancelled by user");
-        return;
-    }
-
-    emit ConnectWater(port_name);
-}
-
-#if LIBRA_VERSION == 1
-/**
- * @brief Allows user to select a physical serial device and commands
- *        ArduinoManager to connect to it as the "SerialServo" device.
- */
-void MainWindow::ConnectManipHelper() {
-    // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialServo"),
-                            QString("Seeed XIAO M0"));
-    QString port_name;
-
-    if (dialog.exec() == QDialog::Accepted) {
-        port_name = dialog.GetSelectedPortName();
-
-        if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
-            return;
-        }
-    } else {
-        logger_->Debug("Port selection cancelled by user");
-        return;
-    }
-
-    emit ConnectManip(port_name);
-}
-#endif
-
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
 //------------------------------------------------------------------------------
@@ -676,6 +627,9 @@ void MainWindow::ConnectManipHelper() {
 #if LIBRA_VERSION == 1
 /**
  * @brief Reflects SerialServo connection status in the UI.
+ *
+ * @note Currently does nothing, as the original manipulator was too weak and
+ *       has been replaced with a static mount.
  */
 void MainWindow::HandleManipConnChanged(const bool& connected) {
     // Menu bar
@@ -801,6 +755,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 void MainWindow::HandleEposConnChanged(const bool& connected) {
     // Menu bar
     ui_->a_epos_connect->setEnabled(!connected);
+    ui_->a_epos_usedefaults->setEnabled(!connected);
     ui_->a_epos_disconnect->setEnabled(connected);
 
     // UI widgets
@@ -905,6 +860,39 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     // Propagate to all children
     emit EnableDebugMode(checked);
 }
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Event handler for "Actuators/EPOS" menu action "Connect".
+ *        Opens a dialog allowing the user to select connection settings.
+ */
+void MainWindow::on_a_epos_connect_triggered() {
+    // Native Linux should have no issues connecting with defaults
+    if (!ui_->a_epos_usedefaults->isChecked() || IsWslEnvironment()) {
+        // Prompt user to select an EPOS device
+        OpenEposDialog dialog(this);
+
+        if (dialog.exec() == QDialog::Accepted) {
+            auto params = dialog.GetDeviceParams();
+
+            if (!params.is_set) {
+                logger_->Error("Parameter selection incomplete!");
+                return;
+            }
+
+            epos_thread_->SetDeviceParams(params.device_name,
+                                          params.protocol_name,
+                                          params.interface_name,
+                                          params.port_name, params.baud_rate);
+        } else {
+            logger_->Debug("Parameter selection cancelled by user");
+            return;
+        }
+    }
+
+    emit ConnectEpos();
+}
+#endif
 
 /**
  * @brief Event handler for "Actuators/HEBI" menu action "Load new gains...".
@@ -1022,6 +1010,36 @@ void MainWindow::on_a_hebi_central_torque_comp_triggered() {
     }
 }
 
+#if LIBRA_VERSION == 1
+/**
+ * @brief Event handler for "Actuator/Manip. Servos" menu action "Connect".
+ *        Allows user to select a physical serial device to connect to.
+ *
+ * @note Currently does nothing, as the original manipulator was too weak and
+ *       has been replaced with a static mount.
+ */
+void MainWindow::on_a_manip_connect_triggered() {
+    // Prompt user to select a serial device
+    OpenSerialDialog dialog(this, QString("SerialServo"),
+                            QString("Seeed XIAO M0"));
+    QString port_name;
+
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            logger_->Error("No port selected!");
+            return;
+        }
+    } else {
+        logger_->Debug("Port selection cancelled by user");
+        return;
+    }
+
+    emit ConnectManip(port_name);
+}
+#endif
+
 /**
  * @brief Event handler for "Sensors/Camera" menu action "Refresh Camera List".
  *        Populates the "Camera" tab's ComboBox with all detected cameras.
@@ -1038,20 +1056,44 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
         available_cameras_[desc] = QString(camera.id());
     }
 
-    // NOTE: The "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when a
-    // camera
-    //       is selected (see on_cb_camera_name_currentTextChanged)
+    // NOTE: The "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when
+    //       a camera is selected (see on_cb_camera_name_currentTextChanged)
     if (available_cameras_.empty()) {
         ui_->pb_camera_capture->setEnabled(false);
         ui_->pb_camera_record->setEnabled(false);
         ui_->pb_camera_flip_h->setEnabled(false);
         ui_->pb_camera_flip_v->setEnabled(false);
 
-        logger_->Info("  No cameras found");
+        logger_->Info("No cameras found");
     } else {
-        logger_->Debug("  Found " + std::to_string(available_cameras_.size())
+        logger_->Debug("Found " + std::to_string(available_cameras_.size())
                        + " cameras");
     }
+}
+
+/**
+ * @brief Event handler for "Water" menu action "Connect".
+ *        Allows user to select a physical serial device to connect to.
+ */
+void MainWindow::on_a_water_connect_triggered() {
+    // Prompt user to select a serial device
+    OpenSerialDialog dialog(this, QString("SerialWater"),
+                            QString("Arduino Nano Every"));
+    QString port_name;
+
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            logger_->Error("No port selected!");
+            return;
+        }
+    } else {
+        logger_->Debug("Port selection cancelled by user");
+        return;
+    }
+
+    emit ConnectWater(port_name);
 }
 
 /**
@@ -1086,9 +1128,9 @@ void MainWindow::on_a_water_set_full_triggered() {
  */
 void MainWindow::on_a_connect_all_triggered() {
     // Arduinos
-    ConnectWaterHelper();
+    ui_->a_water_connect->trigger();
 #if LIBRA_VERSION == 1
-    ConnectManipHelper();
+    ui_->a_manip_connect->trigger();
 #endif
 
     // Actuators
