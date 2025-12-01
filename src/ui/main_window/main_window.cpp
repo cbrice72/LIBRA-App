@@ -321,6 +321,65 @@ void MainWindow::ConfigureUi() {
 }
 
 /**
+ * @brief Populates a map-of-maps with UI label elements, according to their
+ *        corresponding joint names (`Joint`) and feedback types
+ *        (`Actuator::Feedback`).
+ *
+ * @note Only used in constructor - placed in own function to improve readability.
+ *
+ * @see Joint::Name Actuator::Feedback HandleActuatorFeedback
+ */
+void MainWindow::InitializeFeedbackElementMap() {
+    // Central joint
+#if LIBRA_VERSION == 1
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_roll;
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_roll;
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_roll;
+#elif LIBRA_VERSION == 2
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_yaw;
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_yaw;
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_yaw;
+#endif
+
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_pitch;
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_pitch;
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_pitch;
+
+    // Arm
+#if LIBRA_VERSION == 1
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j1;
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j1;
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j1;
+
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j2;
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j2;
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j2;
+
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kTargetPos] =
+        ui_->l_target_j3;
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualPos] =
+        ui_->l_actual_j3;
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualTorque] =
+        ui_->l_torque_j3;
+#endif
+}
+
+/**
  * @brief Sets up child objects.
  *
  * @note Only used in constructor - placed in own function to improve readability.
@@ -514,65 +573,6 @@ void MainWindow::InitializeThreads() {
             epos_thread_, &EposThread::deleteLater);  // deallocate
 
     epos_thread_->start();
-#endif
-}
-
-/**
- * @brief Populates a map-of-maps with UI label elements, according to their
- *        corresponding joint names (`Joint`) and feedback types
- *        (`Actuator::Feedback`).
- *
- * @note Only used in constructor - placed in own function to improve readability.
- *
- * @see Joint::Name Actuator::Feedback HandleActuatorFeedback
- */
-void MainWindow::InitializeFeedbackElementMap() {
-    // Central joint
-#if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_roll;
-    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_roll;
-    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_roll;
-#elif LIBRA_VERSION == 2
-    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_yaw;
-    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_yaw;
-    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_yaw;
-#endif
-
-    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_pitch;
-    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_pitch;
-    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_pitch;
-
-    // Arm
-#if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j1;
-    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j1;
-    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_j1;
-
-    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j2;
-    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j2;
-    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_j2;
-
-    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kTargetPos] =
-        ui_->l_target_j3;
-    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualPos] =
-        ui_->l_actual_j3;
-    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualTorque] =
-        ui_->l_torque_j3;
 #endif
 }
 

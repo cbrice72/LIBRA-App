@@ -200,11 +200,6 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     const Actuator::Feedback type) {
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
-#if LIBRA_VERSION == 1
-    const double alpha = 0.2;  // arbitrary smoothing factor (0.0-1.0)
-    double ma_val = 0;         // storage for differential drive calculation
-#endif
-
     for (int i = 0; i < n_actuators_; ++i) {
         double val = 0;
 
@@ -224,6 +219,7 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         // Handle complex joints first
 #if LIBRA_VERSION == 1
         // MA and MB differential drive -> Roll and Pitch
+        double ma_val = 0;  // storage for differential drive calculation
         if (enum_names_[i] == Actuator::Name::kMA) {
             ma_val = val;
             continue;  // MA will be handled with MB, so do nothing
@@ -242,7 +238,9 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         }
 #endif
         // Regular 1-DoF joints should be 1-to-1
-        auto name = static_cast<Joint::Name>(enum_names_[i]);
+        auto name = static_cast<Joint::Name>(
+            enum_names_[i]);  // TODO: casting Actuator::Name to Joint::Name is
+                              //       horribly bug-prone
         joint_feedback_map[name] = Joint::ActuatorToJointSimple(name, val);
     }
 

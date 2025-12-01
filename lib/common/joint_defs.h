@@ -43,6 +43,11 @@ enum class Type : uint8_t { kRoll = 0, kPitch, kYaw };
  * @note This is what is both displayed to the user and published to the ROS2
  *       ecosystem, not `Actuator::Name`, which is for the physical hardware.
  *
+ * @note HEBI actuator names MUST start at 0 for everything to line up properly,
+ *       thanks to the design of `Actuator::GetHebiDefault()`. I know this
+ *       confusing (it has already led to a frustrating bug hunt), but I have
+ *       more important things to do right now than refactor this...
+ *
  * @see Actuator::Name
  */
 enum Name : uint8_t {
@@ -53,8 +58,8 @@ enum Name : uint8_t {
     kJ2,  // Yaw
     kJ3,  // Pitch
 #elif LIBRA_VERSION == 2
-    kYaw = 0,
-    kPitch,
+    kPitch = 0,
+    kYaw,
 #endif
     kUndefined  // keep this last!
 };
