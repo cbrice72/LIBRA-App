@@ -75,6 +75,18 @@ void MainWindow::on_a_epos_connect_triggered() {
                 return;
             }
 
+            if (util::IsWslEnvironment()) {
+                // What the EPOS API retrieves as "USB#" on WSL is actually
+                // "hidraw#", so we modify the port name here
+                if (auto pos = params.port_name.find("USB");
+                    pos != std::string::npos) {
+                    params.port_name.replace(pos, 3, "/dev/hidraw");
+                    logger_->Info("WSL detected - modified EPOS port name to "
+                                  + params.port_name);
+                }
+            }
+
+            // Send selected device params to EposThread
             epos_thread_->SetDeviceParams(params.device_name,
                                           params.protocol_name,
                                           params.interface_name,
