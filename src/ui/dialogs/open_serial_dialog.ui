@@ -14,7 +14,7 @@
    <string>Select Serial Port</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset resource="../res/resources.qrc">
     <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <property name="modal">
@@ -92,7 +92,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="resources.qrc"/>
+  <include location="../res/resources.qrc"/>
  </resources>
  <connections>
   <connection>

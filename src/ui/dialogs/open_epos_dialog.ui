@@ -20,7 +20,7 @@
    <string>Open EPOS device</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset resource="../res/resources.qrc">
     <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <widget class="QWidget" name="formLayoutWidget">
@@ -196,8 +196,7 @@
   </widget>
  </widget>
  <resources>
-  <include location="resources.qrc"/>
-  <include location="resources.qrc"/>
+  <include location="../res/resources.qrc"/>
  </resources>
  <connections/>
 </ui>

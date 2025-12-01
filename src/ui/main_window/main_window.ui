@@ -14,7 +14,7 @@
    <string>MainWindow</string>
   </property>
   <property name="windowIcon">
-   <iconset resource="resources.qrc">
+   <iconset resource="../res/resources.qrc">
     <normaloff>:/LIBRA-App</normaloff>:/LIBRA-App</iconset>
   </property>
   <widget class="QWidget" name="central_widget">
@@ -3486,7 +3486,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
   <tabstop>pb_manip_fast</tabstop>
  </tabstops>
  <resources>
-  <include location="resources.qrc"/>
+  <include location="../res/resources.qrc"/>
  </resources>
  <connections/>
 </ui>
