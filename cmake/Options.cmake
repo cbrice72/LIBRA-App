@@ -43,16 +43,15 @@ endif()
 
 set(HEBI_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/hebi-cpp-3.13.0"
-    CACHE PATH "Path to the HEBI API" FORCE # included in this project
+    CACHE PATH "Path to the HEBI API" FORCE
 )
 
 set(EPOS_DIR
     "${CMAKE_SOURCE_DIR}/thirdparty/epos-6.8.1.0"
-    CACHE PATH "Path to the EPOS API" FORCE # included in this project
+    CACHE PATH "Path to the EPOS API" FORCE
 )
 
-if(LIBRA_VERSION EQUAL 1)
-    set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-1 PARENT_SCOPE)
-elseif(LIBRA_VERSION EQUAL 2)
-    set(LIBRA_SHARED ${CMAKE_SOURCE_DIR}/shared/libra-2 PARENT_SCOPE)
-endif()
+set(LIBRA_SHARED
+    ${CMAKE_SOURCE_DIR}/shared/libra-${LIBRA_VERSION}
+    CACHE PATH "Path to shared LIBRA resources" FORCE
+)

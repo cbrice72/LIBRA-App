@@ -7,11 +7,14 @@
 
 # ========================= SETUP =========================
 
+# Set common variables
+set(RESOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ui/res")
+
 # Add project modules
 add_subdirectory(thread) # actuator_thread
 
 # Collect project source files
-add_subdirectory(ui) # UI_SOURCE, dialogs
+add_subdirectory(ui) # UI_SOURCE, various dialogs
 add_subdirectory(widgets) # WIDGET_SOURCE
 
 # Validation
@@ -25,7 +28,7 @@ set(PROJECT_SOURCE
 
 # ========================= LIBRA APP GUI =========================
 
-# Create the GUI executable
+# Create the GUI application target
 qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # Ensure it has access to the necessary headers
@@ -48,13 +51,13 @@ target_link_libraries(
     PRIVATE ${LIBRA_THREADS}
     PRIVATE ${LIBRA_DIALOGS}
     # Qt
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core
+    PRIVATE Qt${QT_VERSION_MAJOR}::Gui
     # ~~~
     # Compilation breaks if Multimedia and MultimediaWidgets aren't linked to
     # the main executable, even though they're only needed by camera_manager.
     # Why does this happen? I don't know. I'm tired.
     # ~~~
-    PRIVATE Qt${QT_VERSION_MAJOR}::Core
-    PRIVATE Qt${QT_VERSION_MAJOR}::Gui
     PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia
     PRIVATE Qt${QT_VERSION_MAJOR}::MultimediaWidgets
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
@@ -81,3 +84,19 @@ set_target_properties(
 # For more information, see https://doc.qt.io/qt-6/qt-add-executable.html#target-creation
 # ~~~
 
+# Install the application
+install(
+    TARGETS libra_app_gui
+    BUNDLE DESTINATION .
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+add_custom_command( # copy runtime config files to output dir
+    TARGET libra_app_gui
+    POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
+            ${CMAKE_INSTALL_BINDIR}/shared
+)
+
+qt_finalize_executable(libra_app_gui)

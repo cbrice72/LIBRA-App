@@ -28,17 +28,7 @@
  * !Uncategorized
  */
 
-// Qt
-
-constexpr int kPrecision = 1;        // 0.1
-constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
-
-// Arduino
-
-#if LIBRA_VERSION == 1
-constexpr bool kManipMoveSlow = true;
-constexpr bool kManipMoveFast = false;
-#endif
+constexpr int kPrecision = 1;  // i.e., "0.1"
 
 //------------------------------------------------------------------------------
 // !Local Helpers

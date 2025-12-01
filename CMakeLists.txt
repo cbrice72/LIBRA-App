@@ -41,38 +41,19 @@ if(LIBRA_VERSION EQUAL 2)
 endif()
 include(HebiSetup)
 
+include(GNUInstallDirs) # auto-included by Qt
+
 # ========================= BUILD =========================
 
 # Add project subdirectories (order matters!)
 add_subdirectory(lib) # utilites, managers
-add_subdirectory(src) # libra_app_gui, threads, dialogs
+add_subdirectory(src) # libra_app_gui
 
-# ========================= INSTALL =========================
-
-# Specify installation settings
-include(GNUInstallDirs) # auto-included by Qt
-
-install(
-    TARGETS libra_app_gui
-    BUNDLE DESTINATION .
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-
-# Copy runtime config files to the executable directory
-add_custom_command(
-    TARGET libra_app_gui
-    POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
-            ${CMAKE_INSTALL_BINDIR}/shared
-)
-
-# Generate proper deployment settings for the target
-qt_finalize_executable(libra_app_gui)
+# ========================= FINALIZE =========================
 
 if(BUILD_WITH_ROS2)
     # Register the package with ament
     ament_package()
 endif()
 
-message(STATUS "LIBRA App executable installed in: ${CMAKE_INSTALL_BINDIR}")
+message(STATUS "LIBRA App installed at: ${CMAKE_INSTALL_BINDIR}")

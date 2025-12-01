@@ -12,5 +12,5 @@ set(HEBI_INCLUDE_DIRS
     "${HEBI_DIR}/src"
     "${HEBI_DIR}/hebi/include"
     "${HEBI_DIR}/Eigen"
-    PARENT_SCOPE
+    CACHE PATH "Path to HEBI SDK include directories" FORCE
 )

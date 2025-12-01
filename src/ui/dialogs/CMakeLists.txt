@@ -23,6 +23,8 @@ if(LIBRA_VERSION EQUAL 2)
     # Ensure this module packages the necessary headers
     target_include_directories(
         open_epos_dialog
+        # Project
+        PUBLIC ${RESOURCE_DIR}
         # EPOS (Maxon)
         PUBLIC ${EPOS_INCLUDE_DIRS}
         # Make this directory available to consumers
@@ -58,6 +60,8 @@ qt_add_library(
 # Ensure this module packages the necessary headers
 target_include_directories(
     open_serial_dialog
+    # Project
+    PUBLIC ${RESOURCE_DIR}
     # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )
@@ -87,6 +91,8 @@ qt_add_library(
 # Ensure this module packages the necessary headers
 target_include_directories(
     torque_comp_dialog
+    # Project
+    PUBLIC ${RESOURCE_DIR}
     # Make this directory available to consumers
     INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}
 )

@@ -11,5 +11,5 @@
 #       a CMakeLists.txt, only a binary to link against
 set(EPOS_INCLUDE_DIRS
     "${EPOS_DIR}/include"
-    PARENT_SCOPE
+    CACHE PATH "Path to EPOS SDK include directories" FORCE
 )
