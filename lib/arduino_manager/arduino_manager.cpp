@@ -219,8 +219,8 @@ void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
     }
 
     if (!ser_water_->isOpen()) {
-        // Unlike other isOpen checks, do NOT log any messages here because this
-        // function can be called by HebiThread multiple times per second
+        // NOTE: Unlike other isOpen checks, do NOT log a message here because
+        //       this function can be called frequently by HebiThread
         return;
     }
 
