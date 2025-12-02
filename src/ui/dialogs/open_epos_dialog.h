@@ -21,6 +21,19 @@ class OpenEposDialog;
 }  // namespace Ui
 
 /**
+ * @brief Struct grouping all parameters required to connect to an EPOS device.
+ */
+struct EposDeviceParams {
+    std::string device_name;
+    std::string protocol_name;
+    std::string interface_name;
+    std::string port_name;
+    uint baud_rate;
+    // Convenience flag indicating whether all params have been set
+    bool is_set{false};
+};
+
+/**
  * @brief A dialog for retrieving the information required for the EPOS (Maxon)
  *        library call `VCS_OpenDevice()`.
  */
@@ -35,7 +48,7 @@ class OpenEposDialog : public QDialog {
 
     // --- Getters & Setters ---
 
-    void* GetEPOSHandle();  // has to be public so MainWindow can access it
+    EposDeviceParams GetDeviceParams();
 
     // NOLINTBEGIN: Qt-generated
   private slots:
@@ -47,7 +60,7 @@ class OpenEposDialog : public QDialog {
     void on_cb_port_name_textActivated(const QString& sel);
     void on_cb_baud_rate_textActivated(const QString& sel);
 
-    void on_pb_connect_clicked();
+    void on_pb_confirm_clicked();
     void on_pb_cancel_clicked();
 
   private:
@@ -55,11 +68,5 @@ class OpenEposDialog : public QDialog {
     // --- Data Members ---
     Ui::OpenEposDialog* ui_{nullptr};
 
-    std::string device_name_;
-    std::string protocol_name_;
-    std::string interface_name_;
-    std::string port_name_;
-    uint baud_rate_;
-
-    void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
+    EposDeviceParams params_{};
 };

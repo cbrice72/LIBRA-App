@@ -9,7 +9,7 @@
 #include "util.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <sys/stat.h>
 
 // Other Library Headers
 #include <QDateTime>  // Qt::Core
@@ -33,6 +33,24 @@ constexpr uint kMaxCharBufSize = 100;
 //------------------------------------------------------------------------------
 
 namespace util {
+
+/**
+ * @brief Checks if the app is running in Windows Subsystem for Linux (WSL2).
+ */
+bool IsWslEnvironment() {
+    const char* wsl_path = "/run/WSL";
+
+    struct stat buf {};
+
+    if (stat(wsl_path, &buf) == 0 && S_ISDIR(buf.st_mode)) {
+        qWarning()
+            << "[WARN] You seem to be running this on WSL2. Please ensure "
+               "you have properly forwarded your USB connections.";
+        return true;
+    }
+
+    return false;
+}
 
 /**
  * @brief Provides a filename-safe string of the current date and time.

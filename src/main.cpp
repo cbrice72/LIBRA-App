@@ -18,7 +18,7 @@
 #endif
 
 // Project Headers
-#include "ui/main_window.h"
+#include "ui/main_window/main_window.h"
 
 /**
  * @brief The designated start of the program.

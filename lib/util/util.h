@@ -18,6 +18,8 @@
 
 namespace util {
 
+bool IsWslEnvironment();
+
 std::string GetDateTimeStr();
 std::string GetTimestampStr();
 

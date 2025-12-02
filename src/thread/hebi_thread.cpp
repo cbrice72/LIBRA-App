@@ -200,11 +200,6 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     const Actuator::Feedback type) {
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
-#if LIBRA_VERSION == 1
-    const double alpha = 0.2;  // arbitrary smoothing factor (0.0-1.0)
-    double ma_val = 0;         // storage for differential drive calculation
-#endif
-
     for (int i = 0; i < n_actuators_; ++i) {
         double val = 0;
 
@@ -224,6 +219,7 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         // Handle complex joints first
 #if LIBRA_VERSION == 1
         // MA and MB differential drive -> Roll and Pitch
+        double ma_val = 0;  // storage for differential drive calculation
         if (enum_names_[i] == Actuator::Name::kMA) {
             ma_val = val;
             continue;  // MA will be handled with MB, so do nothing
@@ -242,15 +238,19 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         }
 #endif
         // Regular 1-DoF joints should be 1-to-1
-        auto name = static_cast<Joint::Name>(enum_names_[i]);
+        auto name = static_cast<Joint::Name>(
+            enum_names_[i]);  // TODO: casting Actuator::Name to Joint::Name is
+                              //       horribly bug-prone
         joint_feedback_map[name] = Joint::ActuatorToJointSimple(name, val);
     }
 
+#if LIBRA_VERSION == 1
     // Send J3 position for manipulator pitch correction
     if (type == Actuator::Feedback::kActualPos) {
         emit InformPitch(feedback->getPosition()[Actuator::Name::kJ3]
                          * kRadToDeg);
     }
+#endif
 
     return joint_feedback_map;
 }
@@ -492,14 +492,17 @@ void HebiThread::PublishState() {
         //       certain joints, since I flip the values to aid operator UX.
         double actual_pos = 0.0;
         switch (static_cast<Joint::Name>(i)) {
+# if LIBRA_VERSION == 1
             case Joint::Name::kPitch:
             case Joint::Name::kJ2:
             case Joint::Name::kJ3:
                 // Sign flip required to match actuator's real-world orientation
                 actual_pos = -actual_pos_map.at(static_cast<Joint::Name>(i));
                 break;
+# endif
             default:
                 // Fine as-is
+                // TODO: is this correct for LIBRA-II's pitch joint?
                 actual_pos = actual_pos_map.at(static_cast<Joint::Name>(i));
                 break;
         }

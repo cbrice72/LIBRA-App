@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<group_safety version="1.0.0">
+  <!-- Actuators: "Pitch" -->
+  <mstop />
+  <position>
+    <!-- 3.142 rad ~= 180 deg -->
+    <min_limit>-3.142</min_limit>
+    <max_limit>3.142</max_limit>
+  </position>
+  <velocity>
+    <!-- 0.052 rad/s ~= 3 deg/s -->
+    <!-- 0.018 rad/s ~= 1 deg/s -->
+    <min_limit>-0.052</min_limit>
+    <max_limit>0.052</max_limit>
+  </velocity>
+  <effort>
+    <!-- For X8-16: Cont. Torque = 16 Nm, Peak Torque = 38 Nm -->
+    <min_limit>-35</min_limit>
+    <max_limit>35</max_limit>
+  </effort>
+</group_safety>

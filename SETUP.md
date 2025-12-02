@@ -153,7 +153,7 @@ Log in and follow the installation procedure. The following list of installation
     - Select "Qt X.X for desktop development" and "Custom Installation".
 2. "Customize"
     - Under "Qt" -> "Qt X.X.X" (whichever is automatically selected) -> "Additional Libraries", check the following.
-        - While most libraries listed in the `set(QT_PACKAGES ...)` line in the root `CMakeLists.txt` are available by default, some must be manually selected. At the time of writing, these are: **Qt Multimedia** and **Qt Serial Port**.
+        - While most libraries listed in the `set(QT_PACKAGES ...)` line in `cmake/QtSetup.cmake` are available by default, some must be manually selected. At the time of writing, these are: **Qt Multimedia** and **Qt Serial Port**.
     - Ensure "Qt Creator" -> "Debug Symbols" is checked.
 
 #### **Add Qt Creator to PATH**

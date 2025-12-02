@@ -100,6 +100,7 @@ class MainWindow : public QMainWindow {
                                     const double& lower_bound);
 
 #if LIBRA_VERSION == 2
+    void ConnectEpos();
     void CommandEpos(const std::vector<double>& deg);
 #endif
 
@@ -113,9 +114,17 @@ class MainWindow : public QMainWindow {
 
     // Actuators Menu
 
+#if LIBRA_VERSION == 2
+    void on_a_epos_connect_triggered();
+#endif
+
     void on_a_hebi_load_gains_triggered();
     void on_a_hebi_override_limits_toggled(bool checked);
     void on_a_hebi_central_torque_comp_triggered();
+
+#if LIBRA_VERSION == 1
+    void on_a_manip_connect_triggered();
+#endif
 
     // Sensors Menu
     // (most actions are handled via signals, and thus don't need functions)
@@ -123,6 +132,8 @@ class MainWindow : public QMainWindow {
     void on_a_refresh_camera_list_triggered();
 
     // Water Menu
+
+    void on_a_water_connect_triggered();
 
     void on_a_water_set_empty_triggered();
     void on_a_water_set_full_triggered();
@@ -179,11 +190,6 @@ class MainWindow : public QMainWindow {
     void InitializeFeedbackElementMap();
     void InitializeDeviceManagers();
     void InitializeThreads();
-
-    void ConnectWaterHelper();
-#if LIBRA_VERSION == 1
-    void ConnectManipHelper();
-#endif
 
     // --- Data Members ---
 

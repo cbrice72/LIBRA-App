@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="LIBRA-App">icons/LIBRA-App.ico</file>
+    </qresource>
+</RCC>

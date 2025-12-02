@@ -27,6 +27,7 @@
  * !Local Helpers
  * !Class Management
  * !Class Helpers
+ * !Getters & Setters
  * !Thread Overrides
  * !Actuator Commands (slots)
  */
@@ -94,6 +95,17 @@ namespace {}  // namespace
 //------------------------------------------------------------------------------
 // !Class Management
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Delegating constructor. Automatically configures EposThread based on
+ *        hard-coded defaults for Ubuntu Linux.
+ *
+ * @param parent Owning Qt widget
+ * @param debug_mode Whether to output verbose debug text
+ */
+EposThread::EposThread(QObject* parent, const bool& debug_mode)
+    : EposThread(parent, "EPOS4", "MAXON SERIAL V2", "USB", "USB0", 1000000,
+                 debug_mode_) {}
 
 /**
  * @brief Standard constructor.
@@ -218,6 +230,30 @@ QString EposThread::GetStatus() {
        << "  Current:         " << std::setw(7) << curr << " A\n";
 
     return QString::fromStdString(ss.str());
+}
+
+//------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Sets the device connection parameters.
+ *
+ * @param device_name Maxon device to connect to
+ * @param protocol_name Communication protocol to use
+ * @param interface_name Interface to communicate through
+ * @param port_name Specific interface port where device is located
+ * @param baud_rate Rate at which information will be transferred
+ */
+void EposThread::SetDeviceParams(std::string device_name,
+                                 std::string protocol_name,
+                                 std::string interface_name,
+                                 std::string port_name, uint baud_rate) {
+    device_name_ = std::move(device_name);
+    protocol_name_ = std::move(protocol_name);
+    interface_name_ = std::move(interface_name);
+    port_name_ = std::move(port_name);
+    baud_rate_ = baud_rate;
 }
 
 //------------------------------------------------------------------------------
