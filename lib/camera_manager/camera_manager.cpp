@@ -363,7 +363,7 @@ void CameraManager::Start() {
 #ifdef BUILD_WITH_ROS2
         // Set up image subscription
         image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
-            kCameraRgbTopic, 10,
+            kCameraRgbTopic, rclcpp::SensorDataQoS(),
             [this](const sensor_msgs::msg::Image::SharedPtr msg) {
                 this->ProcessRos2Image(msg);
             });
