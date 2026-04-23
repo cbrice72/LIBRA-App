@@ -114,8 +114,10 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
         // Cancel any conflicting widget states
         ui_->pb_water_fill_A->setChecked(false);
         ui_->pb_water_drain_A->setChecked(false);
+#if LIBRA_VERSION == 1
         ui_->pb_water_fill_B->setChecked(false);
         ui_->pb_water_drain_B->setChecked(false);
+#endif
 
         // Clearly display an "enabled" state
         ui_->pb_autocomp_enable->setText(" DISABLE ATC");

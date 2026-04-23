@@ -150,24 +150,22 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
 
-    // TODO: temporarily place static joint in this publisher.
-
     auto hebi_names = Joint::GetHebiStrings();
+# if LIBRA_VERSION == 1
+    // TODO: temporary solution to publish the static joint to the ROS2 domain
     hebi_names.push_back("Static-Manip");
+# endif
     state_msg_.name = hebi_names;
 
-    state_msg_.position.resize(n_actuators_ + 1);
+# if LIBRA_VERSION == 1
+    state_msg_.position.resize(n_actuators_ + 1);  // +1 for static joint
     state_msg_.velocity.resize(n_actuators_ + 1);
     state_msg_.effort.resize(n_actuators_ + 1);
-
-    /*
-    state_msg_.name = Joint::GetHebiStrings();
-
-    // Resize additional vectors to match number of actuators
+# else
     state_msg_.position.resize(n_actuators_);
     state_msg_.velocity.resize(n_actuators_);
     state_msg_.effort.resize(n_actuators_);
-    */
+# endif
 #endif
 }
 
@@ -487,7 +485,7 @@ void HebiThread::PublishState() {
         GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualTorque);
 
     // Populate the message and publish it
-    for (uint8_t i = 0; i < n_actuators_; ++i) {
+    for (int i = 0; i < n_actuators_; ++i) {
         // NOTE: First we must undo the JointToActuator conversion logic for
         //       certain joints, since I flip the values to aid operator UX.
         double actual_pos = 0.0;
@@ -513,10 +511,12 @@ void HebiThread::PublishState() {
         state_msg_.effort[i] = actual_eff_map.at(static_cast<Joint::Name>(i));
     }
 
+# if LIBRA_VERSION == 1
     // TODO: temporary static manipulator joint
-    state_msg_.position[n_actuators_ + 1] = 0.0;
-    state_msg_.velocity[n_actuators_ + 1] = 0.0;
-    state_msg_.effort[n_actuators_ + 1] = 0.0;
+    state_msg_.position[n_actuators_] = 0.0;
+    state_msg_.velocity[n_actuators_] = 0.0;
+    state_msg_.effort[n_actuators_] = 0.0;
+# endif
 
     state_pub_->publish(state_msg_);
 }
