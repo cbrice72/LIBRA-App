@@ -137,9 +137,10 @@ EposThread::EposThread(QObject* parent, std::string device_name,
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
-    logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
+    logger_ = std::make_unique<Ros2Logger>("epos_manager", debug_mode_,
+                                           this->get_logger());
 #else
-    logger_ = std::make_unique<QtLogger>(debug_mode_);
+    logger_ = std::make_unique<QtLogger>("epos_manager", debug_mode_);
 #endif
 }
 
@@ -264,7 +265,7 @@ void EposThread::SetDeviceParams(std::string device_name,
  * @brief Main command loop.
  */
 void EposThread::run() {
-    logger_->Debug("Initialized EposThread");
+    logger_->Debug("Starting thread");
 
     // Initialize thread variables for efficiency
     uint err_code = 0;
@@ -286,7 +287,9 @@ void EposThread::run() {
 
         // Send movement command
         if (target_ != last_target_) {
-            logger_->Debug("EPOS - Sending move command");
+            logger_->Debug(
+                "Sending move command (target=" + std::to_string(target_)
+                + " inc, prev=" + std::to_string(last_target_) + " inc)");
 
             // No complex trajectory-related logic necessary since we only
             // support ProfilePositionMode (for now)
@@ -348,6 +351,11 @@ void EposThread::Connect() {
     // If there is already an active connection, gracefully terminate it
     Stop();
     Disconnect();
+
+    logger_->Debug("Connecting to device with params: device=" + device_name_
+                   + ", protocol=" + protocol_name_
+                   + ", interface=" + interface_name_ + ", port=" + port_name_
+                   + ", baud=" + std::to_string(baud_rate_));
 
     // Connect to specified controller
     uint err_code = 0;
@@ -477,7 +485,7 @@ void EposThread::Connect() {
     handle_ = handle;  // only set our class handle after successful init
     emit Connected(true);
 
-    logger_->Debug("EPOS - Connection successful");
+    logger_->Debug("Connection successful");
 }
 
 /**
@@ -509,7 +517,7 @@ void EposThread::Disconnect() {
     handle_ = nullptr;
     emit Connected(false);
 
-    logger_->Debug("EPOS - Gracefully disconnected from actuator");
+    logger_->Debug("Gracefully disconnected from actuator(s)");
 }
 
 /**
@@ -537,8 +545,7 @@ void EposThread::SetTarget(const std::vector<double>& target) {
     // Convert and save
     target_ = target.at(0) * kDegToInc;
 
-    logger_->Debug("EPOS - Set target(s) to " + std::to_string(target_)
-                   + " inc");
+    logger_->Debug("Set target(s) to " + std::to_string(target_) + " inc");
 }
 
 /**
@@ -590,5 +597,5 @@ void EposThread::Stop() {
         return;
     }
 
-    logger_->Debug("EPOS - Actuator stopped");
+    logger_->Debug("Actuator stopped");
 }

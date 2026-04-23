@@ -29,6 +29,9 @@
  */
 class Logger {
   public:
+    explicit Logger(std::string parent_name)
+        : parent_prefix_("[" + std::move(parent_name) + "] ") {}
+
     virtual ~Logger() = default;
 
     /**
@@ -67,4 +70,12 @@ class Logger {
      * @param msg The message to log
      */
     virtual void Error(const std::string& msg) = 0;
+
+  protected:
+    [[nodiscard]] std::string Format(const std::string& msg) const {
+        return parent_prefix_ + msg;
+    }
+
+  private:
+    std::string parent_prefix_;
 };

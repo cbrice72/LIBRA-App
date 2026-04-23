@@ -122,9 +122,10 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
-    logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
+    logger_ = std::make_unique<Ros2Logger>("hebi_manager", debug_mode_,
+                                           this->get_logger());
 #else
-    logger_ = std::make_unique<QtLogger>(debug_mode_);
+    logger_ = std::make_unique<QtLogger>("hebi_manager", debug_mode_);
 #endif
 
     // Initialize HEBI objects
@@ -290,7 +291,7 @@ void HebiThread::CheckTorqueControl() {
         if (movement_en_) {
             movement_en_ = false;
 
-            logger_->Debug("HEBI - Movement disabled due to high torque ("
+            logger_->Debug("ATC - Movement disabled due to high torque ("
                            + std::to_string(arm_torque_r) + " Nm > "
                            + std::to_string(torque_comp_upper_bound_) + " Nm)");
         } else {  // movement is disabled
@@ -301,6 +302,7 @@ void HebiThread::CheckTorqueControl() {
         // While significant arm torque still exists, continue reporting
         // direction of torque to arduino_thread
         emit ReportArmTorque(arm_torque_theta);
+
     } else {
         // Once arm torque reaches an acceptable level, disable fluid system
         // balancing and re-enable movement
@@ -308,7 +310,7 @@ void HebiThread::CheckTorqueControl() {
         if (!movement_en_) {
             movement_en_ = true;
 
-            logger_->Debug("HEBI - Movement re-enabled ("
+            logger_->Debug("ATC - Movement re-enabled ("
                            + std::to_string(arm_torque_r) + " Nm < "
                            + std::to_string(torque_comp_lower_bound_) + " Nm)");
         }
@@ -365,7 +367,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             // Trajectory is complete
             trajectory_.reset();
 
-            logger_->Debug("HEBI - Trajectory complete");
+            logger_->Debug("Trajectory complete");
 
             // Calculate effort commands to counteract gravity
             if (model_based_comp_en_ && model_ != nullptr) {
@@ -535,7 +537,7 @@ void HebiThread::PublishState() {
  * @see CheckTorqueControl(), ExecuteMovement(), SendFeedback()
  */
 void HebiThread::run() {
-    logger_->Debug("Initialized HebiThread");
+    logger_->Debug("Starting thread");
 
     // Initialize buffers for loop efficiency
     Eigen::VectorXd cmd_pos(n_actuators_);
@@ -600,7 +602,7 @@ void HebiThread::Connect() {
             return;
         }
 
-        logger_->Debug("HEBI - Found following actuators (Family|Name):");
+        logger_->Debug("Found the following actuators (Family|Name):");
         for (auto entry : *entry_list) {
             logger_->Debug("  " + entry.family_ + " | " + entry.name_);
         }
@@ -635,7 +637,7 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
-    logger_->Debug("HEBI - Connection successful");
+    logger_->Debug("Connection successful");
     emit Connected(true);
 
     // Load robot kinematics
@@ -674,7 +676,7 @@ void HebiThread::Disconnect() {
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
 
-        logger_->Debug("HEBI - Gracefully disconnected from actuator(s)");
+        logger_->Debug("Gracefully disconnected from actuator(s)");
         emit Connected(false);
     }
 }
@@ -777,7 +779,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
                                                                       &vel,
                                                                       &accel);
 
-    logger_->Debug("HEBI - Set trajectory target(s) to " + trajectory_ss.str()
+    logger_->Debug("Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
 }
 
@@ -791,7 +793,7 @@ void HebiThread::Stop() {
 
     trajectory_.reset();
 
-    logger_->Debug("HEBI - Trajectory reset");
+    logger_->Debug("Trajectory reset");
 }
 
 /**
@@ -817,8 +819,7 @@ void HebiThread::LoadGains(const QString& file_path) {
         return;
     }
 
-    logger_->Info("HEBI - Successfully loaded gains from: "
-                  + file_path.toStdString());
+    logger_->Info("Successfully loaded gains from: " + file_path.toStdString());
 }
 
 /**
@@ -834,7 +835,7 @@ void HebiThread::StartHebiLog() {
     }
 
     if (logging_active_) {
-        logger_->Warn("HEBI - Logging is already active");
+        logger_->Warn("Logging is already active");
         return;
     }
 
@@ -856,7 +857,7 @@ void HebiThread::StartHebiLog() {
     }
     logging_active_ = true;
 
-    logger_->Info("HEBI - Started logging to: " + log_path);
+    logger_->Info("Started logging to: " + log_path);
 }
 
 /**
@@ -864,12 +865,12 @@ void HebiThread::StartHebiLog() {
  */
 void HebiThread::StopHebiLog() {
     if (group_ == nullptr) {
-        logger_->Warn("HEBI - Can't stop logging; not connected!");
+        logger_->Warn("Can't stop logging; not connected");
         return;
     }
 
     if (!logging_active_) {
-        logger_->Warn("HEBI - Logging is not currently active");
+        logger_->Warn("Logging is not currently active");
         return;
     }
 
@@ -877,7 +878,7 @@ void HebiThread::StopHebiLog() {
     group_->stopLog();
     logging_active_ = false;
 
-    logger_->Info("HEBI - Stopped logging");
+    logger_->Info("Stopped logging");
 }
 
 //------------------------------------------------------------------------------
@@ -891,7 +892,7 @@ void HebiThread::StopHebiLog() {
  * @param enabled Whether to compensate for inertia/gravity
  */
 void HebiThread::EnableModelBasedComp(const bool& enabled) {
-    logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
+    logger_->Debug(std::string(enabled ? "Enabling" : "Disabling")
                    + " model-based dynamic compensation");
 
     model_based_comp_en_ = enabled;
@@ -903,8 +904,8 @@ void HebiThread::EnableModelBasedComp(const bool& enabled) {
  * @param enabled Whether to control torque experienced by the central joint
  */
 void HebiThread::EnableTorqueControl(const bool& enabled) {
-    logger_->Debug("HEBI - " + std::string(enabled ? "Enabling" : "Disabling")
-                   + " torque-based movement control");
+    logger_->Debug("ATC - " + std::string(enabled ? "Enabling" : "Disabling")
+                   + " automatic torque control");
 
     torque_control_en_ = enabled;
 
@@ -925,7 +926,7 @@ void HebiThread::SetTorqueCompBounds(const double& lower_bound,
     torque_comp_lower_bound_ = lower_bound;
     torque_comp_upper_bound_ = upper_bound;
 
-    logger_->Debug("HEBI - Torque compensation bounds updated: lower="
+    logger_->Debug("ATC - Torque compensation bounds updated: lower="
                    + std::to_string(lower_bound)
                    + " Nm, upper=" + std::to_string(upper_bound) + " Nm");
 }

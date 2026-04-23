@@ -88,9 +88,10 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
-    logger_ = std::make_unique<Ros2Logger>(debug_mode_, this->get_logger());
+    logger_ = std::make_unique<Ros2Logger>("camera_manager", debug_mode_,
+                                           this->get_logger());
 #else
-    logger_ = std::make_unique<QtLogger>(debug_mode_);
+    logger_ = std::make_unique<QtLogger>("camera_manager", debug_mode_);
 #endif
 
     // Ensure output directories exist
@@ -118,8 +119,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     }
 
     if (selected_camera.isNull()) {
-        logger_->Error("CameraManager - Camera " + id_.toStdString()
-                       + " not found!");
+        logger_->Error("Camera " + id_.toStdString() + " not found");
         return;
     }
 
@@ -127,7 +127,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     // ========== Special Case: RealSense Depth Cameras ==========
 
     if (IsRealSenseCamera(selected_camera)) {
-        logger_->Info("CameraManager - RealSense camera detected! Deferring to "
+        logger_->Info("RealSense camera detected; deferring to "
                       "ROS2 node...");
         use_ros2_node_ = true;
 
@@ -160,7 +160,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     // If an invalid CameraFormat is detected, select a safe default
     if (camera_->cameraFormat().pixelFormat()
         == QVideoFrameFormat::Format_Invalid) {
-        logger_->Warn("CameraManager - Invalid camera format detected; "
+        logger_->Warn("Invalid camera format detected; "
                       "applying defaults");
 
         // Check all supported formats
@@ -179,9 +179,8 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         }
 
         if (!selected) {
-            logger_->Warn(
-                "CameraManager - This camera doesn't seem to support "
-                "a JPEG 720p stream; defaulting to the first supported format");
+            logger_->Warn("This camera doesn't seem to support a JPEG 720p "
+                          "stream; defaulting to the first supported format");
             camera_->setCameraFormat(supported_formats.first());
         }
     }
@@ -216,8 +215,8 @@ CameraManager::~CameraManager() {
             video_writer_.release();
         }
 #else
-        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                       "to \"OFF\". You shouldn't be able to get here!");
+        logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                       "shouldn't be able to get here!");
 #endif
     }
 
@@ -225,7 +224,7 @@ CameraManager::~CameraManager() {
     //       cleaned up by virtue of Qt's parenting structure (passing in "this"
     //       as a constructor parameter)
 
-    logger_->Debug("Cleaned up CameraManager");
+    logger_->Debug("Cleaned up manager");
 };
 
 //------------------------------------------------------------------------------
@@ -257,14 +256,11 @@ void CameraManager::CheckRos2Connectivity() {
     ros2_connected_ = !active_publishers.empty();  // get current state
 
     if (was_connected && !ros2_connected_) {  // yes -> no
-        logger_->Warn("CameraManager - Lost connection to publishers on "
-                      + kCameraRgbTopic);
+        logger_->Warn("Lost connection to publishers on " + kCameraRgbTopic);
     } else if (!was_connected && ros2_connected_) {  // no -> yes
-        logger_->Info("CameraManager - Connected to publishers on "
-                      + kCameraRgbTopic);
+        logger_->Info("Connected to publishers on " + kCameraRgbTopic);
     } else if (!was_connected && !ros2_connected_) {  // no
-        logger_->Debug("CameraManager - Not detecting publishers on "
-                       + kCameraRgbTopic);
+        logger_->Debug("Not detecting publishers on " + kCameraRgbTopic);
     }
 }
 
@@ -315,7 +311,7 @@ void CameraManager::ProcessRos2Image(
         // If capture was requested, save to file
         if (capture_requested_.load()) {
             if (!cv::imwrite(image_filename_, cv_ptr->image)) {
-                logger_->Error("CameraManager - Failed to save image data");
+                logger_->Error("Failed to save image data");
             }
             capture_requested_.store(false);
         }
@@ -342,8 +338,7 @@ void CameraManager::ProcessRos2Image(
             video_writer_.write(bgr_frame);
         }
     } catch (cv_bridge::Exception& e) {
-        logger_->Error("CameraManager - OpenCV Bridge error: "
-                       + std::string(e.what()));
+        logger_->Error("OpenCV Bridge error: " + std::string(e.what()));
     }
 }
 #endif
@@ -385,13 +380,12 @@ void CameraManager::Start() {
                 [this]() { CheckRos2Connectivity(); });
         connectivity_timer_->start(5000);  // ms (0.2 Hz)
 #else
-        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                       "to \"OFF\". You shouldn't be able to get here!");
+        logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                       "shouldn't be able to get here!");
 #endif
     } else {
         if (camera_ == nullptr) {
-            logger_->Error("CameraManager - Cannot start camera; QCamera not "
-                           "initialized!");
+            logger_->Error("Cannot start camera; QCamera not initialized!");
             return;
         }
 
@@ -412,7 +406,7 @@ void CameraManager::Stop() {
             spin_timer_->deleteLater();
             spin_timer_ = nullptr;
 
-            logger_->Debug("CameraManager - ROS2 spin timer stopped");
+            logger_->Debug("ROS2 spin timer stopped");
         }
 
         if (connectivity_timer_ != nullptr) {
@@ -420,11 +414,11 @@ void CameraManager::Stop() {
             connectivity_timer_->deleteLater();
             connectivity_timer_ = nullptr;
 
-            logger_->Debug("CameraManager - ROS2 connectivity timer stopped");
+            logger_->Debug("ROS2 connectivity timer stopped");
         }
 #else
-        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                       "to \"OFF\". You shouldn't be able to get here!");
+        logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                       "shouldn't be able to get here!");
 #endif
     } else {
         // Directly stop the QCamera object
@@ -439,8 +433,7 @@ void CameraManager::Stop() {
  */
 void CameraManager::Capture() {
     if (!CameraIsActive()) {
-        logger_->Error("CameraManager - Cannot capture image; camera not "
-                       "initialized!");
+        logger_->Error("Cannot capture image; camera not initialized!");
         return;
     }
 
@@ -456,21 +449,20 @@ void CameraManager::Capture() {
         //       slightly obfuscates the capture logic.
         capture_requested_.store(true);
 #else
-        logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                       "to \"OFF\". You shouldn't be able to get here!");
+        logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                       "shouldn't be able to get here!");
         return;
 #endif
     } else {
         auto id = capture_->captureToFile(
             QString::fromStdString(image_filename_));
         if (id == -1) {
-            logger_->Error("CameraManager - "
-                           + capture_->errorString().toStdString());
+            logger_->Error(capture_->errorString().toStdString());
             return;
         }
     }
 
-    logger_->Info("CameraManager - Saving image data to " + image_filename_);
+    logger_->Info("Saving image data to " + image_filename_);
 }
 
 /**
@@ -499,8 +491,8 @@ bool CameraManager::Record() {
             //       words, this use_ros2_node_ conditional serves no function
             //       but visual symmetry with the "Stop recording" block.
 #else
-            logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                           "to \"OFF\". You shouldn't be able to get here!");
+            logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                           "shouldn't be able to get here!");
             return false;
 #endif
         } else {
@@ -509,7 +501,7 @@ bool CameraManager::Record() {
             recorder_->record();
 
             if (recorder_->recorderState() != QMediaRecorder::RecordingState) {
-                logger_->Error("CameraManager - QMediaRecorder error: "
+                logger_->Error("QMediaRecorder error: "
                                + recorder_->errorString().toStdString());
                 return false;
             }
@@ -526,16 +518,15 @@ bool CameraManager::Record() {
                 video_writer_.release();
             }
 #else
-            logger_->Error("CameraManager was built with BUILD_WITH_ROS2 set "
-                           "to \"OFF\". You shouldn't be able to get here!");
+            logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
+                           "shouldn't be able to get here!");
             return false;
 #endif
         } else {
             recorder_->stop();
         }
 
-        logger_->Info("CameraManager - Saving video recording to "
-                      + video_filename_);
+        logger_->Info("Saving video recording to " + video_filename_);
 
         // Reset common members
         video_filename_.clear();

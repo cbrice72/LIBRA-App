@@ -90,8 +90,17 @@ void MainWindow::on_pb_arm_start_clicked() {
     auto val_j2 = -ui_->sb_arm_j2->value();  // match operator perspective
     auto val_j3 = -ui_->sb_arm_j3->value();  // match operator perspective
 
+    logger_->Debug(
+        "Sending movement command (deg): MA=" + std::to_string(val_ma)
+        + ", MB=" + std::to_string(val_mb) + ", J1=" + std::to_string(val_j1)
+        + ", J2=" + std::to_string(val_j2) + ", J3=" + std::to_string(val_j3));
+
     emit CommandHebi({val_ma, val_mb, val_j1, val_j2, val_j3});
 #elif LIBRA_VERSION == 2
+    logger_->Debug("Sending movement command (deg): Yaw="
+                   + std::to_string(ui_->sb_arm_yaw->value())
+                   + ", Pitch=" + std::to_string(ui_->sb_arm_pitch->value()));
+
     emit CommandEpos({ui_->sb_arm_yaw->value()});
     emit CommandHebi({ui_->sb_arm_pitch->value()});
 #endif
@@ -108,6 +117,19 @@ void MainWindow::on_pb_arm_start_clicked() {
  *      on_pb_water_fill_B_toggled on_pb_water_drain_B_toggled
  */
 void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
+    logger_->Debug(
+        "ATC - " + std::string(checked ? "Enabling" : "Disabling")
+        + " automatic torque compensation ("
+#if LIBRA_VERSION == 2
+        + "EPOS connected="
+        + std::string(ui_->a_epos_disconnect->isEnabled() ? "yes" : "no") + ", "
+#endif
+        + "HEBI connected= "
+        + std::string(ui_->a_hebi_disconnect->isEnabled() ? "yes" : "no")
+        + ", Water connected="
+        + std::string(ui_->a_water_disconnect->isEnabled() ? "yes" : "no")
+        + ")");
+
     emit EnableAutoTorqueComp(checked);
 
     if (checked) {

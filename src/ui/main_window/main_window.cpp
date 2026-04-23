@@ -108,7 +108,7 @@ MainWindow::MainWindow(QWidget* parent)
     ui_->setupUi(this);
     this->setMinimumSize(this->minimumSizeHint());  // enforce minimum size
 
-    logger_ = std::make_unique<QtLogger>(debug_mode_);
+    logger_ = std::make_unique<QtLogger>("main_window", debug_mode_);
 
     // Runtime checks
     util::IsWslEnvironment();  // only warns, no action needed

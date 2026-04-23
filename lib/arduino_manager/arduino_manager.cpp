@@ -110,7 +110,7 @@ ArduinoManager::ArduinoManager(QObject* parent, const bool& debug_mode)
       ser_water_(new QSerialPort(this)),
       ser_manip_(new QSerialPort(this)) {
     // Initialize the logger
-    logger_ = std::make_unique<QtLogger>(debug_mode_);
+    logger_ = std::make_unique<QtLogger>("arduino_manager", debug_mode_);
 
     // Set up timers
     update_timer_ = new QTimer(this);
@@ -126,7 +126,7 @@ ArduinoManager::ArduinoManager(QObject* parent, const bool& debug_mode)
     update_timer_->setInterval(kUpdateIntervalMs);
     reconnect_timer_->setInterval(kReconnectIntervalMs);
 
-    logger_->Debug("Initialized ArduinoManager");
+    logger_->Debug("Starting manager");
 
     // Initialize Arduino-specific variables
     water_cmd_.resize(1);  // only 4 bits needed, so reserve 1 byte
@@ -147,7 +147,7 @@ ArduinoManager::~ArduinoManager() {
     DisconnectManip();
 #endif
 
-    logger_->Debug("Cleaned up ArduinoManager");
+    logger_->Debug("Cleaned up manager");
 }
 
 //------------------------------------------------------------------------------
@@ -256,7 +256,7 @@ void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
 
     ModifyWaterCommand(command);
 
-    logger_->Debug("Water - Set command to " + BytesToStr(water_cmd_)
+    logger_->Debug("[water] Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
 
@@ -334,7 +334,7 @@ void ArduinoManager::AttemptReconnects() {
     // Stop timer if no devices need reconnect
     if (all_reconnected) {
         reconnect_timer_->stop();
-        logger_->Debug("ArduinoManager - Stopped reconnect timer");
+        logger_->Debug("Stopped reconnect timer");
     }
 }
 
@@ -358,11 +358,11 @@ void ArduinoManager::RefreshUpdateTimerState() {
     if (any_connected && !update_timer_->isActive()) {
         // A device(s) has been connected, so start sending it commands
         update_timer_->start();
-        logger_->Debug("ArduinoManager - Started update timer");
+        logger_->Debug("Started update timer");
     } else if (!any_connected && update_timer_->isActive()) {
         // No devices are connected, so conserve resources
         update_timer_->stop();
-        logger_->Debug("ArduinoManager - Stopped update timer");
+        logger_->Debug("Stopped update timer");
     }
 }
 
@@ -379,7 +379,7 @@ void ArduinoManager::UpdateWater() {
     try {
         qint64 bytes_written = ser_water_->write(water_cmd_);
         if (bytes_written == -1) {
-            throw std::runtime_error("Water - Failed to write to port");
+            throw std::runtime_error("[water] Failed to write to port");
         }
 
         SendWaterStatus(Water::Side::kA);  // emits ReportWaterStatus
@@ -388,7 +388,7 @@ void ArduinoManager::UpdateWater() {
 #endif
 
     } catch (const std::exception& e) {
-        emit ErrorThrown("Water - Communication error: " + QString(e.what()));
+        emit ErrorThrown("[water] Communication error: " + QString(e.what()));
 
         // Close the problematic connection
         ser_water_->close();
@@ -398,7 +398,7 @@ void ArduinoManager::UpdateWater() {
         water_needs_reconnect_ = true;
         if (!reconnect_timer_->isActive()) {
             reconnect_timer_->start();
-            logger_->Debug("Water - Started reconnection timer");
+            logger_->Debug("[water] Started reconnection timer");
         }
     }
 }
@@ -451,14 +451,14 @@ void ArduinoManager::UpdateManip() {
                                               m_current_pos_.at(kTilt));
 
         if (ser_manip_->write(servo_cmd.toUtf8()) == -1) {
-            throw std::runtime_error("Manip - Failed to write to port");
+            throw std::runtime_error("[manip] Failed to write to port");
         }
 
         emit ReportPosition(m_current_pos_.at(kPitch), m_current_pos_.at(kPan),
                             m_current_pos_.at(kTilt));
 
     } catch (const std::exception& e) {
-        emit ErrorThrown("Manip - Communication error: " + QString(e.what()));
+        emit ErrorThrown("[manip] Communication error: " + QString(e.what()));
 
         // Close the problematic connection
         ser_manip_->close();
@@ -468,7 +468,7 @@ void ArduinoManager::UpdateManip() {
         manip_needs_reconnect_ = true;
         if (!reconnect_timer_->isActive()) {
             reconnect_timer_->start();
-            logger_->Debug("Manip - Started reconnection timer");
+            logger_->Debug("[manip] Started reconnection timer");
         }
     }
 }
@@ -497,12 +497,12 @@ void ArduinoManager::ConnectWater(const QString& port_name) {
 
     // Only continue if "open" was successful
     if (!ser_water_->open(QIODevice::ReadWrite)) {
-        emit ErrorThrown("Water - Failed to open port: " + port_name + "!\n"
+        emit ErrorThrown("[water] Failed to open port: " + port_name + "!\n"
                          + ser_water_->errorString());
         return;
     }
 
-    logger_->Info("Water - Connected to device at: " + port_name.toStdString());
+    logger_->Info("[water] Connected to device at: " + port_name.toStdString());
     emit WaterConnected(true);
 
     // If update_timer_ is stopped, restart it
@@ -519,7 +519,7 @@ void ArduinoManager::DisconnectWater() {
     if (ser_water_->isOpen()) {
         ser_water_->close();
 
-        logger_->Debug("Water - Gracefully disconnected from device");
+        logger_->Debug("[water] Gracefully disconnected from device");
         emit WaterConnected(false);
     }
 
@@ -535,7 +535,8 @@ void ArduinoManager::DisconnectWater() {
  * @see MapTorqueToWaterCommand
  */
 void ArduinoManager::SetAutoCompensation(const bool& enabled) {
-    logger_->Debug("Water - " + std::string(enabled ? "Enabling" : "Disabling")
+    logger_->Debug("[water] ATC - "
+                   + std::string(enabled ? "Enabling" : "Disabling")
                    + " automatic torque compensation");
 
     if (auto_comp_en_ != enabled) {
@@ -571,7 +572,7 @@ void ArduinoManager::UpdateWaterControl(const std::optional<double>& torque_dir)
 void ArduinoManager::ForceWaterCommand(const Water::Side& side,
                                        const Water::State& state) {
     if (!ser_water_->isOpen()) {
-        logger_->Warn("Water - Cannot force command: not connected!");
+        logger_->Warn("[water] Cannot force command: not connected");
         return;
     }
 
@@ -591,7 +592,7 @@ void ArduinoManager::ForceWaterCommand(const Water::Side& side,
             ClearWaterCommand(side);
     }
 
-    logger_->Debug("Water - Forced command to " + BytesToStr(water_cmd_)
+    logger_->Debug("[water] Forced command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
 
@@ -619,12 +620,12 @@ void ArduinoManager::ConnectManip(const QString& port_name) {
 
     // Only continue if "open" was successful
     if (!ser_manip_->open(QIODevice::ReadWrite)) {
-        emit ErrorThrown("Manip - Failed to open port: " + port_name + "!\n"
+        emit ErrorThrown("[manip] Failed to open port: " + port_name + "!\n"
                          + ser_manip_->errorString());
         return;
     }
 
-    logger_->Info("Manip - Connected to device at: " + port_name.toStdString());
+    logger_->Info("[manip] Connected to device at: " + port_name.toStdString());
     emit ManipConnected(true);
 
     // If update_timer_ is stopped, restart it
@@ -641,7 +642,7 @@ void ArduinoManager::DisconnectManip() {
     if (ser_manip_->isOpen()) {
         ser_manip_->close();
 
-        logger_->Debug("Manip - Gracefully disconnected from device");
+        logger_->Debug("[manip] Gracefully disconnected from device");
         emit ManipConnected(false);
     }
 
@@ -655,7 +656,7 @@ void ArduinoManager::DisconnectManip() {
  * @param enabled Whether to enable pitch correction
  */
 void ArduinoManager::SetManipCorrectionEnabled(const bool& enabled) {
-    logger_->Debug("Manip - " + std::string(enabled ? "Enabling" : "Disabling")
+    logger_->Debug("[manip] " + std::string(enabled ? "Enabling" : "Disabling")
                    + " auto-correction for arm pitch");
 
     manip_correction_enabled_ = enabled;
@@ -669,7 +670,7 @@ void ArduinoManager::SetManipCorrectionEnabled(const bool& enabled) {
 void ArduinoManager::SetManipCorrection(const double& pitch) {
     // TODO: this outputs endlessly, maybe set a variable to only output once?
     if (!ser_manip_->isOpen()) {
-        // logger_->Warn("Manip - Cannot set correction: not connected!");
+        // logger_->Warn("[manip] Cannot set correction: not connected!");
         return;
     }
 
@@ -691,7 +692,7 @@ void ArduinoManager::SetManipCorrection(const double& pitch) {
 void ArduinoManager::SetManipTarget(const double& pan, const double& tilt,
                                     const bool& move_slow) {
     if (!ser_manip_->isOpen()) {
-        logger_->Warn("Manip - Cannot set targets: not connected!");
+        logger_->Warn("[manip] Cannot set targets: not connected");
         return;
     }
 
@@ -718,7 +719,7 @@ void ArduinoManager::SetManipTarget(const double& pan, const double& tilt,
         m_current_pos_.at(kTilt) = tilt;
     }
 
-    logger_->Debug("Manip - Set targets to " + std::to_string(pan) + " "
+    logger_->Debug("[manip] Set targets to " + std::to_string(pan) + " "
                    + std::to_string(tilt) + " deg");
 }
 #endif
