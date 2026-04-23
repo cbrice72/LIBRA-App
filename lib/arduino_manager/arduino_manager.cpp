@@ -254,6 +254,11 @@ void ArduinoManager::MapTorqueToWaterCommand(const double& torque_dir) {
     }
 #endif
 
+    // If command is unchanged, do nothing
+    if (command == (static_cast<uint8_t>(water_cmd_[0]) & kWaterCmdMask)) {
+        return;
+    }
+
     ModifyWaterCommand(command);
 
     logger_->Debug("[water] Set command to " + BytesToStr(water_cmd_)
