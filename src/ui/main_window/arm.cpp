@@ -117,19 +117,8 @@ void MainWindow::on_pb_arm_start_clicked() {
  *      on_pb_water_fill_B_toggled on_pb_water_drain_B_toggled
  */
 void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
-    logger_->Debug(
-        "ATC - " + std::string(checked ? "Enabling" : "Disabling")
-        + " automatic torque compensation ("
-#if LIBRA_VERSION == 2
-        + "EPOS connected="
-        + std::string(ui_->a_epos_disconnect->isEnabled() ? "TRUE" : "FALSE")
-        + ", "
-#endif
-        + "HEBI connected="
-        + std::string(ui_->a_hebi_disconnect->isEnabled() ? "TRUE" : "FALSE")
-        + ", Water connected="
-        + std::string(ui_->a_water_disconnect->isEnabled() ? "TRUE" : "FALSE")
-        + ")");
+    logger_->Debug("ATC - " + std::string(checked ? "Enabling" : "Disabling")
+                   + " automatic torque compensation");
 
     emit EnableAutoTorqueComp(checked);
 

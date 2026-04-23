@@ -915,15 +915,15 @@ void HebiThread::EnableModelBasedComp(const bool& enabled) {
  * @param enabled Whether to control torque experienced by the central joint
  */
 void HebiThread::EnableTorqueControl(const bool& enabled) {
-    logger_->Debug("ATC - " + std::string(enabled ? "Enabling" : "Disabling")
-                   + " automatic torque control");
-
     torque_control_en_ = enabled;
 
     if (!torque_control_en_) {
         // "Manual" mode: only force allow movement if torque compensation is disabled
         movement_en_ = true;
     }
+
+    logger_->Debug("ATC - Automatic torque compensation "
+                   + std::string(enabled ? "enabled" : "disabled"));
 }
 
 /**
