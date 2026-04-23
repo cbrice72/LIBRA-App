@@ -85,6 +85,6 @@ class EposThread : public AbstractActuatorThread
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
     std::mutex handle_mutex_;
 
-    int target_;  // in inc, not deg
-    int last_target_;
+    int target_inc_;  // in encoder increments, not degrees
+    int last_target_inc_;
 };

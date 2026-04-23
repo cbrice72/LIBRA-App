@@ -128,8 +128,8 @@ EposThread::EposThread(QObject* parent, std::string device_name,
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
       baud_rate_(baud_rate),
-      target_{0},
-      last_target_{0}
+      target_inc_{0},
+      last_target_inc_{0}
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("epos_node")
@@ -285,14 +285,14 @@ void EposThread::run() {
         }
 
         // Send movement command
-        if (target_ != last_target_) {
+        if (target_inc_ != last_target_inc_) {
             logger_->Debug(
-                "Sending move command (target=" + std::to_string(target_)
-                + " inc, prev=" + std::to_string(last_target_) + " inc)");
+                "Sending move command (target=" + std::to_string(target_inc_)
+                + " inc, prev=" + std::to_string(last_target_inc_) + " inc)");
 
             // No complex trajectory-related logic necessary since we only
             // support ProfilePositionMode (for now)
-            if (VCS_MoveToPosition(handle_, kNodeID, target_, kMoveAbsolute,
+            if (VCS_MoveToPosition(handle_, kNodeID, target_inc_, kMoveAbsolute,
                                    kMoveImmediately, &err_code)
                 == 0) {
                 emit ErrorThrown(
@@ -301,7 +301,7 @@ void EposThread::run() {
                                                    err_code, kNodeID));
             }
 
-            last_target_ = target_;  // mark the trajectory as "complete"
+            last_target_inc_ = target_inc_;  // mark the trajectory as "complete"
         }
 
         // Report important statuses individually
@@ -444,7 +444,7 @@ void EposThread::Connect() {
         handle = nullptr;
         return;
     }
-    target_ = last_target_ = a_pos * kIncToDeg;
+    target_inc_ = last_target_inc_ = a_pos;
 
     // Initialize to Profile Position Mode by default
     if (VCS_SetOperationMode(handle, kNodeID, OMD_PROFILE_POSITION_MODE,
@@ -500,7 +500,7 @@ void EposThread::Disconnect() {
 
     // Acquire a mutex lock on handle before doing sensitive operations
     // (NOTE: Automatically unlocked when function ends)
-    std::lock_guard<std::mutex> lock(handle_mutex_);
+    std::scoped_lock<std::mutex> lock(handle_mutex_);
 
     // Close the connection via the EPOS API
     uint err_code = 0;
@@ -522,29 +522,29 @@ void EposThread::Disconnect() {
 /**
  * @brief Sets movement target/trajectory for the connected actuator.
  *
- * @param target Target angle (absolute), in degrees
+ * @param target_deg Target angle (absolute), in degrees
  *
  * @note I don't see a reason to use `EposThread` outside of the LIBRA project,
  *       at least in the near future. Since LIBRA-II only uses a single EPOS
  *       actuator, I won't go through the trouble of implementing the ability to
  *       command any N actuators, like in `HebiThread::SetTarget()`.
  */
-void EposThread::SetTarget(const std::vector<double>& target) {
+void EposThread::SetTarget(const std::vector<double>& target_deg) {
     if (handle_ == nullptr) {
         return;  // do nothing
     }
 
     // Validate input
-    if (target.size() != 1) {
+    if (target_deg.size() != 1) {
         emit ErrorThrown("EPOS - Size of command vector != number of "
                          "supported actuators (1)!");
         return;
     }
 
     // Convert and save
-    target_ = target.at(0) * kDegToInc;
+    target_inc_ = target_deg.at(0) * kDegToInc;
 
-    logger_->Debug("Set target(s) to " + std::to_string(target_) + " inc");
+    logger_->Debug("Set target(s) to " + std::to_string(target_inc_) + " inc");
 }
 
 /**
@@ -557,13 +557,13 @@ void EposThread::Stop() {
 
     // Reset class target variables to current position
     uint err_code = 0;
-    if (VCS_GetPositionIs(handle_, kNodeID, &target_, &err_code) == 0) {
+    if (VCS_GetPositionIs(handle_, kNodeID, &target_inc_, &err_code) == 0) {
         emit ErrorThrown("EPOS - Failed to retrieve actual position!\n"
                          + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
                                                         err_code, kNodeID));
         return;
     }
-    last_target_ = target_;  // disables MoveToPosition block in run()
+    last_target_inc_ = target_inc_;  // disables MoveToPosition block in run()
 
     // Set emergency stop profile deceleration
     if (VCS_SetPositionProfile(handle_, kNodeID, kProfileVel, kProfileAcc,
