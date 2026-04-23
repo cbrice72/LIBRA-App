@@ -83,6 +83,18 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
     ss << "\n";
 }
 
+/**
+ * @brief Formats value to fixed-precision string.
+ *
+ * @param value Value to format
+ * @param precision Number of decimal places
+ */
+std::string FormatDouble(double value, int precision = 2) {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(precision) << value;
+    return ss.str();
+}
+
 }  // namespace
 
 //------------------------------------------------------------------------------
@@ -291,8 +303,8 @@ void HebiThread::CheckTorqueControl() {
             movement_en_ = false;
 
             logger_->Debug("ATC - Movement disabled due to high torque ("
-                           + std::to_string(arm_torque_r) + " Nm > "
-                           + std::to_string(torque_comp_upper_bound_) + " Nm)");
+                           + FormatDouble(arm_torque_r) + " Nm > "
+                           + FormatDouble(torque_comp_upper_bound_) + " Nm)");
         } else {  // movement is disabled
             emit ReportArmTorque(arm_torque_theta);
         }
@@ -310,8 +322,8 @@ void HebiThread::CheckTorqueControl() {
             movement_en_ = true;
 
             logger_->Debug("ATC - Movement re-enabled ("
-                           + std::to_string(arm_torque_r) + " Nm < "
-                           + std::to_string(torque_comp_lower_bound_) + " Nm)");
+                           + FormatDouble(arm_torque_r) + " Nm < "
+                           + FormatDouble(torque_comp_lower_bound_) + " Nm)");
         }
     }
 }
@@ -926,6 +938,6 @@ void HebiThread::SetTorqueCompBounds(const double& lower_bound,
     torque_comp_upper_bound_ = upper_bound;
 
     logger_->Debug("ATC - Torque compensation bounds updated: lower="
-                   + std::to_string(lower_bound)
-                   + " Nm, upper=" + std::to_string(upper_bound) + " Nm");
+                   + FormatDouble(lower_bound)
+                   + " Nm, upper=" + FormatDouble(upper_bound) + " Nm");
 }
