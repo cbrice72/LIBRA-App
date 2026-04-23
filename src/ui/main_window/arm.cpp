@@ -113,8 +113,8 @@ void MainWindow::on_pb_arm_start_clicked() {
  *
  * @param checked Whether to enable automatic fluid system compensation
  *
- * @see on_pb_water_fill_A_toggled on_pb_water_drain_A_toggled
- *      on_pb_water_fill_B_toggled on_pb_water_drain_B_toggled
+ * @see on_pb_water_fill_A_clicked on_pb_water_drain_A_clicked
+ *      on_pb_water_fill_B_clicked on_pb_water_drain_B_clicked
  */
 void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
     logger_->Debug("ATC - " + std::string(checked ? "Enabling" : "Disabling")

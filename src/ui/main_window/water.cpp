@@ -33,7 +33,7 @@
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_A_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
@@ -55,7 +55,7 @@ void MainWindow::on_pb_water_fill_A_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_A_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
@@ -78,7 +78,7 @@ void MainWindow::on_pb_water_drain_A_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_fill_B_toggled(bool checked) {
+void MainWindow::on_pb_water_fill_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);
@@ -100,7 +100,7 @@ void MainWindow::on_pb_water_fill_B_toggled(bool checked) {
  *
  * @see on_pb_autocomp_enable_toggled
  */
-void MainWindow::on_pb_water_drain_B_toggled(bool checked) {
+void MainWindow::on_pb_water_drain_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_autocomp_enable->setChecked(false);

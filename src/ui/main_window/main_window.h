@@ -155,11 +155,11 @@ class MainWindow : public QMainWindow {
 
     // Water
 
-    void on_pb_water_fill_A_toggled(bool checked);
-    void on_pb_water_drain_A_toggled(bool checked);
+    void on_pb_water_fill_A_clicked(bool checked);
+    void on_pb_water_drain_A_clicked(bool checked);
 #if LIBRA_VERSION == 1
-    void on_pb_water_fill_B_toggled(bool checked);
-    void on_pb_water_drain_B_toggled(bool checked);
+    void on_pb_water_fill_B_clicked(bool checked);
+    void on_pb_water_drain_B_clicked(bool checked);
 #endif
 
     // Manipulator

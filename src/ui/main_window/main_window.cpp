@@ -401,7 +401,7 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::ConnectWater);
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
             arduino_manager_, &ArduinoManager::DisconnectWater);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // change water state
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // automate water state
             arduino_manager_, &ArduinoManager::SetAutoCompensation);
     connect(this, &MainWindow::CommandWater,  // force update water command
             arduino_manager_, &ArduinoManager::ForceWaterCommand);
@@ -420,27 +420,27 @@ void MainWindow::InitializeDeviceManagers() {
     // TankWidget signals
     connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
             this, [this]() {
-                arduino_manager_->ForceWaterCommand(Water::Side::kA,
-                                                    Water::State::kStopped);
+                logger_->Info("Tank A estimated full; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
             });
 
     connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
             this, [this]() {
-                arduino_manager_->ForceWaterCommand(Water::Side::kA,
-                                                    Water::State::kStopped);
+                logger_->Info("Tank A estimated empty; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
             });
 
 #if LIBRA_VERSION == 1
     connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
             this, [this]() {
-                arduino_manager_->ForceWaterCommand(Water::Side::kB,
-                                                    Water::State::kStopped);
+                logger_->Info("Tank B estimated full; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
             });
 
     connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
             this, [this]() {
-                arduino_manager_->ForceWaterCommand(Water::Side::kB,
-                                                    Water::State::kStopped);
+                logger_->Info("Tank B estimated empty; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
             });
 #endif
 
@@ -506,11 +506,11 @@ void MainWindow::InitializeThreads() {
     connect(ui_->a_hebi_log_stop, &QAction::triggered,  // stop current hebilog
             hebi_thread_, &HebiThread::StopHebiLog);
 
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // central joint comp
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // auto-balancing
             hebi_thread_, &HebiThread::EnableTorqueControl);
     connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
-    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // auto-comp
+    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // HRDF-based comp
             hebi_thread_, &HebiThread::EnableModelBasedComp);
 
     // MainWindow slots

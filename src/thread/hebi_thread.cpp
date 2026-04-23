@@ -288,7 +288,8 @@ void HebiThread::CheckTorqueControl() {
                        - eff[Actuator::Name::kMB]);  // roll
 #elif LIBRA_VERSION == 2
     const double arm_torque_r = std::abs(eff[Actuator::Name::kPitch]);
-    const double arm_torque_theta = (arm_torque_r >= 0) ? 0.0 : M_PI;
+    const double arm_torque_theta = (eff[Actuator::Name::kPitch] >= 0) ? 0.0
+                                                                       : M_PI;
 #endif
 
     // Apply hysteresis logic
