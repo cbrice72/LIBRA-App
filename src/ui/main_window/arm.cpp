@@ -122,12 +122,13 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
         + " automatic torque compensation ("
 #if LIBRA_VERSION == 2
         + "EPOS connected="
-        + std::string(ui_->a_epos_disconnect->isEnabled() ? "yes" : "no") + ", "
+        + std::string(ui_->a_epos_disconnect->isEnabled() ? "TRUE" : "FALSE")
+        + ", "
 #endif
-        + "HEBI connected= "
-        + std::string(ui_->a_hebi_disconnect->isEnabled() ? "yes" : "no")
+        + "HEBI connected="
+        + std::string(ui_->a_hebi_disconnect->isEnabled() ? "TRUE" : "FALSE")
         + ", Water connected="
-        + std::string(ui_->a_water_disconnect->isEnabled() ? "yes" : "no")
+        + std::string(ui_->a_water_disconnect->isEnabled() ? "TRUE" : "FALSE")
         + ")");
 
     emit EnableAutoTorqueComp(checked);
