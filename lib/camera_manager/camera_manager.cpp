@@ -88,8 +88,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
-    logger_ = std::make_unique<Ros2Logger>("camera_manager", debug_mode_,
-                                           this->get_logger());
+    logger_ = std::make_unique<Ros2Logger>(this->get_logger(), debug_mode_);
 #else
     logger_ = std::make_unique<QtLogger>("camera_manager", debug_mode_);
 #endif

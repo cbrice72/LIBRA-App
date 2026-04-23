@@ -137,8 +137,7 @@ EposThread::EposThread(QObject* parent, std::string device_name,
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
-    logger_ = std::make_unique<Ros2Logger>("epos_manager", debug_mode_,
-                                           this->get_logger());
+    logger_ = std::make_unique<Ros2Logger>(this->get_logger(), debug_mode_);
 #else
     logger_ = std::make_unique<QtLogger>("epos_manager", debug_mode_);
 #endif
