@@ -29,7 +29,7 @@
 // Project Headers
 #include "abstract_actuator_thread.h"
 
-typedef sensor_msgs::msg::JointState msgJointState;
+using msgJointState = sensor_msgs::msg::JointState;
 
 // Torque compensation constants
 constexpr double kTorqueCompLowerBound = 3.0;  // Nm
