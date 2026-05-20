@@ -86,14 +86,15 @@ class HebiThread : public AbstractActuatorThread
     void InformPitch(const double& angle);
 #endif
 
-  private:
+  protected:
     void run() override;
 
+  private:
     // --- Helper Functions ---
 
     std::unordered_map<Joint::Name, double> GetJointFeedbackMap(
         const std::shared_ptr<hebi::GroupFeedback>& feedback,
-        const Actuator::Feedback feedback_type);
+        const Actuator::Feedback& feedback_type);
 
     void CheckTorqueControl();
     void ExecuteMovement(std::chrono::duration<double> dt,
@@ -101,7 +102,7 @@ class HebiThread : public AbstractActuatorThread
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
 
     void SendFeedback();
-    QString GetStatus() const;
+    [[nodiscard]] QString GetStatus() const;
 #ifdef BUILD_WITH_ROS2
     void PublishState();
 #endif
