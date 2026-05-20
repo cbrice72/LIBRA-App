@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -870,7 +871,8 @@ void HebiThread::StartHebiLog() {
     }
     logging_active_ = true;
 
-    logger_->Info("Started logging to: " + log_path);
+    auto full_path = std::filesystem::canonical(log_path).string();
+    logger_->Info("Started logging to: " + full_path);
 }
 
 /**
