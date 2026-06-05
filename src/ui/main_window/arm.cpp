@@ -79,16 +79,20 @@ void MainWindow::on_pb_quick_input_clicked() {
  */
 void MainWindow::on_pb_arm_start_clicked() {
 #if LIBRA_VERSION == 1
-    // TODO: this shouldn't be necessary because joint_defs exists and it's all
-    // done in HebiThread now
-
     // Roll and Pitch are controlled by actuators MA and MB via differential drive
-    auto val_ma = (-ui_->sb_arm_roll->value() + ui_->sb_arm_pitch->value());
-    auto val_mb = (-ui_->sb_arm_roll->value() - ui_->sb_arm_pitch->value());
+    const double roll = ui_->sb_arm_roll->value();
+    const double pitch = ui_->sb_arm_pitch->value();
+    const double val_ma = Joint::JointToActuatorDifferential(Actuator::Name::kMA,
+                                                             roll, pitch);
+    const double val_mb = Joint::JointToActuatorDifferential(Actuator::Name::kMB,
+                                                             roll, pitch);
 
-    auto val_j1 = ui_->sb_arm_j1->value();
-    auto val_j2 = -ui_->sb_arm_j2->value();  // match operator perspective
-    auto val_j3 = -ui_->sb_arm_j3->value();  // match operator perspective
+    const double val_j1 = Joint::JointToActuatorSimple(Actuator::Name::kJ1,
+                                                       ui_->sb_arm_j1->value());
+    const double val_j2 = Joint::JointToActuatorSimple(Actuator::Name::kJ2,
+                                                       ui_->sb_arm_j2->value());
+    const double val_j3 = Joint::JointToActuatorSimple(Actuator::Name::kJ3,
+                                                       ui_->sb_arm_j3->value());
 
     logger_->Debug(
         "Sending movement command (deg): MA=" + std::to_string(val_ma)
