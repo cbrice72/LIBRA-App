@@ -719,6 +719,13 @@ void HebiThread::Disconnect() {
  * @brief Sets movement targets/trajectories for all connected actuators.
  *
  * @param target Target angles (absolute) for all actuators, in degrees
+ *
+ * @note The `target` parameter should be in "actuator space" rather than "joint
+ *       space" to keep `HebiThread` decoupled from the kinematics of specific
+ *       robot designs. For example, in LIBRA-I, "actuator space" corresponds to
+ *       the individual actuators in the 2-DoF differential drive (MA and MB)
+ *       and 3-DoF arm (J1, J2, J3), while "joint space" corresponds to the
+ *       effective Roll, Pitch, J1 (Yaw), J2 (Yaw), and J3 (Pitch) angles.
  */
 void HebiThread::SetTarget(const std::vector<double>& target) {
     if (group_ == nullptr) {
@@ -791,32 +798,11 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     group_->getNextFeedback(*feedback_);
     pos.col(0) = feedback_->getPosition();  // start (current value)
 
-    // NOTE: Complex joints must be converted with special logic,
-    //       whereas simple joints can just be looped over.
-#if LIBRA_VERSION == 1
-    const double roll = target.at(static_cast<int>(Joint::Name::kRoll));
-    const double pitch = target.at(static_cast<int>(Joint::Name::kPitch));
-
-    pos(Actuator::Name::kMA,
-        1) = Joint::JointToActuatorDifferential(Actuator::Name::kMA, roll, pitch)
-             * kDegToRad;
-    pos(Actuator::Name::kMB,
-        1) = Joint::JointToActuatorDifferential(Actuator::Name::kMB, roll, pitch)
-             * kDegToRad;
-
-    for (int i = Actuator::Name::kJ1; i <= Actuator::Name::kJ3; ++i) {
-        pos(i, 1) = Joint::JointToActuatorSimple(static_cast<Actuator::Name>(i),
-                                                 target.at(i))
-                    * kDegToRad;
-    }
-#else
     for (int i = 0; i < target.size(); ++i) {
+        // NOTE: Targets assumed to already be in "actuator space"
         pos(i, 1) = target.at(i) * kDegToRad;
-    }
-#endif
 
-    if (debug_mode_) {
-        for (int i = 0; i < target.size(); ++i) {
+        if (debug_mode_) {
             trajectory_ss << std::to_string(pos(i, 1));
         }
     }
