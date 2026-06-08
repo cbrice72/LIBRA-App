@@ -148,6 +148,8 @@ class HebiThread : public AbstractActuatorThread
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;
+    rclcpp::Publisher<msgJointState>::SharedPtr target_pub_;
     msgJointState state_msg_;  // reused for efficiency
+    msgJointState target_msg_;
 #endif
 };

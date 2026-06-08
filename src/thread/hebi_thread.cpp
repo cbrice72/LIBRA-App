@@ -162,6 +162,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
+    target_pub_ = this->create_publisher<msgJointState>("/joint_targets", 10);
 
     auto hebi_names = Joint::GetHebiStrings();
 # if LIBRA_VERSION == 1
@@ -169,15 +170,22 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     hebi_names.push_back("Static-Manip");
 # endif
     state_msg_.name = hebi_names;
+    target_msg_.name = hebi_names;
 
 # if LIBRA_VERSION == 1
     state_msg_.position.resize(n_actuators_ + 1);  // +1 for static joint
     state_msg_.velocity.resize(n_actuators_ + 1);
     state_msg_.effort.resize(n_actuators_ + 1);
+    target_msg_.position.resize(n_actuators_ + 1);
+    target_msg_.velocity.resize(n_actuators_ + 1);
+    target_msg_.effort.resize(n_actuators_ + 1);
 # else
     state_msg_.position.resize(n_actuators_);
     state_msg_.velocity.resize(n_actuators_);
     state_msg_.effort.resize(n_actuators_);
+    target_msg_.position.resize(n_actuators_);
+    target_msg_.velocity.resize(n_actuators_);
+    target_msg_.effort.resize(n_actuators_);
 # endif
 #endif
 }
@@ -217,6 +225,10 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         // Retrieve value based on feedback type
         if (type == Actuator::Feedback::kTargetPos) {
             val = feedback->getPositionCommand()[i] * kRadToDeg;
+        } else if (type == Actuator::Feedback::kTargetVel) {
+            val = feedback->getVelocityCommand()[i] * kRadToDeg;
+        } else if (type == Actuator::Feedback::kTargetTorque) {
+            val = feedback->getEffortCommand()[i];
         } else if (type == Actuator::Feedback::kActualPos) {
             val = feedback->getPosition()[i] * kRadToDeg;
         } else if (type == Actuator::Feedback::kActualVel) {
@@ -485,14 +497,16 @@ QString HebiThread::GetStatus() const {
  * @brief Publishes HEBI actuator state(s).
  */
 void HebiThread::PublishState() {
-    if (!state_pub_ || group_ == nullptr) {
+    if (!state_pub_ || !target_pub_ || group_ == nullptr) {
         return;
     }
 
-    // Update header timestamp
-    state_msg_.header.stamp = this->now();
+    // Update header timestamps
+    const auto stamp = this->now();
+    state_msg_.header.stamp = stamp;
+    target_msg_.header.stamp = stamp;
 
-    // Get the joint-space feedback
+    // Get joint-space feedback
     const auto actual_pos_map =
         GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualPos);
     const auto actual_vel_map =
@@ -500,31 +514,32 @@ void HebiThread::PublishState() {
     const auto actual_eff_map =
         GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualTorque);
 
-    // Populate the message and publish it
+    const auto target_pos_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetPos);
+    const auto target_vel_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetVel);
+    const auto target_eff_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetTorque);
+
+    // Populate messages and publish
     for (int i = 0; i < n_actuators_; ++i) {
-        // NOTE: First we must undo the JointToActuator conversion logic for
-        //       certain joints, since I flip the values to aid operator UX.
-        double actual_pos = 0.0;
-        switch (static_cast<Joint::Name>(i)) {
-# if LIBRA_VERSION == 1
-            case Joint::Name::kPitch:
-            case Joint::Name::kJ2:
-            case Joint::Name::kJ3:
-                // Sign flip required to match actuator's real-world orientation
-                actual_pos = -actual_pos_map.at(static_cast<Joint::Name>(i));
-                break;
-# endif
-            default:
-                // Fine as-is
-                // TODO: is this correct for LIBRA-II's pitch joint?
-                actual_pos = actual_pos_map.at(static_cast<Joint::Name>(i));
-                break;
-        }
+        const auto joint = static_cast<Joint::Name>(i);
+
+        const double actual_pos = actual_pos_map.at(joint);
+        const double actual_vel = actual_vel_map.at(joint);
+        const double actual_eff = actual_eff_map.at(joint);
 
         state_msg_.position[i] = actual_pos * kDegToRad;
-        state_msg_.velocity[i] = actual_vel_map.at(static_cast<Joint::Name>(i))
-                                 * kDegToRad;
-        state_msg_.effort[i] = actual_eff_map.at(static_cast<Joint::Name>(i));
+        state_msg_.velocity[i] = actual_vel * kDegToRad;
+        state_msg_.effort[i] = actual_eff;
+
+        const double target_pos = target_pos_map.at(joint);
+        const double target_vel = target_vel_map.at(joint);
+        const double target_eff = target_eff_map.at(joint);
+
+        target_msg_.position[i] = target_pos * kDegToRad;
+        target_msg_.velocity[i] = target_vel * kDegToRad;
+        target_msg_.effort[i] = target_eff;
     }
 
 # if LIBRA_VERSION == 1
@@ -532,9 +547,14 @@ void HebiThread::PublishState() {
     state_msg_.position[n_actuators_] = 0.0;
     state_msg_.velocity[n_actuators_] = 0.0;
     state_msg_.effort[n_actuators_] = 0.0;
+
+    target_msg_.position[n_actuators_] = 0.0;
+    target_msg_.velocity[n_actuators_] = 0.0;
+    target_msg_.effort[n_actuators_] = 0.0;
 # endif
 
     state_pub_->publish(state_msg_);
+    target_pub_->publish(target_msg_);
 }
 #endif
 
@@ -770,16 +790,40 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     // Populate positions
     group_->getNextFeedback(*feedback_);
     pos.col(0) = feedback_->getPosition();  // start (current value)
-    for (auto i = 0; i < target.size(); ++i) {
-        pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
-        if (debug_mode_) {
-            trajectory_ss << std::to_string(pos(i, 1)) << "";
+
+    // NOTE: Complex joints must be converted with special logic,
+    //       whereas simple joints can just be looped over.
+#if LIBRA_VERSION == 1
+    const double roll = target.at(static_cast<int>(Joint::Name::kRoll));
+    const double pitch = target.at(static_cast<int>(Joint::Name::kPitch));
+
+    pos(Actuator::Name::kMA,
+        1) = Joint::JointToActuatorDifferential(Actuator::Name::kMA, roll, pitch)
+             * kDegToRad;
+    pos(Actuator::Name::kMB,
+        1) = Joint::JointToActuatorDifferential(Actuator::Name::kMB, roll, pitch)
+             * kDegToRad;
+
+    for (int i = Actuator::Name::kJ1; i <= Actuator::Name::kJ3; ++i) {
+        pos(i, 1) = Joint::JointToActuatorSimple(static_cast<Actuator::Name>(i),
+                                                 target.at(i))
+                    * kDegToRad;
+    }
+#else
+    for (int i = 0; i < target.size(); ++i) {
+        pos(i, 1) = target.at(i) * kDegToRad;
+    }
+#endif
+
+    if (debug_mode_) {
+        for (int i = 0; i < target.size(); ++i) {
+            trajectory_ss << std::to_string(pos(i, 1));
         }
     }
 
     // Determine greatest change in position for calculating trajectory times
     double max_difference = 0;
-    for (auto i = 0; i < n_actuators_; i++) {
+    for (int i = 0; i < n_actuators_; ++i) {
         max_difference = std::max(abs(pos(i, 1) - pos(i, 0)), max_difference);
     }
 

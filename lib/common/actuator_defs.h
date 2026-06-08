@@ -87,6 +87,8 @@ enum Name : uint8_t {
  */
 enum Feedback : uint8_t {
     kTargetPos = 0,
+    kTargetVel,
+    kTargetTorque,
     kActualPos,
     kActualVel,
     kActualTorque
@@ -184,8 +186,14 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
     switch (feedback) {
         case Feedback::kTargetPos:
             return "TargetPos";
+        case Feedback::kTargetVel:  // unused in GUI
+            return "TargetVel";
+        case Feedback::kTargetTorque:  // unused in GUI
+            return "TargetTorque";
         case Feedback::kActualPos:
             return "ActualPos";
+        case Feedback::kActualVel:  // unused in GUI
+            return "ActualVel";
         case Feedback::kActualTorque:
             return "ActualTorque";
         default:
