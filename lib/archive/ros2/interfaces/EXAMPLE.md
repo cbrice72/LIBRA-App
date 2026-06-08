@@ -8,7 +8,7 @@ Although not required, if you plan on sending messages frequently, you may want 
 # include <rclcpp/rclcpp.hpp>
 # include <libra_app/msg/hebi_state.hpp>
 
-typedef libra_app::msg::HebiState msgHebiState;  // for convenience
+using msgHebiState = libra_app::msg::HebiState;  // for convenience
 
 class Foo : public rclcpp::Node {
   public:

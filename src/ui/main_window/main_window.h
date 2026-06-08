@@ -191,6 +191,8 @@ class MainWindow : public QMainWindow {
     void InitializeDeviceManagers();
     void InitializeThreads();
 
+    void UpdateActuatorControls();
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_{nullptr};

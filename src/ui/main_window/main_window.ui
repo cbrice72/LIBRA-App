@@ -1678,7 +1678,7 @@ QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
               <number>-90</number>
              </property>
              <property name="maximum">
-              <number>20</number>
+              <number>90</number>
              </property>
              <property name="singleStep">
               <number>10</number>
@@ -1761,7 +1761,7 @@ QPushButton:disabled {background-color: rgb(90, 110, 125);}</string>
               <double>-90.000000000000000</double>
              </property>
              <property name="maximum">
-              <double>20.000000000000000</double>
+              <double>90.000000000000000</double>
              </property>
              <property name="singleStep">
               <double>5.000000000000000</double>
@@ -3144,7 +3144,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <x>0</x>
      <y>0</y>
      <width>1053</width>
-     <height>19</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">

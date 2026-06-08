@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <algorithm>
 #include <cmath>
+#include <filesystem>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
@@ -215,7 +216,7 @@ HebiThread::~HebiThread() {
  */
 std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     const std::shared_ptr<hebi::GroupFeedback>& feedback,
-    const Actuator::Feedback type) {
+    const Actuator::Feedback& type) {
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
     for (int i = 0; i < n_actuators_; ++i) {
@@ -239,8 +240,9 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         }
 
         // Handle complex joints first
+
 #if LIBRA_VERSION == 1
-        // MA and MB differential drive -> Roll and Pitch
+        // [Complex Joint] MA and MB differential drive -> Roll and Pitch
         double ma_val = 0;  // storage for differential drive calculation
         if (enum_names_[i] == Actuator::Name::kMA) {
             ma_val = val;
@@ -913,7 +915,8 @@ void HebiThread::StartHebiLog() {
     }
     logging_active_ = true;
 
-    logger_->Info("Started logging to: " + log_path);
+    auto full_path = std::filesystem::canonical(log_path).string();
+    logger_->Info("Started logging to: " + full_path);
 }
 
 /**
