@@ -576,6 +576,26 @@ void MainWindow::InitializeThreads() {
 #endif
 }
 
+/**
+ * @brief Update UI according to connection status of all actuator types.
+ */
+void MainWindow::UpdateActuatorControls() {
+    // Evaluate connection statuses of all actuators
+    bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
+    bool any_connected = hebi_connected;
+
+#if LIBRA_VERSION == 2
+    bool epos_connected = ui_->a_epos_disconnect->isEnabled();
+    any_connected = hebi_connected || epos_connected;
+#endif
+
+    // Update UI
+    ui_->pb_arm_start->setEnabled(any_connected);
+    ui_->le_quick_input->setEnabled(any_connected);
+    ui_->pb_quick_input->setEnabled(any_connected);
+    ui_->pb_arm_stop->setEnabled(any_connected);
+}
+
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
 //------------------------------------------------------------------------------
@@ -686,16 +706,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     ui_->a_hebi_model_based_comp->setEnabled(connected);
 
     // UI widgets
-    ui_->pb_arm_start->setEnabled(connected);
-    if (connected) {
-        // NOTE: It's possible for multiple actuator types -- and, by extension,
-        //       multiple HandleXConnChanged() calls -- to exist. Therefore, in
-        //       this function, the following elements can only ever be enabled;
-        //       we can't disable them since other actuators may still be connected.
-        ui_->le_quick_input->setEnabled(true);
-        ui_->pb_quick_input->setEnabled(true);
-        ui_->pb_arm_stop->setEnabled(true);
-    }
+    UpdateActuatorControls();
 
     if (connected || (!connected && ui_->a_water_connect->isEnabled())) {
         // Since auto torque compensation is shared between ActuatorThread and
@@ -715,16 +726,7 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
     ui_->a_epos_disconnect->setEnabled(connected);
 
     // UI widgets
-    ui_->pb_arm_start->setEnabled(connected);
-    if (connected) {
-        // NOTE: It's possible for multiple actuator types -- and, by extension,
-        //       multiple HandleXConnChanged() calls -- to exist. Therefore, in
-        //       this function, the following elements can only ever be enabled;
-        //       we can't disable them since other actuators may still be connected.
-        ui_->le_quick_input->setEnabled(true);
-        ui_->pb_quick_input->setEnabled(true);
-        ui_->pb_arm_stop->setEnabled(true);
-    }
+    UpdateActuatorControls();
 }
 #endif
 
@@ -742,6 +744,8 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
 void MainWindow::HandleActuatorFeedback(
     const std::unordered_map<Joint::Name, double>& feedbacks,
     const Actuator::Feedback feedback_type) {
+    bool initialized = false;
+
     for (const auto& feedback : feedbacks) {
         const auto& joint = feedback.first;
         const auto& val = feedback.second;
@@ -758,6 +762,13 @@ void MainWindow::HandleActuatorFeedback(
                 + ") and feedback type "
                 + Actuator::FeedbackEnumToString(feedback_type) + " ("
                 + std::to_string(static_cast<int>(feedback_type)) + ")");
+        }
+
+        // TODO: documentation
+        if (!initialized) {
+            // TODO: initialize SpinBoxes to first received value
+
+            initialized = true;
         }
     }
 }
