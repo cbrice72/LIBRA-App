@@ -219,6 +219,8 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
     const Actuator::Feedback& type) {
     std::unordered_map<Joint::Name, double> joint_feedback_map;
 
+    double ma_val = 0;  // storage for differential drive calculation
+
     for (int i = 0; i < n_actuators_; ++i) {
         double val = 0;
 
@@ -243,7 +245,6 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
 
 #if LIBRA_VERSION == 1
         // [Complex Joint] MA and MB differential drive -> Roll and Pitch
-        double ma_val = 0;  // storage for differential drive calculation
         if (enum_names_[i] == Actuator::Name::kMA) {
             ma_val = val;
             continue;  // MA will be handled with MB, so do nothing
