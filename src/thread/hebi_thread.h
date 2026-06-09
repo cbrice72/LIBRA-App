@@ -72,7 +72,6 @@ class HebiThread : public AbstractActuatorThread
 
     // --- Control Algorithm Settings ---
 
-    void EnableModelBasedComp(const bool& enabled);
     void EnableTorqueControl(const bool& enabled);
     void SetTorqueCompBounds(const double& lower, const double& upper);
 
@@ -145,12 +144,6 @@ class HebiThread : public AbstractActuatorThread
     bool movement_en_{true};
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::chrono::time_point<std::chrono::steady_clock> trajectory_start_time_;
-
-    // Enables logic that uses an HRDF model to calculate dynamic effort
-    // compensation values to create a smoother trajectory
-    bool model_based_comp_en_{false};
-    std::unique_ptr<hebi::robot_model::RobotModel> model_;
-    Eigen::VectorXd model_masses_;
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;

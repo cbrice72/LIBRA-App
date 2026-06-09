@@ -151,7 +151,6 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     }
 
     // Resize vectors to match number of actuators
-    model_masses_.resize(n_actuators_);
     status_a_vel_.resize(n_actuators_);
     status_defl_.resize(n_actuators_);
     status_defl_vel_.resize(n_actuators_);
@@ -388,15 +387,6 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
                                   &cmd_acc);
             command_->setPosition(cmd_pos);
             command_->setVelocity(cmd_vel);
-
-            // Calculate effort commands to assist with trajectory tracking
-            if (model_based_comp_en_ && model_ != nullptr) {
-                // TODO: test this!!
-                model_->getDynamicCompEfforts(feedback_->getPosition(), cmd_pos,
-                                              cmd_vel, cmd_acc, cmd_eff,
-                                              dt.count());
-                command_->setEffort(cmd_eff);
-            }
         } else {
             // --- MODE 2: POSITION HOLDING ---
 
@@ -404,16 +394,6 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             trajectory_.reset();
 
             logger_->Debug("Trajectory complete");
-
-            // Calculate effort commands to counteract gravity
-            if (model_based_comp_en_ && model_ != nullptr) {
-                // TODO: test this!!
-                // NOTE: This may be problematic... I deleted it for a
-                //       reason (although previously there was no model)
-                model_->getGravCompEfforts(cmd_pos, gravity_vec, cmd_eff);
-                command_->setVelocity(Eigen::VectorXd());  // clear
-                command_->setEffort(cmd_eff);
-            }
         }
     }
 
@@ -684,20 +664,6 @@ void HebiThread::Connect() {
     logger_->Debug("Connection successful");
     emit Connected(true);
 
-    // Load robot kinematics
-    // TODO: this doesn't seem to help at all since the HRDF format is too
-    //       limited to model the LIBRA-I's differential joint. However, it may
-    //       be useful for LIBRA-II.
-    /*
-    model_ = hebi::robot_model::RobotModel::loadHRDF(
-        "./bin/shared/hebi/libra.hrdf");
-    if (model_ == nullptr) {
-        emit ErrorThrown("HEBI - Failed to load HRDF!");
-        return;
-    }
-    model_->getMasses(model_masses_);
-    */
-
     // Command actuator(s) to hold current position
     group_ = group;
     group_->getNextFeedback(*feedback_);
@@ -937,19 +903,6 @@ void HebiThread::StopHebiLog() {
 //------------------------------------------------------------------------------
 // !Control Algorithm Settings (slots)
 //------------------------------------------------------------------------------
-
-/**
- * @brief Sets the state of automatic dynamic/gravity compensation based on the
- *        loaded HRDF model.
- *
- * @param enabled Whether to compensate for inertia/gravity
- */
-void HebiThread::EnableModelBasedComp(const bool& enabled) {
-    logger_->Debug(std::string(enabled ? "Enabling" : "Disabling")
-                   + " model-based dynamic compensation");
-
-    model_based_comp_en_ = enabled;
-}
 
 /**
  * @brief Sets the state of the central joint's torque control.

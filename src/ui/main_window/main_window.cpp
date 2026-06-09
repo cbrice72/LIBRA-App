@@ -513,8 +513,6 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::EnableTorqueControl);
     connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
-    connect(ui_->a_hebi_model_based_comp, &QAction::toggled,  // HRDF-based comp
-            hebi_thread_, &HebiThread::EnableModelBasedComp);
 
     // MainWindow slots
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
@@ -706,7 +704,6 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
     ui_->a_hebi_override_limits->setEnabled(connected);
     ui_->a_hebi_central_torque_comp->setEnabled(connected);
-    ui_->a_hebi_model_based_comp->setEnabled(connected);
 
     // UI widgets
     UpdateActuatorControls();

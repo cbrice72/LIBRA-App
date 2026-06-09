@@ -3195,7 +3195,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="separator"/>
      <addaction name="a_hebi_override_limits"/>
      <addaction name="a_hebi_central_torque_comp"/>
-     <addaction name="a_hebi_model_based_comp"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3390,17 +3389,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
   <action name="a_refresh_camera_list">
    <property name="text">
     <string>Refresh camera list</string>
-   </property>
-  </action>
-  <action name="a_hebi_model_based_comp">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Model-based compensation</string>
    </property>
   </action>
   <action name="a_hebi_load_gains">
