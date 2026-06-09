@@ -9,7 +9,7 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <sstream>
 
 // Other Library Headers
 //   (none)
@@ -113,18 +113,29 @@ void MainWindow::on_pb_arm_start_clicked() {
     // Get command vector(s) from UI values
     const auto hebi_command = BuildHebiCommandVector(ui_);
 
+    if (debug_mode_) {
+        // Format command string (for debug output)
+        std::stringstream command_ss;
+        command_ss << std::fixed << std::setprecision(2)
+                   << "Sending movement command (deg): "
+        // clang-format off
 #if LIBRA_VERSION == 1
-    logger_->Debug("Sending movement command (deg): MA="
-                   + std::to_string(hebi_command[0]) + ", MB="
-                   + std::to_string(hebi_command[1]) + ", J1="
-                   + std::to_string(hebi_command[2]) + ", J2="
-                   + std::to_string(hebi_command[3]) + ", J3="
-                   + std::to_string(hebi_command[4]));
+                   << "MA=" << hebi_command[0]
+                   << ", MB=" << hebi_command[1]
+                   << ", J1=" << hebi_command[2]
+                   << ", J2=" << hebi_command[3]
+                   << ", J3=" << hebi_command[4];
 #elif LIBRA_VERSION == 2
-    logger_->Debug("Sending movement command (deg): Yaw="
-                   + std::to_string(ui_->sb_arm_yaw->value())
-                   + ", Pitch=" + std::to_string(ui_->sb_arm_pitch->value()));
+                   << "Yaw=" << ui_->sb_arm_yaw->value()  // EPOS
+                   << ", Pitch=" << hebi_command[0];
+#endif
+        // clang-format on
 
+        logger_->Debug(command_ss.str());
+    }
+
+    // Send command(s)
+#if LIBRA_VERSION == 2
     emit CommandEpos({ui_->sb_arm_yaw->value()});
 #endif
     emit CommandHebi(hebi_command);

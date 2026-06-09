@@ -118,10 +118,16 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
 
+    // clang-format off
+    Eigen::IOFormat matrix_print_format_{Eigen::StreamPrecision,
+                                         Eigen::DontAlignCols,
+                                         ", ", ", ", "", "", "", ""};
+    // clang-format on
+
     bool logging_active_{false};
 
-    /* Improve performance of GetStatus() by allocating these vectors here
-      (the `mutable` keyword allows a const function to modify class members) */
+    // Improve performance of GetStatus() by allocating these vectors here
+    // (the `mutable` keyword allows a const function to modify class members)
     mutable std::vector<double> status_a_vel_;
     mutable std::vector<double> status_defl_;
     mutable std::vector<double> status_defl_vel_;

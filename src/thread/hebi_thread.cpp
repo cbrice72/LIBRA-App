@@ -794,17 +794,15 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
 
     std::stringstream trajectory_ss;  // for debug only
 
-    // Populate positions
+    // Populate positions (targets assumed to be in "actuator space")
     group_->getNextFeedback(*feedback_);
-    pos.col(0) = feedback_->getPosition();  // start (current value)
+    pos.col(0) = feedback_->getPosition();
+    pos.col(1) = Eigen::Map<const Eigen::VectorXd>(target.data(), target.size())
+                 * kDegToRad;
 
-    for (int i = 0; i < target.size(); ++i) {
-        // NOTE: Targets assumed to already be in "actuator space"
-        pos(i, 1) = target.at(i) * kDegToRad;
-
-        if (debug_mode_) {
-            trajectory_ss << std::to_string(pos(i, 1));
-        }
+    if (debug_mode_) {
+        trajectory_ss << std::fixed << std::setprecision(2)
+                      << pos.col(1).format(matrix_print_format_);
     }
 
     // Determine greatest change in position for calculating trajectory times
