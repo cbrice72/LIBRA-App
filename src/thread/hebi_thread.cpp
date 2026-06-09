@@ -293,8 +293,17 @@ void HebiThread::CheckTorqueControl() {
     const auto& eff = feedback_->getEffort();
 
 #if LIBRA_VERSION == 1
-    const double arm_torque_r = std::max(std::abs(eff[Actuator::Name::kMA]),
-                                         std::abs(eff[Actuator::Name::kMB]));
+    const double arm_roll_torque =
+        Joint::ActuatorToJointDifferential(Joint::Name::kRoll,
+                                           eff[Actuator::Name::kMA],
+                                           eff[Actuator::Name::kMB]);
+    const double arm_pitch_torque =
+        Joint::ActuatorToJointDifferential(Joint::Name::kPitch,
+                                           eff[Actuator::Name::kMA],
+                                           eff[Actuator::Name::kMB]);
+    const double arm_torque_r =
+        std::hypot(arm_roll_torque,    // hypot calculates sqrt(x^2 + y^2)
+                   arm_pitch_torque);  // without overflow/underflow issues
 
     const double arm_torque_theta =
         std::atan2(-eff[Actuator::Name::kMA]
