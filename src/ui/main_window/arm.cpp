@@ -29,24 +29,61 @@
 
 namespace {
 
-std::vector<double> BuildHebiCommandVector(const Ui::MainWindow* ui) {
+/**
+ * @brief Converts joint-space commands from the UI to actuator-space commands
+ *        for actuators and returns an enum-ordered vector.
+ *
+ * @param ui Pointer to main UI object
+ * @return Actuator-space ordered target values for all actuators
+ *
+ * @see Actuator::Name
+ */
+std::vector<double> GetActuatorTargets(const Ui::MainWindow* ui) {
+    std::vector<double> targets(Actuator::kUndefined, 0.0);
+
+    // Lambdas for converting joint-space UI values to actuator-space command values
+    auto convert_and_set_simple = [&](Actuator::Name name, double val) {
+        targets[name] = Joint::JointToActuatorSimple(name, val);
+    };
+
+    auto convert_and_set_diff = [&](Actuator::Name name, double roll,
+                                    double pitch) {
+        targets[name] = Joint::JointToActuatorDifferential(name, roll, pitch);
+    };
+
+    // Convert and save values based on Actuator::Name enum order
 #if LIBRA_VERSION == 1
     const double roll = ui->sb_arm_roll->value();
     const double pitch = ui->sb_arm_pitch->value();
 
-    // clang-format off
-    return {
-        Joint::JointToActuatorDifferential(Actuator::Name::kMA, roll, pitch),
-        Joint::JointToActuatorDifferential(Actuator::Name::kMB, roll, pitch),
-        Joint::JointToActuatorSimple(Actuator::Name::kJ1, ui->sb_arm_j1->value()),
-        Joint::JointToActuatorSimple(Actuator::Name::kJ2, ui->sb_arm_j2->value()),
-        Joint::JointToActuatorSimple(Actuator::Name::kJ3, ui->sb_arm_j3->value()),
-    };
+    convert_and_set_diff(Actuator::kMA, roll, pitch);
+    convert_and_set_diff(Actuator::kMB, roll, pitch);
+    convert_and_set_simple(Actuator::kJ1, ui->sb_arm_j1->value());
+    convert_and_set_simple(Actuator::kJ2, ui->sb_arm_j2->value());
+    convert_and_set_simple(Actuator::kJ3, ui->sb_arm_j3->value());
 #elif LIBRA_VERSION == 2
-    return {
-        Joint::JointToActuatorSimple(Actuator::Name::kPitch, ui->sb_arm_pitch->value())
-    };
-    //clang-format on
+    convert_and_set_simple(Actuator::kYaw, ui->sb_arm_yaw->value());
+    convert_and_set_simple(Actuator::kPitch, ui->sb_arm_pitch->value());
+#endif
+
+    return targets;
+}
+
+/**
+ * @brief Helper to resolve UI targets sequence layout-agnostically for input
+ * parsers.
+ *
+ * @param ui Pointer to main UI object
+ * @return Joint-space ordered pointers to target position Spin Boxes
+ *
+ * @see Joint::Name
+ */
+std::vector<QDoubleSpinBox*> GetOrderedSpinBoxes(const Ui::MainWindow* ui) {
+#if LIBRA_VERSION == 1
+    return {ui->sb_arm_roll, ui->sb_arm_pitch, ui->sb_arm_j1, ui->sb_arm_j2,
+            ui->sb_arm_j3};
+#elif LIBRA_VERSION == 2
+    return {ui->sb_arm_yaw, ui->sb_arm_pitch};
 #else
     return {};
 #endif
@@ -75,27 +112,19 @@ void MainWindow::on_pb_quick_input_clicked() {
 
     // Parse input (format and delimiter are automatically validated)
     const auto values = input.split(',', Qt::SkipEmptyParts);
+    const auto target_boxes = GetOrderedSpinBoxes(ui_);
 
-    constexpr auto expected_count = Actuator::kJointCountHebi
-                                    + Actuator::kJointCountEpos;
-    if (values.size() != expected_count) {
+    if (static_cast<size_t>(values.size()) != target_boxes.size()) {
         logger_->Error("Provided values (" + std::to_string(values.size())
                        + ") != No. of actuators ("
-                       + std::to_string(expected_count) + ")!");
+                       + std::to_string(target_boxes.size()) + ")!");
         return;
     }
 
     // Set UI values (each Spin Box's min/max is automatically respected)
-#if LIBRA_VERSION == 1
-    ui_->sb_arm_roll->setValue(values[0].toDouble());
-    ui_->sb_arm_pitch->setValue(values[1].toDouble());
-    ui_->sb_arm_j1->setValue(values[2].toDouble());
-    ui_->sb_arm_j2->setValue(values[3].toDouble());
-    ui_->sb_arm_j3->setValue(values[4].toDouble());
-#elif LIBRA_VERSION == 2
-    ui_->sb_arm_yaw->setValue(values[0].toDouble());
-    ui_->sb_arm_pitch->setValue(values[1].toDouble());
-#endif
+    for (size_t i = 0; i < target_boxes.size(); ++i) {
+        target_boxes[i]->setValue(values[i].toDouble());
+    }
 
     // Clear the input box
     ui_->le_quick_input->clear();
@@ -110,40 +139,41 @@ void MainWindow::on_pb_quick_input_clicked() {
  *       is considered "+" (positive).
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    // Get command vector(s) from UI values
-    const auto hebi_command = BuildHebiCommandVector(ui_);
+    // Get command vector from UI values
+    const auto targets = GetActuatorTargets(ui_);
 
     if (debug_mode_) {
-        // Format command string (for debug output)
         std::stringstream command_ss;
         command_ss << std::fixed << std::setprecision(2)
-                   << "Sending movement command (deg): "
-        // clang-format off
-#if LIBRA_VERSION == 1
-                   << "MA=" << hebi_command[0]
-                   << ", MB=" << hebi_command[1]
-                   << ", J1=" << hebi_command[2]
-                   << ", J2=" << hebi_command[3]
-                   << ", J3=" << hebi_command[4];
-#elif LIBRA_VERSION == 2
-                   << "Yaw=" << ui_->sb_arm_yaw->value()  // EPOS
-                   << ", Pitch=" << hebi_command[0];
-#endif
-        // clang-format on
+                   << "Sending movement command (deg): ";
+
+        for (int i = 0; i < Actuator::kUndefined; ++i) {
+            const auto actuator = static_cast<Actuator::Name>(i);
+            command_ss << Actuator::NameEnumToString(actuator) << "="
+                       << targets[actuator];
+
+            if (i < Actuator::kUndefined - 1) {
+                command_ss << ", ";
+            }
+        }
 
         logger_->Debug(command_ss.str());
     }
 
     // Send command(s)
-#if LIBRA_VERSION == 2
-    emit CommandEpos({ui_->sb_arm_yaw->value()});
+#if LIBRA_VERSION == 1
+    emit CommandHebi(targets);
+#elif LIBRA_VERSION == 2
+    emit CommandEpos({targets[Actuator::kYaw]});
+    emit CommandHebi({targets[Actuator::kPitch]});
 #endif
-    emit CommandHebi(hebi_command);
+
+    last_command_ = targets;
 }
 
 /**
- * @brief Toggles functionality related to automatic torque compensation. This
- *        includes automatic torque control of the central arm joint and, by
+ * @brief Toggles functionality related to automatic torque compensation.
+ * This includes automatic torque control of the central arm joint and, by
  *        association, automatic fluid system operation.
  *
  * @param checked Whether to enable automatic fluid system compensation

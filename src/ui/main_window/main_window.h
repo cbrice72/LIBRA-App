@@ -218,6 +218,8 @@ class MainWindow : public QMainWindow {
 
     // Temporary Value Holders
 
+    std::vector<double> last_command_;
+
     struct ArmLimits {
         double pitch_min{-180.0};
         double pitch_max{180.0};

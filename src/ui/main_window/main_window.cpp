@@ -113,6 +113,9 @@ MainWindow::MainWindow(QWidget* parent)
     // Runtime checks
     util::IsWslEnvironment();  // only warns, no action needed
 
+    // Member initialization
+    last_command_.resize(Actuator::kUndefined);
+
     // GUI configuration
     ConfigureUi();
     InitializeFeedbackElementMap();
