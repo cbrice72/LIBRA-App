@@ -115,7 +115,7 @@ class MainWindow : public QMainWindow {
     // Automation Menu
 
     void on_a_atc_update_bounds_triggered();
-    void on_a_atc_ignore_water_level_triggered();
+    void on_a_atc_ignore_water_level_triggered(bool checked);
 
     // Actuators Menu
 
@@ -206,6 +206,8 @@ class MainWindow : public QMainWindow {
 
     FeedbackElementMapOfMaps feedback_element_map_;
 
+    std::vector<double> last_command_;  // actuator-space target positions
+
     bool ignore_water_level_{false};
 
     // Device Managers
@@ -223,8 +225,6 @@ class MainWindow : public QMainWindow {
 #endif
 
     // Temporary Value Holders
-
-    std::vector<double> last_command_;
 
     struct ArmLimits {
         double pitch_min{-180.0};
