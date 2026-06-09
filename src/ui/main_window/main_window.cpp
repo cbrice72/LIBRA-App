@@ -420,31 +420,32 @@ void MainWindow::InitializeDeviceManagers() {
             arduino_manager_, &ArduinoManager::SetManipTarget);
 #endif
 
+    // Lambda factory for simplification of TankWidget signals
+    auto MakeTankLimHandler = [this](const std::string& tank,
+                                     const std::string& state) {
+        return [this, tank, state]() -> void {
+            if (ignore_water_level_) {
+                return;
+            }
+            ui_->pb_autocomp_enable->setChecked(false);
+            logger_->Info("Tank " + tank + " estimated " + state
+                          + "; ATC disabled");
+        };
+    };
+
     // TankWidget signals
     connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank A estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
+            this, MakeTankLimHandler("A", "full"));
 
     connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank A estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
+            this, MakeTankLimHandler("A", "empty"));
 
 #if LIBRA_VERSION == 1
     connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank B estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
+            this, MakeTankLimHandler("B", "full"));
 
     connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank B estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
+            this, MakeTankLimHandler("B", "empty"));
 #endif
 
     // MainWindow slots
