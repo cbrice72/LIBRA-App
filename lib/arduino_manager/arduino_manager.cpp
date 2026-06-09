@@ -539,7 +539,7 @@ void ArduinoManager::DisconnectWater() {
  *
  * @see MapTorqueToWaterCommand
  */
-void ArduinoManager::SetAutoCompensation(const bool& enabled) {
+void ArduinoManager::SetAutoTorqueComp(const bool& enabled) {
     if (auto_comp_en_ != enabled) {
         ClearWaterCommand();  // reset the previous command when switching modes
     }
@@ -581,7 +581,7 @@ void ArduinoManager::ForceWaterCommand(const Water::Side& side,
     }
 
     // Force-disable auto compensation
-    SetAutoCompensation(false);
+    SetAutoTorqueComp(false);
 
     // Modify or clear corresponding command bits
     switch (state) {

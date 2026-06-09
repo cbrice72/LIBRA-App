@@ -52,7 +52,7 @@ class ArduinoManager : public QObject {
 
     void ConnectWater(const QString& port_name);
     void DisconnectWater();
-    void SetAutoCompensation(const bool& enabled);
+    void SetAutoTorqueComp(const bool& enabled);
     void UpdateWaterControl(const std::optional<double>& torque_dir);
     void ForceWaterCommand(const Water::Side& side, const Water::State& state);
 

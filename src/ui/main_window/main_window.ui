@@ -2561,7 +2561,7 @@ QPushButton:disabled {color: rgb(220, 180, 160);}</string>
             </widget>
            </item>
            <item>
-            <widget class="QPushButton" name="pb_autocomp_enable">
+            <widget class="QPushButton" name="pb_atc_enable">
              <property name="enabled">
               <bool>false</bool>
              </property>
@@ -3478,7 +3478,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
   <tabstop>pb_quick_input</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
-  <tabstop>pb_autocomp_enable</tabstop>
+  <tabstop>pb_atc_enable</tabstop>
   <tabstop>pb_camera_refresh</tabstop>
   <tabstop>cb_camera_name</tabstop>
   <tabstop>pb_camera_capture</tabstop>

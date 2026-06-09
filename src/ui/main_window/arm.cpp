@@ -173,15 +173,15 @@ void MainWindow::on_pb_arm_start_clicked() {
 
 /**
  * @brief Toggles functionality related to automatic torque compensation.
- * This includes automatic torque control of the central arm joint and, by
- *        association, automatic fluid system operation.
+ *        This includes automatic torque control of the central arm joint and,
+ *        by association, automatic fluid system operation.
  *
  * @param checked Whether to enable automatic fluid system compensation
  *
  * @see on_pb_water_fill_A_clicked on_pb_water_drain_A_clicked
  *      on_pb_water_fill_B_clicked on_pb_water_drain_B_clicked
  */
-void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
+void MainWindow::on_pb_atc_enable_toggled(bool checked) {
     logger_->Debug("ATC - " + std::string(checked ? "Enabling" : "Disabling")
                    + " automatic torque compensation");
 
@@ -197,13 +197,13 @@ void MainWindow::on_pb_autocomp_enable_toggled(bool checked) {
 #endif
 
         // Clearly display an "enabled" state
-        ui_->pb_autocomp_enable->setText(" DISABLE ATC");
-        ui_->pb_autocomp_enable->setStyleSheet(
+        ui_->pb_atc_enable->setText(" DISABLE ATC");
+        ui_->pb_atc_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kRed));
     } else {
         // Revert to "disabled" state
-        ui_->pb_autocomp_enable->setText(" ENABLE ATC");
-        ui_->pb_autocomp_enable->setStyleSheet(
+        ui_->pb_atc_enable->setText(" ENABLE ATC");
+        ui_->pb_atc_enable->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
     }
 }

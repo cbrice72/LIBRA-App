@@ -155,7 +155,7 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
     // (pb_arm_stop is handled via signals)
-    void on_pb_autocomp_enable_toggled(bool checked);
+    void on_pb_atc_enable_toggled(bool checked);
 
     // Water
 
@@ -196,6 +196,7 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
 
     void UpdateActuatorControls();
+    void UpdateATCControls();
 
     // --- Data Members ---
 

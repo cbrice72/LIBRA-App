@@ -405,7 +405,7 @@ void MainWindow::InitializeDeviceManagers() {
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
             arduino_manager_, &ArduinoManager::DisconnectWater);
     connect(this, &MainWindow::EnableAutoTorqueComp,  // automate water state
-            arduino_manager_, &ArduinoManager::SetAutoCompensation);
+            arduino_manager_, &ArduinoManager::SetAutoTorqueComp);
     connect(this, &MainWindow::CommandWater,  // force update water command
             arduino_manager_, &ArduinoManager::ForceWaterCommand);
 
@@ -427,7 +427,7 @@ void MainWindow::InitializeDeviceManagers() {
             if (ignore_water_level_) {
                 return;
             }
-            ui_->pb_autocomp_enable->setChecked(false);
+            ui_->pb_atc_enable->setChecked(false);
             logger_->Info("Tank " + tank + " estimated " + state
                           + "; ATC disabled");
         };
@@ -598,6 +598,23 @@ void MainWindow::UpdateActuatorControls() {
     ui_->pb_arm_stop->setEnabled(any_connected);
 }
 
+/**
+ * @brief Update UI according to connection status of components related to
+ *        automatic torque compensation (ATC) mechanism.
+ */
+void MainWindow::UpdateATCControls() {
+    // Evaluate connection statuses of all components
+    // (NOTE: "Pitch" joint in both LIBRA-I/-II is governed by HEBI actuator(s))
+    bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
+    bool water_connected = ui_->a_water_disconnect->isEnabled();
+    bool any_connected = hebi_connected || water_connected;
+
+    // Update UI
+    ui_->pb_atc_enable->setEnabled(any_connected);
+    ui_->a_atc_update_bounds->setEnabled(any_connected);
+    ui_->a_atc_ignore_water_level->setEnabled(any_connected);
+}
+
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
 //------------------------------------------------------------------------------
@@ -655,11 +672,7 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
 
-    if (connected || (!connected && ui_->a_hebi_connect->isEnabled())) {
-        // Since auto torque compensation is shared between ActuatorThread and
-        // ArduinoManager, disable this button if neither is connected
-        ui_->pb_autocomp_enable->setEnabled(connected);
-    }
+    UpdateATCControls();
 }
 
 /**
@@ -707,15 +720,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
     // UI widgets
     UpdateActuatorControls();
-
-    // Since ATC (auto torque compensation) is shared between ActuatorThread and
-    // ArduinoManager, disable the following if neither is connected
-    if (connected || (!connected && ui_->a_water_connect->isEnabled())) {
-        ui_->pb_autocomp_enable->setEnabled(connected);
-
-        ui_->a_atc_update_bounds->setEnabled(connected);
-        ui_->a_atc_ignore_water_level->setEnabled(connected);
-    }
+    UpdateATCControls();
 }
 
 #if LIBRA_VERSION == 2
