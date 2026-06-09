@@ -703,15 +703,17 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     ui_->a_hebi_log_stop->setEnabled(connected);
 
     ui_->a_hebi_override_limits->setEnabled(connected);
-    ui_->a_hebi_central_torque_comp->setEnabled(connected);
 
     // UI widgets
     UpdateActuatorControls();
 
+    // Since ATC (auto torque compensation) is shared between ActuatorThread and
+    // ArduinoManager, disable the following if neither is connected
     if (connected || (!connected && ui_->a_water_connect->isEnabled())) {
-        // Since auto torque compensation is shared between ActuatorThread and
-        // ArduinoManager, disable this button if neither is connected
         ui_->pb_autocomp_enable->setEnabled(connected);
+
+        ui_->a_atc_update_bounds->setEnabled(connected);
+        ui_->a_atc_ignore_water_level->setEnabled(connected);
     }
 }
 

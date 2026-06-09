@@ -25,6 +25,7 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Preferences
+ * !Automation
  * !Actuators
  * !Sensors
  * !Water
@@ -50,6 +51,43 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 
     // Propagate to all children
     emit EnableDebugMode(checked);
+}
+
+//------------------------------------------------------------------------------
+// !Automation
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Event handler for "Automation/ATC" menu action "Torque compensation
+ *        bounds...". Opens a dialog to configure torque compensation bounds.
+ */
+void MainWindow::on_a_atc_update_bounds_triggered() {
+    if (hebi_thread_ == nullptr) {
+        logger_->Warn("HEBI thread not available - cannot edit torque bounds");
+        return;
+    }
+
+    // Prompt user to input new bounds
+    TorqueCompDialog dialog(this, kTorqueCompLowerBound, kTorqueCompUpperBound);
+
+    if (dialog.exec() == QDialog::Accepted) {
+        const double lower_bound = dialog.GetLowerBound();
+        const double upper_bound = dialog.GetUpperBound();
+
+        // Send the new bounds to the HebiThread
+        emit UpdateHebiTorqueCompBounds(lower_bound, upper_bound);
+    } else {
+        logger_->Debug("Torque bound setting cancelled by user");
+        return;
+    }
+}
+
+/**
+ * @brief TODO: documentation.
+ *
+ */
+void MainWindow::on_a_atc_ignore_water_level_triggered() {
+    // TODO: implementation
 }
 
 //------------------------------------------------------------------------------
@@ -189,31 +227,6 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
         ui_->sb_arm_yaw->setRange(original_limits_.yaw_min,
                                   original_limits_.yaw_max);
 #endif
-    }
-}
-
-/**
- * @brief Event handler for "Actuators/HEBI" menu action "Torque compensation
- *        bounds...". Opens a dialog to configure torque compensation bounds.
- */
-void MainWindow::on_a_hebi_central_torque_comp_triggered() {
-    if (hebi_thread_ == nullptr) {
-        logger_->Warn("HEBI thread not available - cannot edit torque bounds");
-        return;
-    }
-
-    // Prompt user to input new bounds
-    TorqueCompDialog dialog(this, kTorqueCompLowerBound, kTorqueCompUpperBound);
-
-    if (dialog.exec() == QDialog::Accepted) {
-        const double lower_bound = dialog.GetLowerBound();
-        const double upper_bound = dialog.GetUpperBound();
-
-        // Send the new bounds to the HebiThread
-        emit UpdateHebiTorqueCompBounds(lower_bound, upper_bound);
-    } else {
-        logger_->Debug("Torque bound setting cancelled by user");
-        return;
     }
 }
 

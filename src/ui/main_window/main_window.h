@@ -112,6 +112,11 @@ class MainWindow : public QMainWindow {
 
     void on_a_debug_mode_toggled(bool checked);
 
+    // Automation Menu
+
+    void on_a_atc_update_bounds_triggered();
+    void on_a_atc_ignore_water_level_triggered();
+
     // Actuators Menu
 
 #if LIBRA_VERSION == 2
@@ -120,7 +125,6 @@ class MainWindow : public QMainWindow {
 
     void on_a_hebi_load_gains_triggered();
     void on_a_hebi_override_limits_toggled(bool checked);
-    void on_a_hebi_central_torque_comp_triggered();
 
 #if LIBRA_VERSION == 1
     void on_a_manip_connect_triggered();

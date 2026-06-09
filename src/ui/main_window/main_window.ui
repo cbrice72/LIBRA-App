@@ -3144,7 +3144,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <x>0</x>
      <y>0</y>
      <width>1053</width>
-     <height>20</height>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">
@@ -3168,6 +3168,19 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <string>Preferences</string>
     </property>
     <addaction name="a_debug_mode"/>
+   </widget>
+   <widget class="QMenu" name="m_automation">
+    <property name="title">
+     <string>Automation</string>
+    </property>
+    <widget class="QMenu" name="m_atc_preferences">
+     <property name="title">
+      <string>ATC</string>
+     </property>
+     <addaction name="a_atc_update_bounds"/>
+     <addaction name="a_atc_ignore_water_level"/>
+    </widget>
+    <addaction name="m_atc_preferences"/>
    </widget>
    <widget class="QMenu" name="m_actuators">
     <property name="title">
@@ -3194,7 +3207,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_hebi_log_stop"/>
      <addaction name="separator"/>
      <addaction name="a_hebi_override_limits"/>
-     <addaction name="a_hebi_central_torque_comp"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
      <property name="title">
@@ -3239,6 +3251,7 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
     <addaction name="a_disconnect_all"/>
    </widget>
    <addaction name="m_preferences"/>
+   <addaction name="m_automation"/>
    <addaction name="m_actuators"/>
    <addaction name="m_sensors"/>
    <addaction name="m_water"/>
@@ -3286,14 +3299,6 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    </property>
    <property name="text">
     <string>Override pos. limits</string>
-   </property>
-  </action>
-  <action name="a_hebi_central_torque_comp">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Torque compensation bounds...</string>
    </property>
   </action>
   <action name="a_water_connect">
@@ -3430,6 +3435,22 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
    </property>
    <property name="statusTip">
     <string>Cannot be toggled when a connection is active</string>
+   </property>
+  </action>
+  <action name="a_atc_update_bounds">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Torque compensation bounds...</string>
+   </property>
+  </action>
+  <action name="a_atc_ignore_water_level">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Ignore water level</string>
    </property>
   </action>
  </widget>
