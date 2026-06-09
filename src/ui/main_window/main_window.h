@@ -96,8 +96,8 @@ class MainWindow : public QMainWindow {
 
     void CommandHebi(const std::vector<double>& deg);
     void LoadHebiGains(const QString& file_path);
-    void UpdateHebiTorqueCompBounds(const double& upper_bound,
-                                    const double& lower_bound);
+    void UpdateHebiTorqueCompBounds(const double& lower_bound,
+                                    const double& upper_bound);
 
 #if LIBRA_VERSION == 2
     void ConnectEpos();
