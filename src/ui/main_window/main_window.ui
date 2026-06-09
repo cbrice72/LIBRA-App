@@ -3209,6 +3209,9 @@ QPushButton:disabled {color: rgb(170, 200, 185);}</string>
      <addaction name="a_hebi_override_limits"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
+     <property name="enabled">
+      <bool>false</bool>
+     </property>
      <property name="title">
       <string>Manip. Servos</string>
      </property>
