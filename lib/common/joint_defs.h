@@ -149,7 +149,7 @@ inline double ActuatorToJointSimple(Joint::Name joint, double val) {
  * @param val The value to convert
  * @return double Real position of the actuator
  *
- * @note Currently unused; provided for completeness
+ * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
  */
 inline double JointToActuatorSimple(Actuator::Name actuator, double val) {
     switch (actuator) {
@@ -216,7 +216,7 @@ inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
  * @param pitch Position of central pitch joint
  * @return double Real position of the actuator
  *
- * @note Currently unused; provided for completeness
+ * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
  */
 inline double JointToActuatorDifferential(Actuator::Name actuator, double roll,
                                           double pitch) {
