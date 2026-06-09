@@ -206,6 +206,8 @@ class MainWindow : public QMainWindow {
 
     FeedbackElementMapOfMaps feedback_element_map_;
 
+    bool ignore_water_level_{false};
+
     // Device Managers
 
     ArduinoManager* arduino_manager_{nullptr};       // serial device control
