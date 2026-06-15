@@ -201,6 +201,76 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
     }
 }
 
+/**
+ * @brief Converts a simple joint's effective position to its corresponding
+ *        actuator's real position.
+ *
+ * @param actuator Which actuator to calculate for
+ * @param val The value to convert
+ * @return double Real position of the actuator
+ *
+ * @see Joint::ActuatorToJointSimple
+ * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
+ */
+inline double JointToActuatorSimple(Name actuator, double val) {
+    switch (actuator) {
+#if LIBRA_VERSION == 1
+        case Name::kMA:
+        case Name::kMB:
+            std::cerr
+                << "[ERROR] JointToActuatorSimple: This actuator is part of a "
+                   "complex system! Please use JointToActuatorDifferential."
+                << std::endl;
+            return 0;
+        case Name::kJ1:
+            return val;
+        case Name::kJ2:
+            return -val;
+        case Name::kJ3:
+            return -val;
+#elif LIBRA_VERSION == 2
+        case Name::kPitch:
+            return -val;
+        case Name::kYaw:
+            return -val;
+#endif
+        default:
+            std::cerr << "[ERROR] JointToActuatorSimple: Unknown actuator!"
+                      << std::endl;
+            return 0;
+    }
+}
+
+/**
+ * @brief Derives the real position of a linked actuator based on its
+ *        differential joints' effective positions.
+ *
+ * @param actuator Which actuator to calculate for
+ * @param roll Position of central roll joint
+ * @param pitch Position of central pitch joint
+ * @return double Real position of the actuator
+ *
+ * @see Joint::ActuatorToJointDifferential
+ * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
+ */
+inline double JointToActuatorDifferential(Name actuator, double roll,
+                                          double pitch) {
+    switch (actuator) {
+#if LIBRA_VERSION == 1
+        case Name::kMA:
+            return -roll + pitch;
+        case Name::kMB:
+            return -roll - pitch;
+#endif
+        default:
+            std::cerr
+                << "[ERROR] JointToActuatorDifferential: Provided actuator "
+                   "name is not part of a known complex system!"
+                << std::endl;
+            return 0;
+    }
+}
+
 //------------------------------------------------------------------------------
 // !Helper Functions
 //------------------------------------------------------------------------------
@@ -214,8 +284,8 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
 inline std::vector<std::string> GetHebiDefault() {
     std::vector<std::string> names;
 
-    names.reserve(Actuator::kJointCountHebi);  // for efficiency
-    for (int i = 0; i < Actuator::kJointCountHebi; ++i) {
+    names.reserve(kJointCountHebi);  // for efficiency
+    for (int i = 0; i < kJointCountHebi; ++i) {
         names.push_back(NameEnumToString(static_cast<Name>(i)));
     }
 
