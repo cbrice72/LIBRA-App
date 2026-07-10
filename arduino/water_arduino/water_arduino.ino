@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   water_sketch.ino
+ * @file   water_arduino.ino
  * @brief  Sketch for controlling up to two combined water inflow/outflow systems.
  *
  * @author Yuto Goto

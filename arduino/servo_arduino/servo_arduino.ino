@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   servo_sketch.ino
+ * @file   servo_arduino.ino
  * @brief  Sketch for controlling the old tip-mounted servo motors.
  *
  * @author Yuto Goto

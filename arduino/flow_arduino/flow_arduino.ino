@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   flow_sketch.ino
+ * @file   flow_arduino.ino
  * @brief  Sketch for analog-to-digital conversion of flow sensor data.
  *
  * @author brice.c.aa
