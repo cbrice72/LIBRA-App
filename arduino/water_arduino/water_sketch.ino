@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file   water_sketch.ino
+ * @brief  Sketch for controlling up to two combined water inflow/outflow systems.
+ *
+ * @author Yuto Goto
+ ******************************************************************************/
+
 // NOLINTBEGIN: don't lint Arduino C++ code
 
 const int pin[4] = {2, 4, 7, 8};
