@@ -21,7 +21,7 @@
 // Pin Assignments
 const int INFLOW_PIN = A0;
 const int OUTFLOW_PIN = A1;
-const int LED_PIN = 13;  // built-in LED
+const int LED_PIN = 13;  // on-board LED
 
 // Hardware Values
 const float SENSOR_MIN_SIGNAL_A = 0.004;  // Amps
@@ -68,7 +68,7 @@ void loop() {
     int raw_inflow = analogRead(INFLOW_PIN);
     int raw_outflow = analogRead(OUTFLOW_PIN);
 
-    // Calculate digital values
+    // Calculate and send digital values
     float in_v = (raw_inflow / ADC_MAX_VALUE) * ADC_REF_VOLTAGE;
     float in_i = in_v / RESISTOR_OHMS;
     float inflow = CalculateFlow(in_i);
@@ -77,30 +77,14 @@ void loop() {
     float out_i = out_v / RESISTOR_OHMS;
     float outflow = CalculateFlow(out_i);
 
-    // Show sensor connection status via LED
+    SendData(inflow, outflow);
+
+    // Also show sensor connection status via on-board LED
     if (in_i >= FAULT_THRESHOLD_A || out_i >= FAULT_THRESHOLD_A) {
         digitalWrite(LED_PIN, HIGH);
     } else {
         digitalWrite(LED_PIN, LOW);
     }
-
-    // Output data to receiving computer
-    // (TODO: only for checking functionality! Not to be used with ArduinoManager)
-    Serial.print("INFLOW: ");
-    if (inflow < 0.0) {
-        Serial.print("FAULT");
-    } else {
-        Serial.print(inflow);
-    }
-
-    Serial.print(" | OUTFLOW: ");
-    if (outflow < 0.0) {
-        Serial.print("FAULT");
-    } else {
-        Serial.print(outflow);
-    }
-
-    Serial.println();
 
     delay(LOOP_PERIOD_MS);
 }
@@ -137,6 +121,42 @@ float CalculateFlow(float current) {
     }
 
     return flow;
+}
+
+/**
+ * @brief Sends flow rates over serial connection (format: "inflow,outflow\n").
+ *
+ * @param inflow Calculated inflow rate (L/s)
+ * @param outflow Calculated outflow rate (L/s)
+ */
+void SendData(float inflow, float outflow) {
+    /* TODO: use this with LIBRA App
+    // Send compact packet
+    Serial.print(inflow);
+    Serial.print(',');
+    Serial.println(outflow); // incl. packet termination
+    */
+
+    // Print to terminal
+    Serial.print("[");
+    Serial.print(millis());
+    Serial.print("] ");
+
+    Serial.print("INFLOW: ");
+    if (inflow < 0.0) {
+        Serial.print("FAULT");
+    } else {
+        Serial.print(inflow);
+    }
+
+    Serial.print(" | OUTFLOW: ");
+    if (outflow < 0.0) {
+        Serial.print("FAULT");
+    } else {
+        Serial.print(outflow);
+    }
+
+    Serial.println();
 }
 
 // NOLINTEND
