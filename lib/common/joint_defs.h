@@ -12,7 +12,7 @@
 #include <iostream>
 
 // Other Library Headers
-#include "actuator_defs.h"
+// (none)
 
 /* --- TABLE OF CONTENTS ---
  * !Constants
@@ -110,29 +110,29 @@ inline std::string NameEnumToString(Name name) {
  * @param val The value to convert
  * @return double Effective position of the joint
  *
- * @see HebiThread::PublishState
+ * @see Actuator::JointToActuatorSimple HebiThread::PublishState
  */
-inline double ActuatorToJointSimple(Joint::Name joint, double val) {
+inline double ActuatorToJointSimple(Name joint, double val) {
     switch (joint) {
 #if LIBRA_VERSION == 1
-        case Joint::Name::kRoll:
-        case Joint::Name::kPitch:
+        case Name::kRoll:
+        case Name::kPitch:
             std::cerr
                 << "[ERROR] ActuatorToJointSimple: This joint is part of a "
                    "complex system! Please use ActuatorToJointDifferential."
                 << std::endl;
             return 0;
-        case Joint::Name::kJ1:
+        case Name::kJ1:
             return val;
-        case Joint::Name::kJ2:
+        case Name::kJ2:
             return -val;
-        case Joint::Name::kJ3:
+        case Name::kJ3:
             return -val;
 #elif LIBRA_VERSION == 2
-        case Joint::Name::kPitch:
-            return val;  // TODO: verify this
-        case Joint::Name::kYaw:
-            return val;  // TODO: verify this
+        case Name::kPitch:
+            return -val;
+        case Name::kYaw:
+            return -val;
 #endif
         default:
             std::cerr << "[ERROR] ActuatorToJointSimple: Unknown joint!"
@@ -142,46 +142,6 @@ inline double ActuatorToJointSimple(Joint::Name joint, double val) {
 }
 
 /**
- * @brief Converts a simple joint's effective position to its corresponding
- *        actuator's real position.
- *
- * @param actuator Which actuator to calculate for
- * @param val The value to convert
- * @return double Real position of the actuator
- *
- * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
- */
-inline double JointToActuatorSimple(Actuator::Name actuator, double val) {
-    switch (actuator) {
-#if LIBRA_VERSION == 1
-        case Actuator::Name::kMA:
-        case Actuator::Name::kMB:
-            std::cerr
-                << "[ERROR] JointToActuatorSimple: This actuator is part of a "
-                   "complex system! Please use JointToActuatorDifferential."
-                << std::endl;
-            return 0;
-        case Actuator::Name::kJ1:
-            return val;
-        case Actuator::Name::kJ2:
-            return -val;
-        case Actuator::Name::kJ3:
-            return -val;
-#elif LIBRA_VERSION == 2
-        case Actuator::Name::kPitch:
-            return val;  // TODO: verify this
-        case Actuator::Name::kYaw:
-            return val;  // TODO: verify this
-#endif
-        default:
-            std::cerr << "[ERROR] JointToActuatorSimple: Unknown actuator!"
-                      << std::endl;
-            return 0;
-    }
-}
-
-#if LIBRA_VERSION == 1
-/**
  * @brief Derives the effective position of a differential joint based on its
  *        linked actuators' real positions.
  *
@@ -190,15 +150,16 @@ inline double JointToActuatorSimple(Actuator::Name actuator, double val) {
  * @param mb Position of actuator "MB" (right side of 2-DoF Joint)
  * @return double Effective position of the joint
  *
- * @see HebiThread::PublishState
+ * @see Actuator::JointToActuatorDifferential HebiThread::PublishState
  */
-inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
-                                          double mb) {
+inline double ActuatorToJointDifferential(Name joint, double ma, double mb) {
     switch (joint) {
-        case Joint::Name::kRoll:
+#if LIBRA_VERSION == 1
+        case Name::kRoll:
             return -(ma + mb) / 2.0;  // positive roll = leftward
-        case Joint::Name::kPitch:
+        case Name::kPitch:
             return (ma - mb) / 2.0;  // positive pitch = upward
+#endif
         default:
             std::cerr << "[ERROR] ActuatorToJointDifferential: Provided joint "
                          "name is not part of a known complex system!"
@@ -206,34 +167,6 @@ inline double ActuatorToJointDifferential(Joint::Name joint, double ma,
             return 0;
     }
 }
-
-/**
- * @brief Derives the real position of a linked actuator based on its
- *        differential joints' effective positions.
- *
- * @param actuator Which actuator to calculate for
- * @param roll Position of central roll joint
- * @param pitch Position of central pitch joint
- * @return double Real position of the actuator
- *
- * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
- */
-inline double JointToActuatorDifferential(Actuator::Name actuator, double roll,
-                                          double pitch) {
-    switch (actuator) {
-        case Actuator::Name::kMA:
-            return -roll + pitch;
-        case Actuator::Name::kMB:
-            return -roll - pitch;
-        default:
-            std::cerr
-                << "[ERROR] JointToActuatorDifferential: Provided actuator "
-                   "name is not part of a known complex system!"
-                << std::endl;
-            return 0;
-    }
-}
-#endif
 
 //------------------------------------------------------------------------------
 // !Helper Functions

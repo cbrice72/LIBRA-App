@@ -43,13 +43,13 @@ std::vector<double> GetActuatorTargets(const Ui::MainWindow* ui) {
 
     // Lambdas for converting joint-space UI values to actuator-space command values
     auto convert_and_set_simple = [&](Actuator::Name name, double val) {
-        targets[name] = Joint::JointToActuatorSimple(name, val);
+        targets[name] = Actuator::JointToActuatorSimple(name, val);
     };
 
 #if LIBRA_VERSION == 1
     auto convert_and_set_diff = [&](Actuator::Name name, double roll,
                                     double pitch) {
-        targets[name] = Joint::JointToActuatorDifferential(name, roll, pitch);
+        targets[name] = Actuator::JointToActuatorDifferential(name, roll, pitch);
     };
 #endif
 

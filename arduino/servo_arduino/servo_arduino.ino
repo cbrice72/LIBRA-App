@@ -1,3 +1,10 @@
+/******************************************************************************
+ * @file   servo_arduino.ino
+ * @brief  Sketch for controlling the old tip-mounted servo motors.
+ *
+ * @author Yuto Goto
+ ******************************************************************************/
+
 // NOLINTBEGIN: don't lint Arduino C++ code
 
 #include <Servo.h>
