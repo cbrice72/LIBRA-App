@@ -46,10 +46,12 @@ std::vector<double> GetActuatorTargets(const Ui::MainWindow* ui) {
         targets[name] = Joint::JointToActuatorSimple(name, val);
     };
 
+#if LIBRA_VERSION == 1
     auto convert_and_set_diff = [&](Actuator::Name name, double roll,
                                     double pitch) {
         targets[name] = Joint::JointToActuatorDifferential(name, roll, pitch);
     };
+#endif
 
     // Convert and save values based on Actuator::Name enum order
 #if LIBRA_VERSION == 1
