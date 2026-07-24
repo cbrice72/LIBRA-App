@@ -46,7 +46,8 @@ GenericSerialDevice::GenericSerialDevice(QObject* parent, bool debug_mode,
       device_name_(device_name),
       serial_port_(new QSerialPort(this)) {
     // Initialize the logger
-    logger_ = std::make_unique<QtLogger>(device_name_, debug_mode_);
+    logger_ = std::make_unique<QtLogger>(device_name_ + "Controller",
+                                         debug_mode_);
     logger_->Debug("Initializing " + device_name_ + "Controller");
 
     // Configure timers

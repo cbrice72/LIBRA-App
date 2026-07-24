@@ -212,7 +212,7 @@ void WaterController::MapTorqueToWaterCommand(const double& torque_dir) {
 
     ModifyWaterCommand(command);
 
-    logger_->Debug("[water]: Set command to " + BytesToStr(water_cmd_)
+    logger_->Debug("Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }
 
@@ -271,7 +271,7 @@ void WaterController::EnableAutoTorqueComp(const bool& enabled) {
     }
     auto_comp_en_ = enabled;
 
-    logger_->Debug("[water]: ATC - Automatic torque compensation "
+    logger_->Debug("ATC - Automatic torque compensation "
                    + std::string(enabled ? "enabled" : "disabled"));
 }
 
@@ -303,7 +303,7 @@ void WaterController::UpdateTorqueFeedback(
 void WaterController::ForceCommand(const Water::Side& side,
                                    const Water::State& state) {
     if (!serial_port_->isOpen()) {
-        logger_->Warn("[water]: Cannot force command; not connected");
+        logger_->Warn("Cannot force command; not connected");
         return;
     }
 
@@ -323,6 +323,6 @@ void WaterController::ForceCommand(const Water::Side& side,
             ClearWaterCommand(side);
     }
 
-    logger_->Debug("[water]: Forced command to " + BytesToStr(water_cmd_)
+    logger_->Debug("Forced command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
 }

@@ -113,7 +113,7 @@ void ManipController::OnUpdate() {
  * @param enabled Whether to enable pitch correction
  */
 void ManipController::EnablePitchCorrection(const bool& enabled) {
-    logger_->Debug("[manip]: " + std::string(enabled ? "Enabling" : "Disabling")
+    logger_->Debug(std::string(enabled ? "Enabling" : "Disabling")
                    + " auto-correction for arm pitch");
 
     manip_correction_enabled_ = enabled;
@@ -127,7 +127,7 @@ void ManipController::EnablePitchCorrection(const bool& enabled) {
 void ManipController::UpdatePitchFeedback(const double& pitch) {
     if (!serial_port_->isOpen()) {
         // TODO: this outputs endlessly, maybe set a variable to only output once?
-        // logger_->Warn("[manip]: Cannot set correction; not connected!");
+        // logger_->Warn("Cannot set correction; not connected!");
         return;
     }
 
@@ -149,7 +149,7 @@ void ManipController::UpdatePitchFeedback(const double& pitch) {
 void ManipController::SetTarget(const double& pan, const double& tilt,
                                 const bool& move_slow) {
     if (!serial_port_->isOpen()) {
-        logger_->Warn("[manip]: Cannot set targets; not connected");
+        logger_->Warn("Cannot set targets; not connected");
         return;
     }
 
@@ -175,6 +175,6 @@ void ManipController::SetTarget(const double& pan, const double& tilt,
         current_pos_.at(kTilt) = tilt;
     }
 
-    logger_->Debug("[manip]: Set targets to " + std::to_string(pan) + " "
+    logger_->Debug("Set targets to " + std::to_string(pan) + " "
                    + std::to_string(tilt) + " deg");
 }
