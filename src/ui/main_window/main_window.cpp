@@ -433,7 +433,7 @@ void MainWindow::InitializeDeviceManagers() {
     connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect
             water_controller_, &WaterController::Disconnect);
     connect(this, &MainWindow::EnableAutoTorqueComp,  // automatic compensation
-            water_controller_, &WaterController::EnableAutoCompensation);
+            water_controller_, &WaterController::EnableAutoTorqueComp);
     connect(this, &MainWindow::CommandWater,  // force specific command
             water_controller_, &WaterController::ForceCommand);
 
