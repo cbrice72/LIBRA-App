@@ -31,12 +31,12 @@
  *
  * @param checked Whether to force-fill the counterweight
  *
- * @see on_pb_autocomp_enable_toggled
+ * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_drain_A->setChecked(false);
 
         // Send signal
@@ -53,12 +53,12 @@ void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
  *
  * @param checked Whether to force-drain the counterweight
  *
- * @see on_pb_autocomp_enable_toggled
+ * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_fill_A->setChecked(false);
 
         // Send signal
@@ -76,12 +76,12 @@ void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
  *
  * @param checked Whether to force-fill the counterweight
  *
- * @see on_pb_autocomp_enable_toggled
+ * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_fill_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_drain_B->setChecked(false);
 
         // Send signal
@@ -98,12 +98,12 @@ void MainWindow::on_pb_water_fill_B_clicked(bool checked) {
  *
  * @param checked Whether to force-drain the counterweight
  *
- * @see on_pb_autocomp_enable_toggled
+ * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_drain_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_autocomp_enable->setChecked(false);
+        ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_fill_B->setChecked(false);
 
         // Send signal

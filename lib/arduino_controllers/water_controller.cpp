@@ -259,13 +259,13 @@ void WaterController::SendWaterStatus(Water::Side side) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sets the state of the fluid system's automatic torque compensation.
+ * @brief Sets the state of the fluid system's automatic torque compensation (ATC).
  *
  * @param enabled Whether to enable auto-compensation
  *
  * @see MapTorqueToWaterCommand
  */
-void WaterController::EnableAutoCompensation(const bool& enabled) {
+void WaterController::EnableAutoTorqueComp(const bool& enabled) {
     if (auto_comp_en_ != enabled) {
         ClearWaterCommand();  // reset the previous command when switching modes
     }
@@ -307,8 +307,8 @@ void WaterController::ForceCommand(const Water::Side& side,
         return;
     }
 
-    // Force-disable auto compensation
-    EnableAutoCompensation(false);
+    // Force-disable automatic torque compensation
+    EnableAutoTorqueComp(false);
 
     // Modify or clear corresponding command bits
     switch (state) {

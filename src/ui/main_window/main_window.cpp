@@ -299,30 +299,27 @@ void MainWindow::ConfigureUi() {
     // ========== Water ==========
 
     // Set up counterweight "tank" (fill state) widget
+    auto MakeTankLimHandler = [this](const std::string& tank,
+                                     const std::string& state) {
+        return [this, tank, state]() -> void {
+            if (ignore_water_level_) {
+                return;
+            }
+            ui_->pb_atc_enable->setChecked(false);
+            logger_->Info("Tank " + tank + " estimated " + state
+                          + "; ATC disabled");
+        };
+    };
+
     connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank A estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
+            this, MakeTankLimHandler("A", "full"));
     connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank A estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
+            this, MakeTankLimHandler("A", "empty"));
 #if LIBRA_VERSION == 1
     connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank B estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
+            this, MakeTankLimHandler("B", "full"));
     connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank B estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
+            this, MakeTankLimHandler("B", "empty"));
 #endif
 
     // Unneeded widgets
@@ -607,6 +604,23 @@ void MainWindow::UpdateActuatorControls() {
     ui_->pb_arm_stop->setEnabled(any_connected);
 }
 
+/**
+ * @brief Update UI according to connection status of components related to
+ *        automatic torque compensation (ATC) mechanism.
+ */
+void MainWindow::UpdateATCControls() {
+    // Evaluate connection statuses of all components
+    // (NOTE: "Pitch" joint in both LIBRA-I/-II is governed by HEBI actuator(s))
+    bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
+    bool water_connected = ui_->a_water_disconnect->isEnabled();
+    bool any_connected = hebi_connected || water_connected;
+
+    // Update UI
+    ui_->pb_atc_enable->setEnabled(any_connected);
+    ui_->a_atc_update_bounds->setEnabled(any_connected);
+    ui_->a_atc_ignore_water_level->setEnabled(any_connected);
+}
+
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
 //------------------------------------------------------------------------------
@@ -664,11 +678,7 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
 
-    if (connected || (!connected && ui_->a_hebi_connect->isEnabled())) {
-        // Since auto torque compensation is shared between ActuatorThread and
-        // ArduinoManager, disable this button if neither is connected
-        ui_->pb_autocomp_enable->setEnabled(connected);
-    }
+    UpdateATCControls();
 }
 
 /**
@@ -716,15 +726,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
     // UI widgets
     UpdateActuatorControls();
-
-    // Since ATC (auto torque compensation) is shared between ActuatorThread and
-    // ArduinoManager, disable the following if neither is connected
-    if (connected || (!connected && ui_->a_water_connect->isEnabled())) {
-        ui_->pb_autocomp_enable->setEnabled(connected);
-
-        ui_->a_atc_update_bounds->setEnabled(connected);
-        ui_->a_atc_ignore_water_level->setEnabled(connected);
-    }
+    UpdateATCControls();
 }
 
 #if LIBRA_VERSION == 2

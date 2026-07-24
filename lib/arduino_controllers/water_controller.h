@@ -32,7 +32,7 @@ class WaterController : public AbstractSerialDevice {
   public slots:
     // --- Arduino Commands ---
 
-    void EnableAutoCompensation(const bool& enabled);
+    void EnableAutoTorqueComp(const bool& enabled);
     void UpdateTorqueFeedback(const std::optional<double>& torque_dir);
 
     void ForceCommand(const Water::Side& side, const Water::State& state);

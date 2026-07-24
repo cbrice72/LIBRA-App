@@ -86,8 +86,11 @@ void MainWindow::on_a_atc_update_bounds_triggered() {
  * @brief TODO: documentation.
  *
  */
-void MainWindow::on_a_atc_ignore_water_level_triggered() {
-    // TODO: implementation
+void MainWindow::on_a_atc_ignore_water_level_triggered(bool checked) {
+    logger_->Debug(std::string(checked ? "Enabling" : "Disabling")
+                   + " ATC auto-stop on tank limit reached");
+
+    ignore_water_level_ = checked;
 }
 
 //------------------------------------------------------------------------------

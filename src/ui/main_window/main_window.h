@@ -99,8 +99,8 @@ class MainWindow : public QMainWindow {
 
     void CommandHebi(const std::vector<double>& deg);
     void LoadHebiGains(const QString& file_path);
-    void UpdateHebiTorqueCompBounds(const double& upper_bound,
-                                    const double& lower_bound);
+    void UpdateHebiTorqueCompBounds(const double& lower_bound,
+                                    const double& upper_bound);
 
 #if LIBRA_VERSION == 2
     void ConnectEpos();
@@ -118,7 +118,7 @@ class MainWindow : public QMainWindow {
     // Automation Menu
 
     void on_a_atc_update_bounds_triggered();
-    void on_a_atc_ignore_water_level_triggered();
+    void on_a_atc_ignore_water_level_triggered(bool checked);
 
     // Actuators Menu
 
@@ -158,7 +158,7 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
     // (pb_arm_stop is handled via signals)
-    void on_pb_autocomp_enable_toggled(bool checked);
+    void on_pb_atc_enable_toggled(bool checked);
 
     // Water
 
@@ -199,6 +199,7 @@ class MainWindow : public QMainWindow {
     void InitializeThreads();
 
     void UpdateActuatorControls();
+    void UpdateATCControls();
 
     // --- Data Members ---
 
@@ -208,6 +209,10 @@ class MainWindow : public QMainWindow {
     bool debug_mode_{true};
 
     FeedbackElementMapOfMaps feedback_element_map_;
+
+    std::vector<double> last_command_;  // actuator-space target positions
+
+    bool ignore_water_level_{false};
 
     // Device Managers
 
@@ -227,8 +232,6 @@ class MainWindow : public QMainWindow {
 #endif
 
     // Temporary Value Holders
-
-    std::vector<double> last_command_;
 
     struct ArmLimits {
         double pitch_min{-180.0};
