@@ -146,13 +146,12 @@ float CalculateFlow(float current) {
  * @param outflow Calculated outflow rate (L/s)
  */
 void SendData(float inflow, float outflow) {
-    /* TODO: use this with LIBRA App
     // Send compact packet
     Serial.print(inflow);
     Serial.print(',');
-    Serial.println(outflow); // incl. packet termination
-    */
+    Serial.println(outflow);  // incl. packet termination
 
+    /* FOR DEBUGGING PURPOSES ONLY
     // Print to terminal
     Serial.print("[");
     Serial.print(millis());
@@ -175,6 +174,7 @@ void SendData(float inflow, float outflow) {
     }
 
     Serial.println();
+    */
 }
 
 // NOLINTEND

@@ -15,16 +15,20 @@
 #include <QMainWindow>  // Qt::Widgets
 
 // Project Headers
-#include "camera_manager.h"
+// - Actuators
 #include "hebi_thread.h"
-#include "logger.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
 #endif
+// - Device Managers
+#include "camera_manager.h"
+#include "flow_controller.h"
 #include "water_controller.h"
 #if LIBRA_VERSION == 1
 # include "manip_controller.h"
 #endif
+// - Utilities
+#include "logger.h"
 
 QT_BEGIN_NAMESPACE
 
@@ -59,6 +63,9 @@ class MainWindow : public QMainWindow {
     void HandleWaterConnChanged(const bool& connected);
     void HandleWaterStatus(const Water::Side& side, const Water::State& state);
 
+    void HandleFlowConnChanged(const bool& connected);
+    void HandleFlowStatus(const double& inflow, const double& outflow);
+
 #if LIBRA_VERSION == 1
     void HandleManipConnChanged(const bool& connected);
     void HandleManipPosition(const double& base, const double& pan,
@@ -88,6 +95,8 @@ class MainWindow : public QMainWindow {
 
     void ConnectWater(const QString& port_name);
     void CommandWater(const Water::Side& side, const Water::State& state);
+
+    void ConnectFlow(const QString& port_name);
 
 #if LIBRA_VERSION == 1
     void ConnectManip(const QString& port_name);
@@ -140,7 +149,8 @@ class MainWindow : public QMainWindow {
 
     // Water Menu
 
-    void on_a_water_connect_triggered();
+    void on_a_water_cw_connect_triggered();
+    void on_a_water_flow_connect_triggered();
 
     void on_a_water_set_empty_triggered();
     void on_a_water_set_full_triggered();
@@ -217,6 +227,7 @@ class MainWindow : public QMainWindow {
     // Device Managers
 
     WaterController* water_controller_{nullptr};  // water Arduino control
+    FlowController* flow_controller_{nullptr};    // flow Arduino control
 #if LIBRA_VERSION == 1
     ManipController* manip_controller_{nullptr};  // manipulator Arduino control
 #endif

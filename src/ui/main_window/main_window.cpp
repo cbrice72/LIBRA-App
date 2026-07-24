@@ -427,45 +427,69 @@ void MainWindow::InitializeDeviceManagers() {
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             water_controller_, &WaterController::SetDebugMode);
-
     connect(this, &MainWindow::ConnectWater,  // connect
             water_controller_, &WaterController::Connect);
-    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect
+    connect(ui_->a_water_cw_disconnect, &QAction::triggered,  // disconnect
             water_controller_, &WaterController::Disconnect);
+
     connect(this, &MainWindow::EnableAutoTorqueComp,  // automatic compensation
             water_controller_, &WaterController::EnableAutoTorqueComp);
     connect(this, &MainWindow::CommandWater,  // force specific command
             water_controller_, &WaterController::ForceCommand);
 
     // MainWindow slots
+    connect(water_controller_, &WaterController::Connected,  // update UI
+            this, &MainWindow::HandleWaterConnChanged);
     connect(water_controller_, &WaterController::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
 
-    connect(water_controller_, &WaterController::Connected,  // update UI
-            this, &MainWindow::HandleWaterConnChanged);
-    connect(water_controller_, &WaterController::ReportStatus,  // state
+    connect(water_controller_, &WaterController::ReportStatus,  // get state
             this, &MainWindow::HandleWaterStatus);
+
+    // ========== Flow Controller ==========
+
+    flow_controller_ = new FlowController(this, debug_mode_);
+
+    // MainWindow signals
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            flow_controller_, &FlowController::SetDebugMode);
+    connect(this, &MainWindow::ConnectWater,  // connect
+            flow_controller_, &FlowController::Connect);
+    connect(ui_->a_water_flow_disconnect, &QAction::triggered,  // disconnect
+            flow_controller_, &FlowController::Disconnect);
+
+    // MainWindow slots
+    connect(flow_controller_, &FlowController::Connected,  // update UI
+            this, &MainWindow::HandleFlowConnChanged);
+    connect(flow_controller_, &FlowController::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
+    connect(flow_controller_, &FlowController::ReportStatus,  // get state
+            this, &MainWindow::HandleFlowStatus);
 
 #if LIBRA_VERSION == 1
     // ========== Manipulator Controller ==========
 
     manip_controller_ = new ManipController(this, debug_mode_);
 
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            manip_controller_, &ManipController::SetDebugMode);
     connect(this, &MainWindow::ConnectManip,  // connect
             manip_controller_, &ManipController::Connect);
     connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect
             manip_controller_, &ManipController::Disconnect);
+
     connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // leveling
             manip_controller_, &ManipController::EnablePitchCorrection);
     connect(this, &MainWindow::CommandManip,  // update targets
             manip_controller_, &ManipController::SetTarget);
 
     // MainWindow slots
+    connect(manip_controller_, &ManipController::Connected,  // update UI
+            this, &MainWindow::HandleManipConnChanged);
     connect(manip_controller_, &ManipController::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
 
-    connect(manip_controller_, &ManipController::Connected,  // update UI
-            this, &MainWindow::HandleManipConnChanged);
     connect(manip_controller_, &ManipController::ReportPosition,  // state
             this, &MainWindow::HandleManipPosition);
 #endif
@@ -612,7 +636,7 @@ void MainWindow::UpdateATCControls() {
     // Evaluate connection statuses of all components
     // (NOTE: "Pitch" joint in both LIBRA-I/-II is governed by HEBI actuator(s))
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
-    bool water_connected = ui_->a_water_disconnect->isEnabled();
+    bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool any_connected = hebi_connected || water_connected;
 
     // Update UI
@@ -664,8 +688,8 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
     // Menu bar
-    ui_->a_water_connect->setEnabled(!connected);
-    ui_->a_water_disconnect->setEnabled(connected);
+    ui_->a_water_cw_connect->setEnabled(!connected);
+    ui_->a_water_cw_disconnect->setEnabled(connected);
 
     ui_->a_water_set_empty->setEnabled(connected);
     ui_->a_water_set_full->setEnabled(connected);
@@ -708,6 +732,47 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
                            + SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
     }
+}
+
+/**
+ * @brief Reflects SerialFlow connection status in the UI.
+ */
+void MainWindow::HandleFlowConnChanged(const bool& connected) {
+    // Menu bar
+    ui_->a_water_flow_connect->setEnabled(!connected);
+    ui_->a_water_flow_disconnect->setEnabled(connected);
+
+    // UI widgets
+    if (!connected) {
+        ui_->l_inflow->setText(QStringLiteral("---"));
+        ui_->l_outflow->setText(QStringLiteral("---"));
+    }
+}
+
+/**
+ * @brief Reflects fluid system status in the UI.
+ *        - Primary visual feedback: formatted status string in "WATER" GroupBox
+ *        - Secondary visual feedback: updates animation state of TankWidget(s)
+ *
+ * @param side The side of the fluid system
+ * @param state The flow state of the fluid system
+ */
+void MainWindow::HandleFlowStatus(const double& inflow, const double& outflow) {
+    auto update_flow_label = [](QLabel* label, const double& value) {
+        if (value == -1.0) {
+            // Either:
+            // (1) sensor current is below fault threshold
+            // (2) data sent by Arduino is malformed/corrupted
+            label->setText(QStringLiteral("ERR"));
+            label->setStyleSheet(QStringLiteral("color: red;"));
+        } else {
+            label->setText(QString::number(value, 'f', 2));  // 0.01
+            label->setStyleSheet(QString());
+        }
+    };
+
+    update_flow_label(ui_->l_inflow, inflow);
+    update_flow_label(ui_->l_outflow, outflow);
 }
 
 /**

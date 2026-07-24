@@ -13,7 +13,7 @@
 // (none)
 
 // Other Library Headers
-// (none)
+#include <QByteArray>
 
 // Project Headers
 // (none)
@@ -42,19 +42,52 @@ namespace {}  // namespace
  * @param debug_mode Whether to output verbose debug text
  */
 FlowController::FlowController(QObject* parent, const bool& debug_mode)
-    : GenericSerialDevice(parent, debug_mode, "Flow") {
-    // TODO
-}
+    : GenericSerialDevice(parent, debug_mode, "Flow") {}
 
 //------------------------------------------------------------------------------
 // !Class Helpers
 //------------------------------------------------------------------------------
 
 /**
- * @brief TODO: documentation.
+ * @brief Reads the current flow values (in L/s) from the SerialFlow Arduino.
  */
 void FlowController::OnUpdate() {
-    // TODO
+    // Read data from serial port and prepare for parsing
+    const QByteArray data = serial_port_->readLine();
+    if (data.isEmpty()) {
+        return;
+    }
+
+    const QString str_data = QString::fromUtf8(data).trimmed();
+    if (str_data.isEmpty()) {
+        return;
+    }
+
+    const QStringList str_values = str_data.split(',');
+    if (str_values.size() != 2) {
+        logger_->Warn("Malformed flow data payload (\"" + str_data.toStdString()
+                      + "\"); ignoring");
+        return;
+    }
+
+    // Parse and validate data
+    auto parse_flow_value = [this, &str_data](const QString& str,
+                                              const char* field_name) -> double {
+        bool ok = false;
+        const double val = str.toDouble(&ok);
+        if (!ok) {
+            logger_->Warn(std::string("Invalid ") + field_name + " field (\""
+                          + str.toStdString()
+                          + "\") in payload: " + str_data.toStdString());
+            return -1.0;  // indicate fault
+        }
+        return val;
+    };
+
+    const double inflow = parse_flow_value(str_values[0], "inflow");
+    const double outflow = parse_flow_value(str_values[1], "outflow");
+
+    emit ReportStatus(inflow, outflow);
 }
 
 //------------------------------------------------------------------------------

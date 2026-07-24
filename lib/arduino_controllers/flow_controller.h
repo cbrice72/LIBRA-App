@@ -36,7 +36,7 @@ class FlowController : public GenericSerialDevice {
   signals:
     // --- Arduino Updates ---
 
-    // TODO
+    void ReportStatus(const double& inflow, const double& outflow);
 
   protected:
     void OnUpdate() override;

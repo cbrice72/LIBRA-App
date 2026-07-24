@@ -303,10 +303,10 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Event handler for "Water" menu action "Connect".
+ * @brief Event handler for "Water" menu action "Connect CW" (counterweights).
  *        Allows user to select a physical serial device to connect to.
  */
-void MainWindow::on_a_water_connect_triggered() {
+void MainWindow::on_a_water_cw_connect_triggered() {
     // Prompt user to select a serial device
     OpenSerialDialog dialog(this, QString("SerialWater"),
                             QString("Arduino Nano Every"));
@@ -325,6 +325,31 @@ void MainWindow::on_a_water_connect_triggered() {
     }
 
     emit ConnectWater(port_name);
+}
+
+/**
+ * @brief Event handler for "Water" menu action "Connect Flow".
+ *        Allows user to select a physical serial device to connect to.
+ */
+void MainWindow::on_a_water_flow_connect_triggered() {
+    // Prompt user to select a serial device
+    OpenSerialDialog dialog(this, QString("SerialFlow"),
+                            QString("Arduino Nano Every"));
+    QString port_name;
+
+    if (dialog.exec() == QDialog::Accepted) {
+        port_name = dialog.GetSelectedPortName();
+
+        if (port_name.isEmpty()) {
+            logger_->Error("No port selected!");
+            return;
+        }
+    } else {
+        logger_->Debug("Port selection cancelled by user");
+        return;
+    }
+
+    emit ConnectFlow(port_name);
 }
 
 /**
@@ -363,7 +388,8 @@ void MainWindow::on_a_water_set_full_triggered() {
  */
 void MainWindow::on_a_connect_all_triggered() {
     // Arduinos
-    ui_->a_water_connect->trigger();
+    ui_->a_water_cw_connect->trigger();
+    ui_->a_water_flow_connect->trigger();
 #if LIBRA_VERSION == 1
     ui_->a_manip_connect->trigger();
 #endif
@@ -385,10 +411,11 @@ void MainWindow::on_a_connect_all_triggered() {
  */
 void MainWindow::on_a_disconnect_all_triggered() {
     // Arduinos
+    ui_->a_water_cw_disconnect->trigger();
+    ui_->a_water_flow_disconnect->trigger();
 #if LIBRA_VERSION == 1
     ui_->a_manip_disconnect->trigger();
 #endif
-    ui_->a_water_disconnect->trigger();
 
     // Actuators
     ui_->a_hebi_disconnect->trigger();
