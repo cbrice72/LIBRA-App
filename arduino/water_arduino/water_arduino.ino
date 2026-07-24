@@ -2,12 +2,30 @@
  * @file   water_arduino.ino
  * @brief  Sketch for controlling up to two combined water inflow/outflow systems.
  *
- * @author Yuto Goto
+ * @author Yuto Goto (original)
+ * @author Christian Brice (modifications)
  ******************************************************************************/
 
 // NOLINTBEGIN: don't lint Arduino C++ code
 
-const int pin[4] = {2, 4, 7, 8};
+/* --- TABLE OF CONTENTS ---
+ * !Main Functions
+ * !Local Helpers
+ */
+
+// Settings
+const long BAUD_RATE = 115200;
+const char DEVICE_ID[] = "water";
+
+const unsigned long STALE_INPUT_TIMEOUT_MS = 5000;  // 5 seconds
+
+// Pin Assignments
+const int OUT_PINS[4] = {2, 4, 7, 8};  // two pins for up to two systems
+const int LED_PIN = 13;                // on-board LED
+
+//------------------------------------------------------------------------------
+// !Main Functions
+//------------------------------------------------------------------------------
 
 /**
  * @brief Initializes variables, pin modes, libraries, etc.
@@ -16,11 +34,13 @@ const int pin[4] = {2, 4, 7, 8};
  */
 void setup() {
     for (int i = 0; i < 4; ++i) {
-        pinMode(pin[i], OUTPUT);
-        digitalWrite(pin[i], LOW);
+        pinMode(OUT_PINS[i], OUTPUT);
+        digitalWrite(OUT_PINS[i], LOW);
     }
-    pinMode(13, OUTPUT);
-    Serial.begin(115200);
+    pinMode(LED_PIN, OUTPUT);
+    digitalWrite(LED_PIN, LOW);  // start with LED off
+
+    Serial.begin(BAUD_RATE);
 }
 
 /**
@@ -31,28 +51,39 @@ void setup() {
  * @see setup
  */
 void loop() {
-    // 基準時刻の変数 - Time reference variable
-    static unsigned long timestamp = 0;
+    static unsigned long time = 0;  // timestamp
 
-    // 受信データがある場合 - If there is incoming data...
     if (Serial.available()) {
-        byte data = Serial.read();  // ... 1バイト読み込む - read 1 byte
-        for (int i = 0; i < 4; ++i) {
-            // i番目のピンの状態を、読み込んだデータの上からi番目のビットの状態にする
-            // Set state of i-th pin to state of i-th bit (from beginning of data)
-            digitalWrite(pin[i], bool(data & (1 << (3 - i))));
+        byte data = Serial.read();
+
+        // Intercept device ID query
+        if (data == '?') {
+            Serial.println(DEVICE_ID);
+            return;  // no further processing
         }
-        timestamp = millis();  // 現在を基準時刻とする - Update reference time
-        digitalWrite(13, HIGH);  // ボード上のLEDを点灯する - Turn on board LED
-    } else if ((millis() - timestamp)
-               > 5000) {  // 受信データがない状態が5000ms続いた場合
-                          // If no data has been received for 5000 ms...
+
+        // Process command
         for (int i = 0; i < 4; ++i) {
-            digitalWrite(pin[i],
-                         LOW);  // ... 全ピンをLOWにする - set all pins LOW
+            // Set state of i-th pin to state of i-th bit
+            digitalWrite(OUT_PINS[i], bool(data & (1 << (3 - i))));
         }
-        digitalWrite(13, LOW);  // ボード上のLEDを消灯する - Turn off board LED
+        digitalWrite(LED_PIN, HIGH);
+
+        time = millis();
+
+    } else if ((millis() - time) > STALE_INPUT_TIMEOUT_MS) {
+        // Set all pins low if it's been a while since the last command
+        for (int i = 0; i < 4; ++i) {
+            digitalWrite(OUT_PINS[i], LOW);
+        }
+        digitalWrite(LED_PIN, LOW);
     }
 }
+
+//------------------------------------------------------------------------------
+// !Local Helpers
+//------------------------------------------------------------------------------
+
+// (none)
 
 // NOLINTEND
