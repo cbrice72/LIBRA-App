@@ -2,7 +2,7 @@
  * @file   camera_manager.cpp
  * @brief  QMediaCaptureSession convenience class implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

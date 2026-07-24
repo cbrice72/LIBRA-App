@@ -2,7 +2,7 @@
  * @file   main_window.cpp
  * @brief  Main app window implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

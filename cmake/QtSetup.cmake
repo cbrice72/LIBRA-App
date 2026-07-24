@@ -2,7 +2,7 @@
 # @file   QtSetup.cmake
 # @brief  CMake module for finding and configuring Qt libraries.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= VALIDATION =========================

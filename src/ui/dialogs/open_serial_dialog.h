@@ -2,7 +2,7 @@
  * @file   open_serial_dialog.h
  * @brief  Serial (USB) selection dialog box header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

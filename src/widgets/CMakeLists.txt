@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project widgets CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Specify subdirectory files for use by parent CMakeLists.txt

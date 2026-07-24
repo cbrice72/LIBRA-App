@@ -2,7 +2,7 @@
  * @file   util.h
  * @brief  Namespace for convenient, general-use functions; header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

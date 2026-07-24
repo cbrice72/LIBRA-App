@@ -2,7 +2,7 @@
  * @file   camera_manager.h
  * @brief  QMediaCaptureSession convenience class header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

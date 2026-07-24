@@ -2,7 +2,7 @@
  * @file   camera.cpp
  * @brief  Main app window camera group box implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Root CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 cmake_minimum_required(VERSION 3.16)

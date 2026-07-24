@@ -2,7 +2,7 @@
  * @file   manipulator.cpp
  * @brief  Main app window manipulator group box implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project source root CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= SETUP =========================

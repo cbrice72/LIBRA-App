@@ -2,7 +2,7 @@
  * @file   main.cpp
  * @brief  Root file of the LIBRA App (v2) program.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

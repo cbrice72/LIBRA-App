@@ -2,7 +2,7 @@
  * @file   open_epos_dialog.cpp
  * @brief  Open EPOS device window implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

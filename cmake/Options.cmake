@@ -2,7 +2,7 @@
 # @file   Options.cmake
 # @brief  CMake module defining project build options.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= PUBLIC OPTIONS =========================

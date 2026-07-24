@@ -2,7 +2,7 @@
  * @file   tank_widget.cpp
  * @brief  Fluid tank visualization implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

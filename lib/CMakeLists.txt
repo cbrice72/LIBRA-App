@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project modules root CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Add module subdirectories

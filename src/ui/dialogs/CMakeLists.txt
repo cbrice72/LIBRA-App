@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project UI dialog windows CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 if(LIBRA_VERSION EQUAL 2)

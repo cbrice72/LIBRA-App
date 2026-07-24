@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project threads CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= ACTUATOR THREAD =========================

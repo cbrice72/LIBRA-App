@@ -2,7 +2,7 @@
 # @file   EposSetup.cmake
 # @brief  CMake module for loading EPOS libraries packaged with this project.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= CMAKE SETUP =========================

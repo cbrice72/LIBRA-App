@@ -2,7 +2,7 @@
  * @file   torque_comp_dialog.cpp
  * @brief  Torque compensation settings dialog box implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

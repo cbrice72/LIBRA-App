@@ -2,7 +2,7 @@
  * @file   logger.h
  * @brief  Common logging interface (backend-agnostic); header-only.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

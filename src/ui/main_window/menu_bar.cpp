@@ -2,7 +2,7 @@
  * @file   menu_bar.cpp
  * @brief  Main app window menu bar implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

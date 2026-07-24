@@ -2,7 +2,7 @@
  * @file   main_window.h
  * @brief  Main app window header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

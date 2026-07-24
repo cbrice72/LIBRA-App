@@ -2,7 +2,7 @@
  * @file   torque_comp_dialog.h
  * @brief  Torque compensation settings dialog box header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

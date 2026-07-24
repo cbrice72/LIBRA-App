@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Common project definitions CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Create and configure the module

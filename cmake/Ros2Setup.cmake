@@ -2,7 +2,7 @@
 # @file   Ros2Setup.cmake
 # @brief  CMake module for validating and loading ROS2 dependencies.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= VALIDATION =========================

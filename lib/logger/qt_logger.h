@@ -2,7 +2,7 @@
  * @file   qt_logger.h
  * @brief  Qt logging interface (backend-agnostic); header-only.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

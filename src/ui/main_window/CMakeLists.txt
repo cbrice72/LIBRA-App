@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project UI main window CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Specify subdirectory files for use by parent CMakeLists.txt

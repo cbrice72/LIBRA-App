@@ -2,7 +2,7 @@
 # @file   HebiSetup.cmake
 # @brief  CMake module for loading HEBI libraries packaged with this project.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # ========================= CMAKE SETUP =========================

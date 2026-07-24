@@ -2,7 +2,7 @@
  * @file   ros2_logger.h
  * @brief  ROS2 logging interface; header-only.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

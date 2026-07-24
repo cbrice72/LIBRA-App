@@ -2,7 +2,7 @@
  * @file   open_serial_dialog.cpp
  * @brief  Serial (USB) selection dialog box implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

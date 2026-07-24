@@ -2,7 +2,7 @@
  * @file   flow_arduino.ino
  * @brief  Sketch for analog-to-digital conversion of flow sensor data.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // NOLINTBEGIN: don't lint Arduino C++ code
@@ -36,7 +36,8 @@ const float ADC_MAX_VALUE = 1023.0;  // 10-bit ADC
 
 // Settings
 const float LOOP_PERIOD_MS = 1000;  // 1 Hertz
-const float FAULT_THRESHOLD_A = 0.0038;  // Amps, slightly less than SENSOR_MIN_SIGNAL_A
+const float FAULT_THRESHOLD_A =
+    0.0038;  // Amps, slightly less than SENSOR_MIN_SIGNAL_A
 
 //------------------------------------------------------------------------------
 // !Main Functions

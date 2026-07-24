@@ -2,7 +2,7 @@
  * @file   tank_widget.h
  * @brief  Fluid tank visualization definition file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

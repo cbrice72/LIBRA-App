@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Project user interface (UI) CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Add UI modules

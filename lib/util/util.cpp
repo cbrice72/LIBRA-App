@@ -2,7 +2,7 @@
  * @file   util.cpp
  * @brief  Namespace for convenient, general-use functions; implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

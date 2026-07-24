@@ -2,7 +2,7 @@
  * @file   open_epos_dialog.h
  * @brief  Open EPOS device window header file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 #pragma once

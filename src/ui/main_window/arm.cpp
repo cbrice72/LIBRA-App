@@ -2,7 +2,7 @@
  * @file   arm.cpp
  * @brief  Main app window arm group box implementation file.
  *
- * @author brice.c.aa
+ * @author Christian Brice
  ******************************************************************************/
 
 // Related Header

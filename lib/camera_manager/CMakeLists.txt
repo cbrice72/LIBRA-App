@@ -2,7 +2,7 @@
 # @file   CMakeLists.txt
 # @brief  Camera manager module (QMediaCaptureSession wrapper) CMakeLists file.
 #
-# @author brice.c.aa
+# @author Christian Brice
 ################################################################################
 
 # Declare module dependencies
