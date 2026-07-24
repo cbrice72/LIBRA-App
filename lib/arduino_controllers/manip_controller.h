@@ -14,7 +14,7 @@
 // (none)
 
 // Project Headers
-#include "abstract_serial_device.h"
+#include "generic_serial_device.h"
 
 /**
  * @brief Controls LIBRA-I's 3-servo, 2-DoF manipulator via serial connection.
@@ -22,7 +22,7 @@
  * @note This manipulator is no longer installed on LIBRA-I due to it being too
  *       weak to lift the sensor suite.
  */
-class ManipController : public AbstractSerialDevice {
+class ManipController : public GenericSerialDevice {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND

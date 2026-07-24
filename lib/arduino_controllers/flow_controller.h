@@ -14,12 +14,12 @@
 // (none)
 
 // Project Headers
-#include "abstract_serial_device.h"
+#include "generic_serial_device.h"
 
 /**
  * @brief Controls the flow sensor system via serial connection.
  */
-class FlowController : public AbstractSerialDevice {
+class FlowController : public GenericSerialDevice {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND

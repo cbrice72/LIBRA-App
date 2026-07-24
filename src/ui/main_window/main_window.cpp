@@ -417,7 +417,7 @@ void MainWindow::InitializeFeedbackElementMap() {
 void MainWindow::InitializeDeviceManagers() {
     // ========== Water Controller ==========
 
-    // NOTE: Since the underlying AbstractSerialDevice is QTimer-driven and
+    // NOTE: Since the underlying GenericSerialDevice is QTimer-driven and
     //       asynchronous, we set up signal/slot connections much like we do
     //       with QThreads. This is not necessary with CameraManager, which is
     //       different by nature.

@@ -12,8 +12,8 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 # Create and configure the module
 set(ARDUINO_DEVICES_SOURCES
-    ${CMAKE_CURRENT_SOURCE_DIR}/abstract_serial_device.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/abstract_serial_device.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/generic_serial_device.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/generic_serial_device.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/flow_controller.h
     ${CMAKE_CURRENT_SOURCE_DIR}/flow_controller.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/water_controller.h

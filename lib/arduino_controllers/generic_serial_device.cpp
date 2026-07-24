@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file   abstract_serial_device.cpp
+ * @file   generic_serial_device.cpp
  * @brief  Abstract control class for Arduino serial devices; implementation.
  *
  * @author Christian Brice
  ******************************************************************************/
 
 // Related Header
-#include "abstract_serial_device.h"
+#include "generic_serial_device.h"
 
 // C++ Standard Library Headers
 // (none)
@@ -39,8 +39,8 @@ constexpr int kReconnectIntervalMs = 3000;  // 3 sec (0.33 Hz)
  * @param debug_mode Whether to output verbose debug text
  * @param device_name The logging identifier for this device
  */
-AbstractSerialDevice::AbstractSerialDevice(QObject* parent, bool debug_mode,
-                                           const std::string& device_name)
+GenericSerialDevice::GenericSerialDevice(QObject* parent, bool debug_mode,
+                                         const std::string& device_name)
     : QObject(parent),
       debug_mode_(debug_mode),
       device_name_(device_name),
@@ -57,16 +57,15 @@ AbstractSerialDevice::AbstractSerialDevice(QObject* parent, bool debug_mode,
     reconnect_timer_->setInterval(kReconnectIntervalMs);
 
     // Connect timer signals (internal)
-    connect(update_timer_, &QTimer::timeout, this,
-            &AbstractSerialDevice::Update);
+    connect(update_timer_, &QTimer::timeout, this, &GenericSerialDevice::Update);
     connect(reconnect_timer_, &QTimer::timeout, this,
-            &AbstractSerialDevice::TryReconnect);
+            &GenericSerialDevice::TryReconnect);
 }
 
 /**
  * @brief Standard destructor.
  */
-AbstractSerialDevice::~AbstractSerialDevice() {
+GenericSerialDevice::~GenericSerialDevice() {
     // Stop all timers
     update_timer_->stop();
     reconnect_timer_->stop();
@@ -88,7 +87,7 @@ AbstractSerialDevice::~AbstractSerialDevice() {
  *
  * @param port_name The serial device address to connect to
  */
-void AbstractSerialDevice::Connect(const QString& port_name) {
+void GenericSerialDevice::Connect(const QString& port_name) {
     // If there is already an active connection, gracefully terminate it
     Disconnect();
 
@@ -120,7 +119,7 @@ void AbstractSerialDevice::Connect(const QString& port_name) {
 /**
  * @brief Terminates the active connection.
  */
-void AbstractSerialDevice::Disconnect() {
+void GenericSerialDevice::Disconnect() {
     // This function is only called intentionally, so don't attempt to reconnect
     reconnect_timer_->stop();
     update_timer_->stop();
@@ -134,11 +133,11 @@ void AbstractSerialDevice::Disconnect() {
     }
 }
 
-bool AbstractSerialDevice::IsOpen() const {
+bool GenericSerialDevice::IsOpen() const {
     return serial_port_->isOpen();
 }
 
-QString AbstractSerialDevice::PortName() const {
+QString GenericSerialDevice::PortName() const {
     return serial_port_->portName();
 }
 
@@ -149,7 +148,7 @@ QString AbstractSerialDevice::PortName() const {
 /**
  * @brief Executes device-specific update logic wrapped in reconnection handling.
  */
-void AbstractSerialDevice::Update() {
+void GenericSerialDevice::Update() {
     if (!IsOpen()) {
         return;
     }
@@ -174,7 +173,7 @@ void AbstractSerialDevice::Update() {
 /**
  * @brief Attempts to reconnect to the device after a dropped connection.
  */
-void AbstractSerialDevice::TryReconnect() {
+void GenericSerialDevice::TryReconnect() {
     logger_->Debug("[" + device_name_
                    + "]: Attempting automatic reconnection...");
     Connect(serial_port_->portName());

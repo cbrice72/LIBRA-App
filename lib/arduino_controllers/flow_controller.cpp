@@ -42,7 +42,7 @@ namespace {}  // namespace
  * @param debug_mode Whether to output verbose debug text
  */
 FlowController::FlowController(QObject* parent, const bool& debug_mode)
-    : AbstractSerialDevice(parent, debug_mode, "Flow") {
+    : GenericSerialDevice(parent, debug_mode, "Flow") {
     // TODO
 }
 

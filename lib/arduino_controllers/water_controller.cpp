@@ -81,7 +81,7 @@ std::string BytesToStr(const QByteArray& bytes) {
  * @param debug_mode Whether to output verbose debug text
  */
 WaterController::WaterController(QObject* parent, const bool& debug_mode)
-    : AbstractSerialDevice(parent, debug_mode, "Water") {
+    : GenericSerialDevice(parent, debug_mode, "Water") {
     water_cmd_.resize(1);  // only 4 bits needed, so reserve 1 byte
     ClearWaterCommand();
 }

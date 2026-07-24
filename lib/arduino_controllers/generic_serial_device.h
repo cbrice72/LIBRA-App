@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   abstract_serial_device.h
+ * @file   generic_serial_device.h
  * @brief  Abstract control class for Arduino serial devices; header-only.
  *
  * @author Christian Brice
@@ -31,16 +31,16 @@
  *       the compiler that it shouldn't allow a derivative class to compile if
  *       it doesn't first define those pure virtual functions (using `override`).
  */
-class AbstractSerialDevice : public QObject {
+class GenericSerialDevice : public QObject {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
 
   public:
-    AbstractSerialDevice() = delete;
-    explicit AbstractSerialDevice(QObject* parent, bool debug_mode,
-                                  const std::string& device_name);
-    ~AbstractSerialDevice() override;
+    GenericSerialDevice() = delete;
+    explicit GenericSerialDevice(QObject* parent, bool debug_mode,
+                                 const std::string& device_name);
+    ~GenericSerialDevice() override;
 
     bool IsOpen() const;
     QString PortName() const;

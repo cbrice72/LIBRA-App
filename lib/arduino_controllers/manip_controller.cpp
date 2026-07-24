@@ -50,7 +50,7 @@ constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateRate;
  * @param debug_mode Whether to output verbose debug text
  */
 ManipController::ManipController(QObject* parent, const bool& debug_mode)
-    : AbstractSerialDevice(parent, debug_mode, "Manip") {}
+    : GenericSerialDevice(parent, debug_mode, "Manip") {}
 
 //------------------------------------------------------------------------------
 // !Class Helpers

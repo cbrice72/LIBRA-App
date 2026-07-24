@@ -14,13 +14,13 @@
 #include <QByteArray>  // Qt::Core
 
 // Project Headers
-#include "abstract_serial_device.h"
 #include "arduino_defs.h"
+#include "generic_serial_device.h"
 
 /**
  * @brief Controls the fluid system (counterweight in/out) via serial connection.
  */
-class WaterController : public AbstractSerialDevice {
+class WaterController : public GenericSerialDevice {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
