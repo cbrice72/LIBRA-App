@@ -92,6 +92,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 #else
     logger_ = std::make_unique<QtLogger>("camera_manager", debug_mode_);
 #endif
+    logger_->Debug("Initializing CameraManager");
 
     // Ensure output directories exist
     const QDir img_dir(QString::fromStdString(output_dir_ + "img"));
@@ -223,7 +224,7 @@ CameraManager::~CameraManager() {
     //       cleaned up by virtue of Qt's parenting structure (passing in "this"
     //       as a constructor parameter)
 
-    logger_->Debug("Cleaned up manager");
+    logger_->Debug("Cleaned up CameraManager");
 };
 
 //------------------------------------------------------------------------------

@@ -141,6 +141,9 @@ EposThread::EposThread(QObject* parent, std::string device_name,
 #else
     logger_ = std::make_unique<QtLogger>("epos_manager", debug_mode_);
 #endif
+    logger_->Debug("Initializing EposThread");
+
+    // (nothing else to do here; waits until QThread::start() is called)
 }
 
 /**

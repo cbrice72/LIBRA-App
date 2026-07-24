@@ -73,7 +73,7 @@ class AbstractActuatorThread : public QThread {
     // --- Data Members ---
 
     std::unique_ptr<Logger> logger_;
-    bool debug_mode_{false};  // keep to allow disabling debug-only code
+    bool debug_mode_{false};
 
     const Actuator::Type type_;
 };

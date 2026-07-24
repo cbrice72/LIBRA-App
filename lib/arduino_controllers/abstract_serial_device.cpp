@@ -47,8 +47,7 @@ AbstractSerialDevice::AbstractSerialDevice(QObject* parent, bool debug_mode,
       serial_port_(new QSerialPort(this)) {
     // Initialize the logger
     logger_ = std::make_unique<QtLogger>(device_name_, debug_mode_);
-
-    logger_->Debug("Starting " + device_name_ + "controller");
+    logger_->Debug("Initializing " + device_name_ + "Controller");
 
     // Configure timers
     update_timer_ = new QTimer(this);
@@ -77,7 +76,7 @@ AbstractSerialDevice::~AbstractSerialDevice() {
         serial_port_->close();
     }
 
-    logger_->Debug("Cleaned up " + device_name_ + "controller");
+    logger_->Debug("Cleaned up " + device_name_ + "Controller");
 }
 
 //------------------------------------------------------------------------------

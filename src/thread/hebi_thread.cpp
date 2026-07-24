@@ -139,6 +139,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 #else
     logger_ = std::make_unique<QtLogger>("hebi_manager", debug_mode_);
 #endif
+    logger_->Debug("Initializing HebiThread");
 
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
