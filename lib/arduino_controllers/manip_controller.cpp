@@ -126,8 +126,8 @@ void ManipController::EnablePitchCorrection(const bool& enabled) {
  */
 void ManipController::UpdatePitchFeedback(const double& pitch) {
     if (!serial_port_->isOpen()) {
-        // TODO: this outputs endlessly, maybe set a variable to only output once?
-        // logger_->Warn("Cannot set correction; not connected!");
+        // NOTE: Unlike other isOpen checks, do NOT log a message here because
+        //       this function can be called frequently by HebiThread
         return;
     }
 
@@ -149,7 +149,7 @@ void ManipController::UpdatePitchFeedback(const double& pitch) {
 void ManipController::SetTarget(const double& pan, const double& tilt,
                                 const bool& move_slow) {
     if (!serial_port_->isOpen()) {
-        logger_->Warn("Cannot set targets; not connected");
+        logger_->Error("Cannot set targets; not connected");
         return;
     }
 

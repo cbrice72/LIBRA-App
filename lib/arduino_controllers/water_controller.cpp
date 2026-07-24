@@ -303,7 +303,7 @@ void WaterController::UpdateTorqueFeedback(
 void WaterController::ForceCommand(const Water::Side& side,
                                    const Water::State& state) {
     if (!serial_port_->isOpen()) {
-        logger_->Warn("Cannot force command; not connected");
+        logger_->Error("Cannot force command; not connected");
         return;
     }
 
