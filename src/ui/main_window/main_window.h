@@ -15,12 +15,15 @@
 #include <QMainWindow>  // Qt::Widgets
 
 // Project Headers
-#include "arduino_manager.h"
 #include "camera_manager.h"
 #include "hebi_thread.h"
 #include "logger.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
+#endif
+#include "water_controller.h"
+#if LIBRA_VERSION == 1
+# include "manip_controller.h"
 #endif
 
 QT_BEGIN_NAMESPACE
@@ -208,7 +211,10 @@ class MainWindow : public QMainWindow {
 
     // Device Managers
 
-    ArduinoManager* arduino_manager_{nullptr};       // serial device control
+    WaterController* water_controller_{nullptr};  // water Arduino control
+#if LIBRA_VERSION == 1
+    ManipController* manip_controller_{nullptr};  // manipulator Arduino control
+#endif
     std::unique_ptr<CameraManager> camera_manager_;  // media device control
 
     std::unordered_map<QString, QString> available_cameras_;  // name, path

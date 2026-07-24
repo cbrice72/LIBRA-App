@@ -17,6 +17,8 @@
 /* --- TABLE OF CONTENTS ---
  * !Water Constants
  * !Water Helpers
+ * !Flow Constants
+ * !Flow Helpers
  * !Manip Constants
  * !Manip Helpers
  */
@@ -99,6 +101,22 @@ inline QString StateEnumToString(State state) {
 }  // namespace Water
 
 /**
+ * @brief Common definitions for controlling the "SerialFlow" Arduino.
+ */
+namespace Flow {
+
+//------------------------------------------------------------------------------
+// !Flow Constants
+//------------------------------------------------------------------------------
+
+//------------------------------------------------------------------------------
+// !Flow Helpers
+//------------------------------------------------------------------------------
+
+}  // namespace Flow
+
+#if LIBRA_VERSION == 1
+/**
  * @brief Common definitions for controlling the "SerialServo" Arduino.
  */
 namespace Manip {
@@ -112,3 +130,4 @@ namespace Manip {
 //------------------------------------------------------------------------------
 
 }  // namespace Manip
+#endif

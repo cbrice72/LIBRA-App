@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   servo_arduino.ino
- * @brief  Sketch for controlling the old tip-mounted servo motors.
+ * @file   manip_arduino.ino
+ * @brief  Sketch for controlling the old manipulator servo motors.
  *
  * @author Yuto Goto
  ******************************************************************************/

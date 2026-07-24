@@ -295,6 +295,33 @@ void MainWindow::ConfigureUi() {
 
     // ========== Water ==========
 
+    // Set up counterweight "tank" (fill state) widget
+    connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
+            this, [this]() {
+                logger_->Info("Tank A estimated full; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
+            });
+
+    connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
+            this, [this]() {
+                logger_->Info("Tank A estimated empty; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
+            });
+
+#if LIBRA_VERSION == 1
+    connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
+            this, [this]() {
+                logger_->Info("Tank B estimated full; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
+            });
+
+    connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
+            this, [this]() {
+                logger_->Info("Tank B estimated empty; disabling ATC");
+                ui_->pb_autocomp_enable->setChecked(false);
+            });
+#endif
+
     // Unneeded widgets
 #if LIBRA_VERSION != 1
     RemoveUiElement(ui_->vl_counterweight_B);
@@ -388,78 +415,58 @@ void MainWindow::InitializeFeedbackElementMap() {
  * @note Only used in constructor - placed in own function to improve readability.
  */
 void MainWindow::InitializeDeviceManagers() {
-    // ========== Arduino Manager ==========
+    // ========== Water Controller ==========
 
-    // NOTE: Since ArduinoManager is QTimer-driven and asynchronous, we set up
-    //       signal/slot connections much like we do with QThreads. This is not
-    //       necessary with CameraManager, which is different by nature.
+    // NOTE: Since the underlying AbstractSerialDevice is QTimer-driven and
+    //       asynchronous, we set up signal/slot connections much like we do
+    //       with QThreads. This is not necessary with CameraManager, which is
+    //       different by nature.
 
-    arduino_manager_ = new ArduinoManager(this, debug_mode_);
+    water_controller_ = new WaterController(this, debug_mode_);
 
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
-            arduino_manager_, &ArduinoManager::SetDebugMode);
+            water_controller_, &WaterController::SetDebugMode);
 
-    connect(this, &MainWindow::ConnectWater,  // connect water
-            arduino_manager_, &ArduinoManager::ConnectWater);
-    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect water
-            arduino_manager_, &ArduinoManager::DisconnectWater);
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // automate water state
-            arduino_manager_, &ArduinoManager::SetAutoCompensation);
-    connect(this, &MainWindow::CommandWater,  // force update water command
-            arduino_manager_, &ArduinoManager::ForceWaterCommand);
-
-#if LIBRA_VERSION == 1
-    connect(this, &MainWindow::ConnectManip,  // connect servos
-            arduino_manager_, &ArduinoManager::ConnectManip);
-    connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect servos
-            arduino_manager_, &ArduinoManager::DisconnectManip);
-    connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // leveling
-            arduino_manager_, &ArduinoManager::SetManipCorrectionEnabled);
-    connect(this, &MainWindow::CommandManip,  // update manip targets
-            arduino_manager_, &ArduinoManager::SetManipTarget);
-#endif
-
-    // TankWidget signals
-    connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank A estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
-    connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank A estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
-#if LIBRA_VERSION == 1
-    connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
-            this, [this]() {
-                logger_->Info("Tank B estimated full; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-
-    connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
-            this, [this]() {
-                logger_->Info("Tank B estimated empty; disabling ATC");
-                ui_->pb_autocomp_enable->setChecked(false);
-            });
-#endif
+    connect(this, &MainWindow::ConnectWater,  // connect
+            water_controller_, &WaterController::Connect);
+    connect(ui_->a_water_disconnect, &QAction::triggered,  // disconnect
+            water_controller_, &WaterController::Disconnect);
+    connect(this, &MainWindow::EnableAutoTorqueComp,  // automatic compensation
+            water_controller_, &WaterController::EnableAutoCompensation);
+    connect(this, &MainWindow::CommandWater,  // force specific command
+            water_controller_, &WaterController::ForceCommand);
 
     // MainWindow slots
-    connect(arduino_manager_, &ArduinoManager::ErrorThrown,  // handle errors
+    connect(water_controller_, &WaterController::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
 
-    connect(arduino_manager_, &ArduinoManager::WaterConnected,  // update UI
+    connect(water_controller_, &WaterController::Connected,  // update UI
             this, &MainWindow::HandleWaterConnChanged);
-    connect(arduino_manager_, &ArduinoManager::ReportWaterStatus,  // get state
+    connect(water_controller_, &WaterController::ReportStatus,  // state
             this, &MainWindow::HandleWaterStatus);
 
 #if LIBRA_VERSION == 1
-    connect(arduino_manager_, &ArduinoManager::ManipConnected,  // update UI
+    // ========== Manipulator Controller ==========
+
+    manip_controller_ = new ManipController(this, debug_mode_);
+
+    connect(this, &MainWindow::ConnectManip,  // connect
+            manip_controller_, &ManipController::Connect);
+    connect(ui_->a_manip_disconnect, &QAction::triggered,  // disconnect
+            manip_controller_, &ManipController::Disconnect);
+    connect(ui_->a_manip_enable_auto_correction, &QAction::toggled,  // leveling
+            manip_controller_, &ManipController::EnablePitchCorrection);
+    connect(this, &MainWindow::CommandManip,  // update targets
+            manip_controller_, &ManipController::SetTarget);
+
+    // MainWindow slots
+    connect(manip_controller_, &ManipController::ErrorThrown,  // handle errors
+            this, &MainWindow::HandleCriticalError);
+
+    connect(manip_controller_, &ManipController::Connected,  // update UI
             this, &MainWindow::HandleManipConnChanged);
-    connect(arduino_manager_, &ArduinoManager::ReportPosition,  // get position
+    connect(manip_controller_, &ManipController::ReportPosition,  // state
             this, &MainWindow::HandleManipPosition);
 #endif
 
@@ -527,10 +534,10 @@ void MainWindow::InitializeThreads() {
 
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
-            arduino_manager_, &ArduinoManager::UpdateWaterControl);
+            water_controller_, &WaterController::UpdateTorqueFeedback);
 #if LIBRA_VERSION == 1
     connect(hebi_thread_, &HebiThread::InformPitch,  // update manip correction
-            arduino_manager_, &ArduinoManager::SetManipCorrection);
+            manip_controller, &ManipController::UpdatePitchFeedback);
 #endif
 
     // Thread cleanup

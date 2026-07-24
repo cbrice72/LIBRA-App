@@ -9,6 +9,7 @@
 
 // C++ Standard Library Headers
 #include <cstdint>
+#include <iostream>  // only for error messages
 #include <string>
 #include <vector>
 
