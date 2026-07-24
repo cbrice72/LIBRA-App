@@ -259,9 +259,9 @@ inline double JointToActuatorDifferential(Name actuator, double roll,
     switch (actuator) {
 #if LIBRA_VERSION == 1
         case Name::kMA:
-            return -roll + pitch;
+            return roll + pitch;
         case Name::kMB:
-            return -roll - pitch;
+            return roll - pitch;
 #endif
         default:
             std::cerr

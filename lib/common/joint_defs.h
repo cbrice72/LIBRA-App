@@ -156,7 +156,7 @@ inline double ActuatorToJointDifferential(Name joint, double ma, double mb) {
     switch (joint) {
 #if LIBRA_VERSION == 1
         case Name::kRoll:
-            return -(ma + mb) / 2.0;  // positive roll = leftward
+            return (ma + mb) / 2.0;  // positive roll = leftward
         case Name::kPitch:
             return (ma - mb) / 2.0;  // positive pitch = upward
 #endif
