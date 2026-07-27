@@ -12,7 +12,9 @@
 //   (none)
 
 // Other Library Headers
-#include <QFileDialog>  // Qt::Widgets
+#include <QFileDialog>      // Qt::Widgets
+#include <QSerialPort>      // Qt::SerialPort
+#include <QSerialPortInfo>  // Qt::SerialPort
 
 // Project Headers
 #if LIBRA_VERSION == 2
@@ -24,6 +26,7 @@
 #include "util.h"
 
 /* --- TABLE OF CONTENTS ---
+ * !Local Helpers
  * !Preferences
  * !Automation
  * !Actuators
@@ -31,6 +34,77 @@
  * !Water
  * !Quick Actions
  */
+
+namespace {
+
+constexpr int kWriteTimeoutMs = 1000;
+constexpr int kReadTimeoutMs = 500;
+
+/**
+ * @brief Queries a serial device for its ID by sending a single "?" character.
+ */
+QString QueryDeviceId(const QSerialPortInfo& port_info,
+                      qint32 baud_rate = QSerialPort::Baud115200) {
+    QSerialPort port;
+    port.setPort(port_info);
+    port.setBaudRate(baud_rate);
+    port.setDataBits(QSerialPort::Data8);
+    port.setParity(QSerialPort::NoParity);
+    port.setStopBits(QSerialPort::OneStop);
+    port.setFlowControl(QSerialPort::NoFlowControl);
+
+    // Attempt to query the device ID
+    if (!port.open(QIODevice::ReadWrite)) {
+        return {};  // failed to open port
+    }
+
+    port.write("?");
+    if (!port.waitForBytesWritten(kWriteTimeoutMs)) {
+        port.close();
+        return {};  // failed to write to port
+    }
+
+    if (!port.waitForReadyRead(kReadTimeoutMs)) {
+        port.close();
+        return {};  // no response received
+    }
+
+    // Read the response
+    QByteArray response = port.readAll();
+    while (port.waitForReadyRead(kReadTimeoutMs)) {
+        response += port.readAll();
+    }
+
+    port.close();  // only temporary port usage, so close it now
+    return QString(response).trimmed();
+}
+
+/**
+ * @brief Attempts to auto-detect a serial port matching the requested ID.
+ *        If not found, opens a dialog to allow the user to select a port.
+ */
+QString FindPortForDevice(const QString& expected_id,
+                          const QString& dialog_label, QWidget* parent) {
+    // Attempt to auto-detect device
+    const auto available_ports = QSerialPortInfo::availablePorts();
+    for (const auto& port_info : available_ports) {
+        if (!port_info.description().isEmpty()
+            && QueryDeviceId(port_info).compare(expected_id, Qt::CaseInsensitive)
+                   == 0) {
+            return port_info.portName();
+        }
+    }
+
+    // Prompt user to manually select a device
+    OpenSerialDialog dialog(parent, dialog_label);
+    if (dialog.exec() == QDialog::Accepted) {
+        return dialog.GetSelectedPortName();
+    }
+
+    return {};
+}
+
+}  // namespace
 
 //------------------------------------------------------------------------------
 // !Preferences
@@ -307,19 +381,10 @@ void MainWindow::on_a_refresh_camera_list_triggered() {
  *        Allows user to select a physical serial device to connect to.
  */
 void MainWindow::on_a_water_cw_connect_triggered() {
-    // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialWater"),
-                            QString("Arduino Nano Every"));
-    QString port_name;
+    const QString port_name = FindPortForDevice(QString("water"),
+                                                QString("WaterArduino"), this);
 
-    if (dialog.exec() == QDialog::Accepted) {
-        port_name = dialog.GetSelectedPortName();
-
-        if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
-            return;
-        }
-    } else {
+    if (port_name.isEmpty()) {
         logger_->Debug("Port selection cancelled by user");
         return;
     }
@@ -332,19 +397,10 @@ void MainWindow::on_a_water_cw_connect_triggered() {
  *        Allows user to select a physical serial device to connect to.
  */
 void MainWindow::on_a_water_flow_connect_triggered() {
-    // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialFlow"),
-                            QString("Arduino Nano Every"));
-    QString port_name;
+    const QString port_name = FindPortForDevice(QString("flow"),
+                                                QString("FlowArduino"), this);
 
-    if (dialog.exec() == QDialog::Accepted) {
-        port_name = dialog.GetSelectedPortName();
-
-        if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
-            return;
-        }
-    } else {
+    if (port_name.isEmpty()) {
         logger_->Debug("Port selection cancelled by user");
         return;
     }
