@@ -49,7 +49,7 @@ FlowController::FlowController(QObject* parent, const bool& debug_mode)
 //------------------------------------------------------------------------------
 
 /**
- * @brief Reads the current flow values (in L/s) from the SerialFlow Arduino.
+ * @brief Reads the current flow values (in L/s) from the FlowArduino.
  */
 void FlowController::OnUpdate() {
     // Read data from serial port and prepare for parsing

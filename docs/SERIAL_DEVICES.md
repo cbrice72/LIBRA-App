@@ -1,9 +1,9 @@
 # Serial Device Identifiers
 
 - [2D LIDAR](#2d-lidar)
-- [SerialWater (Arduino)](#serialwater-arduino)
-- [SerialFlow (Arduino)](#serialflow-arduino)
-- [SerialServo (Arduino)](#serialservo-arduino)
+- [WaterArduino](#waterarduino)
+- [FlowArduino](#flowarduino)
+- [ManipArduino](#maniparduino)
 
 ## 2D LIDAR
 
@@ -13,7 +13,9 @@
 | Description | USB-Serial Controller |
 | Manufacturer | Prolific Technology Inc. |
 
-## SerialWater (Arduino)
+## WaterArduino
+
+Controls the counterweight water levels.
 
 | Field | Value |
 | --- | --- |
@@ -22,7 +24,9 @@
 | Manufacturer | Arduino LLC |
 | Device ID | `"water"` |
 
-## SerialFlow (Arduino)
+## FlowArduino
+
+Reads data from the flow sensors.
 
 | Field | Value |
 | --- | --- |
@@ -31,9 +35,11 @@
 | Manufacturer | Arduino LLC |
 | Device ID | `"flow"` |
   
-## SerialServo (Arduino)
+## ManipArduino
 
-> ***NOTE:*** Currently UNUSED since the three servos (Tower Pro MG-996R) were too weak to move the sensor suite, much less hold it upright.
+> ***NOTE:*** Currently UNUSED since the servos (Tower Pro MG-996R) were too weak to move the sensor suite, much less hold it upright.
+
+Controls the three tip-mounted servos (pitch-yaw-pitch).
 
 | Field | Value |
 | --- | --- |

@@ -317,7 +317,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
  */
 void MainWindow::on_a_manip_connect_triggered() {
     // Prompt user to select a serial device
-    OpenSerialDialog dialog(this, QString("SerialServo"),
+    OpenSerialDialog dialog(this, QString("ManipArduino"),
                             QString("Seeed XIAO M0"));
     QString port_name;
 

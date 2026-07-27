@@ -57,7 +57,7 @@ ManipController::ManipController(QObject* parent, const bool& debug_mode)
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sends the current command to the SerialServo Arduino.
+ * @brief Sends the current command to the ManipArduino.
  */
 void ManipController::OnUpdate() {
     // Slow movement calculation

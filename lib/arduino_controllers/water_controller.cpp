@@ -91,7 +91,7 @@ WaterController::WaterController(QObject* parent, const bool& debug_mode)
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sends the current command to the SerialWater Arduino.
+ * @brief Sends the current command to the WaterArduino.
  */
 void WaterController::OnUpdate() {
     qint64 bytes_written = serial_port_->write(water_cmd_);

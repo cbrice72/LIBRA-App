@@ -651,7 +651,7 @@ void MainWindow::UpdateATCControls() {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Reflects SerialServo connection status in the UI.
+ * @brief Reflects ManipArduino connection status in the UI.
  *
  * @note Currently does nothing, as the original manipulator was too weak and
  *       has been replaced with a static mount.
@@ -684,7 +684,7 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
 #endif
 
 /**
- * @brief Reflects SerialWater connection status in the UI.
+ * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
     // Menu bar
@@ -735,7 +735,7 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
 }
 
 /**
- * @brief Reflects SerialFlow connection status in the UI.
+ * @brief Reflects FlowArduino connection status in the UI.
  */
 void MainWindow::HandleFlowConnChanged(const bool& connected) {
     // Menu bar

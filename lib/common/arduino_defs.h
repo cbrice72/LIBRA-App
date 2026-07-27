@@ -24,7 +24,7 @@
  */
 
 /**
- * @brief Common definitions for controlling the "SerialWater" Arduino.
+ * @brief Common definitions for controlling the WaterArduino.
  *
  */
 namespace Water {
@@ -101,7 +101,7 @@ inline QString StateEnumToString(State state) {
 }  // namespace Water
 
 /**
- * @brief Common definitions for controlling the "SerialFlow" Arduino.
+ * @brief Common definitions for controlling the FlowArduino.
  */
 namespace Flow {
 
@@ -117,7 +117,7 @@ namespace Flow {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Common definitions for controlling the "SerialServo" Arduino.
+ * @brief Common definitions for controlling the ManipArduino.
  */
 namespace Manip {
 
