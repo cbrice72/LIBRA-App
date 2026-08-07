@@ -127,7 +127,7 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
       names_(std::move(names)),
       group_(nullptr),
       n_actuators_(names_.size()),
-      trajectory_start_time_(std::chrono::steady_clock::now())
+      t_trajectory_start_(std::chrono::steady_clock::now())
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("hebi_node")
@@ -345,6 +345,9 @@ void HebiThread::CheckTorqueControl() {
         emit ReportArmTorque(std::nullopt);
         if (!movement_en_) {
             movement_en_ = true;
+            // Reset trajectory clock to pre-stop time
+            t_trajectory_start_ = std::chrono::steady_clock::now()
+                                  - t_trajectory_elapsed_;
 
             logger_->Debug("ATC - Movement re-enabled ("
                            + FormatDouble(arm_torque_r) + " Nm < "
@@ -371,16 +374,17 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_acc,
                                  Eigen::VectorXd& cmd_eff) {
     // Initialize persistent variables
-    static std::chrono::duration<double> t_trajectory(
-        std::chrono::steady_clock::now() - trajectory_start_time_);
-    static const Eigen::Vector3d gravity_vec(0, 0, -9.81);
+    std::chrono::steady_clock::duration t_trajectory = t_trajectory_elapsed_;
 
     // Determine movement command
     if (movement_en_ && trajectory_ != nullptr) {
-        t_trajectory = std::chrono::steady_clock::now()
-                       - trajectory_start_time_;
+        t_trajectory = std::chrono::steady_clock::now() - t_trajectory_start_;
+        // Track trajectory progress in case movement is disabled
+        // mid-trajectory (e.g., by ATC).
+        t_trajectory_elapsed_ = t_trajectory;
 
-        if (t_trajectory.count() < trajectory_->getDuration()) {
+        if (std::chrono::duration<double>(t_trajectory).count()
+            < trajectory_->getDuration()) {
             // --- MODE 1: TRAJECTORY FOLLOWING ---
 
             // Build next step of trajectory
@@ -757,7 +761,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     // Log start time and create trajectory
     // NOTE: Let QP solver handle vel and accel by setting the parameters
     //       "velocities" and "accelerations" to nullptr
-    trajectory_start_time_ = std::chrono::steady_clock::now();
+    t_trajectory_start_ = std::chrono::steady_clock::now();
     trajectory_ =
         hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint, pos,
                                                             nullptr, nullptr);
@@ -793,7 +797,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     time << 0, max_difference / kMaxVel;
 
     // Log start time and create trajectory
-    trajectory_start_time_ = std::chrono::steady_clock::now();
+    t_trajectory_start_ = std::chrono::steady_clock::now();
+    t_trajectory_elapsed_ = std::chrono::steady_clock::duration::zero();
     trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
                                                                       &vel,
                                                                       &accel);
@@ -811,6 +816,7 @@ void HebiThread::Stop() {
     }
 
     trajectory_.reset();
+    t_trajectory_elapsed_ = std::chrono::steady_clock::duration::zero();
 
     logger_->Debug("Trajectory reset");
 }

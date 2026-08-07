@@ -143,7 +143,8 @@ class HebiThread : public AbstractActuatorThread
     // Enables trajectory-based movement
     bool movement_en_{true};
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
-    std::chrono::time_point<std::chrono::steady_clock> trajectory_start_time_;
+    std::chrono::time_point<std::chrono::steady_clock> t_trajectory_start_;
+    std::chrono::steady_clock::duration t_trajectory_elapsed_{0};
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;
