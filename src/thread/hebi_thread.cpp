@@ -338,6 +338,7 @@ void HebiThread::CheckTorqueControl() {
         // While significant arm torque still exists, continue reporting
         // direction of torque to arduino_thread
         emit ReportArmTorque(arm_torque_theta);
+        vel_scale_ = 0.5;  // helps avoid sudden stop if upper bound is exceeded
 
     } else {
         // Once arm torque reaches an acceptable level, disable fluid system
@@ -345,6 +346,8 @@ void HebiThread::CheckTorqueControl() {
         emit ReportArmTorque(std::nullopt);
         if (!movement_en_) {
             movement_en_ = true;
+            vel_scale_ = 1.0;
+
             // Reset trajectory clock to pre-stop time
             t_trajectory_start_ = std::chrono::steady_clock::now()
                                   - t_trajectory_elapsed_;
@@ -391,7 +394,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             trajectory_->getState(t_trajectory.count(), &cmd_pos, &cmd_vel,
                                   &cmd_acc);
             command_->setPosition(cmd_pos);
-            command_->setVelocity(cmd_vel);
+            command_->setVelocity(cmd_vel * vel_scale_);
         } else {
             // --- MODE 2: POSITION HOLDING ---
 

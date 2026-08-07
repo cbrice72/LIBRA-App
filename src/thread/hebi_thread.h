@@ -146,6 +146,8 @@ class HebiThread : public AbstractActuatorThread
     std::chrono::time_point<std::chrono::steady_clock> t_trajectory_start_;
     std::chrono::steady_clock::duration t_trajectory_elapsed_{0};
 
+    double vel_scale_{1.0};  // used when soft torque limit is exceeded
+
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;
     rclcpp::Publisher<msgJointState>::SharedPtr target_pub_;
