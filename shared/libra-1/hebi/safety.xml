@@ -17,7 +17,7 @@
   <effort>
     <!-- For X8-16: Cont. Torque = 16 Nm, Peak Torque = 38 Nm -->
     <!-- NOTE: Give J1 higher limits since it bears the brunt of the arm torque -->
-    <min_limit>-20 -20 -40 -20 -20</min_limit>
-    <max_limit>20 20 40 20 20</max_limit>
+    <min_limit>-20 -20 -38 -20 -20</min_limit>
+    <max_limit>20 20 38 20 20</max_limit>
   </effort>
 </group_safety>
