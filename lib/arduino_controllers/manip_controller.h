@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   manipulator_controller.h
+ * @file   manip_controller.h
  * @brief  Manip Arduino (tip servos) device management; header file.
  *
  * @author Christian Brice

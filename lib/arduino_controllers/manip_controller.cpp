@@ -1,12 +1,12 @@
 /******************************************************************************
- * @file   manipulator_controller.cpp
+ * @file   manip_controller.cpp
  * @brief  Manip Arduino (tip servos) device management; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
 
 // Related Header
-#include "manipulator_controller.h"
+#include "manip_controller.h"
 
 // C++ Standard Library Headers
 // (none)
