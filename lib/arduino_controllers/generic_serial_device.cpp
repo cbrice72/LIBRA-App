@@ -108,8 +108,7 @@ void GenericSerialDevice::Connect(const QString& port_name) {
         return;
     }
 
-    logger_->Info("[" + device_name_ + "]: Connected to device at "
-                  + port_name.toStdString());
+    logger_->Info("Connected to device at " + port_name.toStdString());
     emit Connected(true);
 
     // Connection successful, resume operations
