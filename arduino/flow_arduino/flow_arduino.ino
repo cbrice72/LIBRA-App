@@ -83,6 +83,7 @@ void loop() {
     if (Serial.available()) {
         if (Serial.read() == '?') {
             // Reply to device ID query
+            Serial.print('?');  // prepend magic to indicate query response
             Serial.println(DEVICE_ID);
         }
     }

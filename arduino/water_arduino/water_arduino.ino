@@ -60,7 +60,14 @@ void loop() {
 
         if (data == '?') {
             // Reply to device ID query
+            Serial.print('?');  // prepend magic to indicate query response
             Serial.println(DEVICE_ID);
+
+            // Throw away any remaining data so it doesn't accidentally trigger
+            // a command next loop
+            while (Serial.available()) {
+                Serial.read();
+            }
         } else {
             // Process command
             for (int i = 0; i < 4; ++i) {

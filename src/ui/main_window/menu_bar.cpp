@@ -44,8 +44,10 @@ QString QueryDeviceId(const QSerialPortInfo& port_info,
                       qint32 baud_rate = QSerialPort::Baud115200) {
     constexpr int kMaxRetries = 3;
     constexpr int kRetryDelayMs = 100;
+
     constexpr int kWriteTimeoutMs = 1000;
     constexpr int kReadTimeoutMs = 500;
+    constexpr int kMaxLinesToRead = 3;  // prevent infinite loop on telemetry
 
     // Open a connection
     QSerialPort port;
@@ -71,18 +73,22 @@ QString QueryDeviceId(const QSerialPortInfo& port_info,
         }
 
         // Read the response
-        if (port.waitForReadyRead(kReadTimeoutMs)) {
-            response += port.readAll();  // read data that just arrived
-            while (!response.contains('\n')
-                   && port.waitForReadyRead(kReadTimeoutMs)) {
-                response += port.readAll();  // read until end of line
+        int lines_read = 0;
+        while (port.waitForReadyRead(kReadTimeoutMs)
+               && lines_read < kMaxLinesToRead) {
+            while (port.canReadLine()) {
+                QByteArray line = port.readLine().trimmed();
+                if (line.startsWith('?')) {
+                    port.close();
+                    return QString(line.mid(1)).trimmed();  // strip leading '?'
+                }
+                lines_read++;
             }
-            break;
         }
     }
 
-    port.close();  // only temporary port usage, so close it now
-    return QString(response).trimmed();
+    port.close();
+    return {};
 }
 
 /**
