@@ -561,7 +561,7 @@ void MainWindow::InitializeThreads() {
             water_controller_, &WaterController::UpdateTorqueFeedback);
 #if LIBRA_VERSION == 1
     connect(hebi_thread_, &HebiThread::InformPitch,  // update manip correction
-            manip_controller, &ManipController::UpdatePitchFeedback);
+            manip_controller_, &ManipController::UpdatePitchFeedback);
 #endif
 
     // Thread cleanup
