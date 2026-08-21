@@ -453,7 +453,7 @@ void MainWindow::InitializeDeviceManagers() {
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             flow_controller_, &FlowController::SetDebugMode);
-    connect(this, &MainWindow::ConnectWater,  // connect
+    connect(this, &MainWindow::ConnectFlow,  // connect
             flow_controller_, &FlowController::Connect);
     connect(ui_->a_water_flow_disconnect, &QAction::triggered,  // disconnect
             flow_controller_, &FlowController::Disconnect);
