@@ -260,9 +260,11 @@ void WaterController::SendStatus(Water::Side side) {
  * @see MapTorqueToCommand
  */
 void WaterController::EnableAutoTorqueComp(const bool& enabled) {
-    if (auto_comp_en_ != enabled) {
-        ClearCommand();  // reset the previous command when switching modes
+    if (auto_comp_en_ == enabled) {
+        return;  // no change, so do nothing
     }
+
+    ClearCommand();  // reset the previous command when switching modes
     auto_comp_en_ = enabled;
 
     logger_->Debug("ATC - Automatic torque compensation "
