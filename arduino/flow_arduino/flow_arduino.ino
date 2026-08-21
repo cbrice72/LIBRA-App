@@ -34,8 +34,17 @@ const int LED_PIN = 13;  // on-board LED
 // Hardware Values
 const float SENSOR_MIN_SIGNAL_A = 0.004;  // Amps
 const float SENSOR_MAX_SIGNAL_A = 0.020;
-const float SENSOR_MIN_FLOW_LPS = 0.4 / 60.0;  // Liters/second
-const float SENSOR_MAX_FLOW_LPS = 5.0 / 60.0;
+/* NOTE:
+ * THE VALUES BELOW MUST MATCH THE SENSOR'S "Original Range" CONFIGURATION,
+ * OTHERWISE CALCULATED FLOW RATES WILL BE INCORRECT!!
+ * The sensor is rated for 0.4-5.0 L/min, but will still output a signal outside
+ * those bounds. From 5.0-5.5 L/min (110% * max), the sensor outputs a warning
+ * but continues to function. Above 5.5 L/min, the sensor errors. To get as much
+ * useful data as possible, the "Original Range" setting on the sensor is set to
+ * 0.4-5.5 L/min.ss
+ */
+const float SENSOR_MIN_FLOW_LPS = 0.4 / 60.0;  // Liters/second (sensor: L/min)
+const float SENSOR_MAX_FLOW_LPS = 5.5 / 60.0;
 
 const float RESISTOR_OHMS = 250.0;  // see calculation in "MATH" comment above
 
