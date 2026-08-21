@@ -37,14 +37,17 @@
 
 namespace {
 
-constexpr int kWriteTimeoutMs = 1000;
-constexpr int kReadTimeoutMs = 500;
-
 /**
  * @brief Queries a serial device for its ID by sending a single "?" character.
  */
 QString QueryDeviceId(const QSerialPortInfo& port_info,
                       qint32 baud_rate = QSerialPort::Baud115200) {
+    constexpr int kMaxRetries = 3;
+    constexpr int kRetryDelayMs = 100;
+    constexpr int kWriteTimeoutMs = 1000;
+    constexpr int kReadTimeoutMs = 500;
+
+    // Open a connection
     QSerialPort port;
     port.setPort(port_info);
     port.setBaudRate(baud_rate);
@@ -53,28 +56,28 @@ QString QueryDeviceId(const QSerialPortInfo& port_info,
     port.setStopBits(QSerialPort::OneStop);
     port.setFlowControl(QSerialPort::NoFlowControl);
 
-    // Attempt to query the device ID
     if (!port.open(QIODevice::ReadWrite)) {
         return {};  // failed to open port
     }
 
-    port.write("?");
-    if (!port.waitForBytesWritten(kWriteTimeoutMs)) {
-        port.close();
-        return {};  // failed to write to port
-    }
+    QByteArray response;
+    for (int i = 0; i < kMaxRetries; ++i) {
+        // Attempt to query the device ID
+        port.write("?");
+        if (!port.waitForBytesWritten(kWriteTimeoutMs)) {
+            // Failed to write to port, try again after a short delay
+            QThread::msleep(kRetryDelayMs);
+            continue;
+        }
 
-    if (!port.waitForReadyRead(kReadTimeoutMs)) {
-        port.close();
-        return {};  // no response received
-    }
-
-    // Read the response
-    QByteArray response = port.readAll();
-    while (port.waitForReadyRead(kReadTimeoutMs)) {
-        response += port.readAll();
-        if (response.contains('\n')) {
-            break;  // only read one line
+        // Read the response
+        if (port.waitForReadyRead(kReadTimeoutMs)) {
+            response += port.readAll();  // read data that just arrived
+            while (!response.contains('\n')
+                   && port.waitForReadyRead(kReadTimeoutMs)) {
+                response += port.readAll();  // read until end of line
+            }
+            break;
         }
     }
 
@@ -94,12 +97,14 @@ QString FindPortForDevice(const QString& expected_id,
         if (!port_info.description().isEmpty()
             && QueryDeviceId(port_info).compare(expected_id, Qt::CaseInsensitive)
                    == 0) {
+            qDebug() << "Found device with ID:" << expected_id << "("
+                     << port_info.portName() << ")";
             return port_info.portName();
         }
     }
 
-    qDebug() << "Could not find device with ID \"" << expected_id
-             << "\"; displaying manual selection dialog";
+    qDebug() << "Could not find device with ID:" << expected_id
+             << "-- displaying manual selection dialog";
 
     // Prompt user to manually select a device
     OpenSerialDialog dialog(parent, dialog_label);
