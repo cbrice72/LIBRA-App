@@ -124,14 +124,14 @@ void loop() {
  * @brief Maps the flow sensor's current to a physical flow rate.
  *
  * @param current Sensor current (A)
- * @return Flow rate (mL/s), or -1.0 for fault
+ * @return Flow rate (mL/s), or 0.0 for fault
  *
  * @note Although the native Arduino `map()` function does exactly this, it uses
  *       integer math, thus truncating any precision we'd get from the sensor.
  */
 float CalculateFlow(float current) {
     if (current < FAULT_THRESHOLD_A) {
-        return -1.0;
+        return 0.0;
     }
 
     // Linear interpolation: (X - X_min) * (Y_max - Y_min)
