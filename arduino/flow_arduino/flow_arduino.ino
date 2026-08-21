@@ -39,12 +39,15 @@ const float SENSOR_MAX_SIGNAL_A = 0.020;
  * OTHERWISE CALCULATED FLOW RATES WILL BE INCORRECT!!
  * The sensor is rated for 0.4-5.0 L/min, but will still output a signal outside
  * those bounds. From 5.0-5.5 L/min (110% * max), the sensor outputs a warning
- * but continues to function. Above 5.5 L/min, the sensor errors. To get as much
- * useful data as possible, the "Original Range" setting on the sensor is set to
- * 0.4-5.5 L/min.ss
+ * but continues to function. Above 5.5 L/min, the sensor errors. To ensure accurate
+ * readings, the "Original Range" setting on the sensor is set to 0.4-5.0 L/min.
  */
-const float SENSOR_MIN_FLOW_LPS = 0.4 / 60.0;  // Liters/second (sensor: L/min)
-const float SENSOR_MAX_FLOW_LPS = 5.5 / 60.0;
+const float SENSOR_RANGE_MIN_LPM = 0.4;  // liters/min
+const float SENSOR_RANGE_MAX_LPM = 5.0;
+
+const float SENSOR_MIN_FLOW_MLPS = (SENSOR_RANGE_MIN_LPM / 60.0)
+                                   * 1000.0;  // milliliters/second
+const float SENSOR_MAX_FLOW_MLPS = (SENSOR_RANGE_MAX_LPM / 60.0) * 1000.0;
 
 const float RESISTOR_OHMS = 250.0;  // see calculation in "MATH" comment above
 
@@ -121,7 +124,7 @@ void loop() {
  * @brief Maps the flow sensor's current to a physical flow rate.
  *
  * @param current Sensor current (A)
- * @return Flow rate (L/s), or -1.0 for fault
+ * @return Flow rate (mL/s), or -1.0 for fault
  *
  * @note Although the native Arduino `map()` function does exactly this, it uses
  *       integer math, thus truncating any precision we'd get from the sensor.
@@ -135,15 +138,15 @@ float CalculateFlow(float current) {
     //                       ----------------------------- + Y_min
     //                               X_max - X_min
     float flow = ((current - SENSOR_MIN_SIGNAL_A)
-                  * (SENSOR_MAX_FLOW_LPS - SENSOR_MIN_FLOW_LPS)
+                  * (SENSOR_MAX_FLOW_MLPS - SENSOR_MIN_FLOW_MLPS)
                   / (SENSOR_MAX_SIGNAL_A - SENSOR_MIN_SIGNAL_A))
-                 + SENSOR_MIN_FLOW_LPS;
+                 + SENSOR_MIN_FLOW_MLPS;
 
     // Reject values outside of the sensor's stated range
-    if (flow < SENSOR_MIN_FLOW_LPS) {
+    if (flow < SENSOR_MIN_FLOW_MLPS) {
         flow = 0.0;  // disturbances may register as tiny flow rates; ignore them
-    } else if (flow > SENSOR_MAX_FLOW_LPS) {
-        flow = SENSOR_MAX_FLOW_LPS;
+    } else if (flow > SENSOR_MAX_FLOW_MLPS) {
+        flow = SENSOR_MAX_FLOW_MLPS;
     }
 
     return flow;
@@ -152,8 +155,8 @@ float CalculateFlow(float current) {
 /**
  * @brief Sends flow rates over serial connection (format: "inflow,outflow\n").
  *
- * @param inflow Calculated inflow rate (L/s)
- * @param outflow Calculated outflow rate (L/s)
+ * @param inflow Calculated inflow rate (mL/s)
+ * @param outflow Calculated outflow rate (mL/s)
  */
 void SendData(float inflow, float outflow) {
     // Send compact packet
@@ -171,7 +174,7 @@ void SendData(float inflow, float outflow) {
     if (inflow < 0.0) {
         Serial.print("FAULT");
     } else {
-        Serial.print(inflow * 1000.0);  // convert to mL/s
+        Serial.print(inflow);
         Serial.print(" (mL/s)");
     }
 
@@ -179,7 +182,7 @@ void SendData(float inflow, float outflow) {
     if (outflow < 0.0) {
         Serial.print("FAULT");
     } else {
-        Serial.print(outflow * 1000.0);  // convert to mL/s
+        Serial.print(outflow);
         Serial.print(" (mL/s)");
     }
 
