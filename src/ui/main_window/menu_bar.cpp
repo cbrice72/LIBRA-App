@@ -73,6 +73,9 @@ QString QueryDeviceId(const QSerialPortInfo& port_info,
     QByteArray response = port.readAll();
     while (port.waitForReadyRead(kReadTimeoutMs)) {
         response += port.readAll();
+        if (response.contains('\n')) {
+            break;  // only read one line
+        }
     }
 
     port.close();  // only temporary port usage, so close it now
@@ -94,6 +97,9 @@ QString FindPortForDevice(const QString& expected_id,
             return port_info.portName();
         }
     }
+
+    qDebug() << "Could not find device with ID \"" << expected_id
+             << "\"; displaying manual selection dialog";
 
     // Prompt user to manually select a device
     OpenSerialDialog dialog(parent, dialog_label);
