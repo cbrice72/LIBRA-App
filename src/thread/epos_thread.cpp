@@ -437,18 +437,6 @@ void EposThread::Connect() {
         return;
     }
 
-    // Initialize our class target variables to the actuator's initial position
-    int a_pos = 0;
-    if (VCS_GetPositionIs(handle, kNodeID, &a_pos, &err_code) == 0) {
-        emit ErrorThrown("EPOS - Failed to retrieve starting position!\n"
-                         + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
-                                                        err_code, kNodeID));
-        VCS_CloseDevice(handle, &err_code);
-        handle = nullptr;
-        return;
-    }
-    target_inc_ = last_target_inc_ = a_pos;
-
     // Initialize to Profile Position Mode by default
     if (VCS_SetOperationMode(handle, kNodeID, OMD_PROFILE_POSITION_MODE,
                              &err_code)
@@ -483,6 +471,18 @@ void EposThread::Connect() {
         handle = nullptr;
         return;
     }
+
+    // Get current position (must be done AFTER enabling the controller)
+    int a_pos = 0;
+    if (VCS_GetPositionIs(handle, kNodeID, &a_pos, &err_code) == 0) {
+        emit ErrorThrown("EPOS - Failed to retrieve starting position!\n"
+                         + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
+                                                        err_code, kNodeID));
+        VCS_CloseDevice(handle, &err_code);
+        handle = nullptr;
+        return;
+    }
+    target_inc_ = last_target_inc_ = a_pos;
 
     handle_ = handle;  // only set our class handle after successful init
     emit Connected(true);
