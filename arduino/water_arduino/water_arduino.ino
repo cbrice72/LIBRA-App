@@ -17,9 +17,6 @@
 const long BAUD_RATE = 115200;
 const char DEVICE_ID[] = "water";
 
-const int HANDSHAKE_DELAY_MS = 2000;
-bool handshake_done = false;  // resets on reconnection
-
 const unsigned long STALE_INPUT_TIMEOUT_MS =
     5000;  // safety feature: turn off if no commands received for this long
 
@@ -57,34 +54,21 @@ void setup() {
 void loop() {
     static unsigned long time = 0;  // timestamp
 
-    // Handshake with LIBRA App before accepting any commands
-    if (!handshake_done) {
-        if (Serial.available() && Serial.read() == '?') {
-            // Reply to device ID query
-            Serial.println(DEVICE_ID);
-            delay(HANDSHAKE_DELAY_MS);
-            handshake_done = true;
-
-            // Empty the serial buffer before continuing
-            while (Serial.available()) {
-                Serial.read();
-            }
-
-            time = millis();  // avoid stale timestamp disconnect
-        }
-        return;  // don't do work before successful handshake
-    }
-
     // Accept incoming commands
     if (Serial.available()) {
         byte data = Serial.read();
 
-        // Process command
-        for (int i = 0; i < 4; ++i) {
-            // Set state of i-th pin to state of i-th bit
-            digitalWrite(OUT_PINS[i], bool(data & (1 << (3 - i))));
+        if (data == '?') {
+            // Reply to device ID query
+            Serial.println(DEVICE_ID);
+        } else {
+            // Process command
+            for (int i = 0; i < 4; ++i) {
+                // Set state of i-th pin to state of i-th bit
+                digitalWrite(OUT_PINS[i], bool(data & (1 << (3 - i))));
+            }
+            digitalWrite(LED_PIN, HIGH);
         }
-        digitalWrite(LED_PIN, HIGH);
 
         time = millis();
 

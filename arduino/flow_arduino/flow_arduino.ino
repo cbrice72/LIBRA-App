@@ -22,9 +22,6 @@
 const long BAUD_RATE = 115200;
 const char DEVICE_ID[] = "flow";
 
-const int HANDSHAKE_DELAY_MS = 2000;
-bool handshake_done = false;  // resets on reconnection
-
 const float LOOP_PERIOD_MS = 500;  // 2 Hertz
 const float FAULT_THRESHOLD_A =
     0.0038;  // Amps, slightly less than SENSOR_MIN_SIGNAL_A
@@ -82,20 +79,12 @@ void setup() {
  * @see setup
  */
 void loop() {
-    // Handshake with LIBRA App before accepting any commands
-    if (!handshake_done) {
-        if (Serial.available() && Serial.read() == '?') {
+    // Accept incoming commands
+    if (Serial.available()) {
+        if (Serial.read() == '?') {
             // Reply to device ID query
             Serial.println(DEVICE_ID);
-            delay(HANDSHAKE_DELAY_MS);
-            handshake_done = true;
-
-            // Empty the serial buffer before continuing
-            while (Serial.available()) {
-                Serial.read();
-            }
         }
-        return;  // don't do work before successful handshake
     }
 
     // Read analog values
