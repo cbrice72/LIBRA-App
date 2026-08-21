@@ -302,7 +302,7 @@ void MainWindow::ConfigureUi() {
     auto MakeTankLimHandler = [this](const std::string& tank,
                                      const std::string& state) {
         return [this, tank, state]() -> void {
-            if (ignore_water_level_) {
+            if (ignore_water_level_ || !ui_->pb_atc_enable->isChecked()) {
                 return;
             }
             ui_->pb_atc_enable->setChecked(false);

@@ -191,6 +191,12 @@ void TankWidget::OverrideLevel(double new_level) {
  * @param state
  */
 void TankWidget::UpdateState(Water::State state) {
+    // Prevent re-triggering animation if already at limits
+    if ((state == Water::State::kDraining && qFuzzyCompare(level_, 0.0))
+        || (state == Water::State::kFilling && qFuzzyCompare(level_, 1.0))) {
+        return;
+    }
+
     state_ = state;  // manages internal logic
 
     switch (state) {
