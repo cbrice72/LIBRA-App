@@ -83,7 +83,7 @@ std::string BytesToStr(const QByteArray& bytes) {
 WaterController::WaterController(QObject* parent, const bool& debug_mode)
     : GenericSerialDevice(parent, debug_mode, "Water") {
     water_cmd_.resize(1);  // only 4 bits needed, so reserve 1 byte
-    ClearWaterCommand();
+    ClearCommand();
 }
 
 //------------------------------------------------------------------------------
@@ -99,9 +99,9 @@ void WaterController::OnUpdate() {
         throw std::runtime_error("Failed to write to port");
     }
 
-    SendWaterStatus(Water::Side::kA);  // emits ReportStatus
+    SendStatus(Water::Side::kA);  // emits ReportStatus
 #if LIBRA_VERSION == 1
-    SendWaterStatus(Water::Side::kB);
+    SendStatus(Water::Side::kB);
 #endif
 }
 
@@ -110,16 +110,14 @@ void WaterController::OnUpdate() {
  *
  * @param side The side of the fluid system to clear
  */
-void WaterController::ClearWaterCommand(Water::Side side) {
+void WaterController::ClearCommand(Water::Side side) {
     switch (side) {
         case Water::Side::kA:
             water_cmd_[0] &= static_cast<uint8_t>(~(kAIn | kAOut));
             break;
-#if LIBRA_VERSION == 1
         case Water::Side::kB:
             water_cmd_[0] &= static_cast<uint8_t>(~(kBIn | kBOut));
             break;
-#endif
         case Water::Side::kAll:
         default:
             water_cmd_[0] = 0;
@@ -135,19 +133,15 @@ void WaterController::ClearWaterCommand(Water::Side side) {
  *
  * @see kAIn kBIn kAOut kBOut
  */
-void WaterController::ModifyWaterCommand(uint8_t new_bits) {
+void WaterController::ModifyCommand(uint8_t new_bits) {
     new_bits &= kWaterCmdMask;  // ensure only lower 4 bits are used
 
     // Mutually exclusive: if a side's bit is modified, clear both bits first
     if ((new_bits & (kAIn | kAOut)) != 0) {
-        ClearWaterCommand(Water::Side::kA);
+        ClearCommand(Water::Side::kA);
     }
     if ((new_bits & (kBIn | kBOut)) != 0) {
-#if LIBRA_VERSION == 1
-        ClearWaterCommand(Water::Side::kB);
-#else
-        ClearWaterCommand(Water::Side::kAll);  // no kB if LIBRA_VERSION != 1
-#endif
+        ClearCommand(Water::Side::kB);
     }
 
     water_cmd_[0] |= static_cast<char>(new_bits);
@@ -163,7 +157,7 @@ void WaterController::ModifyWaterCommand(uint8_t new_bits) {
  *
  * @see hebi_thread::run
  */
-void WaterController::MapTorqueToWaterCommand(const double& torque_dir) {
+void WaterController::MapTorqueToCommand(const double& torque_dir) {
     if (!auto_comp_en_) {
         // Only allow manual control (see ForceCommand)
         return;
@@ -210,7 +204,7 @@ void WaterController::MapTorqueToWaterCommand(const double& torque_dir) {
         return;
     }
 
-    ModifyWaterCommand(command);
+    ModifyCommand(command);
 
     logger_->Debug("Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
@@ -222,7 +216,7 @@ void WaterController::MapTorqueToWaterCommand(const double& torque_dir) {
  *
  * @param side The side of the fluid system to check
  */
-void WaterController::SendWaterStatus(Water::Side side) {
+void WaterController::SendStatus(Water::Side side) {
     auto state = Water::State::kStopped;
 
     if (serial_port_->isOpen() && !water_cmd_.isEmpty()) {
@@ -263,11 +257,11 @@ void WaterController::SendWaterStatus(Water::Side side) {
  *
  * @param enabled Whether to enable auto-compensation
  *
- * @see MapTorqueToWaterCommand
+ * @see MapTorqueToCommand
  */
 void WaterController::EnableAutoTorqueComp(const bool& enabled) {
     if (auto_comp_en_ != enabled) {
-        ClearWaterCommand();  // reset the previous command when switching modes
+        ClearCommand();  // reset the previous command when switching modes
     }
     auto_comp_en_ = enabled;
 
@@ -288,9 +282,9 @@ void WaterController::UpdateTorqueFeedback(
     }
 
     if (torque_dir.has_value()) {
-        MapTorqueToWaterCommand(torque_dir.value());
+        MapTorqueToCommand(torque_dir.value());
     } else {
-        ClearWaterCommand();
+        ClearCommand();
     }
 }
 
@@ -311,16 +305,19 @@ void WaterController::ForceCommand(const Water::Side& side,
     EnableAutoTorqueComp(false);
 
     // Modify or clear corresponding command bits
-    switch (state) {
-        case Water::State::kFilling:
-            ModifyWaterCommand((side == Water::Side::kA) ? kAIn : kBIn);
-            break;
-        case Water::State::kDraining:
-            ModifyWaterCommand((side == Water::Side::kA) ? kAOut : kBOut);
-            break;
-        case Water::State::kStopped:
-        default:
-            ClearWaterCommand(side);
+    if (state == Water::State::kStopped) {
+        ClearCommand(side);
+    } else {
+        uint8_t mask = 0;
+
+        if (side == Water::Side::kA || side == Water::Side::kAll) {
+            mask |= (state == Water::State::kFilling) ? kAIn : kAOut;
+        }
+        if (side == Water::Side::kB || side == Water::Side::kAll) {
+            mask |= (state == Water::State::kFilling) ? kBIn : kBOut;
+        }
+
+        ModifyCommand(mask);
     }
 
     logger_->Debug("Forced command to " + BytesToStr(water_cmd_)

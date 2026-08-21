@@ -38,10 +38,8 @@ namespace Water {
  */
 enum class Side : uint8_t {
     kA = 0,  // LIBRA-I: left, LIBRA-II: only one
-#if LIBRA_VERSION == 1
-    kB,  // LIBRA-I: right
-#endif
-    kAll  // keep this last!
+    kB,      // LIBRA-I: right
+    kAll     // keep this last!
 };
 
 /**
@@ -65,10 +63,8 @@ inline std::string SideEnumToString(Side side) {
     switch (side) {
         case Side::kA:
             return "A";
-#if LIBRA_VERSION == 1
         case Side::kB:
             return "B";
-#endif
         default:
             return "Undefined";
     }
