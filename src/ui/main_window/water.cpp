@@ -31,19 +31,29 @@
  *
  * @param checked Whether to force-fill the counterweight
  *
+ * @note For LIBRA-II, since the UI's "B" side is deleted, this action must
+ *       apply to both sides of the fluid system (so it doesn't matter which
+ *       physical ports the solenoid valves are connected to).
+ *
  * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
+#if LIBRA_VERSION == 1
+    constexpr Water::Side kTargetSide = Water::Side::kA;
+#else
+    constexpr Water::Side kTargetSide = Water::Side::kAll;
+#endif
+
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_drain_A->setChecked(false);
 
         // Send signal
-        emit CommandWater(Water::Side::kA, Water::State::kFilling);
+        emit CommandWater(kTargetSide, Water::State::kFilling);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kA, Water::State::kStopped);
+        emit CommandWater(kTargetSide, Water::State::kStopped);
     }
 }
 
@@ -53,19 +63,29 @@ void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
  *
  * @param checked Whether to force-drain the counterweight
  *
+ * @note For LIBRA-II, since the UI's "B" side is deleted, this action must
+ *       apply to both sides of the fluid system (so it doesn't matter which
+ *       physical ports the solenoid valves are connected to).
+ *
  * @see on_pb_atc_enable_toggled
  */
 void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
+#if LIBRA_VERSION == 1
+    constexpr Water::Side kTargetSide = Water::Side::kA;
+#else
+    constexpr Water::Side kTargetSide = Water::Side::kAll;
+#endif
+
     if (checked) {
         // Cancel any conflicting widget states
         ui_->pb_atc_enable->setChecked(false);
         ui_->pb_water_fill_A->setChecked(false);
 
         // Send signal
-        emit CommandWater(Water::Side::kA, Water::State::kDraining);
+        emit CommandWater(kTargetSide, Water::State::kDraining);
     } else {
         // Return to stable state
-        emit CommandWater(Water::Side::kA, Water::State::kStopped);
+        emit CommandWater(kTargetSide, Water::State::kStopped);
     }
 }
 
