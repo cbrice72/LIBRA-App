@@ -24,7 +24,8 @@ const char DEVICE_ID[] = "flow";
 
 const float LOOP_PERIOD_MS = 500;  // 2 Hertz
 const float FAULT_THRESHOLD_A =
-    0.0025;  // Amps, arbitrary value below SENSOR_MIN_SIGNAL_A
+    0.0020;  // Amps; low flow cut is 5% of FS (full scale) = 0.0025 A,
+             // plus slightly lower to account for variability
 
 // Pin Assignments
 const int INFLOW_PIN = A0;
@@ -35,12 +36,12 @@ const int LED_PIN = 13;  // on-board LED
 const float SENSOR_MIN_SIGNAL_A = 0.004;  // Amps
 const float SENSOR_MAX_SIGNAL_A = 0.020;
 /* NOTE:
- * THE VALUES BELOW MUST MATCH THE SENSOR'S "Original Range" CONFIGURATION,
- * OTHERWISE CALCULATED FLOW RATES WILL BE INCORRECT!!
+ * [[    THE FOLLOWING VALUES MUST MATCH BOTH SENSORS' "Original Range"    ]]
+ * [[  CONFIGURATION, OTHERWISE CALCULATED FLOW RATES WILL BE INCORRECT!!  ]]
  * The sensor is rated for 0.4-5.0 L/min, but will still output a signal outside
- * those bounds. From 5.0-5.5 L/min (110% * max), the sensor outputs a warning
- * but continues to function. Above 5.5 L/min, the sensor errors. To ensure accurate
- * readings, the "Original Range" setting on the sensor is set to 0.4-5.0 L/min.
+ * those bounds. From 5.0-5.5 L/min (110% * FS), the sensor outputs a warning but
+ * continues to function. Above 5.5 L/min, the sensor errors. To ensure accurate
+ * readings, the "Original Range" setting on each sensor is set to 0.4-5.0 L/min.
  */
 const float SENSOR_RANGE_MIN_LPM = 0.4;  // liters/min
 const float SENSOR_RANGE_MAX_LPM = 5.0;
@@ -69,7 +70,21 @@ void setup() {
     pinMode(LED_PIN, OUTPUT);
     digitalWrite(LED_PIN, LOW);  // start with LED off
 
-    analogReference(INTERNAL4V3);  // use stable internal 4.3V reference
+    // Use stable internal reference voltage (4.3V) for analog readings
+    // (instead of the default Vcc (5.0V), which may fluctuate)
+    /* NOTE:
+     * - ADC Ceiling:
+     *     4.3V reference / 250 Ohm resistor = 17.2 mA max. This caps the
+     *     detectable flow rate at ~4.19 L/min.
+     * - Inflow Rate:
+     *     Manually controlled by valve at output end of sensor. Set to the 2.5
+     *     tick mark (50% closed) = ~3.95 L/min max.
+     * - Outflow Rate:
+     *     Manually controlled by valve at output end of sensor. Set to the ?.?
+     *     tick mark (??% closed) = ~?.?? L/min max; necessary since pump (Koshin
+     *     MG-25-AAA-4) can suck more than twice the sensor's rated max. flow.
+     */
+    analogReference(INTERNAL4V3);
 
     Serial.begin(BAUD_RATE);
 }
@@ -116,35 +131,10 @@ void loop() {
         digitalWrite(LED_PIN, LOW);
     }
 
-    // clang-format off
-    // DEBUG: Timestamp
-    Serial.print("["); Serial.print(millis()); Serial.print("] ");
-
-    // DEBUG: Inflow sensor metrics
-    Serial.print("IN ADC: "); Serial.print(raw_inflow);
-    Serial.print(" | V: "); Serial.print(in_v, 3);
-    Serial.print(" | mA: "); Serial.print(in_i * 1000.0, 2);
-    if (inflow == -1.0) {
-        Serial.print(" | INFLOW: FAULT ");
-    } else {
-        Serial.print(" | INFLOW: "); Serial.print(inflow / 16.6667, 2); Serial.print(" L/min ("); 
-        Serial.print(inflow, 2); Serial.print(" mL/s)");
-    }
-
-    // DEBUG: Separator
-    Serial.print(" || ");
-
-    // DEBUG: Outflow sensor metrics
-    Serial.print("OUT ADC: "); Serial.print(raw_outflow);
-    Serial.print(" | V: "); Serial.print(out_v, 3);
-    Serial.print(" | mA: "); Serial.print(out_i * 1000.0, 2);
-    if (outflow == -1.0) {
-        Serial.println(" | OUTFLOW: FAULT");
-    } else {
-        Serial.print(" | OUTFLOW: "); Serial.print(outflow / 16.6667, 2); Serial.print(" L/min (");
-        Serial.print(outflow, 2); Serial.println(" mL/s)");
-    }
-    // clang-format on
+    /*
+    PrintDebugLine(raw_inflow, in_v, in_i, inflow,
+                   raw_outflow, out_v, out_i, outflow);
+    */
 
     delay(LOOP_PERIOD_MS);
 }
@@ -157,15 +147,14 @@ void loop() {
  * @brief Maps the flow sensor's current to a physical flow rate.
  *
  * @param current Sensor current (A)
- * @return Flow rate (mL/s), or 0.0 for fault
+ * @return Flow rate (mL/s), or -1.0 for fault
  *
  * @note Although the native Arduino `map()` function does exactly this, it uses
  *       integer math, thus truncating any precision we'd get from the sensor.
  */
 float CalculateFlow(float current) {
     if (current < FAULT_THRESHOLD_A) {
-        return -1.0;  // TODO: this should be correct, but I was getting "ERROR"
-                      // when there wasn't any flow; needs further investigation
+        return -1.0;
     }
 
     // Linear interpolation: (X - X_min) * (Y_max - Y_min)
@@ -184,6 +173,63 @@ float CalculateFlow(float current) {
     }
 
     return flow;
+}
+
+/**
+ * @brief Prints debug information for the flow sensors.
+ *
+ * @param raw_inflow Raw analog reading (ADC value)from inflow sensor
+ * @param in_v Voltage reading from inflow sensor
+ * @param in_i Current reading from inflow sensor
+ * @param inflow Calculated flow rate from inflow sensor
+ * @param raw_outflow Raw analog reading (ADC value) from outflow sensor
+ * @param out_v Voltage reading from outflow sensor
+ * @param out_i Current reading from outflow sensor
+ * @param outflow Calculated flow rate from outflow sensor
+ */
+void PrintDebugLine(int raw_inflow, float in_v, float in_i, float inflow,
+                    int raw_outflow, float out_v, float out_i, float outflow) {
+    // Timestamp
+    Serial.print("[");
+    Serial.print(millis());
+    Serial.print("] ");
+
+    // Inflow sensor metrics
+    Serial.print("IN ADC: ");
+    Serial.print(raw_inflow);
+    Serial.print(" | V: ");
+    Serial.print(in_v, 3);
+    Serial.print(" | mA: ");
+    Serial.print(in_i * 1000.0, 2);
+    if (inflow == -1.0) {
+        Serial.print(" | INFLOW: FAULT ");
+    } else {
+        Serial.print(" | INFLOW: ");
+        Serial.print(inflow / 16.6667, 2);
+        Serial.print(" L/min (");
+        Serial.print(inflow, 2);
+        Serial.print(" mL/s)");
+    }
+
+    // Separator
+    Serial.print(" || ");
+
+    // Outflow sensor metrics
+    Serial.print("OUT ADC: ");
+    Serial.print(raw_outflow);
+    Serial.print(" | V: ");
+    Serial.print(out_v, 3);
+    Serial.print(" | mA: ");
+    Serial.print(out_i * 1000.0, 2);
+    if (outflow == -1.0) {
+        Serial.println(" | OUTFLOW: FAULT");
+    } else {
+        Serial.print(" | OUTFLOW: ");
+        Serial.print(outflow / 16.6667, 2);
+        Serial.print(" L/min (");
+        Serial.print(outflow, 2);
+        Serial.println(" mL/s)");
+    }
 }
 
 // NOLINTEND
