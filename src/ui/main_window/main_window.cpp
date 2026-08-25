@@ -636,12 +636,12 @@ void MainWindow::UpdateATCControls() {
     // (NOTE: "Pitch" joint in both LIBRA-I/-II is governed by HEBI actuator(s))
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
-    bool any_connected = hebi_connected || water_connected;
+    bool both_connected = hebi_connected && water_connected;
 
     // Update UI
-    ui_->pb_atc_enable->setEnabled(any_connected);
-    ui_->a_atc_update_bounds->setEnabled(any_connected);
-    ui_->a_atc_ignore_water_level->setEnabled(any_connected);
+    ui_->pb_atc_enable->setEnabled(both_connected);
+    ui_->a_atc_update_bounds->setEnabled(both_connected);
+    ui_->a_atc_ignore_water_level->setEnabled(both_connected);
 }
 
 //------------------------------------------------------------------------------
