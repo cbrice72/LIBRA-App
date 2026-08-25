@@ -744,35 +744,42 @@ void MainWindow::HandleFlowConnChanged(const bool& connected) {
 
     // UI widgets
     if (!connected) {
-        ui_->l_inflow->setText(QStringLiteral("---"));
-        ui_->l_outflow->setText(QStringLiteral("---"));
+        ui_->l_flow->setText(QStringLiteral("---"));
+        ui_->l_flow->setStyleSheet(QString());
     }
 }
 
 /**
- * @brief Reflects fluid system status in the UI.
- *        - Primary visual feedback: formatted status string in "WATER" GroupBox
- *        - Secondary visual feedback: updates animation state of TankWidget(s)
+ * @brief Reflects the flow sensing system's sensor readings in the UI.
+ *        - Inflow is shown in green as a positive value.
+ *        - Outflow is shown in red as a negative value.
  *
- * @param side The side of the fluid system
- * @param state The flow state of the fluid system
+ * @param inflow Measured inflow rate (in mL/s)
+ * @param outflow Measured outflow rate (in mL/s)
  */
 void MainWindow::HandleFlowStatus(const double& inflow, const double& outflow) {
-    auto update_flow_label = [](QLabel* label, const double& value) {
-        if (value == -1.0) {
-            // Either:
-            // (1) sensor current is below fault threshold
-            // (2) data sent by Arduino is malformed/corrupted
-            label->setText(QStringLiteral("ERR"));
-            label->setStyleSheet(QStringLiteral("color: red;"));
-        } else {
-            label->setText(QString::number(value, 'f', 2));  // 0.01
-            label->setStyleSheet(QString());
-        }
-    };
+    constexpr double kIdleFlowThreshold = 0.7;  // mL/s
 
-    update_flow_label(ui_->l_inflow, inflow);
-    update_flow_label(ui_->l_outflow, outflow);
+    if (inflow == -1.0 || outflow == -1.0) {
+        // Either:
+        // (1) sensor current is below fault threshold
+        // (2) data sent by Arduino is malformed/corrupted
+        ui_->l_flow->setText(QStringLiteral("ERR"));
+        ui_->l_flow->setStyleSheet(QStringLiteral("color: orange;"));
+        return;
+    }
+
+    if (inflow > kIdleFlowThreshold) {
+        ui_->l_flow->setText(QStringLiteral("+")
+                             + QString::number(inflow, 'f', 0));  // no decimals
+        ui_->l_flow->setStyleSheet(QStringLiteral("color: green;"));
+    } else if (outflow > kIdleFlowThreshold) {
+        ui_->l_flow->setText(QString::number(-outflow, 'f', 0));
+        ui_->l_flow->setStyleSheet(QStringLiteral("color: red;"));
+    } else {
+        ui_->l_flow->setText(QString::number(inflow, 'f', 0));
+        ui_->l_flow->setStyleSheet(QString());
+    }
 }
 
 /**
