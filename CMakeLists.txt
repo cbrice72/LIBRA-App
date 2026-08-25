@@ -32,6 +32,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(Options) # must come first as this defines build options
 
+include(BuildSetup)
 include(QtSetup)
 if(BUILD_WITH_ROS2)
     include(Ros2Setup)
@@ -47,7 +48,7 @@ include(GNUInstallDirs) # auto-included by Qt
 
 # Add project subdirectories (order matters!)
 add_subdirectory(lib) # utilites, managers
-add_subdirectory(src) # libra_app_gui
+add_subdirectory(src) # libra_app_qt
 
 # ========================= FINALIZE =========================
 

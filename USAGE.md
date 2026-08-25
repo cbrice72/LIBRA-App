@@ -42,7 +42,7 @@ The recommended IP address for your PC is `10.11.12.2` (see [docs/HEBI.md](./doc
     - TODO: explain which cables do what
 2. **Ensure all USB and Ethernet cables are plugged into your computer**
     - TODO: explain which cables do what
-3. **Run `libra_app_gui` and click "Yes" on the startup popup** to automatically connect all actuators and peripherals. If you click "No", you will have to individually connect each device via the menu bar at the top of the GUI.
+3. **Run `libra_app` and click "Yes" on the startup popup** to automatically connect all actuators and peripherals. If you click "No", you will have to individually connect each device via the menu bar at the top of the GUI.
     - Connecting to the HEBI actuators automatically commands them to hold their position
     - Connecting to the RealSense camera requires that the all-in-one ROS2 launch file be run first (see [README.md "(2) ROS2 Nodes"](./README.md#2-ros2-nodes))
 4. **Remove tape supports** keeping the arm in place

@@ -29,10 +29,10 @@ set(PROJECT_SOURCE
 # ========================= LIBRA APP GUI =========================
 
 # Create the GUI application target
-qt_add_executable(libra_app_gui MANUAL_FINALIZATION ${PROJECT_SOURCE})
+qt_add_executable(libra_app_qt MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # Ensure it has access to the necessary headers
-target_include_directories(libra_app_gui PRIVATE ${CMAKE_SOURCE_DIR}/src ${RESOURCE_DIR})
+target_include_directories(libra_app_qt PRIVATE ${CMAKE_SOURCE_DIR}/src ${RESOURCE_DIR})
 
 # Tell the linker which libraries to link against
 set(LIBRA_LIBRARIES arduino_manager camera_manager common logger util)
@@ -45,7 +45,7 @@ if(LIBRA_VERSION EQUAL 2)
 endif()
 
 target_link_libraries(
-    libra_app_gui
+    libra_app_qt
     # Project
     PRIVATE ${LIBRA_LIBRARIES}
     PRIVATE ${LIBRA_THREADS}
@@ -66,19 +66,20 @@ target_link_libraries(
 # Specify platform-specific properties
 # ~~~
 set_target_properties(
-    libra_app_gui
-    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
-               ${BUNDLE_ID_OPTION} MACOSX_BUNDLE_BUNDLE_VERSION
-               ${PROJECT_VERSION} MACOSX_BUNDLE_SHORT_VERSION_STRING
-               ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR} MACOSX_BUNDLE
-               TRUE WIN32_EXECUTABLE
-               TRUE
+    libra_app_qt
+    PROPERTIES OUTPUT_NAME "libra_app"
+               RUNTIME_OUTPUT_DIRECTORY "${LIBRA_VARIANT_BUILD_DIR}"
+               ${BUNDLE_ID_OPTION}
+               MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
+               MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
+               MACOSX_BUNDLE TRUE
+               WIN32_EXECUTABLE TRUE
 )
 # ~~~
 
 # ~~~
 # Define GUI target properties for Android with Qt 6 as:
-#   set_target_properties(libra_app_gui
+#   set_target_properties(libra_app_qt
 #       APPEND PROPERTY
 #       QT_ANDROID_PACKAGE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/android
 #   )
@@ -87,17 +88,17 @@ set_target_properties(
 
 # Install the application
 install(
-    TARGETS libra_app_gui
+    TARGETS libra_app_qt
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
 add_custom_command( # copy runtime config files to output dir
-    TARGET libra_app_gui
+    TARGET libra_app_qt
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
             ${CMAKE_INSTALL_BINDIR}/shared
 )
 
-qt_finalize_executable(libra_app_gui)
+qt_finalize_executable(libra_app_qt)

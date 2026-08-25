@@ -64,39 +64,46 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 If you want to get started as quickly as possible, you can run the provided build script via a terminal. If you are a developer, it's recommended you build the app and ROS2 tools separately via Qt Creator and colcon, respectively.
 
-- **Terminal** &ndash; Simply run the provided build script. It will automatically build the LIBRA ROS Tools submodule via colcon and source it, before building the main app via CMake.
+#### **Terminal**
+
+Simply run the provided build script. By default, it will build the app for LIBRA-I with ROS2 support.
+
+```bash
+./tools/build-all.bash
+```
+
+It can also modify CMake flags.
+
+```bash
+# Build for LIBRA-II (in CMake: LIBRA_VERSION=2)
+./tools/build-all.bash -v 2
+# Build without ROS2 support (standalone) (in CMake: BUILD_WITH_ROS2=OFF)
+./tools/build-all.bash --disable-ros2
+```
+
+#### **Qt Creator & Colcon**
+
+This method provides a more fine-grained approach.
+
+1) Use a terminal to build the `libra` package (and its dependencies) located in the `LIBRA-ROS2-Tools` submodule.
 
     ```bash
-    ./tools/build-all.bash
+    # Navigate to the ROS2 Tools workspace
+    cd LIBRA-ROS2-Tools/ros2_ws
+    # Setup a ROS2 environment and build the "libra" package
+    source /opt/ros/humble/setup.bash && colcon build --packages-up-to libra
     ```
 
-    If you wish to only build the app, run the following commands.
+2) In the same terminal, source the newly-created environment and launch Qt Creator. Then, click the gray "hammer" icon at the bottom left to build the app. Any errors will be output to the "Compile Output" tab at the bottom.
 
     ```bash
-    mkdir -p build && cd build
-    cmake .. && cmake --build . --target all
+    # Add the "LIBRA ROS Tools" environment
+    source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
+    # Run Qt Creator
+    qtcreator
     ```
 
-- **Qt Creator & Colcon** &ndash; Provides a more fine-grained approach.
-    1) Use a terminal to build the `libra` package (and its dependencies) located in the `LIBRA-ROS2-Tools` submodule.
-
-        ```bash
-        # Navigate to the ROS2 Tools workspace
-        cd LIBRA-ROS2-Tools/ros2_ws
-        # Setup a ROS2 environment and build the "libra" package
-        source /opt/ros/humble/setup.bash && colcon build --packages-up-to libra
-        ```
-
-    2) In the same terminal, source the newly-created environment and launch Qt Creator. Then, click the gray "hammer" icon at the bottom left to build the app. Any errors will be output to the "Compile Output" tab at the bottom.
-
-        ```bash
-        # Add the "LIBRA ROS Tools" environment
-        source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
-        # Run Qt Creator
-        qtcreator
-        ```
-
-        > ***NOTE:*** If you're getting the error `"Unknown CMake command "qt_xxx""`, you likely have an older version of Qt installed; Qt-specific CMake commands (starting with `qt_`) were added in Qt6. You can check which version you have by running Qt Creator, opening the "Help" tab at the top, and clicking "System Information".
+    > ***NOTE:*** If you're getting the error `"Unknown CMake command "qt_xxx""`, you likely have an older version of Qt installed; Qt-specific CMake commands (starting with `qt_`) were added in Qt6. You can check which version you have by running Qt Creator, opening the "Help" tab at the top, and clicking "System Information".
 
 #### **Build Options**
 
@@ -105,7 +112,7 @@ The following CMake options can be used to easily select which version of the ap
 | Variable | Type | Possible<br>Values | Notes |
 | --- | --- | --- | --- |
 | `LIBRA_VERSION` | STRING | `1`, `2` | `1` = **LIBRA-I** (actuators: HEBI x5)<br>`2` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1) |
-| `BUILD_WITH_ROS` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
+| `BUILD_WITH_ROS2` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
 
 ### *Running the App*
 
@@ -122,11 +129,11 @@ source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash
 
 The app can be launched via a terminal or, if you need easy access to debugging tools, via Qt Creator.
 
-- **Terminal** &ndash; Simply navigate to the build directory (the path is output to the terminal at the end of the CMake build step) and run the `libra_app_gui` executable. Since the app uses certain files at runtime (e.g., to set the HEBI actuators' safety parameters), the executabale *must* be run from the directory it is in.
+- **Terminal** &ndash; Simply navigate to the build directory (the path is output to the terminal at the end of the CMake build step) and run the `libra_app` executable. Since the app uses certain files at runtime (e.g., to set the HEBI actuators' safety parameters), the executabale *must* be run from the directory it is in.
 
     ```bash
-    cd <PATH-TO-BUILD-FOLDER>
-    ./libra_app_gui
+    cd build/libra-<1|2>-<ros|standalone>/
+    ./libra_app
     ```
 
 - **Qt Creator** &ndash; Open QtCreator and click the green "run" arrow at the bottom left.
