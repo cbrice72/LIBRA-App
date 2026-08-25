@@ -24,7 +24,7 @@ const char DEVICE_ID[] = "flow";
 
 const float LOOP_PERIOD_MS = 500;  // 2 Hertz
 const float FAULT_THRESHOLD_A =
-    0.0038;  // Amps, slightly less than SENSOR_MIN_SIGNAL_A
+    0.0025;  // Amps, arbitrary value below SENSOR_MIN_SIGNAL_A
 
 // Pin Assignments
 const int INFLOW_PIN = A0;
@@ -51,8 +51,8 @@ const float SENSOR_MAX_FLOW_MLPS = (SENSOR_RANGE_MAX_LPM / 60.0) * 1000.0;
 
 const float RESISTOR_OHMS = 250.0;  // see calculation in "MATH" comment above
 
-const float ADC_REF_VOLTAGE = 4.3;   // Arduino Nano Every stable logic level
-const float ADC_MAX_VALUE = 1023.0;  // 10-bit ADC
+const float ADC_REF_VOLTAGE = 4.3;    // Arduino Nano Every stable logic level
+const float ADC_RESOLUTION = 1024.0;  // 10-bit ADC
 
 //------------------------------------------------------------------------------
 // !Main Functions
@@ -96,15 +96,18 @@ void loop() {
     int raw_outflow = analogRead(OUTFLOW_PIN);
 
     // Calculate and send digital values
-    float in_v = (raw_inflow / ADC_MAX_VALUE) * ADC_REF_VOLTAGE;
+    float in_v = (raw_inflow / ADC_RESOLUTION) * ADC_REF_VOLTAGE;
     float in_i = in_v / RESISTOR_OHMS;
     float inflow = CalculateFlow(in_i);
 
-    float out_v = (raw_outflow / ADC_MAX_VALUE) * ADC_REF_VOLTAGE;
+    float out_v = (raw_outflow / ADC_RESOLUTION) * ADC_REF_VOLTAGE;
     float out_i = out_v / RESISTOR_OHMS;
     float outflow = CalculateFlow(out_i);
 
-    SendData(inflow, outflow);
+    // Send compact packet
+    Serial.print(inflow);
+    Serial.print(',');
+    Serial.println(outflow);  // incl. packet termination
 
     // Also show sensor connection status via on-board LED
     if (in_i >= FAULT_THRESHOLD_A && out_i >= FAULT_THRESHOLD_A) {
@@ -112,6 +115,36 @@ void loop() {
     } else {
         digitalWrite(LED_PIN, LOW);
     }
+
+    // clang-format off
+    // DEBUG: Timestamp
+    Serial.print("["); Serial.print(millis()); Serial.print("] ");
+
+    // DEBUG: Inflow sensor metrics
+    Serial.print("IN ADC: "); Serial.print(raw_inflow);
+    Serial.print(" | V: "); Serial.print(in_v, 3);
+    Serial.print(" | mA: "); Serial.print(in_i * 1000.0, 2);
+    if (inflow == -1.0) {
+        Serial.print(" | INFLOW: FAULT ");
+    } else {
+        Serial.print(" | INFLOW: "); Serial.print(inflow / 16.6667, 2); Serial.print(" L/min ("); 
+        Serial.print(inflow, 2); Serial.print(" mL/s)");
+    }
+
+    // DEBUG: Separator
+    Serial.print(" || ");
+
+    // DEBUG: Outflow sensor metrics
+    Serial.print("OUT ADC: "); Serial.print(raw_outflow);
+    Serial.print(" | V: "); Serial.print(out_v, 3);
+    Serial.print(" | mA: "); Serial.print(out_i * 1000.0, 2);
+    if (outflow == -1.0) {
+        Serial.println(" | OUTFLOW: FAULT");
+    } else {
+        Serial.print(" | OUTFLOW: "); Serial.print(outflow / 16.6667, 2); Serial.print(" L/min (");
+        Serial.print(outflow, 2); Serial.println(" mL/s)");
+    }
+    // clang-format on
 
     delay(LOOP_PERIOD_MS);
 }
@@ -131,7 +164,8 @@ void loop() {
  */
 float CalculateFlow(float current) {
     if (current < FAULT_THRESHOLD_A) {
-        return 0.0;
+        return -1.0;  // TODO: this should be correct, but I was getting "ERROR"
+                      // when there wasn't any flow; needs further investigation
     }
 
     // Linear interpolation: (X - X_min) * (Y_max - Y_min)
@@ -150,44 +184,6 @@ float CalculateFlow(float current) {
     }
 
     return flow;
-}
-
-/**
- * @brief Sends flow rates over serial connection (format: "inflow,outflow\n").
- *
- * @param inflow Calculated inflow rate (mL/s)
- * @param outflow Calculated outflow rate (mL/s)
- */
-void SendData(float inflow, float outflow) {
-    // Send compact packet
-    Serial.print(inflow);
-    Serial.print(',');
-    Serial.println(outflow);  // incl. packet termination
-
-    /* FOR DEBUGGING PURPOSES ONLY
-    // Print to terminal
-    Serial.print("[");
-    Serial.print(millis());
-    Serial.print("] ");
-
-    Serial.print("INFLOW: ");
-    if (inflow < 0.0) {
-        Serial.print("FAULT");
-    } else {
-        Serial.print(inflow);
-        Serial.print(" (mL/s)");
-    }
-
-    Serial.print(" | OUTFLOW: ");
-    if (outflow < 0.0) {
-        Serial.print("FAULT");
-    } else {
-        Serial.print(outflow);
-        Serial.print(" (mL/s)");
-    }
-
-    Serial.println();
-    */
 }
 
 // NOLINTEND
