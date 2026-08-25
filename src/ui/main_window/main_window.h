@@ -247,10 +247,7 @@ class MainWindow : public QMainWindow {
     struct ArmLimits {
         double pitch_min{-180.0};
         double pitch_max{180.0};
-#if LIBRA_VERSION != 1
-        double yaw_min{-180.0};
-        double yaw_max{180.0};
-#elif LIBRA_VERSION != 2
+#if LIBRA_VERSION == 1
         double roll_min{-180.0};
         double roll_max{180.0};
         double j1_min{-180.0};
@@ -259,6 +256,9 @@ class MainWindow : public QMainWindow {
         double j2_max{180.0};
         double j3_min{-180.0};
         double j3_max{180.0};
+#elif LIBRA_VERSION == 2
+        double yaw_min{-180.0};
+        double yaw_max{180.0};
 #endif
     } original_limits_;
 };

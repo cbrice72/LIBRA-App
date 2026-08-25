@@ -142,7 +142,6 @@ MainWindow::~MainWindow() {
     // Define a lambda for gracefully wrapping up worker thread(s)
     auto StopThread = [](QThread* thread) {
         if (thread != nullptr && thread->isRunning()) {
-            thread->disconnect();           // kill any further communication
             thread->requestInterruption();  // signal thread to stop looping
             thread->wait();                 // wait for thread cleanup to finish
         }
@@ -729,7 +728,7 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
         default:
             // Shouldn't be able to get here
             logger_->Error("Received status for unknown fluid system side: "
-                           + SideEnumToString(side) + " ("
+                           + Water::SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
     }
 }
@@ -777,7 +776,7 @@ void MainWindow::HandleFlowStatus(const double& inflow, const double& outflow) {
         ui_->l_flow->setText(QString::number(-outflow, 'f', 0));
         ui_->l_flow->setStyleSheet(QStringLiteral("color: red;"));
     } else {
-        ui_->l_flow->setText(QString::number(inflow, 'f', 0));
+        ui_->l_flow->setText(QStringLiteral("---"));
         ui_->l_flow->setStyleSheet(QString());
     }
 }
