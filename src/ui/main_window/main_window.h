@@ -58,7 +58,7 @@ class MainWindow : public QMainWindow {
   public slots:
     void HandleCriticalError(const QString& err);
 
-    // --- Arduino Updates ---
+    // --- Arduino Updates (main_window.cpp) ---
 
     void HandleWaterConnChanged(const bool& connected);
     void HandleWaterStatus(const Water::Side& side, const Water::State& state);
@@ -72,7 +72,7 @@ class MainWindow : public QMainWindow {
                              const double& tilt);
 #endif
 
-    // --- Actuator Updates ---
+    // --- Actuator Updates (main_window.cpp) ---
 
     void HandleHebiConnChanged(const bool& connected);
 #if LIBRA_VERSION == 2
@@ -118,7 +118,7 @@ class MainWindow : public QMainWindow {
 
     // NOLINTBEGIN: Qt-generated
   private slots:
-    // --- Menu Bar ---
+    // --- Menu Bar (menu_bar.cpp) ---
 
     // Preferences Menu
 
@@ -160,17 +160,17 @@ class MainWindow : public QMainWindow {
     void on_a_connect_all_triggered();
     void on_a_disconnect_all_triggered();
 
-    // --- Main Window ---
+    // --- Main Window (various files) ---
 
-    // Arm
+    // Arm (arm.cpp)
 
     void on_pb_quick_input_clicked();
 
     void on_pb_arm_start_clicked();
-    // (pb_arm_stop is handled via signals)
+    // (NOTE: pb_arm_stop_clicked() is handled via signals)
     void on_pb_atc_enable_toggled(bool checked);
 
-    // Water
+    // Water (water.cpp)
 
     void on_pb_water_fill_A_clicked(bool checked);
     void on_pb_water_drain_A_clicked(bool checked);
@@ -179,14 +179,14 @@ class MainWindow : public QMainWindow {
     void on_pb_water_drain_B_clicked(bool checked);
 #endif
 
-    // Manipulator
+    // Manipulator (manipulator.cpp)
 
 #if LIBRA_VERSION == 1
     void on_pb_manip_slow_clicked();
     void on_pb_manip_fast_clicked();
 #endif
 
-    // Camera
+    // Camera (camera.cpp)
 
     void on_cb_camera_name_currentTextChanged(const QString& sel);
     void on_pb_camera_capture_clicked();
@@ -194,14 +194,12 @@ class MainWindow : public QMainWindow {
     void on_pb_camera_flip_h_clicked();
     void on_pb_camera_flip_v_clicked();
 
-    // Misc.
-
     // --- Uncategorized ---
 
   private:
     // NOLINTEND
 
-    // --- Helper Functions ---
+    // --- Helper Functions (main_window.cpp) ---
 
     void ConfigureUi();
     void InitializeFeedbackElementMap();
@@ -232,7 +230,6 @@ class MainWindow : public QMainWindow {
     ManipController* manip_controller_{nullptr};  // manipulator Arduino control
 #endif
     std::unique_ptr<CameraManager> camera_manager_;  // media device control
-
     std::unordered_map<QString, QString> available_cameras_;  // name, path
 
     // Threads
@@ -242,7 +239,7 @@ class MainWindow : public QMainWindow {
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
 #endif
 
-    // Temporary Value Holders
+    // Misc.
 
     struct ArmLimits {
         double pitch_min{-180.0};
