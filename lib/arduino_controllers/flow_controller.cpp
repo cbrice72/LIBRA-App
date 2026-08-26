@@ -87,7 +87,19 @@ void FlowController::OnUpdate() {
     const double inflow = parse_flow_value(str_values[0], "inflow");
     const double outflow = parse_flow_value(str_values[1], "outflow");
 
-    emit ReportStatus(inflow, outflow);
+    // Resolve into a single signed reading
+    double flow;
+    if (inflow == -1.0 || outflow == -1.0) {
+        flow = -1.0;  // sensor fault, malformed data
+    } else if (outflow > 0.0) {
+        // Outflow sensor is guaranteed to not have flow disturbances,
+        // so it is safe to prioritize it over the inflow sensor
+        flow = -outflow;
+    } else {
+        flow = inflow;
+    }
+
+    emit ReportStatus(flow);
 }
 
 //------------------------------------------------------------------------------

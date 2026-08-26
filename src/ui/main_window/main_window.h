@@ -64,7 +64,7 @@ class MainWindow : public QMainWindow {
     void HandleWaterStatus(const Water::Side& side, const Water::State& state);
 
     void HandleFlowConnChanged(const bool& connected);
-    void HandleFlowStatus(const double& inflow, const double& outflow);
+    void HandleFlowStatus(const double& flow);
 
 #if LIBRA_VERSION == 1
     void HandleManipConnChanged(const bool& connected);

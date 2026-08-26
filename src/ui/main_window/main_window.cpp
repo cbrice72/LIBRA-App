@@ -466,6 +466,10 @@ void MainWindow::InitializeDeviceManagers() {
     connect(flow_controller_, &FlowController::ReportStatus,  // get state
             this, &MainWindow::HandleFlowStatus);
 
+    // TankWidget slots
+    connect(flow_controller_, &FlowController::ReportStatus,  // animate tank
+            ui_->tw_water_level_A, &TankWidget::UpdateFlowRate);
+
 #if LIBRA_VERSION == 1
     // ========== Manipulator Controller ==========
 
@@ -745,37 +749,36 @@ void MainWindow::HandleFlowConnChanged(const bool& connected) {
     if (!connected) {
         ui_->l_flow->setText(QStringLiteral("---"));
         ui_->l_flow->setStyleSheet(QString());
+
+        ui_->tw_water_level_A->UpdateFlowRate(
+            -1.0);  // fall back to hardcoded rate
     }
 }
 
 /**
  * @brief Reflects the flow sensing system's sensor readings in the UI.
- *        - Inflow is shown in green as a positive value.
- *        - Outflow is shown in red as a negative value.
  *
- * @param inflow Measured inflow rate (in mL/s)
- * @param outflow Measured outflow rate (in mL/s)
+ * @param flow Net flow rate (in mL/s); positive = inflow, negative = outflow,
+ *             zero = idle, -1.0 = error
  */
-void MainWindow::HandleFlowStatus(const double& inflow, const double& outflow) {
-    constexpr double kIdleFlowThreshold = 0.7;  // mL/s
-
-    if (inflow == -1.0 || outflow == -1.0) {
-        // Either:
-        // (1) sensor current is below fault threshold
-        // (2) data sent by Arduino is malformed/corrupted
+void MainWindow::HandleFlowStatus(const double& flow) {
+    if (flow == -1.0) {
         ui_->l_flow->setText(QStringLiteral("ERR"));
         ui_->l_flow->setStyleSheet(QStringLiteral("color: orange;"));
         return;
     }
 
-    if (inflow > kIdleFlowThreshold) {
+    if (flow > 0.0) {
+        // Filling: positive value in green
         ui_->l_flow->setText(QStringLiteral("+")
-                             + QString::number(inflow, 'f', 0));  // no decimals
+                             + QString::number(flow, 'f', 0));
         ui_->l_flow->setStyleSheet(QStringLiteral("color: green;"));
-    } else if (outflow > kIdleFlowThreshold) {
-        ui_->l_flow->setText(QString::number(-outflow, 'f', 0));
+    } else if (flow < 0.0) {
+        // Draining: negative value in red
+        ui_->l_flow->setText(QString::number(flow, 'f', 0));
         ui_->l_flow->setStyleSheet(QStringLiteral("color: red;"));
     } else {
+        // Idle: dashes in neutral color
         ui_->l_flow->setText(QStringLiteral("---"));
         ui_->l_flow->setStyleSheet(QString());
     }

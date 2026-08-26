@@ -66,9 +66,11 @@ static constexpr double kCapacity = 35;    // L
  */
 TankWidget::TankWidget(QWidget* parent)
     : QWidget(parent),
+      animation_timer_(new QTimer(this)),
       level_(0.0),
       state_(Water::State::kStopped),
-      animation_timer_(new QTimer(this)) {
+      fill_rate_(kFillRate),
+      drain_rate_(kDrainRate) {
     // Configure widget appearance
     setMinimumSize(100, 100);
     setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -101,13 +103,12 @@ void TankWidget::UpdateAnimation() {
     }
 
     const double old_level = level_;
-    const double time_step = animation_timer_->interval()
-                             / 1000.0;  // convert ms to s
+    const double time_step = animation_timer_->interval() / 1000.0;  // ms -> s
 
     // Calculate step size based on flow rate and frame time
     switch (state_) {
         case Water::State::kFilling:
-            level_ = qMin(level_ + (kFillRate / kCapacity) * time_step, 1.0);
+            level_ = qMin(level_ + (fill_rate_ / kCapacity) * time_step, 1.0);
 
             // Check if we've hit the upper limit
             if (qFuzzyCompare(level_, 1.0)) {
@@ -117,7 +118,7 @@ void TankWidget::UpdateAnimation() {
             break;
 
         case Water::State::kDraining:
-            level_ = qMax(level_ - (kDrainRate / kCapacity) * time_step, 0.0);
+            level_ = qMax(level_ - (drain_rate_ / kCapacity) * time_step, 0.0);
 
             // Check if we've hit the lower limit
             if (qFuzzyCompare(level_, 0.0)) {
@@ -212,6 +213,31 @@ void TankWidget::UpdateState(Water::State state) {
         default:
             animation_timer_->stop();
             break;
+    }
+}
+
+/**
+ * @brief Updates the effective flow rate from measured flow data.
+ *
+ * @param flow Net flow rate (in mL/s); positive = inflow, negative = outflow,
+ *             zero = idle, -1.0 = error
+ *
+ * @note Arduino provides flow rate in mL/s, but TankWidget uses L/s since its
+ *       capacity is measured in L. This conversion is handled internally.
+ */
+void TankWidget::UpdateFlowRate(double flow) {
+    if (flow > 0.0) {
+        // Filling: use the measured rate; no drain reading right now so reset it
+        fill_rate_ = flow / 1000.0;  // mL/s -> L/s
+        drain_rate_ = kDrainRate;
+    } else if (flow < 0.0 && flow != -1.0) {
+        // Draining: use the measured rate; no fill reading right now so reset it
+        fill_rate_ = kFillRate;
+        drain_rate_ = -flow / 1000.0;  // mL/s -> L/s
+    } else {
+        // Idle or Fault: reset to default rates
+        fill_rate_ = kFillRate;
+        drain_rate_ = kDrainRate;
     }
 }
 

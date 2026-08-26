@@ -46,6 +46,8 @@ class TankWidget : public QWidget {
     double GetVolume() const;
 
     void UpdateState(Water::State state);
+    void UpdateFlowRate(double flow);
+
     void OverrideLevel(double new_level);
 
   signals:
@@ -65,7 +67,10 @@ class TankWidget : public QWidget {
 
     // --- Data Members ---
 
+    QTimer* animation_timer_{nullptr};
+
     double level_;
     Water::State state_;
-    QTimer* animation_timer_{nullptr};
+    double fill_rate_;   // L/s
+    double drain_rate_;  // L/s
 };
