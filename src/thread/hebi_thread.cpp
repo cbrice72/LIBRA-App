@@ -242,7 +242,6 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         }
 
         // Handle complex joints first
-
 #if LIBRA_VERSION == 1
         // [Complex Joint] MA and MB differential drive -> Roll and Pitch
         if (enum_names_[i] == Actuator::Name::kMA) {
