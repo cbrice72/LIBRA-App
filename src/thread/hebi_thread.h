@@ -96,7 +96,7 @@ class HebiThread : public AbstractActuatorThread
         const Actuator::Feedback& feedback_type);
 
     void CheckTorqueControl();
-    void ExecuteMovement(std::chrono::duration<double> dt,
+    bool ExecuteMovement(std::chrono::duration<double> dt,
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
 

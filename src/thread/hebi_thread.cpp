@@ -371,7 +371,7 @@ void HebiThread::CheckTorqueControl() {
  *
  * @note Command buffers are reused to avoid repeated allocations at 100 Hz.
  */
-void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
+bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_pos,
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
@@ -406,7 +406,7 @@ void HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
     }
 
     // Send movement command
-    group_->sendCommand(*command_);
+    return group_->sendCommand(*command_);
 }
 
 /**
@@ -594,11 +594,21 @@ void HebiThread::run() {
         last_loop_time = now;
 
         // Update feedback object
-        group_->getNextFeedback(*feedback_);
+        if (!group_->getNextFeedback(*feedback_)) {
+            emit ErrorThrown("HEBI - Failed to receive actuator feedback; "
+                             "connection lost!");
+            Disconnect();
+            continue;
+        }
 
         // Execute control logic
         CheckTorqueControl();
-        ExecuteMovement(dt, cmd_pos, cmd_vel, cmd_acc, cmd_eff);
+        if (!ExecuteMovement(dt, cmd_pos, cmd_vel, cmd_acc, cmd_eff)) {
+            emit ErrorThrown("HEBI - Failed to send actuator command; "
+                             "connection lost!");
+            Disconnect();
+            continue;
+        }
         SendFeedback();
 
         // Don't overwhelm network
@@ -669,13 +679,17 @@ void HebiThread::Connect() {
     }
     command_->clear();
 
-    logger_->Debug("Connection successful");
-    emit Connected(true);
-
     // Command actuator(s) to hold current position
     group_ = group;
-    group_->getNextFeedback(*feedback_);
+    if (!group_->getNextFeedback(*feedback_)) {
+        emit ErrorThrown("HEBI - Failed to retrieve starting position!");
+        group_.reset();
+        return;
+    }
     command_->setPosition(feedback_->getPosition());
+
+    logger_->Debug("Connection successful");
+    emit Connected(true);
 }
 
 /**
@@ -693,6 +707,7 @@ void HebiThread::Disconnect() {
 
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
+        command_->clear();
 
         logger_->Debug("Gracefully disconnected from actuator(s)");
         emit Connected(false);

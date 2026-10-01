@@ -271,6 +271,7 @@ void EposThread::run() {
 
     // Initialize thread variables for efficiency
     uint err_code = 0;
+    QString status;
 
     long t_pos = 0;
     int a_pos = 0;
@@ -302,6 +303,10 @@ void EposThread::run() {
                     "EPOS - Move command failed!\n"
                     + util::GetFormattedEposErrTxt("VCS_MoveToPosition",
                                                    err_code, kNodeID));
+                lock.unlock();
+                Disconnect();
+                QThread::msleep(10);
+                continue;
             }
 
             last_target_inc_ = target_inc_;  // mark the trajectory as "complete"
@@ -313,6 +318,10 @@ void EposThread::run() {
                 "EPOS - Failed to retrieve target position!\n"
                 + util::GetFormattedEposErrTxt("VCS_GetTargetPosition",
                                                err_code, kNodeID));
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(10);
+            continue;
         }
         // clang-format off
         emit ReportFeedback({{Joint::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
@@ -323,6 +332,10 @@ void EposThread::run() {
             emit ErrorThrown("EPOS - Failed to retrieve actual position!\n"
                              + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
                                                             err_code, kNodeID));
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(10);
+            continue;
         }
         // clang-format off
         emit ReportFeedback({{Joint::Name::kYaw, a_pos * kIncToDeg}},
@@ -330,7 +343,14 @@ void EposThread::run() {
         // clang-format on
 
         // Report minor statuses all together
-        emit ReportStatus(GetStatus(), type_);
+        status = GetStatus();
+        if (status == QStringLiteral("Error!")) {
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(10);
+            continue;
+        }
+        emit ReportStatus(status, type_);
 
         // Release the mutex lock
         lock.unlock();
