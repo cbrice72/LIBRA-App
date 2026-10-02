@@ -28,6 +28,7 @@
 
 // Project Headers
 #include "abstract_actuator_thread.h"
+#include "abstract_motion_controller.h"
 
 using msgJointState = sensor_msgs::msg::JointState;
 

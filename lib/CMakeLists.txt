@@ -12,6 +12,7 @@ add_subdirectory(common)
 add_subdirectory(util)
 add_subdirectory(logger)
 
-# (2) "Manager"-type modules
+# (2) Project modules
 add_subdirectory(arduino_controllers)
 add_subdirectory(camera_manager)
+add_subdirectory(motion_controller)
