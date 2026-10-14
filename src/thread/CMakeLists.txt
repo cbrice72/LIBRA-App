@@ -84,6 +84,11 @@ if(LIBRA_VERSION EQUAL 2)
     )
 endif()
 
+if(LIBRA_VERSION EQUAL 2)
+    # HebiThread hands LIBRA-II motion control to its motion controller.
+    target_link_libraries(actuator_thread PRIVATE motion_controller)
+endif()
+
 if(BUILD_WITH_ROS2)
     # Additional includes and libraries for ROS2 integration
     ament_target_dependencies(actuator_thread PUBLIC rclcpp sensor_msgs)
