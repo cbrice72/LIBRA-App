@@ -13,6 +13,7 @@
 
 // Other Library Headers
 #include <QFileDialog>      // Qt::Widgets
+#include <QInputDialog>     // Qt::Widgets
 #include <QSerialPort>      // Qt::SerialPort
 #include <QSerialPortInfo>  // Qt::SerialPort
 
@@ -29,6 +30,7 @@
  * !Local Helpers
  * !Preferences
  * !Automation
+ * !Motion Control
  * !Actuators
  * !Sensors
  * !Water
@@ -144,6 +146,17 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
     emit EnableDebugMode(checked);
 }
 
+/**
+ * @brief Event handler for "Preferences" menu action "Reset window size".
+ *        Restores the window to the size set in the UI file.
+ */
+void MainWindow::on_a_reset_window_size_triggered() {
+    if (isMaximized() || isFullScreen()) {
+        showNormal();
+    }
+    resize(default_size_);
+}
+
 //------------------------------------------------------------------------------
 // !Automation
 //------------------------------------------------------------------------------
@@ -183,6 +196,80 @@ void MainWindow::on_a_atc_ignore_water_level_triggered(bool checked) {
 
     ignore_water_level_ = checked;
 }
+
+//------------------------------------------------------------------------------
+// !Motion Control
+//------------------------------------------------------------------------------
+
+#if LIBRA_VERSION == 2
+// TODO: guesses; keep the band in sync with kDefaultHandoffBand (1 deg) in
+//       libra2_motion_controller.h
+constexpr double kDefaultHandoffBandDeg = 1.0;
+constexpr double kDefaultCalAngleDeg = 20.0;  // first angle +, second angle -
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Hand-off band...".
+ *        Asks for a new hand-off band and sends it to the HEBI thread.
+ */
+void MainWindow::on_a_motion_handoff_band_triggered() {
+    bool ok = false;
+    const double deg = QInputDialog::getDouble(
+        this, "Hand-off Band",
+        "Actuator takes over within (deg of the target):",
+        kDefaultHandoffBandDeg, 0.01, 90.0, 2, &ok);
+    if (ok) {
+        emit UpdateHebiHandoffBand(deg);
+    } else {
+        logger_->Debug("Hand-off band setting cancelled by user");
+    }
+}
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Calibrate (arm
+ *        level)". Starts the level calibration.
+ *
+ * @note The arm must already be level and at rest.
+ */
+void MainWindow::on_a_motion_calibrate_level_triggered() {
+    emit StartHebiLevelCal();
+}
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Calibrate (two
+ *        angles)...". Asks for the two calibration angles (joint space) and
+ *        starts the two-angle calibration.
+ */
+void MainWindow::on_a_motion_calibrate_two_angle_triggered() {
+    bool ok_a = false;
+    const double deg_a = QInputDialog::getDouble(
+        this, "Two-Angle Calibration", "First angle (deg, up = +):",
+        kDefaultCalAngleDeg, -90.0, 90.0, 1, &ok_a);
+    if (!ok_a) {
+        logger_->Debug("Calibration cancelled by user");
+        return;
+    }
+
+    bool ok_b = false;
+    const double deg_b = QInputDialog::getDouble(
+        this, "Two-Angle Calibration", "Second angle (deg, up = +):",
+        -kDefaultCalAngleDeg, -90.0, 90.0, 1, &ok_b);
+    if (!ok_b) {
+        logger_->Debug("Calibration cancelled by user");
+        return;
+    }
+
+    // The controller checks the range and the spacing and reports a failure
+    emit StartHebiTwoAngleCal(deg_a, deg_b);
+}
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Cancel calibration".
+ *        Cancels a running calibration.
+ */
+void MainWindow::on_a_motion_calibrate_cancel_triggered() {
+    emit CancelHebiCal();
+}
+#endif
 
 //------------------------------------------------------------------------------
 // !Actuators

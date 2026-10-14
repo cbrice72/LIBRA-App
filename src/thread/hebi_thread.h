@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <optional>
@@ -28,7 +29,13 @@
 
 // Project Headers
 #include "abstract_actuator_thread.h"
-#include "abstract_motion_controller.h"
+
+// Forward Declarations
+#if LIBRA_VERSION == 2
+namespace Motion {
+class Libra2MotionController;  // see libra2_motion_controller.h
+}  // namespace Motion
+#endif
 
 using msgJointState = sensor_msgs::msg::JointState;
 
@@ -76,6 +83,18 @@ class HebiThread : public AbstractActuatorThread
     void EnableTorqueControl(const bool& enabled);
     void SetTorqueCompBounds(const double& lower, const double& upper);
 
+#if LIBRA_VERSION == 2
+    void EnableCwPrimaryMode(const bool& enabled);
+    void SetHandoffBand(const double& deg);
+    void UpdateCounterweightVolume(const double& liters);
+
+    // --- Calibration ---
+
+    void StartLevelCalibration();
+    void StartTwoAngleCalibration(const double& deg_a, const double& deg_b);
+    void CancelCalibration();
+#endif
+
   signals:
     // --- Actuator Updates ---
 
@@ -84,6 +103,10 @@ class HebiThread : public AbstractActuatorThread
     void ReportArmTorque(const std::optional<double>& theta);
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
+#elif LIBRA_VERSION == 2
+    void MotionModeChanged(const bool& cw_primary);
+    void MovementStateChanged(const bool& moving);
+    void CalibrationFinished(const bool& success);
 #endif
 
   protected:
@@ -96,10 +119,21 @@ class HebiThread : public AbstractActuatorThread
         const std::shared_ptr<hebi::GroupFeedback>& feedback,
         const Actuator::Feedback& feedback_type);
 
+    void StartTrajectory(const Eigen::VectorXd& start_pos,
+                         const Eigen::VectorXd& target_pos);
+#if LIBRA_VERSION == 1
     void CheckTorqueControl();
     bool ExecuteMovement(std::chrono::duration<double> dt,
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
+#elif LIBRA_VERSION == 2
+    bool ExecuteMotionController(std::chrono::duration<double> dt,
+                                 Eigen::VectorXd& cmd_pos,
+                                 Eigen::VectorXd& cmd_vel,
+                                 Eigen::VectorXd& cmd_acc,
+                                 Eigen::VectorXd& cmd_eff);
+    void ReportMotionStatus();
+#endif
 
     void SendFeedback();
     [[nodiscard]] QString GetStatus() const;
@@ -135,6 +169,7 @@ class HebiThread : public AbstractActuatorThread
     mutable std::vector<double> status_curr_;
     mutable std::vector<double> status_temp_;
 
+#if LIBRA_VERSION == 1
     // Enables logic that uses torque feedback hysteresis to control trajectory
     // movement state (see `movement_en_`)
     bool torque_control_en_{false};
@@ -143,11 +178,34 @@ class HebiThread : public AbstractActuatorThread
 
     // Enables trajectory-based movement
     bool movement_en_{true};
+#endif
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
-    std::chrono::time_point<std::chrono::steady_clock> t_trajectory_start_;
+    bool time_unit_warned_{false};  // see `StartTrajectory()`
+#if LIBRA_VERSION == 1
+    std::chrono::time_point<std::chrono::steady_clock> t_trajectory_start_{
+        std::chrono::steady_clock::now()};
     std::chrono::steady_clock::duration t_trajectory_elapsed_{0};
 
     double vel_scale_{1.0};  // used when soft torque limit is exceeded
+#elif LIBRA_VERSION == 2
+    // Torque limits, the movement enable, and the playback speed live in the
+    // motion controller; HebiThread only applies what it returns
+    std::unique_ptr<Motion::Libra2MotionController> motion_controller_;
+
+    // Trajectory clock (s); advances by dt * playback rate, so it freezes while
+    // the controller pauses playback
+    double t_trajectory_s_{0.0};
+
+    // Last position/velocity command sent (actuator space). NaN = "no command"
+    // (HEBI's convention), which is how a joint is left free to move
+    Eigen::VectorXd pos_cmd_;  // rad
+    Eigen::VectorXd vel_cmd_;  // rad/s
+
+    // Report-only state, so the UI hears about each change once
+    std::atomic<bool> moving_{false};
+    std::atomic<bool> calibration_running_{false};
+    double diag_log_elapsed_s_{0.0};  // s since the last model log line
+#endif
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<msgJointState>::SharedPtr state_pub_;

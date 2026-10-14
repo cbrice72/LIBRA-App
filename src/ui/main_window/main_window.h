@@ -84,6 +84,12 @@ class MainWindow : public QMainWindow {
         const Actuator::Feedback feedback_type);
     void HandleActuatorStatus(const QString& status, const Actuator::Type type);
 
+#if LIBRA_VERSION == 2
+    void HandleMotionModeChanged(const bool& cw_primary);
+    void HandleMovementStateChanged(const bool& moving);
+    void HandleCalibrationFinished(const bool& success);
+#endif
+
   signals:
     // --- Generic Commands ---
 
@@ -106,10 +112,23 @@ class MainWindow : public QMainWindow {
 
     // --- Actuator Commands ---
 
+    // HEBI
+
     void CommandHebi(const std::vector<double>& deg);
     void LoadHebiGains(const QString& file_path);
     void UpdateHebiTorqueCompBounds(const double& lower_bound,
                                     const double& upper_bound);
+
+#if LIBRA_VERSION == 2
+    void EnableCwPrimary(const bool& enabled);
+    void UpdateHebiHandoffBand(const double& deg);
+
+    void StartHebiLevelCal();
+    void StartHebiTwoAngleCal(const double& deg_a, const double& deg_b);
+    void CancelHebiCal();
+#endif
+
+    // EPOS (Maxon)
 
 #if LIBRA_VERSION == 2
     void ConnectEpos();
@@ -123,11 +142,21 @@ class MainWindow : public QMainWindow {
     // Preferences Menu
 
     void on_a_debug_mode_toggled(bool checked);
+    void on_a_reset_window_size_triggered();
 
     // Automation Menu
 
     void on_a_atc_update_bounds_triggered();
     void on_a_atc_ignore_water_level_triggered(bool checked);
+
+    // Motion Control Menu
+
+#if LIBRA_VERSION == 2
+    void on_a_motion_handoff_band_triggered();
+    void on_a_motion_calibrate_level_triggered();
+    void on_a_motion_calibrate_two_angle_triggered();
+    void on_a_motion_calibrate_cancel_triggered();
+#endif
 
     // Actuators Menu
 
@@ -179,6 +208,12 @@ class MainWindow : public QMainWindow {
     void on_pb_water_drain_B_clicked(bool checked);
 #endif
 
+    // Motion Control (motion_control.cpp)
+
+#if LIBRA_VERSION == 2
+    void on_pb_cw_primary_toggled(bool checked);
+#endif
+
     // Manipulator (manipulator.cpp)
 
 #if LIBRA_VERSION == 1
@@ -208,6 +243,9 @@ class MainWindow : public QMainWindow {
 
     void UpdateActuatorControls();
     void UpdateATCControls();
+#if LIBRA_VERSION == 2
+    void UpdateMotionControls();
+#endif
 
     // --- Data Members ---
 
@@ -216,11 +254,16 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
+    QSize default_size_;  // window size set in main_window.ui
+
     FeedbackElementMapOfMaps feedback_element_map_;
 
     std::vector<double> last_command_;  // actuator-space target positions
 
     bool ignore_water_level_{false};
+#if LIBRA_VERSION == 2
+    bool arm_moving_{false};  // trajectory or calibration running
+#endif
 
     // Device Managers
 

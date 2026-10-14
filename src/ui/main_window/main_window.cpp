@@ -14,6 +14,7 @@
 // Other Library Headers
 #include <QMessageBox>                  // Qt::Widgets
 #include <QRegularExpressionValidator>  // Qt::Gui
+#include <QSignalBlocker>               // Qt::Core
 
 // Project Headers
 #include "qt_logger.h"
@@ -106,7 +107,7 @@ void RemoveUiElement(T*& element) {
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
-    this->setMinimumSize(this->minimumSizeHint());  // enforce minimum size
+    default_size_ = this->size();  // for "Reset window size"
 
     logger_ = std::make_unique<QtLogger>("main_window", debug_mode_);
     logger_->Debug("Initializing MainWindow");
@@ -202,6 +203,9 @@ void MainWindow::ConfigureUi() {
     ui_->m_serial_servo->setEnabled(false);
 #elif LIBRA_VERSION != 2
     ui_->m_epos->setEnabled(false);
+#endif
+#if LIBRA_VERSION != 2
+    ui_->m_motion_control->setEnabled(false);
 #endif
 
     // Slots
@@ -326,6 +330,16 @@ void MainWindow::ConfigureUi() {
     RemoveUiElement(ui_->vl_counterweight_B);
     RemoveUiElement(ui_->pb_water_fill_B);
     RemoveUiElement(ui_->pb_water_drain_B);
+#endif
+
+    // Slots
+    //   (none)
+
+    // ========== Motion Control ==========
+
+    // Unneeded widgets
+#if LIBRA_VERSION != 2
+    RemoveUiElement(ui_->gb_motion_control);
 #endif
 
     // Slots
@@ -548,6 +562,29 @@ void MainWindow::InitializeThreads() {
     connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
 
+#if LIBRA_VERSION == 2
+    connect(this, &MainWindow::EnableCwPrimary,  // pick main pitch joint mover
+            hebi_thread_, &HebiThread::EnableCwPrimaryMode);
+    connect(this, &MainWindow::UpdateHebiHandoffBand,  // update hand-off band
+            hebi_thread_, &HebiThread::SetHandoffBand);
+
+    connect(this, &MainWindow::StartHebiLevelCal,  // calibrate: level
+            hebi_thread_, &HebiThread::StartLevelCalibration);
+    connect(this, &MainWindow::StartHebiTwoAngleCal,  // calibrate: two angles
+            hebi_thread_, &HebiThread::StartTwoAngleCalibration);
+    connect(this, &MainWindow::CancelHebiCal,  // cancel calibration
+            hebi_thread_, &HebiThread::CancelCalibration);
+
+    // CW volume for the motion controller. TankWidget only emits when the level
+    // changes, so the starting value is sent right after.
+    connect(ui_->tw_water_level_A, &TankWidget::LevelChanged, hebi_thread_,
+            [this](double) {
+                hebi_thread_->UpdateCounterweightVolume(
+                    ui_->tw_water_level_A->GetVolume());
+            });
+    hebi_thread_->UpdateCounterweightVolume(ui_->tw_water_level_A->GetVolume());
+#endif
+
     // MainWindow slots
     connect(hebi_thread_, &HebiThread::ErrorThrown,  // handle errors
             this, &MainWindow::HandleCriticalError);
@@ -558,6 +595,15 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorFeedback);
     connect(hebi_thread_, &HebiThread::ReportStatus,  // get minor statuses
             this, &MainWindow::HandleActuatorStatus);
+
+#if LIBRA_VERSION == 2
+    connect(hebi_thread_, &HebiThread::MotionModeChanged,  // sync mode toggle
+            this, &MainWindow::HandleMotionModeChanged);
+    connect(hebi_thread_, &HebiThread::MovementStateChanged,  // lock mode UI
+            this, &MainWindow::HandleMovementStateChanged);
+    connect(hebi_thread_, &HebiThread::CalibrationFinished,  // calibrated
+            this, &MainWindow::HandleCalibrationFinished);
+#endif
 
     // ArduinoManager slots
     connect(hebi_thread_, &HebiThread::ReportArmTorque,  // update water command
@@ -646,7 +692,35 @@ void MainWindow::UpdateATCControls() {
     ui_->pb_atc_enable->setEnabled(both_connected);
     ui_->a_atc_update_bounds->setEnabled(both_connected);
     ui_->a_atc_ignore_water_level->setEnabled(both_connected);
+
+#if LIBRA_VERSION == 2
+    UpdateMotionControls();
+#endif
 }
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Enables the motion control widgets/actions based on the connection
+ *        statuses and whether the arm is moving.
+ *
+ * @note Mode switching and calibration starts are locked while the arm moves.
+ */
+void MainWindow::UpdateMotionControls() {
+    bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
+    bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
+    bool both_connected = hebi_connected && water_connected;
+
+    // Group box
+    ui_->pb_cw_primary->setEnabled(both_connected && !arm_moving_);
+
+    // Menu bar
+    ui_->a_motion_handoff_band->setEnabled(both_connected && !arm_moving_);
+    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !arm_moving_);
+    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected
+                                                  && !arm_moving_);
+    ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
+}
+#endif
 
 //------------------------------------------------------------------------------
 // !Thread Handlers (Slots)
@@ -885,6 +959,55 @@ void MainWindow::HandleActuatorStatus(const QString& status,
                            + std::to_string(static_cast<int>(type)) + ")");
     }
 }
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Shows the motion mode that is actually in effect.
+ *
+ * @param cw_primary true if the CW moves the arm and the actuator takes over
+ *                   near the target
+ *
+ * @note The controller refuses CW-primary until the arm is calibrated, so the
+ *       toggle can be set back here.
+ */
+void MainWindow::HandleMotionModeChanged(const bool& cw_primary) {
+    const QSignalBlocker blocker(ui_->pb_cw_primary);  // don't re-emit
+    ui_->pb_cw_primary->setChecked(cw_primary);
+
+    ui_->l_motion_mode_val->setText(cw_primary ? "CW-primary" : "Tandem");
+}
+
+/**
+ * @brief Locks mode switching and calibration starts while the arm moves.
+ *
+ * @param moving true while a trajectory or calibration is running
+ */
+void MainWindow::HandleMovementStateChanged(const bool& moving) {
+    arm_moving_ = moving;
+    ui_->l_motion_state_val->setText(moving ? "Moving" : "Idle");
+
+    UpdateMotionControls();
+}
+
+/**
+ * @brief Reports how a calibration ended.
+ *
+ * @param success true if the arm model was updated
+ */
+void MainWindow::HandleCalibrationFinished(const bool& success) {
+    // NOTE: A failed/cancelled calibration keeps the previous arm model
+    if (success) {
+        ui_->l_motion_calibrated_val->setText("Yes");
+        logger_->Info("HEBI - Calibration finished");
+    } else {
+        if (ui_->l_motion_calibrated_val->text() != "Yes") {
+            ui_->l_motion_calibrated_val->setText("Failed");
+        }
+        logger_->Warn("HEBI - Calibration failed or was cancelled "
+                      "(see the messages above)");
+    }
+}
+#endif
 
 /**
  * @brief Throws a pop-up error box upon receiving an error signal from a thread.
