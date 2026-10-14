@@ -2276,7 +2276,7 @@
                   <string>Which component drives the pitch joint</string>
                  </property>
                  <property name="text">
-                  <string>Tandem</string>
+                  <string>...</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
@@ -2302,7 +2302,7 @@
                   <string>Whether the arm model has been calibrated this session</string>
                  </property>
                  <property name="text">
-                  <string>No</string>
+                  <string>...</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
@@ -2328,7 +2328,7 @@
                   <string>Whether a trajectory or calibration is running</string>
                  </property>
                  <property name="text">
-                  <string>Idle</string>
+                  <string>...</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
