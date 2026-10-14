@@ -1,6 +1,22 @@
 /******************************************************************************
  * @file   abstract_motion_controller.h
- * @brief  Abstract base class for kinematics-aware system estimation; header-only.
+ * @brief  Common types and base class for joint motion controllers; plain C++.
+ *
+ * @note   Joint-space interface: every position, velocity, and torque is in
+ *         JOINT space (e.g., positive pitch = arm up, CCW). Converting to and
+ *         from actuator space is the caller's job (see Joint::
+ *         ActuatorToJointSimple and Actuator::JointToActuatorSimple). Nothing
+ *         here depends on Qt or HEBI.
+ *
+ * @note   Per-joint arrays hold one entry per HEBI-controlled joint and are
+ *         indexed with `Joint::Name` (e.g., `state.pos[Joint::Name::kPitch]`),
+ *         the same way HEBI feedback vectors are indexed. For LIBRA-II that is
+ *         a single entry (kPitch = 0).
+ *
+ * @note   There is deliberately no virtual `Update()`: LIBRA-I and LIBRA-II are
+ *         mechanically different, so each controller defines its own `Update()`
+ *         and any extra inputs/outputs it needs. Only what they truly share
+ *         lives here.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -8,19 +24,130 @@
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
-
-// Other Library Headers
-//   (none)
+#include <cstddef>
+#include <cstdint>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <vector>
 
 // Project Headers
-//   (none)
+#include "logger.h"
+
+/* --- TABLE OF CONTENTS ---
+ * !Types
+ * !Class Declaration
+ */
+
+namespace Motion {
+
+//------------------------------------------------------------------------------
+// !Types
+//------------------------------------------------------------------------------
 
 /**
- * @brief Provides a common interface for system estimation, calibration, and
- *        motion modeling regardless of kinematic configuration.
+ * @brief One value per HEBI-controlled joint, in joint space, indexed by
+ *        `Joint::Name`.
+ */
+using JointValues = std::vector<double>;
+
+/**
+ * @brief How the actuator of one joint should be commanded this cycle.
+ */
+enum class CommandMode : uint8_t {
+    // Send the position/velocity command (trajectory or hold) plus the effort
+    // feedforward, if any
+    kPositionControl,
+
+    // Send NO position/velocity command; only the effort feedforward, if any
+    kEffortOnly
+};
+
+/**
+ * @brief What the controller needs to know about the joints each cycle:
+ *        measurements plus the reference commanded in the PREVIOUS cycle.
+ */
+struct MotionState {
+    double dt{0.0};  // time since last cycle (s)
+
+    // Measured
+    JointValues pos;              // theta (rad)
+    JointValues vel;              // theta_dot (rad/s)
+    JointValues torque_actuator;  // torque applied by the actuator (Nm)
+
+    // Commanded in the previous cycle ("cmd_vel", "cmd_acc"); needed before
+    // this cycle's trajectory is evaluated
+    JointValues ref_vel;  // theta_dot_ref (rad/s)
+    JointValues ref_acc;  // theta_ddot_ref (rad/s^2)
+
+    bool trajectory_active{false};  // a trajectory is currently being followed
+};
+
+/**
+ * @brief What the controller wants done with the actuators this cycle.
+ */
+struct MotionCommand {
+    explicit MotionCommand(std::size_t n_joints = 0)
+        : mode(n_joints, CommandMode::kPositionControl),
+          torque_actuator_cmd(n_joints) {}
+
+    std::vector<CommandMode> mode;
+
+    // Effort feedforward per joint (Nm); none = don't send one. NOT clamped.
+    std::vector<std::optional<double>> torque_actuator_cmd;
+
+    // Trajectory clock rate: 1 = normal, 0.5 = slow, 0 = paused
+    double playback_rate{1.0};
+};
+
+std::string MotionFormat(double value);
+
+//------------------------------------------------------------------------------
+// !Class Declaration
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Shared plumbing for motion controllers: a non-owning logger, the
+ *        current target, and a lock for slot/thread safety.
+ *
+ * @note Thread safety: `Update()` (in derived classes) runs on the actuator
+ *       thread while setters run from slots, so all public functions lock
+ *       `mutex_`.
  */
 class AbstractMotionController {
   public:
-    // TODO
+    AbstractMotionController(Logger& logger, std::size_t n_joints);
+    virtual ~AbstractMotionController() = default;
+
+    AbstractMotionController(const AbstractMotionController&) = delete;
+    AbstractMotionController& operator=(const AbstractMotionController&) =
+        delete;
+
+    [[nodiscard]] std::size_t NumJoints() const {
+        return n_joints_;
+    }
+
+    // --- Commands ---
+
+    void SetTarget(const JointValues& target_pos);
+    void Stop();
+    void Reset();
+
+  protected:
+    // Derived-class hooks; `mutex_` is already locked when these are called
+    virtual void OnTargetChanged() {}
+
+    virtual void OnStop() {}
+
+    virtual void OnReset() {}
+
+    [[nodiscard]] bool IsValid(const MotionState& state) const;
+
+    Logger& logger_;  // not owned
+    mutable std::mutex mutex_;
+    const std::size_t n_joints_;
+
+    std::optional<JointValues> target_pos_;
 };
+
+}  // namespace Motion
