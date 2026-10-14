@@ -96,6 +96,8 @@ namespace {}  // namespace
 // !Class Management
 //------------------------------------------------------------------------------
 
+// TODO: BUG - passes the uninitialized member `debug_mode_` to the delegated
+//       constructor instead of the `debug_mode` parameter
 /**
  * @brief Delegating constructor. Automatically configures EposThread based on
  *        hard-coded defaults for Ubuntu Linux.

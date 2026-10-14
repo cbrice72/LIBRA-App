@@ -37,6 +37,8 @@ class Libra2MotionController;  // see libra2_motion_controller.h
 }  // namespace Motion
 #endif
 
+// TODO: BUG - this alias is outside the BUILD_WITH_ROS2 guard, so standalone
+//       builds (BUILD_WITH_ROS2=OFF) fail to compile
 using msgJointState = sensor_msgs::msg::JointState;
 
 // Torque compensation constants
