@@ -94,11 +94,12 @@ install(
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-add_custom_command( # copy runtime config files to output dir
+add_custom_command( # copy runtime config files to build-specific output dir
     TARGET libra_app_qt
     POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
-            ${CMAKE_INSTALL_BINDIR}/shared
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${LIBRA_VARIANT_BUILD_DIR}/bin"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${LIBRA_SHARED}"
+            "${LIBRA_VARIANT_BUILD_DIR}/bin/shared"
 )
 
 qt_finalize_executable(libra_app_qt)

@@ -648,16 +648,41 @@ void HebiThread::Connect() {
         return;
     }
 
+    const std::filesystem::path safety_path(
+        "./bin/shared/hebi/safety_conservative.xml");
+    if (!std::filesystem::exists(safety_path)
+        || !std::filesystem::is_regular_file(safety_path)) {
+        emit ErrorThrown(
+            "HEBI - Safety parameters file missing!\nExpected: "
+            + QString::fromStdString(safety_path.string()) + "\nCWD: "
+            + QString::fromStdString(std::filesystem::current_path().string()));
+        return;
+    }
+
     // Load safety parameters
-    if (!command_->readSafetyParameters(
-            "./bin/shared/hebi/safety_conservative.xml")) {
+    if (!command_->readSafetyParameters(safety_path.string())) {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
 
+    const std::filesystem::path gains_path("./bin/shared/hebi/gains.xml");
+    if (!std::filesystem::exists(gains_path)
+        || !std::filesystem::is_regular_file(gains_path)) {
+        emit ErrorThrown(
+            "HEBI - Gain file missing!\nExpected: "
+            + QString::fromStdString(gains_path.string()) + "\nCWD: "
+            + QString::fromStdString(std::filesystem::current_path().string()));
+        return;
+    }
+
     // Load gains
-    if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
+    if (!command_->readGains(gains_path.string())) {
         emit ErrorThrown("HEBI - Failed to load gain parameters!");
+        return;
+    }
+
+    if (group->size() != static_cast<std::size_t>(n_actuators_)) {
+        emit ErrorThrown("HEBI - Group size mismatch!");
         return;
     }
 
@@ -835,9 +860,22 @@ void HebiThread::LoadGains(const QString& file_path) {
         return;
     }
 
+    const std::filesystem::path gains_file(file_path.toStdString());
+    std::error_code ec;
+    if (!std::filesystem::exists(gains_file, ec)
+        || !std::filesystem::is_regular_file(gains_file, ec)) {
+        emit ErrorThrown("HEBI - Gains file not found!");
+        return;
+    }
+
     hebi::GroupCommand gain_cmd(group_->size());
     if (!gain_cmd.readGains(file_path.toStdString())) {
         emit ErrorThrown("HEBI - Failed to load gains from: " + file_path);
+        return;
+    }
+
+    if (group_->size() != gain_cmd.size()) {
+        emit ErrorThrown("HEBI - Gain size mismatch!");
         return;
     }
 
