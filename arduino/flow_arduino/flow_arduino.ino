@@ -73,16 +73,21 @@ void setup() {
     // Use stable internal reference voltage (4.3V) for analog readings
     // (instead of the default Vcc (5.0V), which may fluctuate)
     /* NOTE:
-     * - ADC Ceiling:
-     *     4.3V reference / 250 Ohm resistor = 17.2 mA max. This caps the
-     *     detectable flow rate at ~4.19 L/min.
-     * - Inflow Rate:
-     *     Manually controlled by valve at output end of sensor. Set to the 2.5
-     *     tick mark (50% closed) = ~3.95 L/min max.
-     * - Outflow Rate:
-     *     Manually controlled by valve at output end of sensor. Set to the ?.?
-     *     tick mark (??% closed) = ~?.?? L/min max; necessary since pump (Koshin
-     *     MG-25-AAA-4) can suck more than twice the sensor's rated max. flow.
+     * - [ADC Ceiling]
+     *     4.3V reference / 250 Ohm resistor = 17.2 mA max.
+     *     This caps detectable flow rate at ~4.19 L/min.
+     *     ---
+     *     4.3V reference / 200 Ohm resistor = 21.5 mA max.
+     *     This caps detectable flow rate at ~5.38 L/min,
+     *     safely above the 5.00 L/min upper limit.
+     * - [Inflow Rate]
+     *     Manually controlled by valve at output end of sensor.
+     *     Set to the 2.5 tick mark (50% closed) = ~3.95 L/min max.
+     * - [Outflow Rate]
+     *     Manually controlled by valve at output end of sensor.
+     *     Set to the ?.? tick mark (??% closed) = ~?.?? L/min max;
+     *     necessary since pump (Koshin MG-25-AAA-4) can suck more than twice
+     *     the sensor's rated max. flow.
      */
     analogReference(INTERNAL4V3);
 
