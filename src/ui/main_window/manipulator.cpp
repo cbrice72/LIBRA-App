@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   manipulator.cpp
- * @brief  Main app window manipulator group box implementation file.
+ * @brief  Main app window manipulator group box; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/

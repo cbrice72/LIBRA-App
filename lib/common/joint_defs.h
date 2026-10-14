@@ -12,7 +12,7 @@
 #include <iostream>
 
 // Other Library Headers
-// (none)
+//   (none)
 
 /* --- TABLE OF CONTENTS ---
  * !Constants
@@ -32,8 +32,6 @@ namespace Joint {
 
 /**
  * @brief Joint direction (revolute only).
- *
- * @see TODO
  */
 enum class Type : uint8_t { kRoll = 0, kPitch, kYaw };
 
@@ -44,7 +42,7 @@ enum class Type : uint8_t { kRoll = 0, kPitch, kYaw };
  *       ecosystem, not `Actuator::Name`, which is for the physical hardware.
  *
  * @note HEBI actuator names MUST start at 0 for everything to line up properly,
- *       thanks to the design of `Actuator::GetHebiDefault()`. I know this
+ *       thanks to the design of `Actuator::GetHebiDefault()`. I know this is
  *       confusing (it has already led to a frustrating bug hunt), but I have
  *       more important things to do right now than refactor this...
  *
@@ -72,9 +70,8 @@ enum Name : uint8_t {
  * @brief Converts joint `Name` enum value to its corresponding string name.
  *
  * @param name Named enum value of the joint
- * @return std::string String name of the corresponding joint
  */
-inline std::string NameEnumToString(Name name) {
+inline std::string NameEnumToString(const Name& name) {
     switch (name) {
 #if LIBRA_VERSION == 1
         case Name::kRoll:
@@ -102,17 +99,16 @@ inline std::string NameEnumToString(Name name) {
  * @brief Converts a 1-DoF actuator's real position to its joint's effective
  *        position.
  *
+ * @param joint Which joint to calculate for
+ * @param val Value to convert
+ *
  * @note Positive X = forward, positive Y = leftward, and positive Z = upward.
  *       By extension, positive roll = leftward, positive pitch = upward, and
  *       positive yaw = leftward.
  *
- * @param joint Which joint to calculate for
- * @param val The value to convert
- * @return double Effective position of the joint
- *
  * @see Actuator::JointToActuatorSimple HebiThread::PublishState
  */
-inline double ActuatorToJointSimple(Name joint, double val) {
+inline double ActuatorToJointSimple(const Name& joint, const double& val) {
     switch (joint) {
 #if LIBRA_VERSION == 1
         case Name::kRoll:
@@ -142,17 +138,17 @@ inline double ActuatorToJointSimple(Name joint, double val) {
 }
 
 /**
- * @brief Derives the effective position of a differential joint based on its
- *        linked actuators' real positions.
+ * @brief Derives a differential joint's effective position from its linked
+ *        actuators' real positions.
  *
  * @param joint Which joint to calculate for
- * @param ma Position of actuator "MA" (left side of 2-DoF Joint)
- * @param mb Position of actuator "MB" (right side of 2-DoF Joint)
- * @return double Effective position of the joint
+ * @param ma Position of actuator "MA" (left side of 2-DoF joint)
+ * @param mb Position of actuator "MB" (right side of 2-DoF joint)
  *
  * @see Actuator::JointToActuatorDifferential HebiThread::PublishState
  */
-inline double ActuatorToJointDifferential(Name joint, double ma, double mb) {
+inline double ActuatorToJointDifferential(const Name& joint, const double& ma,
+                                          const double& mb) {
     switch (joint) {
 #if LIBRA_VERSION == 1
         case Name::kRoll:
@@ -173,11 +169,9 @@ inline double ActuatorToJointDifferential(Name joint, double ma, double mb) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns an ordered list of joints controlled by HEBI actuators.
+ * @brief Ordered names of the joints controlled by HEBI actuators.
  *
- * @note No logic; return value determined solely by `LIBRA_VERSION`.
- *
- * @return std::vector<std::string> Ordered list of string names
+ * @note No logic; determined solely by `LIBRA_VERSION`.
  */
 inline std::vector<std::string> GetHebiStrings() {
 #if LIBRA_VERSION == 1

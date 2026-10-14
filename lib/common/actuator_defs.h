@@ -86,7 +86,7 @@ enum Name : uint8_t {
  *
  * @see AbstractActuatorThread::ReportStatus
  */
-enum Feedback : uint8_t {
+enum class Feedback : uint8_t {
     kTargetPos = 0,
     kTargetVel,
     kTargetTorque,
@@ -103,7 +103,6 @@ enum Feedback : uint8_t {
  * @brief Converts actuator string name to its corresponding `Name` enum value.
  *
  * @param name_str Name of the actuator
- * @return Actuator::Name Named enum value of the corresponding actuator
  */
 inline Name StringToNameEnum(const std::string& name_str) {
 #if LIBRA_VERSION == 1
@@ -132,9 +131,8 @@ inline Name StringToNameEnum(const std::string& name_str) {
  * @brief Converts actuator `Name` enum value to its corresponding string name.
  *
  * @param name Named enum value of the actuator
- * @return std::string String name of the corresponding actuator
  */
-inline std::string NameEnumToString(Name name) {
+inline std::string NameEnumToString(const Name& name) {
     switch (name) {
 #if LIBRA_VERSION == 1
         case Name::kMA:
@@ -161,10 +159,9 @@ inline std::string NameEnumToString(Name name) {
 /**
  * @brief Converts actuator `Type` enum value to its corresponding string name.
  *
- * @param name Actuator implementation enum value
- * @return std::string String name of the corresponding actuator type
+ * @param type Actuator implementation enum value
  */
-inline std::string TypeEnumToString(Type type) {
+inline std::string TypeEnumToString(const Type& type) {
     switch (type) {
         case Type::kHebi:
             return "HEBI";
@@ -178,12 +175,12 @@ inline std::string TypeEnumToString(Type type) {
 }
 
 /**
- * @brief Converts actuator `Feedback` enum value to its corresponding string name.
+ * @brief Converts actuator `Feedback` enum value to its corresponding string
+ *        name.
  *
  * @param feedback Feedback type
- * @return std::string String feedback type
  */
-inline std::string FeedbackEnumToString(Feedback feedback) {
+inline std::string FeedbackEnumToString(const Feedback& feedback) {
     switch (feedback) {
         case Feedback::kTargetPos:
             return "TargetPos";
@@ -203,17 +200,16 @@ inline std::string FeedbackEnumToString(Feedback feedback) {
 }
 
 /**
- * @brief Converts a simple joint's effective position to its corresponding
- *        actuator's real position.
+ * @brief Converts a simple joint's effective position to its actuator's real
+ *        position.
  *
  * @param actuator Which actuator to calculate for
- * @param val The value to convert
- * @return double Real position of the actuator
+ * @param val Value to convert
  *
  * @see Joint::ActuatorToJointSimple
  * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
  */
-inline double JointToActuatorSimple(Name actuator, double val) {
+inline double JointToActuatorSimple(const Name& actuator, const double& val) {
     switch (actuator) {
 #if LIBRA_VERSION == 1
         case Name::kMA:
@@ -243,19 +239,19 @@ inline double JointToActuatorSimple(Name actuator, double val) {
 }
 
 /**
- * @brief Derives the real position of a linked actuator based on its
- *        differential joints' effective positions.
+ * @brief Derives a linked actuator's real position from its differential
+ *        joints' effective positions.
  *
  * @param actuator Which actuator to calculate for
  * @param roll Position of central roll joint
  * @param pitch Position of central pitch joint
- * @return double Real position of the actuator
  *
  * @see Joint::ActuatorToJointDifferential
  * @see BuildHebiCommandVector (local function in ui/main_window/arm.cpp)
  */
-inline double JointToActuatorDifferential(Name actuator, double roll,
-                                          double pitch) {
+inline double JointToActuatorDifferential(const Name& actuator,
+                                          const double& roll,
+                                          const double& pitch) {
     switch (actuator) {
 #if LIBRA_VERSION == 1
         case Name::kMA:
@@ -277,10 +273,8 @@ inline double JointToActuatorDifferential(Name actuator, double roll,
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns the default HEBI actuator names based on the `LIBRA_VERSION`
- *        the app is built with.
- *
- * @return std::vector<std::string> Ordered list of HEBI actuators
+ * @brief Default HEBI actuator names, in order, for the `LIBRA_VERSION` the app
+ *        is built with.
  */
 inline std::vector<std::string> GetHebiDefault() {
     std::vector<std::string> names;

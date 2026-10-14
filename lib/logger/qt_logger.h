@@ -27,12 +27,12 @@
 class QtLogger : public Logger {
   public:
     /**
-     * @brief Implementation constructor.
+     * @brief Standard constructor.
      *
      * @param parent_name Name of parent object
      * @param debug_mode Whether to enable DEBUG messages at start
      */
-    explicit QtLogger(std::string parent_name, bool debug_mode)
+    explicit QtLogger(std::string parent_name, const bool& debug_mode)
         : parent_name_(std::move(parent_name)), debug_mode_(debug_mode) {}
 
     // --- Overrides ---
@@ -67,7 +67,7 @@ class QtLogger : public Logger {
      * @param msg Log message
      */
     [[nodiscard]] std::string Format(const std::string& level,
-                                     const std::string& msg) {
+                                     const std::string& msg) const {
         auto now = std::chrono::system_clock::now().time_since_epoch();
         auto secs = std::chrono::duration_cast<std::chrono::seconds>(now).count();
         auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now)
@@ -82,6 +82,8 @@ class QtLogger : public Logger {
 
         return oss.str();
     }
+
+    // --- Data Members ---
 
     std::string parent_name_;
     bool debug_mode_;

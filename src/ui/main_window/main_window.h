@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   main_window.h
- * @brief  Main app window header file.
+ * @brief  Main app window; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -81,8 +81,8 @@ class MainWindow : public QMainWindow {
 
     void HandleActuatorFeedback(
         const std::unordered_map<Joint::Name, double>& feedbacks,
-        const Actuator::Feedback feedback_type);
-    void HandleActuatorStatus(const QString& status, const Actuator::Type type);
+        const Actuator::Feedback& feedback_type);
+    void HandleActuatorStatus(const QString& status, const Actuator::Type& type);
 
 #if LIBRA_VERSION == 2
     void HandleMotionModeChanged(const bool& cw_primary);

@@ -48,11 +48,11 @@ class WaterController : public GenericSerialDevice {
   private:
     // --- Helper Functions ---
 
-    void ClearCommand(Water::Side side = Water::Side::kAll);
+    void ClearCommand(const Water::Side& side = Water::Side::kAll);
     void ModifyCommand(uint8_t new_bits);
     void MapTorqueToCommand(const double& torque_dir);
 
-    void SendStatus(Water::Side side);
+    void SendStatus(const Water::Side& side);
 
     // --- Data Members ---
 

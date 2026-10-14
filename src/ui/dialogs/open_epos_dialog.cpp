@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   open_epos_dialog.cpp
- * @brief  Open EPOS device window implementation file.
+ * @brief  Open EPOS device window; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -19,7 +19,6 @@
 #include "util.h"
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Class Management
  * !Main Window
  * !Getters & Setters
@@ -32,10 +31,6 @@ constexpr int kMaxonTrue = 1;   // In general Maxon code = TRUE
 constexpr int kMaxonFalse = 0;  // In general Maxon code = FALSE
 constexpr uint kMaxCharBufSize = 100;
 constexpr uint kTimeout = 100;  // ms
-
-//------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -108,7 +103,7 @@ OpenEposDialog::~OpenEposDialog() {
  * @brief Event handler for "Device" combo box selection.
  *        Populates the "Protocol" combo box and enables it.
  *
- * @param sel The device name selected by the user
+ * @param sel Device name selected by the user
  */
 void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     // Save selected device name
@@ -179,7 +174,7 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
  * @brief Event handler for "Protocol" combo box selection.
  *        Populates the "Interface" combo box and enables it.
  *
- * @param sel The protocol name selected by the user
+ * @param sel Protocol name selected by the user
  */
 void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     // Save selected protocol name
@@ -248,7 +243,7 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
  * @brief Event handler for "Interface" combo box selection.
  *        Populates the "Port" combo box and enables it.
  *
- * @param sel The interface name selected by the user
+ * @param sel Interface name selected by the user
  */
 void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     // Save selected interface name
@@ -314,7 +309,7 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
  * @brief Event handler for "Port" combo box selection.
  *        Populates the "Baud Rate" combo box and enables it.
  *
- * @param sel The port name selected by the user
+ * @param sel Port name selected by the user
  */
 void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     // Save selected port name
@@ -378,7 +373,7 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
  * @brief Event handler for "Baud Rate" combo box selection.
  *        Enables the "Connect" button.
  *
- * @param sel The baud rate selected by the user
+ * @param sel Baud rate selected by the user
  */
 void OpenEposDialog::on_cb_baud_rate_textActivated(const QString& sel) {
     // Save selected baud rate
@@ -413,10 +408,8 @@ void OpenEposDialog::on_pb_cancel_clicked() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns the necessary device parameters for opening a connection to
- *        the EPOS controller.
- *
- * @return EposDeviceParams Convenience struct grouping all device parameters
+ * @brief Gets the device parameters for opening a connection to the EPOS
+ *        controller.
  */
 EposDeviceParams OpenEposDialog::GetDeviceParams() {
     return std::move(params_);

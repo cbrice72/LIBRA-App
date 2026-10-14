@@ -11,7 +11,7 @@
 #include <array>
 
 // Other Library Headers
-// (none)
+//   (none)
 
 // Project Headers
 #include "generic_serial_device.h"
@@ -51,6 +51,8 @@ class ManipController : public GenericSerialDevice {
   private:
     // --- Helper Functions ---
 
+    // (none)
+
     // --- Data Members ---
 
     std::array<double, 3> current_pos_{0};
@@ -58,5 +60,5 @@ class ManipController : public GenericSerialDevice {
 
     std::array<int, 3> slow_direction_{0};
 
-    bool manip_correction_enabled_{true};
+    bool manip_correction_en_{true};
 };

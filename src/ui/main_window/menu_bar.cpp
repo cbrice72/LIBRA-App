@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   menu_bar.cpp
- * @brief  Main app window menu bar implementation file.
+ * @brief  Main app window menu bar; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -50,9 +50,12 @@ namespace {
 
 /**
  * @brief Queries a serial device for its ID by sending a single "?" character.
+ *
+ * @param port_info Serial port to query
+ * @param baud_rate Baud rate to use
  */
 QString QueryDeviceId(const QSerialPortInfo& port_info,
-                      qint32 baud_rate = QSerialPort::Baud115200) {
+                      const qint32& baud_rate = QSerialPort::Baud115200) {
     constexpr int kMaxRetries = 3;
     constexpr int kRetryDelayMs = 100;
 
@@ -103,8 +106,12 @@ QString QueryDeviceId(const QSerialPortInfo& port_info,
 }
 
 /**
- * @brief Attempts to auto-detect a serial port matching the requested ID.
- *        If not found, opens a dialog to allow the user to select a port.
+ * @brief Attempts to auto-detect a serial port matching the requested ID. If
+ *        not found, opens a dialog for the user to select a port.
+ *
+ * @param expected_id Device ID to look for
+ * @param dialog_label Label for the manual selection dialog
+ * @param parent Owning Qt widget
  */
 QString FindPortForDevice(const QString& expected_id,
                           const QString& dialog_label, QWidget* parent) {
@@ -176,7 +183,7 @@ void MainWindow::on_a_reset_window_size_triggered() {
  */
 void MainWindow::on_a_atc_update_bounds_triggered() {
     if (hebi_thread_ == nullptr) {
-        logger_->Warn("HEBI thread not available - cannot edit torque bounds");
+        logger_->Warn("Can't edit torque bounds; HEBI thread not available");
         return;
     }
 
@@ -196,12 +203,14 @@ void MainWindow::on_a_atc_update_bounds_triggered() {
 }
 
 /**
- * @brief TODO: documentation.
+ * @brief Event handler for "Automation/ATC" menu action "Ignore water level".
+ *        Toggles whether ATC auto-stops when a tank limit is reached.
  *
+ * @param checked Whether to ignore the water level (no auto-stop)
  */
 void MainWindow::on_a_atc_ignore_water_level_triggered(bool checked) {
-    logger_->Debug(std::string(checked ? "Enabling" : "Disabling")
-                   + " ATC auto-stop on tank limit reached");
+    logger_->Info(std::string(checked ? "Disabling" : "Enabling")
+                  + " ATC auto-stop on tank limit reached");
 
     ignore_water_level_ = checked;
 }
@@ -296,7 +305,7 @@ void MainWindow::on_a_epos_connect_triggered() {
             auto params = dialog.GetDeviceParams();
 
             if (!params.is_set) {
-                logger_->Error("Parameter selection incomplete!");
+                logger_->Warn("Parameter selection incomplete");
                 return;
             }
 
@@ -332,7 +341,7 @@ void MainWindow::on_a_epos_connect_triggered() {
  */
 void MainWindow::on_a_hebi_load_gains_triggered() {
     if (hebi_thread_ == nullptr) {
-        logger_->Warn("HEBI thread not available - cannot load gains");
+        logger_->Warn("Can't load gains; HEBI thread not available");
         return;
     }
 
@@ -355,7 +364,7 @@ void MainWindow::on_a_hebi_load_gains_triggered() {
  */
 void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
     if (checked) {
-        logger_->Debug("Overriding HEBI position limits");
+        logger_->Info("Overriding HEBI position limits");
 
         // Set override limits (full circle in either direction)
         // NOLINTBEGIN(readability-magic-numbers)
@@ -380,7 +389,7 @@ void MainWindow::on_a_hebi_override_limits_toggled(bool checked) {
 #endif
         // NOLINTEND(readability-magic-numbers)
     } else {
-        logger_->Debug("Restoring HEBI position limits");
+        logger_->Info("Restoring HEBI position limits");
 
         // Restore original limits
         ui_->hs_arm_pitch->setRange(original_limits_.pitch_min,
@@ -435,7 +444,7 @@ void MainWindow::on_a_manip_connect_triggered() {
         port_name = dialog.GetSelectedPortName();
 
         if (port_name.isEmpty()) {
-            logger_->Error("No port selected!");
+            logger_->Warn("No port selected");
             return;
         }
     } else {

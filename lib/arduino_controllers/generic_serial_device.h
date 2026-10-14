@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   generic_serial_device.h
- * @brief  Abstract control class for Arduino serial devices; header-only.
+ * @brief  Abstract control class for Arduino serial devices; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -38,19 +38,19 @@ class GenericSerialDevice : public QObject {
 
   public:
     GenericSerialDevice() = delete;
-    explicit GenericSerialDevice(QObject* parent, bool debug_mode,
+    explicit GenericSerialDevice(QObject* parent, const bool& debug_mode,
                                  const std::string& device_name);
     ~GenericSerialDevice() override;
 
     bool IsOpen() const;
-    QString PortName() const;
+    QString GetPortName() const;
 
   public slots:
 
     void SetDebugMode(const bool& enabled) {
         debug_mode_ = enabled;
         logger_->SetDebugMode(debug_mode_);
-    };
+    }
 
     // --- Device Commands ---
 

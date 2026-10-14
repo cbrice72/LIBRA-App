@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   camera_manager.h
- * @brief  QMediaCaptureSession convenience class header file.
+ * @brief  QMediaCaptureSession convenience class; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -38,14 +38,15 @@ class CameraManager : public QObject
     // NOLINTEND
 
   public:
-    CameraManager(QString id, QVideoWidget* viewfinder,
-                  const bool& debug_mode = false, QObject* parent = nullptr);
-    ~CameraManager();
+    explicit CameraManager(QString id, QVideoWidget* viewfinder,
+                           const bool& debug_mode = false,
+                           QObject* parent = nullptr);
+    ~CameraManager() override;
 
     void SetDebugMode(const bool& enabled) {
         debug_mode_ = enabled;
         logger_->SetDebugMode(debug_mode_);
-    };
+    }
 
     void Start();
     void Stop();
@@ -53,24 +54,12 @@ class CameraManager : public QObject
     bool Record();
 
 #ifdef BUILD_WITH_ROS2
-    // --- ROS2 Frame Transform Getters/Setters ---
+    // --- ROS2 Frame Transform Getters & Setters ---
 
-    // TODO: move these to .cpp and add Doxygen comments
-    void FlipHorizontal(bool enabled) {
-        flip_horizontal_ = enabled;
-    }
-
-    void FlipVertical(bool enabled) {
-        flip_vertical = enabled;
-    }
-
-    bool IsHorizontalFlipped() const {
-        return flip_horizontal_;
-    }
-
-    bool IsVerticalFlipped() const {
-        return flip_vertical;
-    }
+    void FlipHorizontal(const bool& enabled);
+    void FlipVertical(const bool& enabled);
+    [[nodiscard]] bool IsHorizontalFlipped() const;
+    [[nodiscard]] bool IsVerticalFlipped() const;
 #endif
 
   private:
@@ -114,7 +103,7 @@ class CameraManager : public QObject
     bool ros2_connected_{false};
 
     bool flip_horizontal_{false};
-    bool flip_vertical{false};
+    bool flip_vertical_{false};
 
     std::atomic<bool> capture_requested_{false};
 

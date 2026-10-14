@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   main_window.cpp
- * @brief  Main app window implementation file.
+ * @brief  Main app window; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -42,7 +42,7 @@ namespace {
  * @brief Fully deletes a widget or layout from the user interface.
  *
  * @tparam T Any visual QObject type
- * @param widget The widget or layout to be removed
+ * @param element Widget or layout to remove
  */
 template<typename T>
 void RemoveUiElement(T*& element) {
@@ -168,7 +168,7 @@ MainWindow::~MainWindow() {
  * @brief Based on LIBRA version, disables unneeded widgets and connects those
  *        with complementary functions.
  *
- * @note Only used in constructor - placed in own function to improve readability.
+ * @note Only used in constructor; separate function for readability.
  */
 void MainWindow::ConfigureUi() {
     ui_->a_debug_mode->setChecked(debug_mode_);
@@ -369,7 +369,7 @@ void MainWindow::ConfigureUi() {
  *        corresponding joint names (`Joint`) and feedback types
  *        (`Actuator::Feedback`).
  *
- * @note Only used in constructor - placed in own function to improve readability.
+ * @note Only used in constructor; separate function for readability.
  *
  * @see Joint::Name Actuator::Feedback HandleActuatorFeedback
  */
@@ -426,7 +426,7 @@ void MainWindow::InitializeFeedbackElementMap() {
 /**
  * @brief Sets up child objects.
  *
- * @note Only used in constructor - placed in own function to improve readability.
+ * @note Only used in constructor; separate function for readability.
  */
 void MainWindow::InitializeDeviceManagers() {
     // ========== Water Controller ==========
@@ -520,15 +520,15 @@ void MainWindow::InitializeDeviceManagers() {
 /**
  * @brief Sets up signal and slot connections to child threads and spins them up.
  *
- * @note In Qt, thread management for subclassed QThreads generally has 4 steps:
- *   1) Initialize a new QThread object as a child of MainWindow.
- *   2) Register its signals and slots to send/receive data to/from MainWindow.
- *   3) Register its exit signal to its own destruction slot.
- *   4) Spin it off.
- * If the thread loops continuously, there is a fifth step:
- *   5) In the MainWindow destructor, interrupt or forcibly stop the QThread.
+ * @note In Qt, managing a subclassed QThread generally takes 4 steps:
+ *         1) Create the QThread object as a child of MainWindow.
+ *         2) Connect its signals/slots to send/receive data to/from MainWindow.
+ *         3) Connect its exit signal to its own destruction slot.
+ *         4) Spin it off.
+ *       A continuously looping thread needs a fifth step:
+ *         5) In the MainWindow destructor, interrupt or forcibly stop it.
  *
- * @note Only used in constructor - placed in own function to improve readability.
+ * @note Only used in constructor; separate function for readability.
  */
 void MainWindow::InitializeThreads() {
     // ========== HEBI Thread ==========
@@ -658,7 +658,7 @@ void MainWindow::InitializeThreads() {
 }
 
 /**
- * @brief Update UI according to connection status of all actuator types.
+ * @brief Updates UI according to connection status of all actuator types.
  */
 void MainWindow::UpdateActuatorControls() {
     // Evaluate connection statuses of all actuators
@@ -678,8 +678,8 @@ void MainWindow::UpdateActuatorControls() {
 }
 
 /**
- * @brief Update UI according to connection status of components related to
- *        automatic torque compensation (ATC) mechanism.
+ * @brief Updates UI according to connection status of components used by
+ *        automatic torque compensation (ATC).
  */
 void MainWindow::UpdateATCControls() {
     // Evaluate connection statuses of all components
@@ -748,9 +748,9 @@ void MainWindow::HandleManipConnChanged(const bool& connected) {
 /**
  * @brief Sorts important actuator information into individual UI elements.
  *
- * @param base Position of the pitch-correction servo.
- * @param pan Position of the manipulator yaw servo.
- * @param tilt Position of the manipulator pitch servo.
+ * @param base Position of pitch-correction servo
+ * @param pan Position of manipulator yaw servo
+ * @param tilt Position of manipulator pitch servo
  */
 void MainWindow::HandleManipPosition(const double& base, const double& pan,
                                      const double& tilt) {
@@ -787,8 +787,8 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
  *        - Primary visual feedback: formatted status string in "WATER" GroupBox
  *        - Secondary visual feedback: updates animation state of TankWidget(s)
  *
- * @param side The side of the fluid system
- * @param state The flow state of the fluid system
+ * @param side Fluid system side
+ * @param state Fluid system flow state
  */
 void MainWindow::HandleWaterStatus(const Water::Side& side,
                                    const Water::State& state) {
@@ -914,7 +914,7 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
  * @brief Sorts important actuator information into individual UI elements.
  *
  * @param feedbacks Unordered map of joint(s) and their corresponding feedback
- * @param feedback_type The type of primary feedback provided
+ * @param feedback_type Type of primary feedback provided
  *
  * @note To improve ease of use, LIBRA-I arm actuator angles (J1, J2, J3) in the
  *       UI are shown relative to a forward-facing perspective directly behind
@@ -923,7 +923,7 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
  */
 void MainWindow::HandleActuatorFeedback(
     const std::unordered_map<Joint::Name, double>& feedbacks,
-    const Actuator::Feedback feedback_type) {
+    const Actuator::Feedback& feedback_type) {
     bool initialized = false;
 
     for (const auto& feedback : feedbacks) {
@@ -957,10 +957,10 @@ void MainWindow::HandleActuatorFeedback(
  * @brief Prints miscellaneous actuator information at the bottom of the UI.
  *
  * @param status Newline-delimited status info
- * @param type The actuator type, for updating the corresponding UI element
+ * @param type Actuator type, for updating the matching UI element
  */
 void MainWindow::HandleActuatorStatus(const QString& status,
-                                      const Actuator::Type type) {
+                                      const Actuator::Type& type) {
     switch (type) {
         case Actuator::Type::kHebi:
             ui_->l_hebi_status->setText(status);
@@ -1033,7 +1033,7 @@ void MainWindow::HandleCalibrationFinished(const bool& success) {
 #endif
 
 /**
- * @brief Throws a pop-up error box upon receiving an error signal from a thread.
+ * @brief Shows a pop-up error box for an error signal from a thread.
  *
  * @param err Fatal error message from a component
  */

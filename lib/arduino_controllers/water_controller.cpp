@@ -14,10 +14,10 @@
 #include <cmath>
 
 // Other Library Headers
-// (none)
+//   (none)
 
 // Project Headers
-// (none)
+//   (none)
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
@@ -51,11 +51,10 @@ constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
 namespace {
 
 /**
- * @brief Stringifies the lower 4 bits of a byte array for printing, since Qt
- *        doesn't seem to support this natively.
+ * @brief Stringifies the lower 4 bits of a byte array for printing (Qt doesn't
+ *        seem to support this natively).
  *
- * @param bytes The QByteArray to convert
- * @return std::string String representation of the lower 4 bits
+ * @param bytes Byte array to convert
  */
 std::string BytesToStr(const QByteArray& bytes) {
     std::string str("");
@@ -108,9 +107,9 @@ void WaterController::OnUpdate() {
 /**
  * @brief Clears the current water command.
  *
- * @param side The side of the fluid system to clear
+ * @param side Fluid system side to clear
  */
-void WaterController::ClearCommand(Water::Side side) {
+void WaterController::ClearCommand(const Water::Side& side) {
     switch (side) {
         case Water::Side::kA:
             water_cmd_[0] &= static_cast<uint8_t>(~(kAIn | kAOut));
@@ -129,7 +128,7 @@ void WaterController::ClearCommand(Water::Side side) {
  * @brief Modifies the current water command. Automatically enforces mutual
  *        exclusivity between commands to the same fluid system side.
  *
- * @param new_bits The bit(s) corresponding to the new command(s)
+ * @param new_bits Bit(s) for the new command(s)
  *
  * @see kAIn kBIn kAOut kBOut
  */
@@ -155,7 +154,7 @@ void WaterController::ModifyCommand(uint8_t new_bits) {
  *
  * @note Command bit field "0b1234" -> 1: A_IN | 2: B_IN | 3: A_OUT | 4: B_OUT.
  *
- * @see hebi_thread::run
+ * @see HebiThread::run
  */
 void WaterController::MapTorqueToCommand(const double& torque_dir) {
     if (!auto_comp_en_) {
@@ -214,9 +213,9 @@ void WaterController::MapTorqueToCommand(const double& torque_dir) {
  * @brief Parses the active water command based on the specified side and
  *        reports its status.
  *
- * @param side The side of the fluid system to check
+ * @param side Fluid system side to check
  */
-void WaterController::SendStatus(Water::Side side) {
+void WaterController::SendStatus(const Water::Side& side) {
     auto state = Water::State::kStopped;
 
     if (serial_port_->isOpen() && !water_cmd_.isEmpty()) {
@@ -267,8 +266,8 @@ void WaterController::EnableAutoTorqueComp(const bool& enabled) {
     ClearCommand();  // reset the previous command when switching modes
     auto_comp_en_ = enabled;
 
-    logger_->Debug("ATC - Automatic torque compensation "
-                   + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Info("Automatic torque compensation "
+                  + std::string(enabled ? "enabled" : "disabled"));
 }
 
 /**
@@ -293,13 +292,13 @@ void WaterController::UpdateTorqueFeedback(
 /**
  * @brief Forces the state of a specific side of the fluid system.
  *
- * @param side The side to command
- * @param Water::State The state to force
+ * @param side Side to command
+ * @param state State to force
  */
 void WaterController::ForceCommand(const Water::Side& side,
                                    const Water::State& state) {
     if (!serial_port_->isOpen()) {
-        logger_->Error("Cannot force command; not connected");
+        emit ErrorThrown("Water - Can't force command; not connected!");
         return;
     }
 
@@ -322,6 +321,6 @@ void WaterController::ForceCommand(const Water::Side& side,
         ModifyCommand(mask);
     }
 
-    logger_->Debug("Forced command to " + BytesToStr(water_cmd_)
-                   + " (A_IN | B_IN | A_OUT | B_OUT)");
+    logger_->Info("Forced command to " + BytesToStr(water_cmd_)
+                  + " (A_IN | B_IN | A_OUT | B_OUT)");
 }

@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   open_epos_dialog.h
- * @brief  Open EPOS device window header file.
+ * @brief  Open EPOS device window; header file.
  *
  * @author Christian Brice
  ******************************************************************************/

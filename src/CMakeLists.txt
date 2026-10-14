@@ -19,11 +19,16 @@ add_subdirectory(widgets) # WIDGET_SOURCE
 
 # Validation
 if(NOT DEFINED UI_SOURCE OR NOT DEFINED WIDGET_SOURCE)
-    message(FATAL_ERROR "One or more required source variables are undefined! Check if subdirectories were built correctly")
+    message(
+        FATAL_ERROR
+            "One or more required source variables are undefined! Check if subdirectories were built correctly"
+    )
 endif()
 
 set(PROJECT_SOURCE
-    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp ${UI_SOURCE} ${WIDGET_SOURCE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+    ${UI_SOURCE}
+    ${WIDGET_SOURCE}
 )
 
 # ========================= LIBRA APP GUI =========================
@@ -32,7 +37,11 @@ set(PROJECT_SOURCE
 qt_add_executable(libra_app_qt MANUAL_FINALIZATION ${PROJECT_SOURCE})
 
 # Ensure it has access to the necessary headers
-target_include_directories(libra_app_qt PRIVATE ${CMAKE_SOURCE_DIR}/src ${RESOURCE_DIR})
+target_include_directories(
+    libra_app_qt
+    PRIVATE ${CMAKE_SOURCE_DIR}/src
+            ${RESOURCE_DIR}
+)
 
 # Tell the linker which libraries to link against
 set(LIBRA_LIBRARIES arduino_manager camera_manager common logger util)
@@ -64,7 +73,7 @@ target_link_libraries(
 )
 
 # Specify platform-specific properties
-# ~~~
+# cmake-format: off
 set_target_properties(
     libra_app_qt
     PROPERTIES OUTPUT_NAME "libra_app"
@@ -75,7 +84,7 @@ set_target_properties(
                MACOSX_BUNDLE TRUE
                WIN32_EXECUTABLE TRUE
 )
-# ~~~
+# cmake-format: on
 
 # ~~~
 # Define GUI target properties for Android with Qt 6 as:
@@ -94,7 +103,8 @@ install(
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-add_custom_command( # copy runtime config files to output dir
+add_custom_command(
+    # copy runtime config files to output dir
     TARGET libra_app_qt
     POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}

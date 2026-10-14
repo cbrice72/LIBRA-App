@@ -25,7 +25,6 @@
  *
  * @param argc Argument count
  * @param argv Argument vector
- * @return int The `exit()` code after the application exits
  */
 int main(int argc, char* argv[]) {
 #ifdef BUILD_WITH_ROS2

@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   camera_manager.cpp
- * @brief  QMediaCaptureSession convenience class implementation file.
+ * @brief  QMediaCaptureSession convenience class; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -12,8 +12,7 @@
 //   (none)
 
 // Other Library Headers
-#include <QDateTime>  // Qt::Core
-#include <QDir>       // Qt::Core
+#include <QDir>  // Qt::Core
 #ifdef BUILD_WITH_ROS2
 # include <cv_bridge/cv_bridge.h>  // OpenCV
 # include <opencv2/imgcodecs.hpp>  // OpenCV
@@ -21,6 +20,7 @@
 #endif
 
 // Project Headers
+#include "util.h"
 #ifdef BUILD_WITH_ROS2
 # include "ros2_logger.h"
 #else
@@ -32,9 +32,16 @@
  * !Class Management
  * !Class Helpers
  * !Camera Commands
+ * !Getters & Setters
  */
 
+// Timing
+
 constexpr int kWaitForTimeout = 3000;  // ms
+#ifdef BUILD_WITH_ROS2
+constexpr int kRos2SpinIntervalMs = 10;            // ms (100 Hz)
+constexpr int kRos2ConnectivityIntervalMs = 5000;  // ms (0.2 Hz)
+#endif
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -43,22 +50,15 @@ constexpr int kWaitForTimeout = 3000;  // ms
 namespace {
 
 #ifdef BUILD_WITH_ROS2
+/**
+ * @brief Whether a camera device is an Intel RealSense (by its description).
+ *
+ * @param device Camera device to check
+ */
 bool IsRealSenseCamera(const QCameraDevice& device) {
     return device.description().toLower().contains("realsense");
 }
 #endif
-
-/**
- * @brief Provides a filename-safe string of the current date and time.
- *
- * @return std::string Date-time string in the format "yyyy-MM-ddTHH-mm-ss"
- */
-std::string GetDateTimeStr() {
-    auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
-    dts.replace(":", "-");         // replace colons (invalid in filenames)
-    dts = dts.section('.', 0, 0);  // remove milliseconds
-    return dts.toStdString();
-}
 
 }  // namespace
 
@@ -69,10 +69,10 @@ std::string GetDateTimeStr() {
 /**
  * @brief Standard constructor.
  *
- * @param id Camera location (e.g., `/dev/video0`); will be used to find the device
- * @param viewfinder The QVideoWidget object to display the camera feeed in
+ * @param id Camera location (e.g., `/dev/video0`), used to find the device
+ * @param viewfinder QVideoWidget to display the camera feed in
  * @param debug_mode Whether to output verbose debug text
- * @param parent Owning Qt widget (default: nullptr)
+ * @param parent Owning Qt widget
  */
 CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
                              const bool& debug_mode, QObject* parent)
@@ -112,7 +112,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         if (camera_device.id() == id_) {
             // NOTE: We don't immediately initialize the QCamera object `camera_`
             //       here since, if it's a RealSense RGB-D camera, we'd rather
-            //       let a ROS2 realsense2_camera node do all the work.
+            //       let a ROS2 realsense2_camera node do all the work
             selected_camera = camera_device;
             break;
         }
@@ -190,7 +190,10 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 
     // Set output format for video
     QMediaFormat format(QMediaFormat::MPEG4);
-    // format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
+    // NOTE: Setting an audio codec gave me issues, so it's disabled for now
+    /*
+    format.setAudioCodec(QMediaFormat::AudioCodec::MP3);
+    */
     format.setVideoCodec(QMediaFormat::VideoCodec::MPEG4);
 
     recorder_->setMediaFormat(format);
@@ -202,7 +205,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
 };
 
 /**
- * @brief Standard desctructor.
+ * @brief Standard destructor.
  */
 CameraManager::~CameraManager() {
     // Stop camera
@@ -232,12 +235,8 @@ CameraManager::~CameraManager() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Convenience function for checking camera status regardless of whether
- *        it was instantiated through the owned QCamera object (`camera_`) or
- *        delegated to a separate process running the ROS2 node.
- *
- * @return true Camera is running
- * @return false Camera is not initialized
+ * @brief Whether the camera is running, either as the owned QCamera
+ *        (`camera_`) or as a separate ROS2 node process.
  */
 bool CameraManager::CameraIsActive() {
     return (use_ros2_node_) ? ros2_connected_ : camera_ != nullptr;
@@ -245,7 +244,8 @@ bool CameraManager::CameraIsActive() {
 
 #ifdef BUILD_WITH_ROS2
 /**
- * @brief TODO: documentation.
+ * @brief Checks for publishers on the RGB image topic and logs changes in
+ *        connection.
  */
 void CameraManager::CheckRos2Connectivity() {
     // TODO: the following line will need to change if I ever implement
@@ -267,18 +267,17 @@ void CameraManager::CheckRos2Connectivity() {
 /**
  * @brief Applies the current flip states to an image.
  *
- * @param input The input image to transform
- * @return The transformed image
+ * @param input Image to transform
  */
 cv::Mat CameraManager::TransformImage(const cv::Mat& input) const {
-    if (!flip_horizontal_ && !flip_vertical)
+    if (!flip_horizontal_ && !flip_vertical_)
         return input;
     cv::Mat result;
-    if (flip_horizontal_ && flip_vertical) {
+    if (flip_horizontal_ && flip_vertical_) {
         cv::flip(input, result, -1);
     } else if (flip_horizontal_) {
         cv::flip(input, result, 1);
-    } else if (flip_vertical) {
+    } else if (flip_vertical_) {
         cv::flip(input, result, 0);
     }
     return result;
@@ -367,18 +366,19 @@ void CameraManager::Start() {
         // (NOTE: This is useful for triggering ROS2 callbacks without blocking
         //        the Qt event loop)
         spin_timer_ = new QTimer(this);
-        connect(spin_timer_, &QTimer::timeout, [this]() {
-            if (rclcpp::ok()) {
-                rclcpp::spin_some(this->get_node_base_interface());
-            }
-        });
-        spin_timer_->start(10);  // ms (100 Hz)
+        connect(spin_timer_, &QTimer::timeout,  // spin ROS2 callbacks
+                this, [this]() {
+                    if (rclcpp::ok()) {
+                        rclcpp::spin_some(this->get_node_base_interface());
+                    }
+                });
+        spin_timer_->start(kRos2SpinIntervalMs);
 
         // Set up periodic connectivity check
         connectivity_timer_ = new QTimer(this);
-        connect(connectivity_timer_, &QTimer::timeout,
-                [this]() { CheckRos2Connectivity(); });
-        connectivity_timer_->start(5000);  // ms (0.2 Hz)
+        connect(connectivity_timer_, &QTimer::timeout,  // check publishers
+                this, [this]() { CheckRos2Connectivity(); });
+        connectivity_timer_->start(kRos2ConnectivityIntervalMs);
 #else
         logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
                        "shouldn't be able to get here!");
@@ -437,7 +437,7 @@ void CameraManager::Capture() {
         return;
     }
 
-    image_filename_ = output_dir_ + "img/" + GetDateTimeStr() + ".jpg";
+    image_filename_ = output_dir_ + "img/" + util::GetDateTimeStr() + ".jpg";
 
     // Capture a single frame
     if (use_ros2_node_) {
@@ -468,8 +468,7 @@ void CameraManager::Capture() {
 /**
  * @brief Toggles video recording of the current feed.
  *
- * @return true Recording is active
- * @return false Not recording
+ * @note Returns true if recording is now active.
  */
 bool CameraManager::Record() {
     if (!CameraIsActive()) {
@@ -479,7 +478,8 @@ bool CameraManager::Record() {
     }
 
     if (!is_recording_.load()) {
-        video_filename_ = output_dir_ + "vid/" + GetDateTimeStr() + ".mp4";
+        video_filename_ = output_dir_ + "vid/" + util::GetDateTimeStr()
+                          + ".mp4";
 
         // Start recording
         if (use_ros2_node_) {
@@ -535,3 +535,41 @@ bool CameraManager::Record() {
 
     return is_recording_.load();
 }
+
+//------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+#ifdef BUILD_WITH_ROS2
+/**
+ * @brief Sets horizontal flipping of the ROS2 image feed.
+ *
+ * @param enabled Whether to flip horizontally
+ */
+void CameraManager::FlipHorizontal(const bool& enabled) {
+    flip_horizontal_ = enabled;
+}
+
+/**
+ * @brief Sets vertical flipping of the ROS2 image feed.
+ *
+ * @param enabled Whether to flip vertically
+ */
+void CameraManager::FlipVertical(const bool& enabled) {
+    flip_vertical_ = enabled;
+}
+
+/**
+ * @brief Whether the ROS2 image feed is flipped horizontally.
+ */
+bool CameraManager::IsHorizontalFlipped() const {
+    return flip_horizontal_;
+}
+
+/**
+ * @brief Whether the ROS2 image feed is flipped vertically.
+ */
+bool CameraManager::IsVerticalFlipped() const {
+    return flip_vertical_;
+}
+#endif

@@ -8,11 +8,13 @@
 # ========================= PUBLIC OPTIONS =========================
 
 # The LIBRA robot this app will control (string option)
+# cmake-format: off
 set(LIBRA_VERSION
     1
     CACHE STRING
     "Which prototype to build for: 1 = LIBRA-I (HEBI x5), 2 = LIBRA-II (EPOS x1 + HEBI x1)"
 )
+# cmake-format: on
 set_property(CACHE LIBRA_VERSION PROPERTY STRINGS 1 2)
 message(STATUS "Selected LIBRA version: ${LIBRA_VERSION}")
 

@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   tank_widget.cpp
- * @brief  Fluid tank visualization implementation file.
+ * @brief  Fluid tank visualization; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -18,7 +18,6 @@
 //   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Class Management
  * !Class Helpers
  * !Getters & Setters
@@ -28,7 +27,7 @@
 
 // Widget Animation
 
-constexpr int kAnimTime = 1000 / 30;  // 1 s -> 1000 ms / 30 FPS animation
+constexpr int kAnimTime = 1000 / 30;  // ms (30 FPS)
 
 // Per-setup Fluid Flow Constants
 #if LIBRA_VERSION == 1
@@ -43,19 +42,7 @@ static constexpr double kCapacity = 38;          // L
 static constexpr double kFillRate = 0.129;   // L/s
 static constexpr double kDrainRate = 0.061;  // L/s
 static constexpr double kCapacity = 19;      // L
-
-/*
-// - 3L + 2*6L + 2*10L
-
-static constexpr double kFillRate = ???;   // L/s
-static constexpr double kDrainRate = ???;  // L/s
-static constexpr double kCapacity = 35;    // L
-*/
 #endif
-
-//------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -63,12 +50,12 @@ static constexpr double kCapacity = 35;    // L
 
 /**
  * @brief Standard constructor.
+ *
+ * @param parent Owning Qt widget
  */
 TankWidget::TankWidget(QWidget* parent)
     : QWidget(parent),
       animation_timer_(new QTimer(this)),
-      level_(0.0),
-      state_(Water::State::kStopped),
       fill_rate_(kFillRate),
       drain_rate_(kDrainRate) {
     // Configure widget appearance
@@ -143,18 +130,14 @@ void TankWidget::UpdateAnimation() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns current fluid level.
- *
- * @return double Current fluid level as a fraction in the range [0.0, 1.0].
+ * @brief Gets current fluid level, as a fraction in [0.0, 1.0].
  */
 double TankWidget::GetLevel() const {
     return level_;
 }
 
 /**
- * @brief Returns current fluid volume.
- *
- * @return double Current fluid volume (in L).
+ * @brief Gets current fluid volume (L).
  */
 double TankWidget::GetVolume() const {
     return level_ * kCapacity;
@@ -187,11 +170,11 @@ void TankWidget::OverrideLevel(double new_level) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Controls the animation timer to change the level of the tank.
+ * @brief Controls the animation timer to change the tank's level.
  *
- * @param state
+ * @param state New fluid system state
  */
-void TankWidget::UpdateState(Water::State state) {
+void TankWidget::UpdateState(const Water::State& state) {
     // Prevent re-triggering animation if already at limits
     if ((state == Water::State::kDraining && qFuzzyCompare(level_, 0.0))
         || (state == Water::State::kFilling && qFuzzyCompare(level_, 1.0))) {
@@ -225,7 +208,7 @@ void TankWidget::UpdateState(Water::State state) {
  * @note Arduino provides flow rate in mL/s, but TankWidget uses L/s since its
  *       capacity is measured in L. This conversion is handled internally.
  */
-void TankWidget::UpdateFlowRate(double flow) {
+void TankWidget::UpdateFlowRate(const double& flow) {
     if (flow > 0.0) {
         // Filling: use the measured rate; no drain reading right now so reset it
         fill_rate_ = flow / 1000.0;  // mL/s -> L/s

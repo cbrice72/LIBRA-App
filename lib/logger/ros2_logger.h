@@ -9,6 +9,7 @@
 
 // C++ Standard Library Headers
 #include <iostream>
+#include <utility>
 
 // Other Library Headers
 #include <rclcpp/logger.hpp>  // ROS2 Core
@@ -24,13 +25,13 @@
 class Ros2Logger : public Logger {
   public:
     /**
-     * @brief Implementation class constructor.
+     * @brief Standard constructor.
      *
      * @param logger Owning node's ROS2 logging object
      * @param debug_mode Whether to initialize the logger level at DEBUG or INFO
      */
-    explicit Ros2Logger(rclcpp::Logger logger, bool debug_mode)
-        : logger_(logger) {
+    explicit Ros2Logger(rclcpp::Logger logger, const bool& debug_mode)
+        : logger_(std::move(logger)) {
         SetDebugMode(debug_mode);
     }
 
@@ -66,5 +67,7 @@ class Ros2Logger : public Logger {
     }
 
   private:
+    // --- Data Members ---
+
     rclcpp::Logger logger_;
 };

@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   open_serial_dialog.h
- * @brief  Serial (USB) selection dialog box header file.
+ * @brief  Serial (USB) selection dialog box; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -34,7 +34,7 @@ class OpenSerialDialog : public QDialog {
     explicit OpenSerialDialog(QWidget* parent = nullptr,
                               QString device_to_prompt = "Serial",
                               QString wanted_device_desc = "");
-    ~OpenSerialDialog();
+    ~OpenSerialDialog() override;
 
     QString GetSelectedPortName();  // has to be public so MainWindow can access it
 

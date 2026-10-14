@@ -8,14 +8,17 @@
 # ========================= VALIDATION =========================
 
 if(NOT DEFINED ENV{AMENT_PREFIX_PATH})
-    message(FATAL_ERROR
-        "AMENT_PREFIX_PATH is not set; ROS2 environment was not sourced.\n"
-        "Run: source /opt/ros/<distro>/setup.bash"
+    message(
+        FATAL_ERROR
+            "AMENT_PREFIX_PATH is not set; ROS2 environment was not sourced.\n"
+            "Run: source /opt/ros/<distro>/setup.bash"
     )
 endif()
 
 if(NOT "$ENV{ROS_VERSION}" STREQUAL "2")
-    message(FATAL_ERROR "ROS_VERSION is not 2 — no valid ROS2 installation found.")
+    message(
+        FATAL_ERROR "ROS_VERSION is not 2 — no valid ROS2 installation found."
+    )
 endif()
 
 # ========================= DEPENDENCIES =========================

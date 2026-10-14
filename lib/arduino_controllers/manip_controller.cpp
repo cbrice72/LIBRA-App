@@ -9,13 +9,13 @@
 #include "manip_controller.h"
 
 // C++ Standard Library Headers
-// (none)
+//   (none)
 
 // Other Library Headers
-// (none)
+//   (none)
 
 // Project Headers
-// (none)
+//   (none)
 
 /* --- TABLE OF CONTENTS ---
  * !Class Management
@@ -36,7 +36,7 @@ constexpr uint8_t kTilt = 2;
 //       we use known constants to recreate it here.
 constexpr double kManipSlowSpeed = 1.5;  // deg/s
 constexpr double kManipUpdateRate =
-    1000.0 / 500.0;  // Hz (Assuming 500ms update interval)
+    1000.0 / 500.0;  // Hz (assumes a 500 ms update interval)
 constexpr double kManipSlowMultiplier = kManipSlowSpeed / kManipUpdateRate;
 
 //------------------------------------------------------------------------------
@@ -70,15 +70,6 @@ void ManipController::OnUpdate() {
             current_pos_.at(i) += slow_direction_.at(i) * kManipSlowMultiplier;
 
             // If target has been reached, reset relevant variables
-            /*
-            // NOTE: There is no check for moving in a "negative"
-            //       direction because the servos do not take negative
-            //       values. This conversion is handled in the file
-            //       `arduino/servo_arduino/servo_arduino.ino`, function
-            //       `mapfloat()`.
-            if ((current_pos_.at(i) > target_pos_.at(i))
-                && (slow_direction_.at(i) == 1)) {
-            */
             if ((slow_direction_.at(i) == 1
                  && current_pos_.at(i) > target_pos_.at(i))
                 || (slow_direction_.at(i) == -1
@@ -113,10 +104,10 @@ void ManipController::OnUpdate() {
  * @param enabled Whether to enable pitch correction
  */
 void ManipController::EnablePitchCorrection(const bool& enabled) {
-    logger_->Debug(std::string(enabled ? "Enabling" : "Disabling")
-                   + " auto-correction for arm pitch");
+    logger_->Info(std::string(enabled ? "Enabling" : "Disabling")
+                  + " auto-correction for arm pitch");
 
-    manip_correction_enabled_ = enabled;
+    manip_correction_en_ = enabled;
 }
 
 /**
@@ -132,7 +123,7 @@ void ManipController::UpdatePitchFeedback(const double& pitch) {
     }
 
     // Do nothing if disabled
-    if (!manip_correction_enabled_) {
+    if (!manip_correction_en_) {
         return;
     }
 
@@ -142,14 +133,14 @@ void ManipController::UpdatePitchFeedback(const double& pitch) {
 /**
  * @brief Sets movement targets for manipulator servos #2 and #3.
  *
- * @param pan Target yaw angle
- * @param tilt Target pitch angle
+ * @param pan Target yaw angle (deg)
+ * @param tilt Target pitch angle (deg)
  * @param move_slow Whether to use a slower, more controlled trajectory
  */
 void ManipController::SetTarget(const double& pan, const double& tilt,
                                 const bool& move_slow) {
     if (!serial_port_->isOpen()) {
-        logger_->Error("Cannot set targets; not connected");
+        emit ErrorThrown("Manip - Can't set targets; not connected!");
         return;
     }
 
@@ -157,7 +148,7 @@ void ManipController::SetTarget(const double& pan, const double& tilt,
     target_pos_.at(kTilt) = -tilt;  // "+" should rotate "upwards"
 
     if (move_slow) {
-        // Only calculate the direction (position is set in UpdateManip)
+        // Only calculate the direction (position is set in OnUpdate)
         auto get_direction = [](double target, double current) {
             return (target > current) ? 1 : (target < current) ? -1 : 0;
         };
@@ -175,6 +166,6 @@ void ManipController::SetTarget(const double& pan, const double& tilt,
         current_pos_.at(kTilt) = tilt;
     }
 
-    logger_->Debug("Set targets to " + std::to_string(pan) + " "
-                   + std::to_string(tilt) + " deg");
+    logger_->Info("Set targets to " + std::to_string(pan) + " "
+                  + std::to_string(tilt) + " deg");
 }

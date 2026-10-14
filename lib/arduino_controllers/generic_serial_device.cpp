@@ -1,6 +1,7 @@
 /******************************************************************************
  * @file   generic_serial_device.cpp
- * @brief  Abstract control class for Arduino serial devices; implementation.
+ * @brief  Abstract control class for Arduino serial devices; implementation
+ *         file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -9,7 +10,7 @@
 #include "generic_serial_device.h"
 
 // C++ Standard Library Headers
-// (none)
+//   (none)
 
 // Other Library Headers
 #include <QSerialPortInfo>  // Qt::SerialPort
@@ -25,8 +26,8 @@
 
 // Thread Timer Intervals
 
-constexpr int kUpdateIntervalMs = 500;      // 0.5 sec (2 Hz)
-constexpr int kReconnectIntervalMs = 3000;  // 3 sec (0.33 Hz)
+constexpr int kUpdateIntervalMs = 500;      // ms (2 Hz)
+constexpr int kReconnectIntervalMs = 3000;  // ms (0.33 Hz)
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -37,9 +38,10 @@ constexpr int kReconnectIntervalMs = 3000;  // 3 sec (0.33 Hz)
  *
  * @param parent Owning Qt widget
  * @param debug_mode Whether to output verbose debug text
- * @param device_name The logging identifier for this device
+ * @param device_name Logging identifier for this device
  */
-GenericSerialDevice::GenericSerialDevice(QObject* parent, bool debug_mode,
+GenericSerialDevice::GenericSerialDevice(QObject* parent,
+                                         const bool& debug_mode,
                                          const std::string& device_name)
     : QObject(parent),
       debug_mode_(debug_mode),
@@ -58,9 +60,10 @@ GenericSerialDevice::GenericSerialDevice(QObject* parent, bool debug_mode,
     reconnect_timer_->setInterval(kReconnectIntervalMs);
 
     // Connect timer signals (internal)
-    connect(update_timer_, &QTimer::timeout, this, &GenericSerialDevice::Update);
-    connect(reconnect_timer_, &QTimer::timeout, this,
-            &GenericSerialDevice::TryReconnect);
+    connect(update_timer_, &QTimer::timeout,  // send/receive data
+            this, &GenericSerialDevice::Update);
+    connect(reconnect_timer_, &QTimer::timeout,  // retry dropped connection
+            this, &GenericSerialDevice::TryReconnect);
 }
 
 /**
@@ -86,7 +89,7 @@ GenericSerialDevice::~GenericSerialDevice() {
 /**
  * @brief Attempts to establish a connection to a serial device.
  *
- * @param port_name The serial device address to connect to
+ * @param port_name Serial device address to connect to
  */
 void GenericSerialDevice::Connect(const QString& port_name) {
     // If there is already an active connection, gracefully terminate it
@@ -102,8 +105,8 @@ void GenericSerialDevice::Connect(const QString& port_name) {
 
     // Only continue if "open" was successful
     if (!serial_port_->open(QIODevice::ReadWrite)) {
-        emit ErrorThrown("[" + QString::fromStdString(device_name_)
-                         + "]: Failed to open port " + port_name + "!\n"
+        emit ErrorThrown(QString::fromStdString(device_name_)
+                         + " - Failed to open port " + port_name + "!\n"
                          + serial_port_->errorString());
         return;
     }
@@ -127,17 +130,22 @@ void GenericSerialDevice::Disconnect() {
     if (serial_port_->isOpen()) {
         serial_port_->close();
 
-        logger_->Debug("[" + device_name_
-                       + "]: Gracefully disconnected from device");
+        logger_->Info("Disconnected from device");
         emit Connected(false);
     }
 }
 
+/**
+ * @brief Whether the serial port is open.
+ */
 bool GenericSerialDevice::IsOpen() const {
     return serial_port_->isOpen();
 }
 
-QString GenericSerialDevice::PortName() const {
+/**
+ * @brief Gets the serial port's device name.
+ */
+QString GenericSerialDevice::GetPortName() const {
     return serial_port_->portName();
 }
 
@@ -156,8 +164,8 @@ void GenericSerialDevice::Update() {
     try {
         OnUpdate();
     } catch (const std::exception& e) {
-        emit ErrorThrown("[" + QString::fromStdString(device_name_)
-                         + "]: Communication error: " + QString(e.what()));
+        emit ErrorThrown(QString::fromStdString(device_name_)
+                         + " - Communication error: " + QString(e.what()));
 
         // Close the problematic connection
         update_timer_->stop();
@@ -166,7 +174,7 @@ void GenericSerialDevice::Update() {
 
         // Periodically try to reconnect
         reconnect_timer_->start();
-        logger_->Debug("[" + device_name_ + "]: Started reconnection timer");
+        logger_->Debug("Started reconnection timer");
     }
 }
 
@@ -174,7 +182,6 @@ void GenericSerialDevice::Update() {
  * @brief Attempts to reconnect to the device after a dropped connection.
  */
 void GenericSerialDevice::TryReconnect() {
-    logger_->Debug("[" + device_name_
-                   + "]: Attempting automatic reconnection...");
+    logger_->Debug("Attempting automatic reconnection...");
     Connect(serial_port_->portName());
 }

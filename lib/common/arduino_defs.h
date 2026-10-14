@@ -25,7 +25,6 @@
 
 /**
  * @brief Common definitions for controlling the WaterArduino.
- *
  */
 namespace Water {
 
@@ -54,12 +53,11 @@ enum class State : uint8_t { kStopped = 0, kFilling, kDraining };
 /**
  * @brief Converts fluid system `Side` enum value to an equivalent string.
  *
- * @param side Fluid system side.
- * @return QString Human-readable string.
+ * @param side Fluid system side
  *
  * @note Only really useful for debugging.
  */
-inline std::string SideEnumToString(Side side) {
+inline std::string SideEnumToString(const Side& side) {
     switch (side) {
         case Side::kA:
             return "A";
@@ -71,13 +69,12 @@ inline std::string SideEnumToString(Side side) {
 }
 
 /**
- * @brief Converts fluid system `State` enum value to an appropriately formatted
- *        string.
+ * @brief Converts fluid system `State` enum value to a human-readable rich text
+ *        (HTML) string.
  *
- * @param state Fluid system state.
- * @return QString Human-readable rich text (HTML) string.
+ * @param state Fluid system state
  */
-inline QString StateEnumToString(State state) {
+inline QString StateEnumToString(const State& state) {
     static const QString no_text = "<span style='color: gray;'>--</span>";
     static const QString in_text = "<span style='color: green;'>IN</span>";
     static const QString out_text = "<span style='color: red;'>OUT</span>";

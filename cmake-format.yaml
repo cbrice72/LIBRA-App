@@ -163,7 +163,7 @@ markup:
   - If comment markup is enabled, don't reflow any comment block which matches
   - this (regex) pattern.
   - Default is "null" (disabled).
-  literal_comment_pattern: null
+  literal_comment_pattern: '^\s*(NOTE|TODO):'
 
   _help_fence_pattern:
   - Regular expression to match preformatted fences in comments.

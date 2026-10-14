@@ -53,9 +53,8 @@ bool IsWslEnvironment() {
 }
 
 /**
- * @brief Provides a filename-safe string of the current date and time.
- *
- * @return std::string Date-time string in the format "yyyy-MM-ddTHH-mm-ss"
+ * @brief Filename-safe string of the current date and time
+ *        ("yyyy-MM-ddTHH-mm-ss").
  */
 std::string GetDateTimeStr() {
     auto dts = QDateTime::currentDateTime().toString(Qt::ISODateWithMs);
@@ -65,33 +64,28 @@ std::string GetDateTimeStr() {
 }
 
 /**
- * @brief Provides an Excel-friendly string of the current time.
- *
- * @return std::string Time string in the format "HH-mm-ss.zzz"
+ * @brief Excel-friendly string of the current time ("HH-mm-ss.zzz").
  */
 std::string GetTimestampStr() {
     return QDateTime::currentDateTime().toString("HH:mm:ss.zzz").toStdString();
 }
 
 #if LIBRA_VERSION == 2
-/**
- * Note concerning EPOS system units (from Application Notes Collection, 1.7)
- *
- * Position Units:  steps (quadcounts (qc) = 4 * encoder counts / revolution)
- * Velocity:        rpm
- * Acceleration:    rpm/s
- */
+// NOTE: EPOS system units (from Application Notes Collection, 1.7):
+//         Position:      steps (quadcounts (qc) = 4 * encoder counts / rev)
+//         Velocity:      rpm
+//         Acceleration:  rpm/s
 
 /**
- * @brief Returns the following formatted message for EPOS library errors:
- *        "<FUNCTION_NAME> [NODE_ID] failed: <ERROR TEXT>"
+ * @brief Formats an EPOS library error as
+ *        "<FUNCTION_NAME> [NODE_ID] failed: <ERROR TEXT>".
  *
- * @param func_name The name of the EPOS function (`VCS_...`) that failed
- * @param err The error code returned by said function
- * @param node_id [Optional] The EPOS node for which the function failed
+ * @param func_name Name of the EPOS function (`VCS_...`) that failed
+ * @param err Error code returned by that function
+ * @param node_id EPOS node the function failed for (optional)
  *
- * @see "EPOS Command Library", Section 8 "Error Overview" for more detailed
- *      descriptions of error messages.
+ * @note See "EPOS Command Library", Section 8 "Error Overview" for more
+ *       detailed descriptions of error messages.
  */
 QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
                                const int& node_id) {
@@ -106,17 +100,17 @@ QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
     // Add the actual error text
     err_msg += " failed: ";
 
-    // NOLINTBEGIN
+    // NOLINTBEGIN(*-avoid-c-arrays): EPOS C API fills a char buffer
     if (err != 0) {
         char err_text[kMaxCharBufSize];
         VCS_GetErrorInfo(err, err_text, kMaxCharBufSize);
         err_msg += QString::fromLocal8Bit(err_text);
     } else {
-        // Although err = 0 means "No error" in the EPOS library, if we are here
-        // it means the node is not connected, so replace the error text.
+        // Although err = 0 means "No error" in the EPOS library, getting here
+        // means the node is not connected, so replace the error text
         err_msg += QString::fromStdString("Not connected");
     }
-    // NOLINTEND
+    // NOLINTEND(*-avoid-c-arrays)
 
     return err_msg;
 }

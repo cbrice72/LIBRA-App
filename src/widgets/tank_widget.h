@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   tank_widget.h
- * @brief  Fluid tank visualization definition file.
+ * @brief  Fluid tank visualization; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -21,8 +21,6 @@
 
 /**
  * @brief A simple widget for visualizing a tank's fluid level.
- *
- * @todo TODO(brice.c.aa): Check for correctness.
  */
 class TankWidget : public QWidget {
     // NOLINTBEGIN: required by Qt
@@ -45,13 +43,13 @@ class TankWidget : public QWidget {
     double GetLevel() const;
     double GetVolume() const;
 
-    void UpdateState(Water::State state);
-    void UpdateFlowRate(double flow);
+    void UpdateState(const Water::State& state);
+    void UpdateFlowRate(const double& flow);
 
     void OverrideLevel(double new_level);
 
   signals:
-    void LevelChanged(double level);
+    void LevelChanged(const double& level);
     void TankFull();
     void TankEmpty();
 
@@ -69,8 +67,8 @@ class TankWidget : public QWidget {
 
     QTimer* animation_timer_{nullptr};
 
-    double level_;
-    Water::State state_;
+    double level_{0.0};
+    Water::State state_{Water::State::kStopped};
     double fill_rate_;   // L/s
     double drain_rate_;  // L/s
 };

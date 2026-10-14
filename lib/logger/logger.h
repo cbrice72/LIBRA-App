@@ -34,7 +34,7 @@ class Logger {
     /**
      * @brief Updates the log message level.
      *
-     * @param enabled Whether to enable debug-level messages.
+     * @param enabled Whether to enable debug-level messages
      *
      * @note Any info-, warning-, and error-level messages are always output.
      */
@@ -43,28 +43,28 @@ class Logger {
     /**
      * @brief Logs a debug-level message.
      *
-     * @param msg The message to log
+     * @param msg Message to log
      */
     virtual void Debug(const std::string& msg) = 0;
 
     /**
      * @brief Logs an info-level message.
      *
-     * @param msg The message to log
+     * @param msg Message to log
      */
     virtual void Info(const std::string& msg) = 0;
 
     /**
      * @brief Logs a warning-level message.
      *
-     * @param msg The message to log
+     * @param msg Message to log
      */
     virtual void Warn(const std::string& msg) = 0;
 
     /**
      * @brief Logs an error-level message.
      *
-     * @param msg The message to log
+     * @param msg Message to log
      */
     virtual void Error(const std::string& msg) = 0;
 };

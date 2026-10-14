@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   arm.cpp
- * @brief  Main app window arm group box implementation file.
+ * @brief  Main app window arm group box; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -30,11 +30,10 @@
 namespace {
 
 /**
- * @brief Converts joint-space commands from the UI to actuator-space commands
- *        for actuators and returns an enum-ordered vector.
+ * @brief Converts the UI's joint-space commands to actuator-space targets,
+ *        ordered by `Actuator::Name`.
  *
  * @param ui Pointer to main UI object
- * @return Actuator-space ordered target values for all actuators
  *
  * @see Actuator::Name
  */
@@ -72,11 +71,10 @@ std::vector<double> GetActuatorTargets(const Ui::MainWindow* ui) {
 }
 
 /**
- * @brief Helper to resolve UI targets sequence layout-agnostically for input
- * parsers.
+ * @brief Target position spin boxes in joint-space (`Joint::Name`) order,
+ *        independent of UI layout, for input parsers.
  *
  * @param ui Pointer to main UI object
- * @return Joint-space ordered pointers to target position Spin Boxes
  *
  * @see Joint::Name
  */
@@ -108,7 +106,7 @@ void MainWindow::on_pb_quick_input_clicked() {
     const auto input = ui_->le_quick_input->text();
 
     if (input.isEmpty()) {
-        logger_->Error("No values entered!");
+        logger_->Warn("No values entered");
         return;
     }
 
@@ -117,9 +115,9 @@ void MainWindow::on_pb_quick_input_clicked() {
     const auto target_boxes = GetOrderedSpinBoxes(ui_);
 
     if (static_cast<size_t>(values.size()) != target_boxes.size()) {
-        logger_->Error("Provided values (" + std::to_string(values.size())
-                       + ") != No. of actuators ("
-                       + std::to_string(target_boxes.size()) + ")!");
+        logger_->Warn("Provided values (" + std::to_string(values.size())
+                      + ") != No. of actuators ("
+                      + std::to_string(target_boxes.size()) + "); ignoring");
         return;
     }
 
@@ -184,7 +182,7 @@ void MainWindow::on_pb_arm_start_clicked() {
  *      on_pb_water_fill_B_clicked on_pb_water_drain_B_clicked
  */
 void MainWindow::on_pb_atc_enable_toggled(bool checked) {
-    logger_->Debug("ATC - " + std::string(checked ? "Enabling" : "Disabling")
+    logger_->Debug(std::string(checked ? "Enabling" : "Disabling")
                    + " automatic torque compensation");
 
     emit EnableAutoTorqueComp(checked);

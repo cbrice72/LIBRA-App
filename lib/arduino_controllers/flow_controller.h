@@ -8,10 +8,10 @@
 #pragma once
 
 // C++ Standard Library Headers
-// (none)
+//   (none)
 
 // Other Library Headers
-// (none)
+//   (none)
 
 // Project Headers
 #include "generic_serial_device.h"
@@ -31,7 +31,7 @@ class FlowController : public GenericSerialDevice {
   public slots:
     // --- Arduino Commands ---
 
-    // TODO
+    // NOTE: FlowArduino is a read-only device
 
   signals:
     // --- Arduino Updates ---
@@ -44,9 +44,9 @@ class FlowController : public GenericSerialDevice {
   private:
     // --- Helper Functions ---
 
-    // TODO
+    // (none)
 
     // --- Data Members ---
 
-    // TODO
+    // (none)
 };

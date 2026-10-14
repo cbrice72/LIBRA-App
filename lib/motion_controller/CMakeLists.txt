@@ -6,7 +6,8 @@
 ################################################################################
 
 # Declare module dependencies
-# (none)
+
+#   (none)
 
 # Create and configure the module
 set(MOTION_CONTROLLER_SOURCES
@@ -16,17 +17,22 @@ set(MOTION_CONTROLLER_SOURCES
 
 if(LIBRA_VERSION EQUAL 1)
     # TODO: not yet implemented
+    # cmake-format: off
     #list(APPEND MOTION_CONTROLLER_SOURCES
     #    ${CMAKE_CURRENT_SOURCE_DIR}/libra1_motion_controller.h
     #    ${CMAKE_CURRENT_SOURCE_DIR}/libra1_motion_controller.cpp
     #)
+    # cmake-format: on
 elseif(LIBRA_VERSION EQUAL 2)
     list(APPEND MOTION_CONTROLLER_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.cpp
     )
 else()
-    message(FATAL_ERROR "No motion controller available for LIBRA_VERSION: ${LIBRA_VERSION}")
+    message(
+        FATAL_ERROR
+            "No motion controller available for LIBRA_VERSION: ${LIBRA_VERSION}"
+    )
 endif()
 
 qt_add_library(motion_controller STATIC ${MOTION_CONTROLLER_SOURCES})

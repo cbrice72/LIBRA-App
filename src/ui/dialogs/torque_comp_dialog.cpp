@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   torque_comp_dialog.cpp
- * @brief  Torque compensation settings dialog box implementation file.
+ * @brief  Torque compensation settings dialog box; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -31,8 +31,8 @@
  * @brief Standard constructor.
  *
  * @param parent Owning Qt widget
- * @param upper_bound Initial lower bound value, in Nm
- * @param lower_bound Initial upper bound value, in Nm
+ * @param lower_bound Initial lower bound (Nm)
+ * @param upper_bound Initial upper bound (Nm)
  */
 TorqueCompDialog::TorqueCompDialog(QWidget* parent, const double& lower_bound,
                                    const double& upper_bound)
@@ -57,18 +57,14 @@ TorqueCompDialog::~TorqueCompDialog() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns the lower bound value.
- *
- * @return double Lower bound in Nm
+ * @brief Gets the lower bound (Nm).
  */
 double TorqueCompDialog::GetLowerBound() const {
     return ui_->sb_lower_bound->value();
 }
 
 /**
- * @brief Returns the upper bound value.
- *
- * @return double Upper bound in Nm
+ * @brief Gets the upper bound (Nm).
  */
 double TorqueCompDialog::GetUpperBound() const {
     return ui_->sb_upper_bound->value();

@@ -103,7 +103,7 @@ void AppendRow(std::ostringstream& ss, const std::string& label,
  * @param value Value to format
  * @param precision Number of decimal places
  */
-std::string FormatDouble(double value, int precision = 2) {
+std::string FormatDouble(const double& value, const int& precision = 2) {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(precision) << value;
     return ss.str();
@@ -333,8 +333,8 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Check torque on the central joint and enforce movement limits.
- *        (central joint = 2-DoF joint (LIBRA-I) -or- pitch joint (LIBRA-II).)
+ * @brief Checks torque on the central joint (LIBRA-I's 2-DoF joint) and
+ *        enforces movement limits.
  */
 void HebiThread::CheckTorqueControl() {
     if (!torque_control_en_) {
@@ -344,7 +344,6 @@ void HebiThread::CheckTorqueControl() {
     // Retrieve torque magnitude and direction (i.e., polar coords)
     const auto& eff = feedback_->getEffort();
 
-# if LIBRA_VERSION == 1
     const double arm_roll_torque =
         Joint::ActuatorToJointDifferential(Joint::Name::kRoll,
                                            eff[Actuator::Name::kMA],
@@ -362,7 +361,6 @@ void HebiThread::CheckTorqueControl() {
                        + eff[Actuator::Name::kMB],  // pitch
                    -eff[Actuator::Name::kMA]
                        - eff[Actuator::Name::kMB]);  // roll
-# endif
 
     // Apply hysteresis logic
     // TODO: the current "algorithm" is just simple hysteresis which
@@ -370,12 +368,12 @@ void HebiThread::CheckTorqueControl() {
     //       enough. This is not ideal, and we should be predicting how
     //       arm movement will affect the central joint torque.
     if (arm_torque_r > torque_comp_upper_bound_) {
-        // If arm torque is too high, ensure movement is disabled before reporting
-        // direction of torque to arduino_thread for fluid system balancing
+        // If arm torque is too high, disable movement before reporting the
+        // torque direction to WaterController for CW balancing
         if (movement_en_) {
             movement_en_ = false;
 
-            logger_->Info("ATC - Movement disabled due to high torque ("
+            logger_->Info("Movement disabled due to high torque ("
                           + FormatDouble(arm_torque_r) + " Nm > "
                           + FormatDouble(torque_comp_upper_bound_) + " Nm)");
         } else {  // movement is disabled
@@ -383,8 +381,8 @@ void HebiThread::CheckTorqueControl() {
         }
 
     } else if (arm_torque_r >= torque_comp_lower_bound_) {
-        // While significant arm torque still exists, continue reporting
-        // direction of torque to arduino_thread
+        // While significant arm torque remains, keep reporting its direction
+        // to WaterController
         emit ReportArmTorque(arm_torque_theta);
         vel_scale_ = 0.5;  // helps avoid sudden stop if upper bound is exceeded
 
@@ -400,15 +398,15 @@ void HebiThread::CheckTorqueControl() {
             t_trajectory_start_ = std::chrono::steady_clock::now()
                                   - t_trajectory_elapsed_;
 
-            logger_->Info("ATC - Movement re-enabled ("
-                          + FormatDouble(arm_torque_r) + " Nm < "
-                          + FormatDouble(torque_comp_lower_bound_) + " Nm)");
+            logger_->Info("Movement re-enabled (" + FormatDouble(arm_torque_r)
+                          + " Nm < " + FormatDouble(torque_comp_lower_bound_)
+                          + " Nm)");
         }
     }
 }
 
 /**
- * @brief Execute trajectory following or position hold with dynamic/gravity
+ * @brief Executes trajectory following or position hold with dynamic/gravity
  *        compensation.
  *
  * @param dt Time since last command loop
@@ -431,7 +429,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
     if (movement_en_ && trajectory_ != nullptr) {
         t_trajectory = std::chrono::steady_clock::now() - t_trajectory_start_;
         // Track trajectory progress in case movement is disabled
-        // mid-trajectory (e.g., by ATC).
+        // mid-trajectory (e.g., by ATC)
         t_trajectory_elapsed_ = t_trajectory;
 
         if (std::chrono::duration<double>(t_trajectory).count()
@@ -759,14 +757,11 @@ void HebiThread::SendFeedback() {
 }
 
 /**
- * @brief Returns minor status information for all connected actuators.
- *        Target position, actual position, and actual torque (effort) are
- *        provided separately as signals.
+ * @brief Minor status info for all connected actuators, as comma-delimited
+ *        messages (target/actual position and actual torque are sent
+ *        separately as signals).
  *
- * @return QString Comma-delimited status messages
- *
- * @note See following HEBI C++ API page for full list of available
- * feedback:
+ * @note See the HEBI C++ API page for the full list of available feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
  */
 QString HebiThread::GetStatus() const {
@@ -1040,9 +1035,6 @@ void HebiThread::Connect() {
 
 /**
  * @brief Terminates the active connection(s).
- *
- * @return true Disconnection successful
- * @return false Disconnection failed
  */
 void HebiThread::Disconnect() {
     // In case this was called in the middle of a movement, gracefully stop
@@ -1065,7 +1057,7 @@ void HebiThread::Disconnect() {
         group_.reset();
         command_->clear();
 
-        logger_->Debug("Gracefully disconnected from actuator(s)");
+        logger_->Info("Disconnected from actuator(s)");
         emit Connected(false);
     }
 }
@@ -1073,7 +1065,7 @@ void HebiThread::Disconnect() {
 /**
  * @brief Sets movement targets/trajectories for all connected actuators.
  *
- * @param target Target angles (absolute) for all actuators, in degrees
+ * @param target Target angles (deg, absolute) for all actuators
  *
  * @note The `target` parameter should be in "actuator space" rather than "joint
  *       space" to keep `HebiThread` decoupled from the kinematics of specific
@@ -1181,7 +1173,7 @@ void HebiThread::Stop() {
     motion_controller_->Stop();  // drops the target and cancels a calibration
 #endif
 
-    logger_->Debug("Trajectory reset");
+    logger_->Info("Trajectory stopped");
 }
 
 /**
@@ -1254,7 +1246,7 @@ void HebiThread::StartHebiLog() {
  */
 void HebiThread::StopHebiLog() {
     if (group_ == nullptr) {
-        logger_->Warn("Can't stop logging; not connected");
+        emit ErrorThrown("HEBI - Can't stop logging; not connected!");
         return;
     }
 
@@ -1286,11 +1278,11 @@ void HebiThread::EnableTorqueControl(const bool& enabled) {
     torque_control_en_ = enabled;
 
     if (!torque_control_en_) {
-        // "Manual" mode: only force allow movement if torque compensation is disabled
+        // "Manual" mode: always allow movement while ATC is disabled
         movement_en_ = true;
     }
 
-    logger_->Info("ATC - Automatic torque compensation "
+    logger_->Info("Automatic torque compensation "
                   + std::string(enabled ? "enabled" : "disabled"));
 #endif
 }
@@ -1298,8 +1290,8 @@ void HebiThread::EnableTorqueControl(const bool& enabled) {
 /**
  * @brief Sets the bounds for the central joint's torque control.
  *
- * @param lower_bound Upper torque bound, in Nm
- * @param upper_bound Lower torque bound, in Nm
+ * @param lower_bound Lower torque bound (Nm)
+ * @param upper_bound Upper torque bound (Nm)
  */
 void HebiThread::SetTorqueCompBounds(const double& lower_bound,
                                      const double& upper_bound) {
@@ -1309,7 +1301,7 @@ void HebiThread::SetTorqueCompBounds(const double& lower_bound,
     torque_comp_lower_bound_ = lower_bound;
     torque_comp_upper_bound_ = upper_bound;
 
-    logger_->Info("ATC - Torque compensation bounds updated: lower="
+    logger_->Info("Torque compensation bounds updated: lower="
                   + FormatDouble(lower_bound)
                   + " Nm, upper=" + FormatDouble(upper_bound) + " Nm");
 #endif

@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   water.cpp
- * @brief  Main app window water group box implementation file.
+ * @brief  Main app window water group box; implementation file.
  *
  * @author Christian Brice
  ******************************************************************************/

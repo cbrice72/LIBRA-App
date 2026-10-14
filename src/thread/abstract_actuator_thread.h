@@ -36,9 +36,12 @@ class AbstractActuatorThread : public QThread {
     // NOLINTEND
 
   public:
-    AbstractActuatorThread() = default;
-    AbstractActuatorThread(QObject* parent, bool debug_mode, Actuator::Type type)
-        : QThread(parent), debug_mode_(debug_mode), type_(type){};
+    AbstractActuatorThread() = delete;
+
+    explicit AbstractActuatorThread(QObject* parent, const bool& debug_mode,
+                                    const Actuator::Type& type)
+        : QThread(parent), debug_mode_(debug_mode), type_(type) {}
+
     ~AbstractActuatorThread() override = default;
 
   public slots:
@@ -46,7 +49,7 @@ class AbstractActuatorThread : public QThread {
     void SetDebugMode(const bool& enabled) {
         debug_mode_ = enabled;
         logger_->SetDebugMode(debug_mode_);
-    };
+    }
 
     // --- Actuator Commands ---
 
@@ -62,13 +65,15 @@ class AbstractActuatorThread : public QThread {
     void Connected(const bool& connected);
 
     void ReportFeedback(const std::unordered_map<Joint::Name, double>& feedbacks,
-                        const Actuator::Feedback feedback_type);
-    void ReportStatus(const QString& status, const Actuator::Type type);
+                        const Actuator::Feedback& feedback_type);
+    void ReportStatus(const QString& status, const Actuator::Type& type);
 
     void ErrorThrown(const QString& err);
 
   protected:
     // --- Helper Functions ---
+
+    // (none)
 
     // --- Data Members ---
 

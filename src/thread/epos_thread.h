@@ -27,7 +27,7 @@
  *       I won't go through the trouble of making full use of the EPOS library
  *       to match the HEBI API's one-group-to-many-actuators functionality.
  *
- * @see abstract_actuator_thread
+ * @see AbstractActuatorThread
  */
 class EposThread : public AbstractActuatorThread
 #ifdef BUILD_WITH_ROS2
@@ -43,7 +43,7 @@ class EposThread : public AbstractActuatorThread
     explicit EposThread(QObject* parent, const bool& debug_mode = false);
     explicit EposThread(QObject* parent, std::string device_name,
                         std::string protocol_name, std::string interface_name,
-                        std::string port_name, uint baud_rate,
+                        std::string port_name, const uint& baud_rate,
                         const bool& debug_mode = false);
     ~EposThread() override;
 
@@ -51,7 +51,7 @@ class EposThread : public AbstractActuatorThread
 
     void SetDeviceParams(std::string device_name, std::string protocol_name,
                          std::string interface_name, std::string port_name,
-                         uint baud_rate);
+                         const uint& baud_rate);
 
   public slots:
     // --- Actuator Commands ---
@@ -82,9 +82,11 @@ class EposThread : public AbstractActuatorThread
     std::string port_name_;
     uint baud_rate_;
 
+    const unsigned long loop_period_ms_;
+
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
     std::mutex handle_mutex_;
 
-    int target_inc_;  // in encoder increments, not degrees
-    int last_target_inc_;
+    int target_inc_{0};  // in encoder increments, not degrees
+    int last_target_inc_{0};
 };

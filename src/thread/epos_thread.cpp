@@ -24,7 +24,6 @@
 #endif
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Class Management
  * !Class Helpers
  * !Getters & Setters
@@ -87,12 +86,6 @@ constexpr int kMoveImmediately = 1;  // `Immediately` = TRUE
 constexpr int kMoveWaitForLast = 0;  // `Immediately` = FALSE
 
 //------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
-
-namespace {}  // namespace
-
-//------------------------------------------------------------------------------
 // !Class Management
 //------------------------------------------------------------------------------
 
@@ -122,7 +115,7 @@ EposThread::EposThread(QObject* parent, const bool& debug_mode)
  */
 EposThread::EposThread(QObject* parent, std::string device_name,
                        std::string protocol_name, std::string interface_name,
-                       std::string port_name, uint baud_rate,
+                       std::string port_name, const uint& baud_rate,
                        const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kEpos),
       device_name_(std::move(device_name)),
@@ -130,8 +123,7 @@ EposThread::EposThread(QObject* parent, std::string device_name,
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
       baud_rate_(baud_rate),
-      target_inc_{0},
-      last_target_inc_{0}
+      loop_period_ms_(10)  // 100 Hz
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("epos_node")
@@ -166,15 +158,9 @@ EposThread::~EposThread() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Returns minor status information for the connected actuator.
- *        Target position, actual position, and actual torque (effort) are
- *        provided separately as signals.
- *
- * @return QString Comma-delimited status messages
- *
- * @note See following HEBI C++ API page for full list of available
- * feedback:
- *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
+ * @brief Minor status info for the connected actuator, as comma-delimited
+ *        messages (target/actual position and actual torque are sent
+ *        separately as signals).
  */
 QString EposThread::GetStatus() {
     if (handle_ == nullptr) {
@@ -253,7 +239,7 @@ QString EposThread::GetStatus() {
 void EposThread::SetDeviceParams(std::string device_name,
                                  std::string protocol_name,
                                  std::string interface_name,
-                                 std::string port_name, uint baud_rate) {
+                                 std::string port_name, const uint& baud_rate) {
     device_name_ = std::move(device_name);
     protocol_name_ = std::move(protocol_name);
     interface_name_ = std::move(interface_name);
@@ -286,7 +272,7 @@ void EposThread::run() {
         if (handle_ == nullptr) {
             emit ReportStatus(GetStatus(), type_);  // "Not Connected"
             lock.unlock();
-            QThread::msleep(10);
+            QThread::msleep(loop_period_ms_);
             continue;
         }
 
@@ -307,7 +293,7 @@ void EposThread::run() {
                                                    err_code, kNodeID));
                 lock.unlock();
                 Disconnect();
-                QThread::msleep(10);
+                QThread::msleep(loop_period_ms_);
                 continue;
             }
 
@@ -322,7 +308,7 @@ void EposThread::run() {
                                                err_code, kNodeID));
             lock.unlock();
             Disconnect();
-            QThread::msleep(10);
+            QThread::msleep(loop_period_ms_);
             continue;
         }
         // clang-format off
@@ -336,7 +322,7 @@ void EposThread::run() {
                                                             err_code, kNodeID));
             lock.unlock();
             Disconnect();
-            QThread::msleep(10);
+            QThread::msleep(loop_period_ms_);
             continue;
         }
         // clang-format off
@@ -349,7 +335,7 @@ void EposThread::run() {
         if (status == QStringLiteral("Error!")) {
             lock.unlock();
             Disconnect();
-            QThread::msleep(10);
+            QThread::msleep(loop_period_ms_);
             continue;
         }
         emit ReportStatus(status, type_);
@@ -357,7 +343,7 @@ void EposThread::run() {
         // Release the mutex lock
         lock.unlock();
 
-        QThread::msleep(10);  // update 100 times/second (theoretically)
+        QThread::msleep(loop_period_ms_);
     }
 }
 
@@ -366,10 +352,7 @@ void EposThread::run() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Attempts to establish connections to all actuators.
- *
- * @return true Connection successful
- * @return false Connection failed
+ * @brief Attempts to connect to the actuator.
  */
 void EposThread::Connect() {
     // If there is already an active connection, gracefully terminate it
@@ -509,7 +492,7 @@ void EposThread::Connect() {
     handle_ = handle;  // only set our class handle after successful init
     emit Connected(true);
 
-    logger_->Debug("Connection successful");
+    logger_->Info("Connection successful");
 }
 
 /**
@@ -541,13 +524,13 @@ void EposThread::Disconnect() {
     handle_ = nullptr;
     emit Connected(false);
 
-    logger_->Debug("Gracefully disconnected from actuator(s)");
+    logger_->Info("Disconnected from actuator");
 }
 
 /**
  * @brief Sets movement target/trajectory for the connected actuator.
  *
- * @param target_deg Target angle (absolute), in degrees
+ * @param target_deg Target angle (deg, absolute)
  *
  * @note I don't see a reason to use `EposThread` outside of the LIBRA project,
  *       at least in the near future. Since LIBRA-II only uses a single EPOS
@@ -621,5 +604,5 @@ void EposThread::Stop() {
         return;
     }
 
-    logger_->Debug("Actuator stopped");
+    logger_->Info("Actuator stopped");
 }

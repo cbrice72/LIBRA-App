@@ -10,26 +10,19 @@
 #include "flow_controller.h"
 
 // C++ Standard Library Headers
-// (none)
+//   (none)
 
 // Other Library Headers
-#include <QByteArray>
+#include <QByteArray>  // Qt::Core
 
 // Project Headers
-// (none)
+//   (none)
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Class Management
  * !Class Helpers
  * !Arduino Commands (slots)
  */
-
-//------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
-
-namespace {}  // namespace
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -105,3 +98,5 @@ void FlowController::OnUpdate() {
 //------------------------------------------------------------------------------
 // !Arduino Commands (slots)
 //------------------------------------------------------------------------------
+
+// NOTE: FlowArduino is a read-only device.

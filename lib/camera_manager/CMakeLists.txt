@@ -12,7 +12,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 if(BUILD_WITH_ROS2)
     # Additional dependencies for ROS2 integration
-    
+
     # (1) ROS2 Core, Messages
     set(ROS_CORE_PACKAGES ament_cmake rclcpp)
     foreach(PKG ${ROS_CORE_PACKAGES})
@@ -48,6 +48,7 @@ target_link_libraries(
     camera_manager
     # Project
     PUBLIC logger
+    PRIVATE util
     # Qt
     PRIVATE Qt${QT_VERSION_MAJOR}::Core
     PRIVATE Qt${QT_VERSION_MAJOR}::Multimedia

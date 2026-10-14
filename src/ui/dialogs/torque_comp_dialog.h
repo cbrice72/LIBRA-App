@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   torque_comp_dialog.h
- * @brief  Torque compensation settings dialog box header file.
+ * @brief  Torque compensation settings dialog box; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -32,7 +32,7 @@ class TorqueCompDialog : public QDialog {
     explicit TorqueCompDialog(QWidget* parent = nullptr,
                               const double& lower_bound = 2.5,
                               const double& upper_bound = 5.0);
-    ~TorqueCompDialog();
+    ~TorqueCompDialog() override;
 
     double GetLowerBound() const;
     double GetUpperBound() const;

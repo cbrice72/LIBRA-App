@@ -40,8 +40,7 @@ if(NOT DEFINED QT_DIR)
                 if(EXISTS "${install_dir}/${version}/gcc_64/lib/cmake")
                     set(QT_VERSION_CUSTOM "${version}")
                     message(
-                        STATUS
-                            "Found Qt ${QT_VERSION_CUSTOM} at ${install_dir}"
+                        STATUS "Found Qt ${QT_VERSION_CUSTOM} at ${install_dir}"
                     )
                     break()
                 endif()
@@ -61,8 +60,7 @@ if(NOT DEFINED QT_DIR)
         )
     else()
         message(
-            WARNING
-                "Could not auto-detect Qt6. Please define QT_DIR manually."
+            WARNING "Could not auto-detect Qt6. Please define QT_DIR manually."
         )
     endif()
 endif()
@@ -90,7 +88,7 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 # Validate version
 if(Qt6Core_VERSION VERSION_LESS "6.8.0")
-    message(FATAL_ERROR
-        "This project requires Qt 6.8.0+. Found: ${Qt6Core_VERSION}"
+    message(
+        FATAL_ERROR "This project requires Qt 6.8.0+. Found: ${Qt6Core_VERSION}"
     )
 endif()
