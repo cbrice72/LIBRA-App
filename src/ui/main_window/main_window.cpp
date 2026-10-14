@@ -576,10 +576,9 @@ void MainWindow::InitializeThreads() {
     connect(this, &MainWindow::CancelHebiCal,  // cancel calibration
             hebi_thread_, &HebiThread::CancelCalibration);
 
-    // CW volume for the motion controller. TankWidget only emits when the level
-    // changes, so the starting value is sent right after.
-    connect(ui_->tw_water_level_A, &TankWidget::LevelChanged, hebi_thread_,
-            [this](double) {
+    // TankWidget only emits on level changes, so send starting CW volume now
+    connect(ui_->tw_water_level_A, &TankWidget::LevelChanged,  // CW volume
+            hebi_thread_, [this](double) {
                 hebi_thread_->UpdateCounterweightVolume(
                     ui_->tw_water_level_A->GetVolume());
             });
@@ -701,8 +700,8 @@ void MainWindow::UpdateATCControls() {
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Enables the motion control widgets/actions based on the connection
- *        statuses and whether the arm is moving.
+ * @brief Enables motion control widgets/actions based on connection statuses
+ *        and whether the arm is moving.
  *
  * @note Mode switching and calibration starts are locked while the arm moves.
  */
@@ -878,8 +877,8 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     UpdateATCControls();
 
 #if LIBRA_VERSION == 2
-    // The thread only reports motion states when they change, so fill in the
-    // controller's defaults for any state that hasn't been reported yet
+    // HebiThread only reports motion states on change, so fill in the motion
+    // controller's defaults
     if (connected) {
         if (ui_->l_motion_mode_val->text() == "...") {
             HandleMotionModeChanged(false);
@@ -981,13 +980,12 @@ void MainWindow::HandleActuatorStatus(const QString& status,
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Shows the motion mode that is actually in effect.
+ * @brief Shows the motion mode currently in effect.
  *
- * @param cw_primary true if the CW moves the arm and the actuator takes over
- *                   near the target
+ * @param cw_primary true if CW moves the arm and actuator takes over near
+ *                   target, false if CW and actuator move the arm together.
  *
- * @note The controller refuses CW-primary until the arm is calibrated, so the
- *       toggle can be set back here.
+ * @note Motion controller refuses CW-primary until the arm is calibrated.
  */
 void MainWindow::HandleMotionModeChanged(const bool& cw_primary) {
     const QSignalBlocker blocker(ui_->pb_cw_primary);  // don't re-emit
@@ -1021,14 +1019,14 @@ void MainWindow::HandleCalibrationFinished(const bool& success) {
         ui_->l_motion_calibrated_val->setText("Yes");
         ui_->l_motion_calibrated_val->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
-        logger_->Info("HEBI - Calibration finished");
+        logger_->Info("Calibration finished");
     } else {
         if (ui_->l_motion_calibrated_val->text() != "Yes") {
             ui_->l_motion_calibrated_val->setText("Failed");
             ui_->l_motion_calibrated_val->setStyleSheet(
                 QString("color: %1;").arg(Color::kRed));
         }
-        logger_->Warn("HEBI - Calibration failed or was cancelled "
+        logger_->Warn("Calibration failed or was cancelled "
                       "(see the messages above)");
     }
 }

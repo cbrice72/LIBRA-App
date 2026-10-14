@@ -148,7 +148,8 @@ class HebiThread : public AbstractActuatorThread
     std::vector<std::string> families_;
     std::vector<std::string> names_;
     std::vector<Actuator::Name> enum_names_;
-    const int n_actuators_;  // set in constructor initializer list
+    const int n_actuators_;
+    const unsigned long loop_period_ms_;
 
     std::shared_ptr<hebi::Group> group_;
     std::shared_ptr<hebi::GroupCommand> command_;
@@ -190,23 +191,23 @@ class HebiThread : public AbstractActuatorThread
 
     double vel_scale_{1.0};  // used when soft torque limit is exceeded
 #elif LIBRA_VERSION == 2
-    // Torque limits, the movement enable, and the playback speed live in the
-    // motion controller; HebiThread only applies what it returns
+    // Torque limits, movement enable, and playback speed live in the motion
+    // controller; HebiThread only applies what it returns
     std::unique_ptr<Motion::Libra2MotionController> motion_controller_;
 
     // Trajectory clock (s); advances by dt * playback rate, so it freezes while
-    // the controller pauses playback
+    // the motion controller pauses playback
     double t_trajectory_s_{0.0};
 
     // Last position/velocity command sent (actuator space). NaN = "no command"
-    // (HEBI's convention), which is how a joint is left free to move
+    // (HEBI's convention), which is how a joint is left free to move.
     Eigen::VectorXd pos_cmd_;  // rad
     Eigen::VectorXd vel_cmd_;  // rad/s
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> moving_{false};
     std::atomic<bool> calibration_running_{false};
-    double diag_log_elapsed_s_{0.0};  // s since the last model log line
+    double t_diag_log_elapsed_s_{0.0};  // s since the last model log line
 #endif
 
 #ifdef BUILD_WITH_ROS2

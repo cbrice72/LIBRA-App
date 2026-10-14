@@ -22,14 +22,11 @@ set(UI_SOURCE
 
 if(LIBRA_VERSION EQUAL 1)
     # UNUSED (kept for reference)
-    list(APPEND UI_SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/manipulator.cpp
-    )
+    list(APPEND UI_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/manipulator.cpp)
 elseif(LIBRA_VERSION EQUAL 2)
-    # LIBRA-II motion control is more complicated than LIBRA-I's, so it uses an additional module
-    list(APPEND UI_SOURCE
-        ${CMAKE_CURRENT_SOURCE_DIR}/motion_control.cpp
-    )
+    # LIBRA-II motion control is more complicated than LIBRA-I's, so it uses an
+    # additional module
+    list(APPEND UI_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/motion_control.cpp)
 endif()
 
 # Propagate changes (only necessary if UI_SOURCE is appended to after creation)

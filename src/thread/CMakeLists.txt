@@ -85,7 +85,7 @@ if(LIBRA_VERSION EQUAL 2)
 endif()
 
 if(LIBRA_VERSION EQUAL 2)
-    # HebiThread hands LIBRA-II motion control to its motion controller.
+    # HebiThread hands LIBRA-II motion control to its motion controller
     target_link_libraries(actuator_thread PRIVATE motion_controller)
 endif()
 

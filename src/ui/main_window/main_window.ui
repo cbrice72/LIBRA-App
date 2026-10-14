@@ -151,7 +151,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="hs_main_header">
+               <spacer name="h_spacer_main_header">
                 <property name="orientation">
                  <enum>Qt::Orientation::Horizontal</enum>
                 </property>
@@ -1511,7 +1511,7 @@
                   <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
                  </property>
                  <item>
-                  <spacer name="hs_hl_arm_control_l">
+                  <spacer name="h_spacer_arm_control_l">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
@@ -1654,7 +1654,7 @@
                   </widget>
                  </item>
                  <item>
-                  <spacer name="hs_hl_arm_control_r">
+                  <spacer name="h_spacer_arm_control_r">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
@@ -2336,7 +2336,7 @@
                 </widget>
                </item>
                <item row="0" column="7">
-                <spacer name="hs_motion_control">
+                <spacer name="h_spacer_motion_control">
                  <property name="orientation">
                   <enum>Qt::Orientation::Horizontal</enum>
                  </property>
@@ -2352,7 +2352,7 @@
              </widget>
             </item>
             <item>
-             <spacer name="vs_main_left">
+             <spacer name="v_spacer_main_left">
               <property name="orientation">
                <enum>Qt::Orientation::Vertical</enum>
               </property>
@@ -2524,7 +2524,7 @@
                <item row="1" column="0">
                 <layout class="QHBoxLayout" name="hl_camera_control">
                  <item>
-                  <spacer name="hs_hl_camera_control_l">
+                  <spacer name="h_spacer_camera_control_l">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
@@ -2681,7 +2681,7 @@
                   </widget>
                  </item>
                  <item>
-                  <spacer name="hs_hl_camera_control_r">
+                  <spacer name="h_spacer_camera_control_r">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
@@ -2701,7 +2701,7 @@
             <item>
              <layout class="QHBoxLayout" name="hl_arduino">
               <item>
-               <spacer name="hs_hl_arduino_l">
+               <spacer name="h_spacer_arduino_l">
                 <property name="orientation">
                  <enum>Qt::Orientation::Horizontal</enum>
                 </property>
@@ -3527,7 +3527,7 @@
                </widget>
               </item>
               <item>
-               <spacer name="hs_hl_arduino_r">
+               <spacer name="h_spacer_arduino_r">
                 <property name="orientation">
                  <enum>Qt::Orientation::Horizontal</enum>
                 </property>
@@ -3542,7 +3542,7 @@
              </layout>
             </item>
             <item>
-             <spacer name="vs_main_right">
+             <spacer name="v_spacer_main_right">
               <property name="orientation">
                <enum>Qt::Orientation::Vertical</enum>
               </property>

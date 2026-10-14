@@ -254,7 +254,7 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
-    QSize default_size_;  // window size set in main_window.ui
+    QSize default_size_{};  // window size set in main_window.ui
 
     FeedbackElementMapOfMaps feedback_element_map_;
 
