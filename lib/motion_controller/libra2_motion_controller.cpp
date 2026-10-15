@@ -70,9 +70,9 @@ bool IsCalibrationRunning(const CalibrationStatus& status) {
 /**
  * @brief Builds and checks the CW model (CW pivot distance vs. volume).
  *
- * @param cw_pivot_dist_m CW pivot distance at 0 L, A (m); sign is ignored
+ * @param cw_pivot_dist CW pivot distance at 0 L, A (m); sign is ignored
  *                        (0 = "not measured yet" and leaves model invalid)
- * @param cw_pivot_slope_m_per_l Change in CW pivot distance per liter, B
+ * @param cw_pivot_slope Change in CW pivot distance per liter, B
  *                               (m/L); may be negative, so sign is kept
  * @param capacity_l Largest volume the CW can hold (L)
  *
@@ -80,25 +80,24 @@ bool IsCalibrationRunning(const CalibrationStatus& status) {
  *       where r_P (pitch pivot to CW pivot P) varies linearly with volume:
  *         r_P(V) = A + B·V
  */
-CwModel::CwModel(const double& cw_pivot_dist_m,
-                 const double& cw_pivot_slope_m_per_l, const double& capacity_l)
+CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
+                 const double& capacity_l)
     : capacity_l_(capacity_l) {
     if (!std::isfinite(capacity_l) || capacity_l <= 0.0) {
         error_ = "CW capacity must be a positive number of liters";
         return;
     }
-    if (!std::isfinite(cw_pivot_dist_m)
-        || !std::isfinite(cw_pivot_slope_m_per_l)) {
+    if (!std::isfinite(cw_pivot_dist) || !std::isfinite(cw_pivot_slope)) {
         error_ = "r_P intercept or slope is not a number";
         return;
     }
-    if (cw_pivot_dist_m == 0.0) {
+    if (cw_pivot_dist == 0.0) {
         error_ = "r_P is not set (intercept = 0)";
         return;
     }
 
-    r_P_0_ = std::abs(cw_pivot_dist_m);
-    dr_P_dV_ = cw_pivot_slope_m_per_l;
+    r_P_0_ = std::abs(cw_pivot_dist);
+    dr_P_dV_ = cw_pivot_slope;
 
     // Moment A*m + (B/rho)*m^2 must increase up to a full CW, or two masses
     // give the same moment and MassForMoment() is ambiguous. Its slope
@@ -449,22 +448,24 @@ std::optional<RestSample> RestSampler::Add(
  *        HebiThread uses).
  *
  * @param logger Logger to use (NOT owned; must outlive this object)
+ * @param cw_capacity CW capacity (L)
  */
-Libra2MotionController::Libra2MotionController(Logger& logger)
+Libra2MotionController::Libra2MotionController(Logger& logger,
+                                               const double& cw_capacity)
     : Libra2MotionController(logger, kDefaultCwPivotDist, kDefaultCwPivotSlope,
-                             kDefaultCwCapacity, kDefaultGrav,
-                             kDefaultFrictionCoulomb, kDefaultFrictionViscous,
-                             kDefaultInertia, kDefaultInertiaRate) {}
+                             cw_capacity, kDefaultGrav, kDefaultFrictionCoulomb,
+                             kDefaultFrictionViscous, kDefaultInertia,
+                             kDefaultInertiaRate) {}
 
 /**
  * @brief Standard constructor.
  *
  * @param logger Logger to use (NOT owned; must outlive this object)
- * @param cw_pivot_dist_m CW pivot distance at 0 L, A (m) (0 = not measured,
+ * @param cw_pivot_dist CW pivot distance at 0 L, A (m) (0 = not measured,
  *                        model invalid)
- * @param cw_pivot_slope_m_per_l Change in CW pivot distance per liter, B
+ * @param cw_pivot_slope Change in CW pivot distance per liter, B
  *                               (m/L)
- * @param cw_capacity_l CW capacity (L)
+ * @param cw_capacity CW capacity (L)
  * @param grav Gravitational acceleration, g (m/s²)
  * @param friction_coulomb Coulomb friction torque, τ_c (Nm)
  * @param friction_viscous Viscous friction coefficient, b (Nm·s/rad)
@@ -472,13 +473,12 @@ Libra2MotionController::Libra2MotionController(Logger& logger)
  * @param inertia_rate Rate of change of inertia, İ (kg·m²/s)
  */
 Libra2MotionController::Libra2MotionController(
-    Logger& logger, const double& cw_pivot_dist_m,
-    const double& cw_pivot_slope_m_per_l, const double& cw_capacity_l,
-    const double& grav, const double& friction_coulomb,
-    const double& friction_viscous, const double& inertia,
-    const double& inertia_rate)
+    Logger& logger, const double& cw_pivot_dist, const double& cw_pivot_slope,
+    const double& cw_capacity, const double& grav,
+    const double& friction_coulomb, const double& friction_viscous,
+    const double& inertia, const double& inertia_rate)
     : AbstractMotionController(logger, Joint::GetHebiStrings().size()),
-      cw_model_(cw_pivot_dist_m, cw_pivot_slope_m_per_l, cw_capacity_l),
+      cw_model_(cw_pivot_dist, cw_pivot_slope, cw_capacity),
       grav_(grav),
       friction_coulomb_(friction_coulomb),
       friction_viscous_(friction_viscous),
@@ -499,7 +499,9 @@ Libra2MotionController::Libra2MotionController(
  *
  * @param mode Mode to use from next target on
  *
- * @note Returns false if CW-primary is refused (needs arm and CW models).
+ * @note Returns false if CW-primary is refused (needs arm and CW models, and
+ *       no move in progress). Switching to tandem is always accepted; mid-move
+ *       it hands off to the actuator so the arm is never left free.
  */
 bool Libra2MotionController::SetMotionMode(const MotionMode& mode) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -509,16 +511,28 @@ bool Libra2MotionController::SetMotionMode(const MotionMode& mode) {
                      "CW model; staying in the current mode");
         return false;
     }
+    if (mode == MotionMode::kCwPrimary && IsMovingLocked()) {
+        logger_.Warn("Can't switch to CW-primary while the arm is moving; "
+                     "staying in the current mode");
+        return false;
+    }
 
-    // TODO: DECISION (not asked): a mode change only takes effect from the NEXT
-    //       target; it resets the CW phase and the "CW done" flag so a move in
-    //       progress is not switched mid-way. The UI is meant to disable the
-    //       switch while moving (as requested), so this only matters if
-    //       something else calls it during a move. Revisit if mid-move
-    //       switching is ever wanted.
+    if (cw_phase_ == CwPhase::kCwMoving) {
+        logger_.Warn("Left CW-primary while the CW was moving the arm; handing "
+                     "off to the actuator");
+        cw_phase_ = CwPhase::kIdle;
+        cw_assist_done_ = true;
+        if (target_pos_) {
+            pending_move_ = (*target_pos_)[kPitchIdx];
+        }
+    } else if (!IsMovingLocked()) {
+        // NOTE: A move in progress keeps its CW state; the new mode applies
+        //       from the next target (see `OnTargetChanged()`).
+        cw_phase_ = CwPhase::kIdle;
+        cw_assist_done_ = false;
+    }
+
     mode_ = mode;
-    cw_phase_ = CwPhase::kIdle;
-    cw_assist_done_ = false;
     logger_.Info(std::string("Motion mode: ")
                  + (mode == MotionMode::kTandem ? "tandem" : "CW-primary"));
     return true;
@@ -533,6 +547,17 @@ MotionMode Libra2MotionController::GetMotionMode() const {
 }
 
 /**
+ * @brief Whether the arm is moving or about to: a trajectory is running, the
+ *        CW is moving the arm, a move is queued, or a calibration is running.
+ *
+ * @note Trajectory state is as of the last `Update()`.
+ */
+bool Libra2MotionController::IsMoving() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return IsMovingLocked();
+}
+
+/**
  * @brief Stores latest CW volume (from TankWidget).
  *
  * @param liters CW volume (L)
@@ -544,7 +569,7 @@ void Libra2MotionController::SetCwVolume(const double& liters) {
                      + " L");
         return;
     }
-    cw_volume_l_ = liters;
+    cw_vol_ = liters;
 }
 
 /**
@@ -591,39 +616,39 @@ bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
 /**
  * @brief Sets the CW-primary hand-off band.
  *
- * @param band_rad Band around target angle (rad); inside it, CW stops and
+ * @param band Band around target angle (rad); inside it, CW stops and
  *                 actuator takes over
  *
  * @note Rejects a non-positive band and returns false.
  */
-bool Libra2MotionController::SetHandoffBand(const double& band_rad) {
+bool Libra2MotionController::SetHandoffBand(const double& band) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!(band_rad > 0.0) || !std::isfinite(band_rad)) {
-        logger_.Warn("Ignoring invalid hand-off band: " + MotionFormat(band_rad)
+    if (!(band > 0.0) || !std::isfinite(band)) {
+        logger_.Warn("Ignoring invalid hand-off band: " + MotionFormat(band)
                      + " rad");
         return false;
     }
-    handoff_band_ = band_rad;
-    logger_.Info("Hand-off band updated: " + MotionFormat(band_rad) + " rad");
+    handoff_band_ = band;
+    logger_.Info("Hand-off band updated: " + MotionFormat(band) + " rad");
     return true;
 }
 
 /**
  * @brief Sets the CW volume tolerance ("volume reached" deadband).
  *
- * @param tolerance_l Tolerance (L); prevents fill/drain chatter near target
+ * @param tolerance Tolerance (L); prevents fill/drain chatter near target
  *                    volume
  *
  * @note Rejects a negative or non-finite tolerance and returns false.
  */
-bool Libra2MotionController::SetCwVolumeTolerance(const double& tolerance_l) {
+bool Libra2MotionController::SetCwVolumeTolerance(const double& tolerance) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!(tolerance_l >= 0.0) || !std::isfinite(tolerance_l)) {
+    if (!(tolerance >= 0.0) || !std::isfinite(tolerance)) {
         logger_.Warn("Ignoring invalid CW volume tolerance: "
-                     + MotionFormat(tolerance_l) + " L");
+                     + MotionFormat(tolerance) + " L");
         return false;
     }
-    cw_volume_tolerance_ = tolerance_l;
+    cw_volume_tolerance_ = tolerance;
     return true;
 }
 
@@ -688,7 +713,7 @@ double Libra2MotionController::GetArmSag() const {
  *        mass.
  *
  * @param theta Pitch angle, θ (rad)
- * @param cw_mass_kg CW mass, m_cw (kg)
+ * @param cw_mass CW mass, m_cw (kg)
  *
  * @note Doesn't lock, since `Update()` calls it while holding the lock. From
  *       outside, only call it while the motion controller isn't running.
@@ -697,10 +722,9 @@ double Libra2MotionController::GetArmSag() const {
  *         τ_ext,g(θ) = (τ_g1,0 + m_cw·g·r_P)·cos θ + m_arm·h_1·g·sin θ
  */
 double Libra2MotionController::ComputeNetGravTorque(
-    const double& theta, const double& cw_mass_kg) const {
+    const double& theta, const double& cw_mass) const {
     return Libra2Model::NetGravTorque(arm_level_torque_, arm_sag_,
-                                      cw_model_.Moment(cw_mass_kg), grav_,
-                                      theta);
+                                      cw_model_.Moment(cw_mass), grav_, theta);
 }
 
 //------------------------------------------------------------------------------
@@ -809,11 +833,17 @@ CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
  *
  * @param torque_magnitude |Measured actuator torque| (Nm)
  * @param direction CW direction that relieves the actuator
+ * @param braking Whether actuator torque opposes travel (CW leads)
  *
  * @note Result's CW command is none when there's nothing to report.
+ *
+ * @note Slowing the trajectory only helps while the actuator lifts the arm.
+ *       While it brakes, slowing would raise the torque, so the soft limit
+ *       keeps full speed and only the CW reacts. The hard limit always stops.
  */
 Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
-    const double& torque_magnitude, const CwCommand& direction) {
+    const double& torque_magnitude, const CwCommand& direction,
+    const bool& braking) {
     AtcResult result;
 
     if (!atc_en_) {
@@ -838,8 +868,9 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
 
     } else if (torque_magnitude >= torque_comp_lower_bound_) {
         // Soft limit: keep reporting the direction and slow the trajectory
+        // (unless braking)
         result.cw_command = direction;
-        in_slow_band = true;
+        in_slow_band = !braking;
 
     } else {
         // Acceptable torque: stop balancing and re-enable movement
@@ -853,12 +884,6 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
         }
     }
 
-    // TODO: DECISION (not asked): the throttle looks at |torque| only. That is
-    //       right while the actuator LIFTS the arm and the CW is catching up.
-    //       If the CW ever leads the trajectory (the actuator brakes instead of
-    //       lifts), slowing the trajectory is the WRONG response and the
-    //       torque would stay high. Check once the real CW speed is known; a
-    //       signed check (torque vs. direction of travel) would fix it.
     if (!movement_en_) {
         result.playback_rate = 0.0;
     } else {
@@ -872,8 +897,8 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
  *        the arm at target angle.
  *
  * @param theta_tgt Target angle, θ_tgt (rad)
- * @param cw_mass_kg Current CW mass, m_cw (kg)
- * @param[out] cw_mass_tgt_kg If given, set to balancing CW mass,
+ * @param cw_mass Current CW mass, m_cw (kg)
+ * @param[out] cw_mass_tgt If given, set to balancing CW mass,
  *                            m_cw,bal(θ_tgt) (kg)
  *
  * @note Returns none if balance mass is undefined at this angle.
@@ -884,8 +909,7 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
  *         Δm_tgt = m_cw,bal(θ_tgt) − m_cw
  */
 std::optional<CwCommand> Libra2MotionController::PredictiveCwCommand(
-    const double& theta_tgt, const double& cw_mass_kg,
-    double* cw_mass_tgt_kg) const {
+    const double& theta_tgt, const double& cw_mass, double* cw_mass_tgt) const {
     // Eq. 38 -> target mass (clamped to what the CW can hold)
     const auto moment_bal = Libra2Model::BalanceCwMoment(arm_level_torque_,
                                                          arm_sag_, grav_,
@@ -894,12 +918,12 @@ std::optional<CwCommand> Libra2MotionController::PredictiveCwCommand(
         return std::nullopt;
     }
     const double mass_tgt = cw_model_.MassForMoment(*moment_bal);
-    if (cw_mass_tgt_kg != nullptr) {
-        *cw_mass_tgt_kg = mass_tgt;
+    if (cw_mass_tgt != nullptr) {
+        *cw_mass_tgt = mass_tgt;
     }
 
     // Eq. 40a
-    const double diff = mass_tgt - cw_mass_kg;
+    const double diff = mass_tgt - cw_mass;
     if (std::abs(diff) <= cw_volume_tolerance_ * kWaterDensity) {
         return CwCommand::kIdle;
     }
@@ -928,7 +952,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
                                           const double& theta_tgt,
                                           Libra2Command& command) {
     double mass_tgt = 0.0;
-    const auto cw = PredictiveCwCommand(theta_tgt, *cw_mass_kg_, &mass_tgt);
+    const auto cw = PredictiveCwCommand(theta_tgt, *cw_mass_, &mass_tgt);
     if (!cw) {
         logger_.Warn("CW-primary: target mass undefined at this angle; handing "
                      "off to the actuator");
@@ -949,18 +973,15 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
             + std::string(angle_reached ? "angle" : "") + " reached): theta="
             + MotionFormat(theta) + " rad, target=" + MotionFormat(theta_tgt)
             + " rad, angle error=" + MotionFormat(theta - theta_tgt)
-            + " rad; volume=" + MotionFormat(*cw_mass_kg_ / kWaterDensity)
+            + " rad; volume=" + MotionFormat(*cw_mass_ / kWaterDensity)
             + " L, target volume=" + MotionFormat(mass_tgt / kWaterDensity)
             + " L, volume error="
-            + MotionFormat((*cw_mass_kg_ - mass_tgt) / kWaterDensity) + " L");
+            + MotionFormat((*cw_mass_ - mass_tgt) / kWaterDensity) + " L");
 
-        // TODO: DECISION (not asked): after the hand-off the CW goes (and
-        //       stays) idle until the next target, so the predictive command
-        //       cannot refill the CW while the actuator finishes the move. The
-        //       cost: the CW will not trim a residual error left by an
-        //       inaccurate model, and the actuator may end up holding a large
-        //       steady torque. If that shows up in the hand-off log, let the
-        //       CW resume (e.g., with the reactive torque command).
+        // NOTE: After the hand-off, the predictive command stays off until the
+        //       next target so it can't refill the CW while the actuator
+        //       finishes the move. The reactive (ATC) command still trims any
+        //       residual torque left by an inaccurate model.
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
         pending_move_ = theta_tgt;
@@ -996,15 +1017,15 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
     const double theta = state.pos[kPitchIdx];
     const double vel = state.vel[kPitchIdx];
     const double torque = state.torque_actuator[kPitchIdx];
+    trajectory_active_ = state.trajectory_active;
 
     // Eq. 28: CW mass from latest volume (none until one arrives)
-    cw_mass_kg_ = cw_volume_l_
-                      ? std::optional<double>(Libra2Model::CwMass(*cw_volume_l_))
-                      : std::nullopt;
+    cw_mass_ = cw_vol_ ? std::optional<double>(Libra2Model::CwMass(*cw_vol_))
+                       : std::nullopt;
 
     const bool calibrating = IsCalibrationRunning(status_);
     const bool model_ready = calibrated_ && cw_model_.IsValid()
-                             && cw_mass_kg_.has_value();
+                             && cw_mass_.has_value();
     std::optional<double> target;
     if (target_pos_) {
         target = (*target_pos_)[kPitchIdx];
@@ -1013,15 +1034,16 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
     // CW-primary: arm is left free while CW moves it
     bool arm_free = false;
     if (mode_ == MotionMode::kCwPrimary && cw_phase_ == CwPhase::kCwMoving) {
-        if (!model_ready || !target || calibrating) {
-            // TODO: DECISION (not asked): if the model, CW volume, or target is
-            //       lost (or a calibration starts) while the arm is free, hand
-            //       off to the actuator right away instead of leaving the arm
-            //       uncontrolled. The actuator then moves to the target if
-            //       there still is one. A free arm falling under gravity is the
-            //       thing to avoid, so this errs on the side of grabbing it.
-            logger_.Warn("CW-primary: model, CW volume, or target unavailable; "
-                         "handing off to the actuator");
+        if (!model_ready || !target || calibrating || !atc_en_) {
+            // NOTE: If the model, CW volume, or target is lost (or a
+            //       calibration starts, or ATC is turned off so the CW stops
+            //       responding) while the arm is free, hand off to the actuator
+            //       right away instead of leaving the arm uncontrolled. The
+            //       actuator then moves to the target if there still is one. A
+            //       free arm falling under gravity is the thing to avoid, so
+            //       this errs on the side of grabbing it.
+            logger_.Warn("CW-primary: model, CW volume, target, or ATC "
+                         "unavailable; handing off to the actuator");
             cw_phase_ = CwPhase::kIdle;
             cw_assist_done_ = true;
             if (target) {
@@ -1036,10 +1058,13 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
     // feedforward while CW works toward its target
     if (!arm_free) {
         // Throttle trajectory from measured torque (rate 1 / 0.5 / 0). Filling
-        // relieves a positive (joint-space) actuator torque.
+        // relieves a positive (joint-space) actuator torque. Actuator brakes
+        // when its torque opposes travel toward the target.
         const CwCommand direction = (torque > 0.0) ? CwCommand::kFill
                                                    : CwCommand::kDrain;
-        const AtcResult atc = UpdateTorqueComp(std::abs(torque), direction);
+        const bool braking = target && (torque * (*target - theta) < 0.0);
+        const AtcResult atc = UpdateTorqueComp(std::abs(torque), direction,
+                                               braking);
         command.playback_rate = atc.playback_rate;
         command.cw_command = atc.cw_command;  // reactive (LIBRA-I style)
 
@@ -1048,14 +1073,10 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
             RunCalibration(state, theta, vel, torque);
         } else {
             // Once calibrated, predictive target replaces reactive command.
-            // After a CW-primary hand-off, CW stays idle.
-            if (model_ready && target) {
-                const auto predicted = cw_assist_done_
-                                           ? std::optional<CwCommand>(
-                                               CwCommand::kIdle)
-                                           : PredictiveCwCommand(*target,
-                                                                 *cw_mass_kg_,
-                                                                 nullptr);
+            // After a CW-primary hand-off, reactive command stays.
+            if (model_ready && target && !cw_assist_done_) {
+                const auto predicted = PredictiveCwCommand(*target, *cw_mass_,
+                                                           nullptr);
                 if (predicted) {
                     command.cw_command = predicted;
                 }
@@ -1064,7 +1085,7 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
             // Eq. 36-37 (no clamping)
             if (model_ready) {
                 const double torque_ext_g = ComputeNetGravTorque(theta,
-                                                                 *cw_mass_kg_);
+                                                                 *cw_mass_);
                 command.torque_actuator_cmd[kPitchIdx] =
                     Libra2Model::TorqueCommand(inertia_, inertia_rate_,
                                                friction_viscous_,
@@ -1076,9 +1097,10 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
         }
     }
 
-    // One-shot move request (calibration moves, CW-primary hand-off)
+    // One-shot move request (tandem targets, calibration moves, CW-primary
+    // hand-off)
     if (pending_move_) {
-        JointValues move = state.pos;
+        std::vector<double> move = state.pos;
         move[kPitchIdx] = *pending_move_;
         command.move_to = move;
         pending_move_.reset();
@@ -1104,14 +1126,14 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
 void Libra2MotionController::ComputeDiagnostics(
     const double& theta, const std::optional<double>& theta_tgt,
     Libra2Diagnostics& diagnostics) const {
-    diagnostics.cw_mass_kg = cw_mass_kg_;
+    diagnostics.cw_mass = cw_mass_;
     if (!calibrated_ || !cw_model_.IsValid()) {
         return;
     }
 
     std::optional<double> moment;
-    if (cw_mass_kg_) {
-        moment = cw_model_.Moment(*cw_mass_kg_);
+    if (cw_mass_) {
+        moment = cw_model_.Moment(*cw_mass_);
         diagnostics.torque_ext_g = Libra2Model::NetGravTorque(arm_level_torque_,
                                                               arm_sag_, *moment,
                                                               grav_, theta);
@@ -1124,9 +1146,9 @@ void Libra2MotionController::ComputeDiagnostics(
                                                              *theta_tgt);
         if (moment_bal) {
             const double mass_tgt = cw_model_.MassForMoment(*moment_bal);
-            diagnostics.cw_mass_tgt_kg = mass_tgt;
-            if (cw_mass_kg_) {
-                diagnostics.cw_mass_change_kg = mass_tgt - *cw_mass_kg_;
+            diagnostics.cw_mass_tgt = mass_tgt;
+            if (cw_mass_) {
+                diagnostics.cw_mass_change_kg = mass_tgt - *cw_mass_;
                 diagnostics.torque_ext_g_tgt =
                     Libra2Model::TargetNetGravTorque(grav_, *theta_tgt, *moment,
                                                      *moment_bal);
@@ -1140,18 +1162,27 @@ void Libra2MotionController::ComputeDiagnostics(
 //------------------------------------------------------------------------------
 
 /**
- * @brief New target: cancels any calibration move and, in CW-primary mode,
- *        lets the CW start moving the arm.
+ * @brief New target: cancels any calibration move, then either requests the
+ *        actuator move (tandem) or lets the CW start moving the arm
+ *        (CW-primary).
+ *
+ * @note HebiThread starts every LIBRA-II trajectory from `move_to`, so the
+ *       choice of how to reach a target is made here only.
  */
 void Libra2MotionController::OnTargetChanged() {
     // A manual target overrides any calibration move
     CancelCalibrationLocked();
 
     // Mode is read here, so a mode change applies from next target (see
-    // DECISION note in SetMotionMode)
+    // `SetMotionMode()`)
     cw_assist_done_ = false;
-    cw_phase_ = (mode_ == MotionMode::kCwPrimary) ? CwPhase::kCwMoving
-                                                  : CwPhase::kIdle;
+    if (mode_ == MotionMode::kCwPrimary) {
+        cw_phase_ = CwPhase::kCwMoving;
+        pending_move_.reset();  // hand-off requests the move
+    } else {
+        cw_phase_ = CwPhase::kIdle;
+        pending_move_ = (*target_pos_)[kPitchIdx];
+    }
 }
 
 /**
@@ -1173,6 +1204,7 @@ void Libra2MotionController::OnReset() {
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
     pending_move_.reset();
+    trajectory_active_ = false;
     movement_en_ = true;
     state_warned_ = false;
 }
@@ -1191,6 +1223,14 @@ void Libra2MotionController::CancelCalibrationLocked() {
         sampler_.Reset();
         logger_.Info("Calibration cancelled");
     }
+}
+
+/**
+ * @brief Same as `IsMoving()` (`mutex_` must already be held).
+ */
+bool Libra2MotionController::IsMovingLocked() const {
+    return trajectory_active_ || (cw_phase_ == CwPhase::kCwMoving)
+           || pending_move_.has_value() || IsCalibrationRunning(status_);
 }
 
 /**
@@ -1295,7 +1335,7 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
     }
 
     const auto sample = sampler_.Add(state.dt, theta, vel, torque,
-                                     state.trajectory_active, cw_volume_l_);
+                                     state.trajectory_active, cw_vol_);
     if (!sample) {
         return;
     }

@@ -55,9 +55,8 @@ constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 //       CW command until real values are set here.
 constexpr double kDefaultCwPivotDist = 0.0;   // r_P at 0 L, A (m)
 constexpr double kDefaultCwPivotSlope = 0.0;  // r_P change per liter, B (m/L)
-// TODO: keep in sync with TankWidget's kCapacity (19 L for LIBRA-II)
-constexpr double kDefaultCwCapacity = 19.0;  // L
-constexpr double kDefaultGrav = 9.80665;     // g (m/s²)
+// NOTE: CW capacity comes from the caller (HebiThread: `Water::kCapacity`)
+constexpr double kDefaultGrav = 9.80665;  // g (m/s²)
 // TODO: friction has not been measured yet
 constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
 constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
@@ -130,9 +129,9 @@ bool IsCalibrationRunning(const CalibrationStatus& status);
  *       (`I_Controller.jpg`).
  */
 struct Libra2Diagnostics {
-    std::optional<double> cw_mass_kg;         // m_cw
+    std::optional<double> cw_mass;            // m_cw
     std::optional<double> torque_ext_g;       // τ_ext,g(θ) (Nm)
-    std::optional<double> cw_mass_tgt_kg;     // m_cw,bal(θ_tgt)
+    std::optional<double> cw_mass_tgt;        // m_cw,bal(θ_tgt)
     std::optional<double> cw_mass_change_kg;  // Δm_tgt, Eq. 40a
     std::optional<double> torque_ext_g_tgt;   // τ_ext,g(θ_tgt) (Nm), Eq. 39
 };
@@ -148,8 +147,8 @@ struct Libra2Command : MotionCommand {
     std::optional<CwCommand> cw_command;
 
     // Pose (joint space, rad) the caller must move to; emitted ONCE per
-    // request (calibration moves, CW-primary hand-off)
-    std::optional<JointValues> move_to;
+    // request (tandem targets, calibration moves, CW-primary hand-off)
+    std::optional<std::vector<double>> move_to;
 
     Libra2Diagnostics diagnostics;
 };
@@ -167,8 +166,7 @@ struct Libra2Command : MotionCommand {
  */
 class CwModel {
   public:
-    explicit CwModel(const double& cw_pivot_dist_m,
-                     const double& cw_pivot_slope_m_per_l,
+    explicit CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
                      const double& capacity_l);
 
     [[nodiscard]] bool IsValid() const {
@@ -287,13 +285,15 @@ class RestSampler {
  */
 class Libra2MotionController : public AbstractMotionController {
   public:
-    explicit Libra2MotionController(Logger& logger);  // kDefault* values
-    explicit Libra2MotionController(
-        Logger& logger, const double& cw_pivot_dist_m,
-        const double& cw_pivot_slope_m_per_l, const double& cw_capacity_l,
-        const double& grav, const double& friction_coulomb,
-        const double& friction_viscous, const double& inertia,
-        const double& inertia_rate);
+    explicit Libra2MotionController(Logger& logger, const double& cw_capacity);
+    explicit Libra2MotionController(Logger& logger, const double& cw_pivot_dist,
+                                    const double& cw_pivot_slope,
+                                    const double& cw_capacity,
+                                    const double& grav,
+                                    const double& friction_coulomb,
+                                    const double& friction_viscous,
+                                    const double& inertia,
+                                    const double& inertia_rate);
 
     // --- Control Cycle ---
 
@@ -303,22 +303,27 @@ class Libra2MotionController : public AbstractMotionController {
 
     bool SetMotionMode(const MotionMode& mode);
     [[nodiscard]] MotionMode GetMotionMode() const;
+
+    [[nodiscard]] bool IsMoving() const;
+
     void SetCwVolume(const double& liters);
     void EnableTorqueComp(const bool& enabled);
     bool SetTorqueCompBounds(const double& lower_bound,
                              const double& upper_bound);
-    bool SetHandoffBand(const double& band_rad);
-    bool SetCwVolumeTolerance(const double& tolerance_l);
+    bool SetHandoffBand(const double& band);
+    bool SetCwVolumeTolerance(const double& tolerance);
 
     // --- Arm Model ---
 
     void SetArmModel(const double& arm_level_torque, const double& arm_sag);
     void ClearArmModel();
+
     [[nodiscard]] bool IsCalibrated() const;
+
     [[nodiscard]] double GetArmLevelTorque() const;
     [[nodiscard]] double GetArmSag() const;
     [[nodiscard]] double ComputeNetGravTorque(const double& theta,
-                                              const double& cw_mass_kg) const;
+                                              const double& cw_mass) const;
 
     // --- Calibration ---
 
@@ -343,12 +348,13 @@ class Libra2MotionController : public AbstractMotionController {
     // --- Helper Functions ---
 
     AtcResult UpdateTorqueComp(const double& torque_magnitude,
-                               const CwCommand& direction);
+                               const CwCommand& direction, const bool& braking);
     std::optional<CwCommand> PredictiveCwCommand(const double& theta_tgt,
-                                                 const double& cw_mass_kg,
-                                                 double* cw_mass_tgt_kg) const;
+                                                 const double& cw_mass,
+                                                 double* cw_mass_tgt) const;
     bool RunCwPrimary(const double& theta, const double& theta_tgt,
                       Libra2Command& command);
+
     void ComputeDiagnostics(const double& theta,
                             const std::optional<double>& theta_tgt,
                             Libra2Diagnostics& diagnostics) const;
@@ -359,6 +365,8 @@ class Libra2MotionController : public AbstractMotionController {
     void FinishCalibration(const bool& success, const std::string& message);
     [[nodiscard]] double SampleToArmTorque(const RestSample& sample) const;
     void CancelCalibrationLocked();
+
+    [[nodiscard]] bool IsMovingLocked() const;
 
     // --- Data Members ---
 
@@ -376,25 +384,22 @@ class Libra2MotionController : public AbstractMotionController {
     bool calibrated_{false};
 
     // Inputs from slots
-    std::optional<double> cw_volume_l_;
-    std::optional<double> cw_mass_kg_;  // Eq. 28, refreshed each cycle
+    std::optional<double> cw_vol_;   // V (L)
+    std::optional<double> cw_mass_;  // m_cw (kg); Eq. 28, refreshed each cycle
 
     // Mode and CW-primary state
     MotionMode mode_{MotionMode::kTandem};
     CwPhase cw_phase_{CwPhase::kIdle};
-    // TODO: after a CW-primary hand-off the CW stays idle until the next
-    //       target. This keeps the predictive command from refilling the CW
-    //       while the actuator finishes the move, but it also means the CW
-    //       will not trim a residual error left by an inaccurate model. If
-    //       the actuator ends up holding a large steady torque, consider
-    //       letting the CW resume (e.g., via the reactive torque command).
-    bool cw_assist_done_{false};
+    bool cw_assist_done_{false};     // hand-off done; predictive CW off
+    bool trajectory_active_{false};  // from last `Update()`
+
     double handoff_band_{kDefaultHandoffBand};
     double cw_volume_tolerance_{kDefaultCwVolumeTolerance};
 
     // ATC
     bool atc_en_{false};
     bool movement_en_{true};
+
     double torque_comp_lower_bound_{kDefaultTorqueCompLowerBound};
     double torque_comp_upper_bound_{kDefaultTorqueCompUpperBound};
 
@@ -406,6 +411,7 @@ class Libra2MotionController : public AbstractMotionController {
     double t_stage_s_{0.0};
     double arm_torque_a_{0.0};
     double theta_a_{0.0};
+
     std::optional<double> pending_move_;  // pitch angle to request next cycle
     RestSampler sampler_;
 
