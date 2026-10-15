@@ -12,10 +12,10 @@
 
 // Other Library Headers
 #include <QtMultimedia>  // Qt::Multimedia
+#include <QVideoSink>    // Qt::Multimedia
 #include <QVideoWidget>  // Qt::MultimediaWidgets
 #ifdef BUILD_WITH_ROS2
 # include <opencv2/videoio.hpp>        // OpenCV
-# include <QVideoSink>                 // Qt::Multimedia
 # include <rclcpp/rclcpp.hpp>          // ROS2 Core
 # include <sensor_msgs/msg/image.hpp>  // ROS2 Messages
 #endif
@@ -55,21 +55,16 @@ class CameraManager : public QObject
 
     // --- Getters & Setters ---
 
-    [[nodiscard]] bool UsesRos2Node() const;
-
-#ifdef BUILD_WITH_ROS2
-    // --- ROS2 Frame Transform Getters & Setters ---
-
     void FlipHorizontal(const bool& enabled);
     void FlipVertical(const bool& enabled);
     [[nodiscard]] bool IsHorizontalFlipped() const;
     [[nodiscard]] bool IsVerticalFlipped() const;
-#endif
 
   private:
     // --- Helper Functions ---
 
     bool CameraIsActive();
+    void ProcessQtFrame(QVideoFrame frame);
 
 #ifdef BUILD_WITH_ROS2
     void CheckRos2Connectivity();
@@ -96,6 +91,11 @@ class CameraManager : public QObject
     std::atomic<bool> is_recording_{false};
     std::string video_filename_;
 
+    QVideoSink* video_sink_{nullptr};  // for displaying in Qt
+    bool flip_horizontal_{false};
+    bool flip_vertical_{false};
+
+    bool ros2_connected_{false};
 #ifdef BUILD_WITH_ROS2
     const std::string kCameraRgbTopic = "/camera/color/image_raw";
     const std::string kCameraDepthTopic = "/camera/depth/image_rect_raw";
@@ -104,14 +104,9 @@ class CameraManager : public QObject
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     QTimer* spin_timer_{nullptr};
     QTimer* connectivity_timer_{nullptr};
-    bool ros2_connected_{false};
-
-    bool flip_horizontal_{false};
-    bool flip_vertical_{false};
 
     std::atomic<bool> capture_requested_{false};
 
-    QVideoSink* video_sink_{nullptr};  // for displaying in Qt
     const int video_codec_ = cv::VideoWriter::fourcc('m', 'p', '4', 'v');
     cv::VideoWriter video_writer_;
 #endif

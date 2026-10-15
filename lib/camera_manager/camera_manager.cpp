@@ -12,11 +12,11 @@
 //   (none)
 
 // Other Library Headers
-#include <QDir>  // Qt::Core
+#include <QDir>         // Qt::Core
+#include <QVideoFrame>  // Qt::Multimedia
 #ifdef BUILD_WITH_ROS2
 # include <cv_bridge/cv_bridge.h>  // OpenCV
 # include <opencv2/imgcodecs.hpp>  // OpenCV
-# include <QVideoFrame>            // Qt::Multimedia
 #endif
 
 // Project Headers
@@ -123,6 +123,10 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         return;
     }
 
+    // Get video sink from the QVideoWidget for direct frame injection
+    video_sink_ = viewfinder->videoSink();
+    viewfinder->show();  // enable video feed
+
 #ifdef BUILD_WITH_ROS2
     // ========== Special Case: RealSense Depth Cameras ==========
 
@@ -130,9 +134,6 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         logger_->Info("RealSense camera detected; deferring to "
                       "ROS2 node...");
         use_ros2_node_ = true;
-
-        // Get video sink from the QVideoWidget for direct frame injection
-        video_sink_ = viewfinder->videoSink();
 
         return;  // Qt Multimedia setup not necessary
     }
@@ -153,9 +154,12 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
     recorder_ = new QMediaRecorder(camera_);
     session_.setRecorder(recorder_);
 
-    // Register video output to existing UI VideoWidget
-    session_.setVideoOutput(viewfinder);
-    viewfinder->show();  // enable the video feed
+    // Register an intermediate sink so frames can be flipped before they're
+    // displayed in the UI VideoWidget
+    auto* qt_sink = new QVideoSink(this);
+    session_.setVideoSink(qt_sink);
+    connect(qt_sink, &QVideoSink::videoFrameChanged,  // forward to viewfinder
+            this, &CameraManager::ProcessQtFrame);
 
     // If an invalid CameraFormat is detected, select a safe default
     if (camera_->cameraFormat().pixelFormat()
@@ -240,6 +244,20 @@ CameraManager::~CameraManager() {
  */
 bool CameraManager::CameraIsActive() {
     return (use_ros2_node_) ? ros2_connected_ : camera_ != nullptr;
+}
+
+/**
+ * @brief Applies current flip states to a frame and forwards it to the viewfinder.
+ *
+ * @param frame A frame from a capture session
+ *
+ * @note Only display flags are set, so captures and recordings stay unflipped.
+ */
+void CameraManager::ProcessQtFrame(QVideoFrame frame) {
+    frame.setMirrored(flip_horizontal_ != flip_vertical_);
+    frame.setRotation(flip_vertical_ ? QtVideo::Rotation::Clockwise180
+                                     : QtVideo::Rotation::None);
+    video_sink_->setVideoFrame(frame);
 }
 
 #ifdef BUILD_WITH_ROS2
@@ -541,15 +559,7 @@ bool CameraManager::Record() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Whether frames come from a ROS2 node (RealSense) instead of QCamera.
- */
-bool CameraManager::UsesRos2Node() const {
-    return use_ros2_node_;
-}
-
-#ifdef BUILD_WITH_ROS2
-/**
- * @brief Sets horizontal flipping of the ROS2 image feed.
+ * @brief Sets horizontal flipping of the image feed.
  *
  * @param enabled Whether to flip horizontally
  */
@@ -558,7 +568,7 @@ void CameraManager::FlipHorizontal(const bool& enabled) {
 }
 
 /**
- * @brief Sets vertical flipping of the ROS2 image feed.
+ * @brief Sets vertical flipping of the image feed.
  *
  * @param enabled Whether to flip vertically
  */
@@ -567,16 +577,15 @@ void CameraManager::FlipVertical(const bool& enabled) {
 }
 
 /**
- * @brief Whether the ROS2 image feed is flipped horizontally.
+ * @brief Whether the image feed is flipped horizontally.
  */
 bool CameraManager::IsHorizontalFlipped() const {
     return flip_horizontal_;
 }
 
 /**
- * @brief Whether the ROS2 image feed is flipped vertically.
+ * @brief Whether the image feed is flipped vertically.
  */
 bool CameraManager::IsVerticalFlipped() const {
     return flip_vertical_;
 }
-#endif

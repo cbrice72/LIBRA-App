@@ -81,10 +81,8 @@ void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
     ui_->l_camera_id->setText(camera_id);
     ui_->pb_camera_capture->setEnabled(true);
     ui_->pb_camera_record->setEnabled(true);
-
-    // Flipping is only applied to ROS2 (RealSense) frames
-    ui_->pb_camera_flip_h->setEnabled(camera_manager_->UsesRos2Node());
-    ui_->pb_camera_flip_v->setEnabled(camera_manager_->UsesRos2Node());
+    ui_->pb_camera_flip_h->setEnabled(true);
+    ui_->pb_camera_flip_v->setEnabled(true);
 }
 
 //------------------------------------------------------------------------------
