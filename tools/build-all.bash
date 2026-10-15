@@ -88,6 +88,7 @@ else
   ROS_STATUS="without"
   BUILD_TYPE="standalone"
 fi
+BUILD_DIR="$PROJECT_ROOT/build/libra-${LIBRA_VERSION}-${BUILD_TYPE}"
 
 color_echo INFO "The LIBRA App will be built for LIBRA-$LIBRA_VERSION $ROS_STATUS ROS2 support."
 sleep 2;  # let user see this message
