@@ -45,6 +45,9 @@ target_include_directories(
 
 # Tell the linker which libraries to link against
 set(LIBRA_LIBRARIES arduino_manager camera_manager common logger util)
+if(LIBRA_VERSION EQUAL 2)
+    list(APPEND LIBRA_LIBRARIES motion_controller)  # for default settings
+endif()
 
 set(LIBRA_THREADS actuator_thread)
 
@@ -77,7 +80,7 @@ target_link_libraries(
 set_target_properties(
     libra_app_qt
     PROPERTIES OUTPUT_NAME "libra_app"
-               RUNTIME_OUTPUT_DIRECTORY "${LIBRA_VARIANT_BUILD_DIR}"
+               RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
                ${BUNDLE_ID_OPTION}
                MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
                MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}"
@@ -104,11 +107,13 @@ install(
 )
 
 add_custom_command(
-    # copy runtime config files to output dir
+    # copy runtime config files to output dir (replace existing)
     TARGET libra_app_qt
     POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E rm -rf
+            $<TARGET_FILE_DIR:libra_app_qt>/${CMAKE_INSTALL_BINDIR}/shared
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${LIBRA_SHARED}
-            ${CMAKE_INSTALL_BINDIR}/shared
+            $<TARGET_FILE_DIR:libra_app_qt>/${CMAKE_INSTALL_BINDIR}/shared
 )
 
 qt_finalize_executable(libra_app_qt)

@@ -26,6 +26,7 @@
 
 // Project Headers
 #if LIBRA_VERSION == 2
+# include "arduino_defs.h"
 # include "libra2_motion_controller.h"
 #endif
 #ifdef BUILD_WITH_ROS2
@@ -109,6 +110,34 @@ std::string FormatDouble(const double& value, const int& precision = 2) {
     return ss.str();
 }
 
+/**
+ * @brief Maps an actuator to the joint it drives (simple joints only).
+ *
+ * @param actuator Named enum value of the actuator
+ *
+ * @note Returns `Joint::Name::kUndefined` for actuators that are part of
+ *       complex joints (LIBRA-I's differential 2-DoF joint w/ MA and MB).
+ */
+Joint::Name JointFromActuator(const Actuator::Name& actuator) {
+    switch (actuator) {
+#if LIBRA_VERSION == 1
+        case Actuator::Name::kJ1:
+            return Joint::Name::kJ1;
+        case Actuator::Name::kJ2:
+            return Joint::Name::kJ2;
+        case Actuator::Name::kJ3:
+            return Joint::Name::kJ3;
+#elif LIBRA_VERSION == 2
+        case Actuator::Name::kPitch:
+            return Joint::Name::kPitch;
+        case Actuator::Name::kYaw:
+            return Joint::Name::kYaw;
+#endif
+        default:
+            return Joint::Name::kUndefined;
+    }
+}
+
 #if LIBRA_VERSION == 2
 /**
  * @brief Formats an optional value ("n/a" if empty).
@@ -189,8 +218,9 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 
 #if LIBRA_VERSION == 2
     // Motion controller shares this logger, so `SetDebugMode()` reaches it too
-    motion_controller_ = std::make_unique<Motion::Libra2MotionController>(
-        *logger_);
+    motion_controller_ =
+        std::make_unique<Motion::Libra2MotionController>(*logger_,
+                                                         Water::kCapacity);
 #endif
 
     // Initialize HEBI objects
@@ -201,6 +231,20 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     enum_names_.resize(n_actuators_);
     for (std::size_t i = 0; i < n_actuators_; ++i) {
         enum_names_[i] = Actuator::StringToNameEnum(names_[i]);
+
+        // Every actuator must drive a known joint
+#if LIBRA_VERSION == 1
+        const bool differential = (enum_names_[i] == Actuator::Name::kMA)
+                                  || (enum_names_[i] == Actuator::Name::kMB);
+#else
+        const bool differential = false;
+#endif
+        if (!differential
+            && JointFromActuator(enum_names_[i]) == Joint::Name::kUndefined) {
+            logger_->Error("Actuator " + names_[i]
+                           + " has no matching joint; its feedback and "
+                             "commands will be ignored");
+        }
     }
 
     // Resize vectors to match number of actuators
@@ -218,7 +262,9 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
 
     auto hebi_names = Joint::GetHebiStrings();
 # if LIBRA_VERSION == 1
-    // TODO: temporary solution to publish the static joint to the ROS2 domain
+    // NOTE: this doesn't belong here, but until we replace either of LIBRA-I's
+    //       or LIBRA-II's static joint with something else, this is the easiest
+    //       way to get it into the ROS2 message.
     hebi_names.push_back("Static-Manip");
 # endif
     state_msg_.name = hebi_names;
@@ -314,10 +360,11 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         }
 #endif
         // Regular 1-DoF joints should be 1-to-1
-        auto name = static_cast<Joint::Name>(
-            enum_names_[i]);  // TODO: casting Actuator::Name to Joint::Name is
-                              //       horribly bug-prone
-        joint_feedback_map[name] = Joint::ActuatorToJointSimple(name, val);
+        const auto joint = JointFromActuator(enum_names_[i]);
+        if (joint == Joint::Name::kUndefined) {
+            continue;  // user is only warned once (in constructor)
+        }
+        joint_feedback_map[joint] = Joint::ActuatorToJointSimple(joint, val);
     }
 
 #if LIBRA_VERSION == 1
@@ -362,11 +409,9 @@ void HebiThread::CheckTorqueControl() {
                    -eff[Actuator::Name::kMA]
                        - eff[Actuator::Name::kMB]);  // roll
 
-    // Apply hysteresis logic
-    // TODO: the current "algorithm" is just simple hysteresis which
-    //       stops ALL arm movement until the counterweight is full
-    //       enough. This is not ideal, and we should be predicting how
-    //       arm movement will affect the central joint torque.
+    // Apply 3-tier hysteresis logic
+    // TODO: Ideally we should be predicting how a trajectory will affect the
+    //       central joint's feedback torque, maybe with ROS2 or something.
     if (arm_torque_r > torque_comp_upper_bound_) {
         // If arm torque is too high, disable movement before reporting the
         // torque direction to WaterController for CW balancing
@@ -384,19 +429,15 @@ void HebiThread::CheckTorqueControl() {
         // While significant arm torque remains, keep reporting its direction
         // to WaterController
         emit ReportArmTorque(arm_torque_theta);
-        vel_scale_ = 0.5;  // helps avoid sudden stop if upper bound is exceeded
+        playback_rate_ = 0.5;  // helps avoid sudden stop if upper bound is hit
 
     } else {
         // Once arm torque reaches an acceptable level, disable fluid system
         // balancing and re-enable movement
         emit ReportArmTorque(std::nullopt);
+        playback_rate_ = 1.0;  // full speed
         if (!movement_en_) {
             movement_en_ = true;
-            vel_scale_ = 1.0;
-
-            // Reset trajectory clock to pre-stop time
-            t_trajectory_start_ = std::chrono::steady_clock::now()
-                                  - t_trajectory_elapsed_;
 
             logger_->Info("Movement re-enabled (" + FormatDouble(arm_torque_r)
                           + " Nm < " + FormatDouble(torque_comp_lower_bound_)
@@ -422,29 +463,24 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
                                  Eigen::VectorXd& cmd_eff) {
-    // Initialize persistent variables
-    std::chrono::steady_clock::duration t_trajectory = t_trajectory_elapsed_;
+    // Playback rate from ATC hysteresis (0 = paused)
+    const double rate = movement_en_ ? playback_rate_ : 0.0;
+
+    std::unique_lock<std::mutex> lock(trajectory_mutex_);
 
     // Determine movement command
-    if (movement_en_ && trajectory_ != nullptr) {
-        t_trajectory = std::chrono::steady_clock::now() - t_trajectory_start_;
-        // Track trajectory progress in case movement is disabled
-        // mid-trajectory (e.g., by ATC)
-        t_trajectory_elapsed_ = t_trajectory;
+    if (trajectory_ != nullptr) {
+        t_trajectory_s_ += dt.count() * rate;
 
-        if (std::chrono::duration<double>(t_trajectory).count()
-            < trajectory_->getDuration()) {
+        if (t_trajectory_s_ < trajectory_->getDuration()) {
             // --- MODE 1: TRAJECTORY FOLLOWING ---
 
             // Build next step of trajectory
-            // TODO: this used to pass `t_trajectory.count()` (clock ticks,
-            //       i.e., nanoseconds), but HEBI expects seconds. Verify on
-            //       hardware (see the warning in StartTrajectory()).
-            trajectory_
-                ->getState(std::chrono::duration<double>(t_trajectory).count(),
-                           &cmd_pos, &cmd_vel, &cmd_acc);
+            // TODO: This used to pass clock ticks (i.e., nanoseconds), but
+            //       apparently HEBI expects seconds. Need to verify this.
+            trajectory_->getState(t_trajectory_s_, &cmd_pos, &cmd_vel, &cmd_acc);
             command_->setPosition(cmd_pos);
-            command_->setVelocity(cmd_vel * vel_scale_);
+            command_->setVelocity(cmd_vel * rate);
         } else {
             // --- MODE 2: POSITION HOLDING ---
 
@@ -454,6 +490,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             logger_->Info("Trajectory complete");
         }
     }
+    lock.unlock();
 
     // Send movement command
     return group_->sendCommand(*command_);
@@ -466,10 +503,8 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
  * @param start_pos Start pose (rad, actuator space)
  * @param target_pos End pose (rad, actuator space)
  *
- * @note Called from the GUI thread (`SetTarget()`) and, for LIBRA-II, from the
- *       control loop (moves requested by the motion controller).
- *       TODO: `trajectory_` is shared between those threads without a lock
- *       (pinned thread-safety item).
+ * @note LIBRA-I calls this from the `MainWindow` thread (via `SetTarget()`).
+ *       LIBRA-II calls this from the motion control loop (via `move_to`).
  */
 void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
                                  const Eigen::VectorXd& target_pos) {
@@ -516,16 +551,15 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
     time << 0, max_difference / kMaxVel;
 #endif
 
-    // Log start time and create trajectory
-#if LIBRA_VERSION == 1
-    t_trajectory_start_ = std::chrono::steady_clock::now();
-    t_trajectory_elapsed_ = std::chrono::steady_clock::duration::zero();
-#elif LIBRA_VERSION == 2
-    t_trajectory_s_ = 0.0;
-#endif
-    trajectory_ = hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos,
-                                                                      &vel,
-                                                                      &accel);
+    // Create trajectory and log start time
+    auto trajectory =
+        hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos, &vel,
+                                                            &accel);
+    {
+        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        t_trajectory_s_ = 0.0;
+        trajectory_ = std::move(trajectory);
+    }
 
     logger_->Debug("Set trajectory target(s) to " + trajectory_ss.str()
                    + " rad");
@@ -561,8 +595,22 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         vel_cmd_ = Eigen::VectorXd::Zero(n_actuators_);
     }
 
+    // Free mode: send nothing to the pitch joint
+    if (free_mode_) {
+        pos_cmd_.setConstant(kNone);
+        vel_cmd_.setZero();
+        emit ReportArmTorque(std::nullopt);
+        ReportMotionStatus();
+        return true;  // nothing to send
+    }
+
     // No trajectory, no reference (e.g., after Stop())
-    if (trajectory_ == nullptr) {
+    bool trajectory_active = false;
+    {
+        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        trajectory_active = (trajectory_ != nullptr);
+    }
+    if (!trajectory_active) {
         cmd_vel.setZero();
         cmd_acc.setZero();
     }
@@ -578,9 +626,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
     state.ref_vel.resize(n);
     state.ref_acc.resize(n);
     for (int i = 0; i < n_actuators_; ++i) {
-        // TODO: casting Actuator::Name to Joint::Name is bug-prone (as in
-        //       GetJointFeedbackMap)
-        const auto joint = static_cast<Joint::Name>(enum_names_[i]);
+        const auto joint = JointFromActuator(enum_names_[i]);
 
         state.pos[i] = Joint::ActuatorToJointSimple(joint,
                                                     feedback_->getPosition()[i]);
@@ -591,7 +637,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         state.ref_vel[i] = Joint::ActuatorToJointSimple(joint, cmd_vel[i]);
         state.ref_acc[i] = Joint::ActuatorToJointSimple(joint, cmd_acc[i]);
     }
-    state.trajectory_active = (trajectory_ != nullptr);
+    state.trajectory_active = trajectory_active;
 
     const Motion::Libra2Command cmd = motion_controller_->Update(state);
     if (cmd.mode.size() != n) {
@@ -604,7 +650,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         emit ReportArmTorque(CwCommandToReport(*cmd.cw_command));
     }
 
-    // Move requested by motion controller (calibration, CW-primary hand-off)
+    // Move requested by motion controller (calibration, CW-primary, tandem CW-actuator)
     if (cmd.move_to && cmd.move_to->size() == n) {
         Eigen::VectorXd move_pos(n_actuators_);
         for (int i = 0; i < n_actuators_; ++i) {
@@ -614,13 +660,6 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         StartTrajectory(feedback_->getPosition(), move_pos);
     }
 
-    // While CW moves the arm (effort only), trajectory waits parked (clock
-    // frozen, nothing sent) until the hand-off replaces it
-    // TODO: DECISION (not asked): `SetTarget()` always starts a trajectory,
-    //       even in CW-primary mode, so it has to be parked. Every way out of
-    //       CW-primary mode either replaces it (`move_to`) or drops it
-    //       (`Stop()`), but if a new path ever skips both, the parked
-    //       trajectory would resume where its clock stopped.
     bool arm_free = false;
     for (int i = 0; i < n_actuators_; ++i) {
         arm_free = arm_free
@@ -628,8 +667,14 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
     }
 
     // Trajectory following at motion controller's playback rate, or holding
+    // (`trajectory_` re-checked under the lock, since `Stop()` may have run)
     const double rate = std::clamp(cmd.playback_rate, 0.0, 1.0);
+    std::unique_lock<std::mutex> lock(trajectory_mutex_);
     if (arm_free) {
+        // CW moves the arm
+        // (reset previous trajectory since hand-off will request a new one later)
+        trajectory_.reset();
+        t_trajectory_s_ = 0.0;
         cmd_vel.setZero();
         cmd_acc.setZero();
         vel_cmd_.setZero();
@@ -664,6 +709,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
         vel_cmd_.setZero();
     }
+    lock.unlock();
 
     // Per-joint command (NaN = no command)
     // TODO: not confirmed for Strategy 4 with NaN position/velocity/effort;
@@ -693,12 +739,12 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         t_diag_log_elapsed_s_ = 0.0;
 
         const auto& d = cmd.diagnostics;
-        logger_->Debug(
-            "Model - m_cw=" + FormatOptional(d.cw_mass_kg) + " kg, tau_ext,g="
-            + FormatOptional(d.torque_ext_g) + " Nm, m_cw,bal(target)="
-            + FormatOptional(d.cw_mass_tgt_kg) + " kg, delta_m="
-            + FormatOptional(d.cw_mass_change_kg) + " kg, tau_ext,g(target)="
-            + FormatOptional(d.torque_ext_g_tgt) + " Nm");
+        logger_->Debug("Model - m_cw=" + FormatOptional(d.cw_mass)
+                       + " kg, tau_ext,g=" + FormatOptional(d.torque_ext_g)
+                       + " Nm, m_cw,bal(target)=" + FormatOptional(d.cw_mass_tgt)
+                       + " kg, delta_m=" + FormatOptional(d.cw_mass_change_kg)
+                       + " kg, tau_ext,g(target)="
+                       + FormatOptional(d.torque_ext_g_tgt) + " Nm");
     }
 
     ReportMotionStatus();
@@ -708,9 +754,9 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 /**
  * @brief Tells the UI when movement starts/stops and when a calibration ends.
  *
- * @note "Moving" covers a trajectory (including the one parked during
- *       CW-primary motion) and a running calibration; the UI disables mode
- *       switching while it is true.
+ * @note "Moving" covers trajectory-based motion, the CW alone moving the arm, a
+ *       queued move, and a running calibration; the UI disables mode switching
+ *       while it is true.
  */
 void HebiThread::ReportMotionStatus() {
     const auto status = motion_controller_->GetCalibrationStatus();
@@ -722,7 +768,7 @@ void HebiThread::ReportMotionStatus() {
                                  == Motion::CalibrationStatus::kSucceeded);
     }
 
-    const bool moving = (trajectory_ != nullptr) || calibration_running_;
+    const bool moving = calibration_running_ || motion_controller_->IsMoving();
     if (moving != moving_) {
         moving_ = moving;
         emit MovementStateChanged(moving);
@@ -1019,7 +1065,10 @@ void HebiThread::Connect() {
     // Same pose for loop's position hold; reset motion controller and clock
     pos_cmd_ = feedback_->getPosition();
     vel_cmd_ = Eigen::VectorXd::Zero(n_actuators_);
-    t_trajectory_s_ = 0.0;
+    {
+        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        t_trajectory_s_ = 0.0;
+    }
     motion_controller_->Reset();
     if (motion_controller_->GetNumJoints()
         != static_cast<std::size_t>(n_actuators_)) {
@@ -1043,14 +1092,15 @@ void HebiThread::Disconnect() {
     if (group_ != nullptr) {
         StopHebiLog();
 
-#if LIBRA_VERSION == 2
-        // Drop motion controller state (cancels a calibration) and stop CW
-        // TODO: DECISION (not asked): the CW is told to idle here so water
-        //       does not keep flowing after a disconnect. LIBRA-I does not do
-        //       this.
-        motion_controller_->Reset();
+        // Idle CW just in case
         emit ReportArmTorque(std::nullopt);
+
+#if LIBRA_VERSION == 2
+        // Reset motion state
+        motion_controller_->Reset();
         ReportMotionStatus();
+        free_mode_ = false;
+        emit FreeModeChanged(false);
 #endif
 
         // Destructing hebi::Group automatically cleans it up
@@ -1063,7 +1113,8 @@ void HebiThread::Disconnect() {
 }
 
 /**
- * @brief Sets movement targets/trajectories for all connected actuators.
+ * @brief Sets movement targets/trajectories for all connected actuators and
+ *        begins the motion.
  *
  * @param target Target angles (deg, absolute) for all actuators
  *
@@ -1087,74 +1138,33 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
         return;
     }
 
-    /* NOTE: The following trajectory generation method is theoretically better
-             (it was added in a newer version of the HEBI API), but in practice
-             it results in very unstable oscillations. Therefore, a simpler
-             method is used below.
-
-    // Populate positions
-    Eigen::MatrixXd pos(n_actuators_, 2);
-
-    group_->getNextFeedback(*feedback_);
-    pos.col(0) = feedback_->getPosition();  // start (current value)
-
-    std::stringstream trajectory_ss;  // for debug only
-
-    for (auto i = 0; i < target.size(); ++i) {
-        pos(i, 1) = target.at(i) * kDegToRad;  // end (target value)
-        if (debug_mode_) {
-            trajectory_ss << std::to_string(pos(i, 1)) << "";
-        }
+#if LIBRA_VERSION == 2
+    if (free_mode_) {
+        // A "move" may still command the EPOS yaw joint, so don't error
+        logger_->Warn("Ignoring target while in free mode");
+        return;
     }
+#endif
 
-    // Create velocity and acceleration constraints
-    Eigen::VectorXd max_vel(n_actuators_);
-    // TODO: although these are identical to safety.xml, no hard-coding!!
-    max_vel << 0.052, 0.052, 0.052, 0.052, 0.018;  // rad/s, ~= 3 & 1 deg/s
-
-    Eigen::VectorXd max_acc(n_actuators_);
-    max_acc.setConstant(0.2);  // rad/s^2, ~= 11.5 deg/s^2 (arbitrary)
-
-    // Use HEBI's trajectory time estimation
-    Eigen::VectorXd t_segment =
-        hebi::trajectory::Trajectory::estimateSegmentTimesTrapezoidal(pos,
-                                                                      max_vel,
-                                                                      max_acc);
-
-    Eigen::VectorXd t_waypoint =
-        hebi::trajectory::Trajectory::segmentTimesToWaypointTimes(t_segment);
-
-    // Log start time and create trajectory
-    // NOTE: Let QP solver handle vel and accel by setting the parameters
-    //       "velocities" and "accelerations" to nullptr
-    t_trajectory_start_ = std::chrono::steady_clock::now();
-    trajectory_ =
-        hebi::trajectory::Trajectory::createUnconstrainedQp(t_waypoint, pos,
-                                                            nullptr, nullptr);
-    */
-
-    // Start from freshest pose (targets assumed to be in actuator space)
-    group_->getNextFeedback(*feedback_);
-    const Eigen::VectorXd start_pos = feedback_->getPosition();
+    // Prepare targets and begin motion
     const Eigen::VectorXd target_pos =
         Eigen::Map<const Eigen::VectorXd>(target.data(), target.size())
         * kDegToRad;
 
-#if LIBRA_VERSION == 2
-    // Motion controller works in joint space, so give it the converted target
-    // (also cancels a running calibration)
-    Motion::JointValues target_joint(n_actuators_);
+#if LIBRA_VERSION == 1
+    group_->getNextFeedback(*feedback_);  // use latest position to avoid jump
+    StartTrajectory(feedback_->getPosition(), target_pos);
+#elif LIBRA_VERSION == 2
+    // Motion controller does the work and requests the movement. It works in
+    // joint space (since it relies on specific kinematics)
+    std::vector<double> target_joint(n_actuators_);
     for (int i = 0; i < n_actuators_; ++i) {
-        // TODO: casting Actuator::Name to Joint::Name is bug-prone (as in
-        //       GetJointFeedbackMap)
-        target_joint[i] = Joint::ActuatorToJointSimple(static_cast<Joint::Name>(
+        target_joint[i] = Joint::ActuatorToJointSimple(JointFromActuator(
                                                            enum_names_[i]),
                                                        target_pos(i));
     }
     motion_controller_->SetTarget(target_joint);
 #endif
-
-    StartTrajectory(start_pos, target_pos);
 }
 
 /**
@@ -1165,12 +1175,15 @@ void HebiThread::Stop() {
         return;  // do nothing
     }
 
-    trajectory_.reset();
-#if LIBRA_VERSION == 1
-    t_trajectory_elapsed_ = std::chrono::steady_clock::duration::zero();
-#elif LIBRA_VERSION == 2
-    t_trajectory_s_ = 0.0;
-    motion_controller_->Stop();  // drops the target and cancels a calibration
+    // End trajectory following; the arm holds its last commanded pose
+    {
+        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        trajectory_.reset();
+        t_trajectory_s_ = 0.0;
+    }
+
+#if LIBRA_VERSION == 2
+    motion_controller_->Stop();
 #endif
 
     logger_->Info("Trajectory stopped");
@@ -1280,6 +1293,7 @@ void HebiThread::EnableTorqueControl(const bool& enabled) {
     if (!torque_control_en_) {
         // "Manual" mode: always allow movement while ATC is disabled
         movement_en_ = true;
+        playback_rate_ = 1.0;  // full speed
     }
 
     logger_->Info("Automatic torque compensation "
@@ -1326,6 +1340,33 @@ void HebiThread::EnableCwPrimaryMode(const bool& enabled) {
 }
 
 /**
+ * @brief Turns free mode on or off. While on, nothing is sent to the actuator,
+ *        allowing it to rotate freely.
+ *
+ * @param enabled Whether to stop commanding the actuator
+ */
+void HebiThread::EnableFreeMode(const bool& enabled) {
+    if (enabled && group_ == nullptr) {
+        emit ErrorThrown("HEBI - Can't enter free mode; not connected!");
+        emit FreeModeChanged(false);
+        return;
+    }
+
+    if (enabled && !free_mode_) {
+        Stop();
+        motion_controller_->Reset();
+        free_mode_ = true;
+        logger_->Info("Free mode ON: actuator will release in "
+                      + std::to_string(group_->getCommandLifetimeMs()) + " ms");
+    } else if (!enabled && free_mode_) {
+        free_mode_ = false;
+        logger_->Info("Free mode OFF: holding current pose");
+    }
+
+    emit FreeModeChanged(free_mode_);
+}
+
+/**
  * @brief Sets the CW-primary hand-off band.
  *
  * @param deg Band around target angle (deg, joint space)
@@ -1359,6 +1400,11 @@ void HebiThread::StartLevelCalibration() {
         emit CalibrationFinished(false);
         return;
     }
+    if (free_mode_) {
+        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
+        emit CalibrationFinished(false);
+        return;
+    }
 
     if (!motion_controller_->StartLevelCalibration()) {
         emit ErrorThrown("HEBI - Can't start the level calibration (see the "
@@ -1382,6 +1428,11 @@ void HebiThread::StartTwoAngleCalibration(const double& deg_a,
                                           const double& deg_b) {
     if (group_ == nullptr) {
         emit ErrorThrown("HEBI - Can't calibrate; not connected!");
+        emit CalibrationFinished(false);
+        return;
+    }
+    if (free_mode_) {
+        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
         emit CalibrationFinished(false);
         return;
     }

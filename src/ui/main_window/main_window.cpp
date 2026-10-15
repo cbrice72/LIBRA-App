@@ -121,7 +121,7 @@ MainWindow::MainWindow(QWidget* parent)
 
     // GUI configuration
     ConfigureUi();
-    InitializeFeedbackElementMap();
+    InitializeElementMaps();
     InitializeDeviceManagers();
     InitializeThreads();
 
@@ -365,15 +365,14 @@ void MainWindow::ConfigureUi() {
 }
 
 /**
- * @brief Populates a map-of-maps with UI label elements, according to their
- *        corresponding joint names (`Joint`) and feedback types
- *        (`Actuator::Feedback`).
+ * @brief Populates various maps-of-maps with UI elements according to their
+ *        corresponding joint names (`Joint::Name`).
  *
  * @note Only used in constructor; separate function for readability.
  *
  * @see Joint::Name Actuator::Feedback HandleActuatorFeedback
  */
-void MainWindow::InitializeFeedbackElementMap() {
+void MainWindow::InitializeElementMaps() {
     // Central joint
 #if LIBRA_VERSION == 1
     feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kTargetPos] =
@@ -420,6 +419,17 @@ void MainWindow::InitializeFeedbackElementMap() {
         ui_->l_actual_j3;
     feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j3;
+#endif
+
+    // Target spin boxes
+    target_spin_box_map_[Joint::Name::kPitch] = ui_->sb_arm_pitch;
+#if LIBRA_VERSION == 1
+    target_spin_box_map_[Joint::Name::kRoll] = ui_->sb_arm_roll;
+    target_spin_box_map_[Joint::Name::kJ1] = ui_->sb_arm_j1;
+    target_spin_box_map_[Joint::Name::kJ2] = ui_->sb_arm_j2;
+    target_spin_box_map_[Joint::Name::kJ3] = ui_->sb_arm_j3;
+#elif LIBRA_VERSION == 2
+    target_spin_box_map_[Joint::Name::kYaw] = ui_->sb_arm_yaw;
 #endif
 }
 
@@ -514,7 +524,8 @@ void MainWindow::InitializeDeviceManagers() {
 
     // ========== Camera Manager ==========
 
-    // TODO: auto-display first connected device?
+    // NOTE: Created when a camera is selected ("Connect All" selects first
+    //       available; see on_cb_camera_name_currentTextChanged)
 }
 
 /**
@@ -566,6 +577,8 @@ void MainWindow::InitializeThreads() {
 #if LIBRA_VERSION == 2
     connect(this, &MainWindow::EnableCwPrimary,  // pick main pitch joint mover
             hebi_thread_, &HebiThread::EnableCwPrimaryMode);
+    connect(this, &MainWindow::EnableFreeMode,  // stop commanding pitch joint
+            hebi_thread_, &HebiThread::EnableFreeMode);
     connect(this, &MainWindow::UpdateHebiHandoffBand,  // update hand-off band
             hebi_thread_, &HebiThread::SetHandoffBand);
 
@@ -599,6 +612,8 @@ void MainWindow::InitializeThreads() {
 #if LIBRA_VERSION == 2
     connect(hebi_thread_, &HebiThread::MotionModeChanged,  // sync mode toggle
             this, &MainWindow::HandleMotionModeChanged);
+    connect(hebi_thread_, &HebiThread::FreeModeChanged,  // sync free toggle
+            this, &MainWindow::HandleFreeModeChanged);
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // lock mode UI
             this, &MainWindow::HandleMovementStateChanged);
     connect(hebi_thread_, &HebiThread::CalibrationFinished,  // calibrated
@@ -703,21 +718,25 @@ void MainWindow::UpdateATCControls() {
  * @brief Enables motion control widgets/actions based on connection statuses
  *        and whether the arm is moving.
  *
- * @note Mode switching and calibration starts are locked while the arm moves.
+ * @note Mode switching and calibration must be locked while the arm is in motion
+ *       or free mode. Free mode itself can be toggled whenever HEBI is connected.
  */
 void MainWindow::UpdateMotionControls() {
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
+    bool free_mode = ui_->pb_free_mode->isChecked();
 
     // Group box
-    ui_->pb_cw_primary->setEnabled(both_connected && !arm_moving_);
+    ui_->pb_cw_primary->setEnabled(both_connected && !arm_moving_ && !free_mode);
+    ui_->pb_free_mode->setEnabled(hebi_connected);
 
     // Menu bar
     ui_->a_motion_handoff_band->setEnabled(both_connected && !arm_moving_);
-    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !arm_moving_);
-    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected
-                                                  && !arm_moving_);
+    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !arm_moving_
+                                              && !free_mode);
+    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !arm_moving_
+                                                  && !free_mode);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
 }
 #endif
@@ -875,6 +894,9 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     UpdateActuatorControls();
     UpdateATCControls();
+    if (connected) {
+        populate_targets_ = true;
+    }
 
 #if LIBRA_VERSION == 2
     // HebiThread only reports motion states on change, so fill in the motion
@@ -907,6 +929,9 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
 
     // UI widgets
     UpdateActuatorControls();
+    if (connected) {
+        populate_targets_ = true;
+    }
 }
 #endif
 
@@ -924,7 +949,8 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
 void MainWindow::HandleActuatorFeedback(
     const std::unordered_map<Joint::Name, double>& feedbacks,
     const Actuator::Feedback& feedback_type) {
-    bool initialized = false;
+    const bool initialize = populate_targets_
+                            && (feedback_type == Actuator::Feedback::kActualPos);
 
     for (const auto& feedback : feedbacks) {
         const auto& joint = feedback.first;
@@ -944,11 +970,13 @@ void MainWindow::HandleActuatorFeedback(
                 + std::to_string(static_cast<int>(feedback_type)) + ")");
         }
 
-        // TODO: documentation
-        if (!initialized) {
-            // TODO: initialize SpinBoxes to first received value
-
-            initialized = true;
+        // Initialize target spin boxes to actual position after a connect
+        if (initialize) {
+            const auto spin_box = target_spin_box_map_.find(joint);
+            if (spin_box != target_spin_box_map_.end()) {
+                spin_box->second->setValue(val);
+            }
+            populate_targets_ = false;
         }
     }
 }
@@ -992,6 +1020,21 @@ void MainWindow::HandleMotionModeChanged(const bool& cw_primary) {
     ui_->pb_cw_primary->setChecked(cw_primary);
 
     ui_->l_motion_mode_val->setText(cw_primary ? "CW-primary" : "Tandem");
+}
+
+/**
+ * @brief Shows whether the pitch joint is in free mode (not commanded).
+ *
+ * @param enabled true while no commands are sent to the pitch actuator
+ */
+void MainWindow::HandleFreeModeChanged(const bool& enabled) {
+    const QSignalBlocker blocker(ui_->pb_free_mode);  // don't re-emit
+
+    ui_->pb_free_mode->setChecked(enabled);
+    ui_->pb_free_mode->setStyleSheet(
+        enabled ? QString("color: %1;").arg(Color::kRed) : QString());
+
+    UpdateMotionControls();
 }
 
 /**

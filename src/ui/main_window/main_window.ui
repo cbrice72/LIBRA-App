@@ -2348,6 +2348,34 @@
                  </property>
                 </spacer>
                </item>
+               <item row="1" column="0">
+                <widget class="QPushButton" name="pb_free_mode">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>130</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>130</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="statusTip">
+                  <string>Stops commanding the pitch actuator so the joint moves freely (simulates a power failure)</string>
+                 </property>
+                 <property name="text">
+                  <string> FREE MODE</string>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
               </layout>
              </widget>
             </item>

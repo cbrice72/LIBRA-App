@@ -89,8 +89,6 @@ constexpr int kMoveWaitForLast = 0;  // `Immediately` = FALSE
 // !Class Management
 //------------------------------------------------------------------------------
 
-// TODO: BUG - passes the uninitialized member `debug_mode_` to the delegated
-//       constructor instead of the `debug_mode` parameter
 /**
  * @brief Delegating constructor. Automatically configures EposThread based on
  *        hard-coded defaults for Ubuntu Linux.
@@ -100,7 +98,7 @@ constexpr int kMoveWaitForLast = 0;  // `Immediately` = FALSE
  */
 EposThread::EposThread(QObject* parent, const bool& debug_mode)
     : EposThread(parent, "EPOS4", "MAXON SERIAL V2", "USB", "USB0", 1000000,
-                 debug_mode_) {}
+                 debug_mode) {}
 
 /**
  * @brief Standard constructor.

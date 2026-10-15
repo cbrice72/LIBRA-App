@@ -83,8 +83,10 @@ done
 
 if [[ "$BUILD_WITH_ROS2" == "ON" ]]; then
   ROS_STATUS="with"
+  BUILD_TYPE="ros"
 else
   ROS_STATUS="without"
+  BUILD_TYPE="standalone"
 fi
 
 color_echo INFO "The LIBRA App will be built for LIBRA-$LIBRA_VERSION $ROS_STATUS ROS2 support."
@@ -96,7 +98,7 @@ if [[ "$CLEAN_BUILD" == true ]]; then
 #-------------------------
   color_echo INFO "Cleaning build artifacts..."
 
-  rm -rf "$PROJECT_ROOT/build"
+  rm -rf "$BUILD_DIR"
   if [[ -d "$ROS2_WS_DIR" ]]; then
     rm -rf "$ROS2_WS_DIR/build" "$ROS2_WS_DIR/install" "$ROS2_WS_DIR/log"
   fi
@@ -150,20 +152,17 @@ fi
 #-------------------------
 color_echo INFO "Configuring LIBRA App..."
 
-if [[ "$BUILD_WITH_ROS2" == "ON" ]]; then
-  BUILD_TYPE="ros"
-else
-  BUILD_TYPE="standalone"
-fi
-BUILD_DIR="$PROJECT_ROOT/build"
 cmake -S "$PROJECT_ROOT" -B "$BUILD_DIR" -DLIBRA_VERSION="$LIBRA_VERSION" -DBUILD_WITH_ROS2="$BUILD_WITH_ROS2"
+
+# Point editors (see .vscode/) at the most recently built configuration
+ln -sfn "$BUILD_DIR/compile_commands.json" "$PROJECT_ROOT/build/compile_commands.json"
 
 color_echo INFO "Configuring LIBRA App... SUCCESS"
 #-------------------------
 color_echo INFO "Building LIBRA App..."
 
 cmake --build "$BUILD_DIR" --target all
-EXE_PATH="$BUILD_DIR/libra-${LIBRA_VERSION}-${BUILD_TYPE}/libra_app"
+EXE_PATH="$BUILD_DIR/libra_app"
 if [ ! -f "$EXE_PATH" ]; then
   color_echo ERROR "> \"libra_app\" was not installed to $(dirname "$EXE_PATH")!\n          Check CMake build output for errors."
   exit 1
@@ -184,7 +183,7 @@ color_echo INFO "$F_ELAPSED_TIME"
 echo ""
 color_echo INFO "Run the app with the following command:"
 if [[ "$BUILD_WITH_ROS2" == "ON" ]]; then
-  echo "source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && $EXE_PATH"
+  echo "source LIBRA-ROS2-Tools/ros2_ws/install/setup.bash && cd \"$BUILD_DIR\" && ./libra_app"
 else
-  echo "$EXE_PATH"
+  echo "cd \"$BUILD_DIR\" && ./libra_app"
 fi

@@ -53,6 +53,10 @@ class CameraManager : public QObject
     void Capture();
     bool Record();
 
+    // --- Getters & Setters ---
+
+    [[nodiscard]] bool UsesRos2Node() const;
+
 #ifdef BUILD_WITH_ROS2
     // --- ROS2 Frame Transform Getters & Setters ---
 

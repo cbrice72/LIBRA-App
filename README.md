@@ -26,9 +26,10 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 
 | | Minimum | Recommended | Download Link |
 |---|---|---|---|
-| **Operating System** | Ubuntu 22.04.4<br>(Jammy) | Ubuntu 24.04<br>(Noble) | [ubuntu.com](https://ubuntu.com/download/alternative-downloads) |
+| **Operating System** | Ubuntu 22.04<br>(Jammy) | Ubuntu 24.04<br>(Noble) | [ubuntu.com](https://ubuntu.com/download/alternative-downloads) |
 | **C++ Standard** | C++17 | C++17 | N/A |
 | **Qt** | 6.8.0<sup>1</sup> | 6.9.1 | [doc.qt.io](https://doc.qt.io/qt-6/get-and-install-qt.html) |
+| **CMake** | 3.22.1 | 3.25.3 | [cmake.org](https://cmake.org/download/)<br>(default version on Ubuntu 22.04) |
 | **ROS2** | Humble Hawksbill<br>(humble)<sup>2</sup> | Humble Hawksbill<br>(humble) | [docs.ros.org](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) |
 
 <sup>1</sup> Qt 6.8 minimum required specifically for constructing a `QVideoFrame` from a `QImage` (used in `CameraManager`). See the official docs for [QVideoFrame::QvideoFrame()](https://doc.qt.io/qt-6/qvideoframe.html#QVideoFrame-2).
@@ -107,12 +108,14 @@ This method provides a more fine-grained approach.
 
 #### **Build Options**
 
-The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in the root `CMakeLists.txt` (see "CONFIG" section) or via the `cmake-gui` app, if you have it installed.
+The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in `cmake/Options.cmake` or via the `cmake-gui` app, if you have it installed.
 
 | Variable | Type | Possible<br>Values | Notes |
 | --- | --- | --- | --- |
 | `LIBRA_VERSION` | STRING | `1`, `2` | `1` = **LIBRA-I** (actuators: HEBI x5)<br>`2` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1) |
 | `BUILD_WITH_ROS2` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
+
+> ***NOTE:*** Each combination of these options results in a different build directory `build/libra-<1|2>-<ros|standalone>/`. In Qt Creator, a separate build configuration must be specified for each combination instead of changing these options in an existing one.
 
 ### *Running the App*
 
@@ -142,14 +145,12 @@ The app can be launched via a terminal or, if you need easy access to debugging 
 
 #### **(2) ROS2 Nodes**
 
-⚠️ **TODO** ⚠️
+All the nodes necessary to run RTAB-Map have been organized into a single launch file. First, ensure you've built and sourced the project's ROS2 environment.
 
-Currently, the following instructions only run RTAB-Map with the RealSense RGB-D camera. Sensor fusion support with the 2D LIDAR is coming soon!
-
-All the nodes necessary to run RTAB-Map have been compiled into a single launch file. Ensure you've sourced both ROS2 environments, then run the following in a terminal.
+By default, the following command runs RTAB-Map in RGB-D mode with visual-inertial odometry (VIO), depending primarily on the RealSense D456 camera (+ its internal IMU) and using the 2D LiDAR as a corrective sensor only.
 
 ```bash
-ros2 launch libra rtabmap_realsense_d456_stereo.launch.py
+ros2 launch libra libra_slam.launch.py odom_source:=vio
 ```
 
 This will also launch the `realsense-ros` node which provides the ROS2 topic(s) `CameraManager` needs to stream images from the RealSense camera.

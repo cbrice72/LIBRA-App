@@ -11,6 +11,7 @@
 #include <atomic>
 #include <chrono>
 #include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -37,9 +38,9 @@ class Libra2MotionController;  // see libra2_motion_controller.h
 }  // namespace Motion
 #endif
 
-// TODO: BUG - this alias is outside the BUILD_WITH_ROS2 guard, so standalone
-//       builds (BUILD_WITH_ROS2=OFF) fail to compile
+#ifdef BUILD_WITH_ROS2
 using msgJointState = sensor_msgs::msg::JointState;
+#endif
 
 // Torque compensation constants
 constexpr double kTorqueCompLowerBound = 3.0;  // Nm
@@ -87,6 +88,7 @@ class HebiThread : public AbstractActuatorThread
 
 #if LIBRA_VERSION == 2
     void EnableCwPrimaryMode(const bool& enabled);
+    void EnableFreeMode(const bool& enabled);
     void SetHandoffBand(const double& deg);
     void UpdateCounterweightVolume(const double& liters);
 
@@ -107,6 +109,7 @@ class HebiThread : public AbstractActuatorThread
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
     void MotionModeChanged(const bool& cw_primary);
+    void FreeModeChanged(const bool& enabled);
     void MovementStateChanged(const bool& moving);
     void CalibrationFinished(const bool& success);
 #endif
@@ -172,6 +175,13 @@ class HebiThread : public AbstractActuatorThread
     mutable std::vector<double> status_curr_;
     mutable std::vector<double> status_temp_;
 
+    std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
+    std::mutex trajectory_mutex_;
+
+    double t_trajectory_s_{0.0};  // s, advances by dt * playback_rate_ / cycle
+
+    bool time_unit_warned_{false};  // see `StartTrajectory()`
+
 #if LIBRA_VERSION == 1
     // Enables logic that uses torque feedback hysteresis to control trajectory
     // movement state (see `movement_en_`)
@@ -181,33 +191,20 @@ class HebiThread : public AbstractActuatorThread
 
     // Enables trajectory-based movement
     bool movement_en_{true};
-#endif
-    std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
-    bool time_unit_warned_{false};  // see `StartTrajectory()`
-#if LIBRA_VERSION == 1
-    std::chrono::time_point<std::chrono::steady_clock> t_trajectory_start_{
-        std::chrono::steady_clock::now()};
-    std::chrono::steady_clock::duration t_trajectory_elapsed_{0};
 
-    double vel_scale_{1.0};  // used when soft torque limit is exceeded
+    double playback_rate_{1.0};  // 0.5 in the soft torque band
 #elif LIBRA_VERSION == 2
-    // Torque limits, movement enable, and playback speed live in the motion
-    // controller; HebiThread only applies what it returns
     std::unique_ptr<Motion::Libra2MotionController> motion_controller_;
+    std::atomic<bool> free_mode_{false};
 
-    // Trajectory clock (s); advances by dt * playback rate, so it freezes while
-    // the motion controller pauses playback
-    double t_trajectory_s_{0.0};
-
-    // Last position/velocity command sent (actuator space). NaN = "no command"
-    // (HEBI's convention), which is how a joint is left free to move.
+    // Last position/velocity command sent (actuator space)
     Eigen::VectorXd pos_cmd_;  // rad
     Eigen::VectorXd vel_cmd_;  // rad/s
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> moving_{false};
     std::atomic<bool> calibration_running_{false};
-    double t_diag_log_elapsed_s_{0.0};  // s since the last model log line
+    double t_diag_log_elapsed_s_{0.0};  // s since last log (for throttling)
 #endif
 
 #ifdef BUILD_WITH_ROS2

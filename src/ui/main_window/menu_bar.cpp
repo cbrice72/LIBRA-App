@@ -9,16 +9,18 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <cmath>
 
 // Other Library Headers
 #include <QFileDialog>      // Qt::Widgets
 #include <QInputDialog>     // Qt::Widgets
 #include <QSerialPort>      // Qt::SerialPort
 #include <QSerialPortInfo>  // Qt::SerialPort
+#include <QSignalBlocker>   // Qt::Core
 
 // Project Headers
 #if LIBRA_VERSION == 2
+# include "libra2_motion_controller.h"
 # include "open_epos_dialog.h"
 #endif
 #include "open_serial_dialog.h"
@@ -40,10 +42,10 @@
 #if LIBRA_VERSION == 2
 // Motion Control Dialog Defaults
 
-// TODO: guesses; keep the band in sync with kDefaultHandoffBand (1 deg) in
-//       libra2_motion_controller.h
-constexpr double kDefaultHandoffBandDeg = 1.0;  // deg
-constexpr double kDefaultCalAngleDeg = 20.0;    // deg (first angle +, second -)
+constexpr double kDefaultHandoffBandDeg = Motion::kDefaultHandoffBand * 180
+                                          / M_PI;  // deg
+// TODO: guess
+constexpr double kDefaultCalAngleDeg = 20.0;  // deg (first angle +, second -)
 #endif
 
 namespace {
@@ -467,13 +469,20 @@ void MainWindow::on_a_manip_connect_triggered() {
 void MainWindow::on_a_refresh_camera_list_triggered() {
     logger_->Debug("Checking available video inputs...");
 
-    ui_->cb_camera_name->clear();  // existing list may be stale
+    // Populate silently (so a camera doesn't get selected)
+    {
+        const QSignalBlocker blocker(ui_->cb_camera_name);
 
-    const auto cameras = QMediaDevices::videoInputs();
-    for (const auto& camera : cameras) {
-        auto desc = camera.description();
-        ui_->cb_camera_name->addItem(desc);  // populate ComboBox
-        available_cameras_[desc] = QString(camera.id());
+        ui_->cb_camera_name->clear();  // existing list may be stale
+        available_cameras_.clear();
+
+        const auto cameras = QMediaDevices::videoInputs();
+        for (const auto& camera : cameras) {
+            auto desc = camera.description();
+            ui_->cb_camera_name->addItem(desc);  // populate ComboBox
+            available_cameras_[desc] = QString(camera.id());
+        }
+        ui_->cb_camera_name->setCurrentIndex(-1);
     }
 
     // NOTE: The "CAPTURE", "RECORD", and "FLIP" buttons are only enabled when
@@ -577,6 +586,9 @@ void MainWindow::on_a_connect_all_triggered() {
 
     // Sensors
     ui_->a_refresh_camera_list->trigger();
+    if (ui_->cb_camera_name->count() > 0) {
+        ui_->cb_camera_name->setCurrentIndex(0);  // display first camera found
+    }
     ui_->a_lidar_connect->trigger();
 }
 

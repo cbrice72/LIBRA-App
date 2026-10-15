@@ -540,6 +540,13 @@ bool CameraManager::Record() {
 // !Getters & Setters
 //------------------------------------------------------------------------------
 
+/**
+ * @brief Whether frames come from a ROS2 node (RealSense) instead of QCamera.
+ */
+bool CameraManager::UsesRos2Node() const {
+    return use_ros2_node_;
+}
+
 #ifdef BUILD_WITH_ROS2
 /**
  * @brief Sets horizontal flipping of the ROS2 image feed.

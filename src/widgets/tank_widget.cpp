@@ -29,21 +29,6 @@
 
 constexpr int kAnimTime = 1000 / 30;  // ms (30 FPS)
 
-// Per-setup Fluid Flow Constants
-#if LIBRA_VERSION == 1
-// - 2*(3L + 6L + 10L)
-
-static constexpr double kFillRate = 2 * 0.129;   // L/s
-static constexpr double kDrainRate = 2 * 0.061;  // L/s
-static constexpr double kCapacity = 38;          // L
-#elif LIBRA_VERSION == 2
-// - 3L + 6L + 10L
-
-static constexpr double kFillRate = 0.129;   // L/s
-static constexpr double kDrainRate = 0.061;  // L/s
-static constexpr double kCapacity = 19;      // L
-#endif
-
 //------------------------------------------------------------------------------
 // !Class Management
 //------------------------------------------------------------------------------
@@ -56,8 +41,8 @@ static constexpr double kCapacity = 19;      // L
 TankWidget::TankWidget(QWidget* parent)
     : QWidget(parent),
       animation_timer_(new QTimer(this)),
-      fill_rate_(kFillRate),
-      drain_rate_(kDrainRate) {
+      fill_rate_(Water::kFillRate),
+      drain_rate_(Water::kDrainRate) {
     // Configure widget appearance
     setMinimumSize(100, 100);
     setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
@@ -95,7 +80,7 @@ void TankWidget::UpdateAnimation() {
     // Calculate step size based on flow rate and frame time
     switch (state_) {
         case Water::State::kFilling:
-            level_ = qMin(level_ + (fill_rate_ / kCapacity) * time_step, 1.0);
+            level_ = qMin(level_ + (fill_rate_ / Water::kCapacity) * time_step, 1.0);
 
             // Check if we've hit the upper limit
             if (qFuzzyCompare(level_, 1.0)) {
@@ -105,7 +90,7 @@ void TankWidget::UpdateAnimation() {
             break;
 
         case Water::State::kDraining:
-            level_ = qMax(level_ - (drain_rate_ / kCapacity) * time_step, 0.0);
+            level_ = qMax(level_ - (drain_rate_ / Water::kCapacity) * time_step, 0.0);
 
             // Check if we've hit the lower limit
             if (qFuzzyCompare(level_, 0.0)) {
@@ -140,7 +125,7 @@ double TankWidget::GetLevel() const {
  * @brief Gets current fluid volume (L).
  */
 double TankWidget::GetVolume() const {
-    return level_ * kCapacity;
+    return level_ * Water::kCapacity;
 }
 
 /**
@@ -212,15 +197,15 @@ void TankWidget::UpdateFlowRate(const double& flow) {
     if (flow > 0.0) {
         // Filling: use the measured rate; no drain reading right now so reset it
         fill_rate_ = flow / 1000.0;  // mL/s -> L/s
-        drain_rate_ = kDrainRate;
+        drain_rate_ = Water::kDrainRate;
     } else if (flow < 0.0 && flow != -1.0) {
         // Draining: use the measured rate; no fill reading right now so reset it
-        fill_rate_ = kFillRate;
+        fill_rate_ = Water::kFillRate;
         drain_rate_ = -flow / 1000.0;  // mL/s -> L/s
     } else {
         // Idle or Fault: reset to default rates
-        fill_rate_ = kFillRate;
-        drain_rate_ = kDrainRate;
+        fill_rate_ = Water::kFillRate;
+        drain_rate_ = Water::kDrainRate;
     }
 }
 

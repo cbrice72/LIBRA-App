@@ -9,10 +9,12 @@
 
 // C++ Standard Library Headers
 #include <fstream>
+#include <unordered_map>
 
 // Other Library Headers
-#include <QLabel>       // Qt::Widgets
-#include <QMainWindow>  // Qt::Widgets
+#include <QDoubleSpinBox>  // Qt::Widgets
+#include <QLabel>          // Qt::Widgets
+#include <QMainWindow>     // Qt::Widgets
 
 // Project Headers
 // - Actuators
@@ -86,6 +88,7 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 2
     void HandleMotionModeChanged(const bool& cw_primary);
+    void HandleFreeModeChanged(const bool& enabled);
     void HandleMovementStateChanged(const bool& moving);
     void HandleCalibrationFinished(const bool& success);
 #endif
@@ -121,6 +124,7 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 2
     void EnableCwPrimary(const bool& enabled);
+    void EnableFreeMode(const bool& enabled);
     void UpdateHebiHandoffBand(const double& deg);
 
     void StartHebiLevelCal();
@@ -212,6 +216,7 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 2
     void on_pb_cw_primary_toggled(bool checked);
+    void on_pb_free_mode_toggled(bool checked);
 #endif
 
     // Manipulator (manipulator.cpp)
@@ -237,7 +242,7 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions (main_window.cpp) ---
 
     void ConfigureUi();
-    void InitializeFeedbackElementMap();
+    void InitializeElementMaps();
     void InitializeDeviceManagers();
     void InitializeThreads();
 
@@ -254,9 +259,11 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
-    QSize default_size_{};  // window size set in main_window.ui
+    QSize default_size_{};  // main UI window size
 
     FeedbackElementMapOfMaps feedback_element_map_;
+    std::unordered_map<Joint::Name, QDoubleSpinBox*> target_spin_box_map_;
+    bool populate_targets_{false};  // set on actuator connect
 
     std::vector<double> last_command_;  // actuator-space target positions
 

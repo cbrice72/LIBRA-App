@@ -40,6 +40,13 @@ constexpr int kInfoLifespan = 4000;  // 4s timer for non-hover status tips
  *       description into the device address.
  */
 void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
+    const auto camera = available_cameras_.find(sel);
+    if (camera == available_cameras_.end()) {
+        logger_->Debug("No camera selected");
+        return;
+    }
+    const QString& camera_id = camera->second;
+
     // Remove any signals before destruction
     disconnect(this, &MainWindow::EnableDebugMode, camera_manager_.get(),
                &CameraManager::SetDebugMode);
@@ -62,20 +69,22 @@ void MainWindow::on_cb_camera_name_currentTextChanged(const QString& sel) {
     }
 
     // Initialize camera and begin streaming
-    camera_manager_ = std::make_unique<CameraManager>(available_cameras_[sel],
+    camera_manager_ = std::make_unique<CameraManager>(camera_id,
                                                       ui_->vw_camera_viewfinder,
-                                                      this);
+                                                      debug_mode_);
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             camera_manager_.get(), &CameraManager::SetDebugMode);
 
     camera_manager_->Start();
 
     // Display misc. info and enable relevant widgets
-    ui_->l_camera_id->setText(available_cameras_[sel]);
+    ui_->l_camera_id->setText(camera_id);
     ui_->pb_camera_capture->setEnabled(true);
     ui_->pb_camera_record->setEnabled(true);
-    ui_->pb_camera_flip_h->setEnabled(true);  // TODO: only enable if RealSense
-    ui_->pb_camera_flip_v->setEnabled(true);  // TODO: only enable if RealSense
+
+    // Flipping is only applied to ROS2 (RealSense) frames
+    ui_->pb_camera_flip_h->setEnabled(camera_manager_->UsesRos2Node());
+    ui_->pb_camera_flip_v->setEnabled(camera_manager_->UsesRos2Node());
 }
 
 //------------------------------------------------------------------------------
