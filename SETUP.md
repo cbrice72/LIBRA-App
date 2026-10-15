@@ -60,7 +60,7 @@ sudo apt update && sudo apt upgrade
 Install the following packages via the terminal.
 
 ```bash
-sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git qt6-base-dev libqt6svg6 libgl1-mesa-dev libxcb-cursor0 libxcb-cursor-dev papirus-icon-theme
+sudo apt install -y build-essential clang libclang-dev clang-format clang-tidy cmake cmake-format doxygen git qt6-base-dev libqt6svg6 libgl1-mesa-dev libxcb-cursor0 libxcb-cursor-dev ninja-build papirus-icon-theme
 ```
 
 - `build-essential`: programs and libraries necessary for basic software development.
