@@ -192,6 +192,9 @@ adobe/*
 **/build*/
 **/install/
 
+# Local CMake preset overrides
+CMakeUserPresets.json
+
 # Doxygen-generated files
 **/docs/html
 **/docs/latex

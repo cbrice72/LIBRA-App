@@ -1,0 +1,90 @@
+{
+    "version": 3,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 22,
+        "patch": 1
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "standalone",
+            "hidden": true,
+            "inherits": "base",
+            "cacheVariables": {
+                "BUILD_WITH_ROS2": "OFF"
+            }
+        },
+        {
+            "name": "ros",
+            "hidden": true,
+            "inherits": "base",
+            "description": "Requires a sourced LIBRA-ROS2-Tools environment (see README.md)",
+            "cacheVariables": {
+                "BUILD_WITH_ROS2": "ON"
+            }
+        },
+        {
+            "name": "libra-1-standalone",
+            "displayName": "LIBRA-I (standalone)",
+            "inherits": "standalone",
+            "cacheVariables": {
+                "LIBRA_VERSION": "1"
+            }
+        },
+        {
+            "name": "libra-1-ros",
+            "displayName": "LIBRA-I (ROS2)",
+            "inherits": "ros",
+            "cacheVariables": {
+                "LIBRA_VERSION": "1"
+            }
+        },
+        {
+            "name": "libra-2-standalone",
+            "displayName": "LIBRA-II (standalone)",
+            "inherits": "standalone",
+            "cacheVariables": {
+                "LIBRA_VERSION": "2"
+            }
+        },
+        {
+            "name": "libra-2-ros",
+            "displayName": "LIBRA-II (ROS2)",
+            "inherits": "ros",
+            "cacheVariables": {
+                "LIBRA_VERSION": "2"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "libra-1-standalone",
+            "displayName": "LIBRA-I (standalone)",
+            "configurePreset": "libra-1-standalone"
+        },
+        {
+            "name": "libra-1-ros",
+            "displayName": "LIBRA-I (ROS2)",
+            "configurePreset": "libra-1-ros"
+        },
+        {
+            "name": "libra-2-standalone",
+            "displayName": "LIBRA-II (standalone)",
+            "configurePreset": "libra-2-standalone"
+        },
+        {
+            "name": "libra-2-ros",
+            "displayName": "LIBRA-II (ROS2)",
+            "configurePreset": "libra-2-ros"
+        }
+    ]
+}

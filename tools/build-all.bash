@@ -88,7 +88,8 @@ else
   ROS_STATUS="without"
   BUILD_TYPE="standalone"
 fi
-BUILD_DIR="$PROJECT_ROOT/build/libra-${LIBRA_VERSION}-${BUILD_TYPE}"
+PRESET="libra-${LIBRA_VERSION}-${BUILD_TYPE}"  # see CMakePresets.json
+BUILD_DIR="$PROJECT_ROOT/build/$PRESET"
 
 color_echo INFO "The LIBRA App will be built for LIBRA-$LIBRA_VERSION $ROS_STATUS ROS2 support."
 sleep 2;  # let user see this message
@@ -153,7 +154,7 @@ fi
 #-------------------------
 color_echo INFO "Configuring LIBRA App..."
 
-cmake -S "$PROJECT_ROOT" -B "$BUILD_DIR" -DLIBRA_VERSION="$LIBRA_VERSION" -DBUILD_WITH_ROS2="$BUILD_WITH_ROS2"
+(cd "$PROJECT_ROOT" && cmake --preset "$PRESET")
 
 # Point editors (see .vscode/) at the most recently built configuration
 ln -sfn "$BUILD_DIR/compile_commands.json" "$PROJECT_ROOT/build/compile_commands.json"
@@ -162,7 +163,7 @@ color_echo INFO "Configuring LIBRA App... SUCCESS"
 #-------------------------
 color_echo INFO "Building LIBRA App..."
 
-cmake --build "$BUILD_DIR" --target all
+(cd "$PROJECT_ROOT" && cmake --build --preset "$PRESET" --target all)
 EXE_PATH="$BUILD_DIR/libra_app"
 if [ ! -f "$EXE_PATH" ]; then
   color_echo ERROR "> \"libra_app\" was not installed to $(dirname "$EXE_PATH")!\n          Check CMake build output for errors."

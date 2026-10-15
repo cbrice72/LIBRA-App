@@ -30,6 +30,7 @@ Project link: <https://github.com/christian-brice/LIBRA-App>
 | **C++ Standard** | C++17 | C++17 | N/A |
 | **Qt** | 6.8.0<sup>1</sup> | 6.9.1 | [doc.qt.io](https://doc.qt.io/qt-6/get-and-install-qt.html) |
 | **CMake** | 3.22.1 | 3.25.3 | [cmake.org](https://cmake.org/download/)<br>(default version on Ubuntu 22.04) |
+| **Ninja** | 1.10.1 | 1.10.1 | [ninja-build.org](https://ninja-build.org/)<br>(default version on Ubuntu 22.04) |
 | **ROS2** | Humble Hawksbill<br>(humble)<sup>2</sup> | Humble Hawksbill<br>(humble) | [docs.ros.org](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debs.html) |
 
 <sup>1</sup> Qt 6.8 minimum required specifically for constructing a `QVideoFrame` from a `QImage` (used in `CameraManager`). See the official docs for [QVideoFrame::QvideoFrame()](https://doc.qt.io/qt-6/qvideoframe.html#QVideoFrame-2).
@@ -108,14 +109,16 @@ This method provides a more fine-grained approach.
 
 #### **Build Options**
 
-The following CMake options can be used to easily select which version of the app you want to compile. They can be changed either directly in `cmake/Options.cmake` or via the `cmake-gui` app, if you have it installed.
+The following CMake options determined which version of the app is compiled. They can be changed either directly in `cmake/Options.cmake` or via the `cmake-gui` app, if you have it installed.
 
 | Variable | Type | Possible<br>Values | Notes |
 | --- | --- | --- | --- |
 | `LIBRA_VERSION` | STRING | `1`, `2` | `1` = **LIBRA-I** (actuators: HEBI x5)<br>`2` = **LIBRA-II** (actuators: EPOS x1 + HEBI x1) |
 | `BUILD_WITH_ROS2` | BOOL | `ON`, `OFF` | Whether to build with ROS2 support.<br>If disabled, the app will only rely on C++ standard library methods and Qt-based connections (e.g., signals and slots). |
 
-> ***NOTE:*** Each combination of these options results in a different build directory `build/libra-<1|2>-<ros|standalone>/`. In Qt Creator, a separate build configuration must be specified for each combination instead of changing these options in an existing one.
+> ***NOTE:*** Each combination of these options results in a different build directory `build/libra-<1|2>-<ros|standalone>/`. **Do NOT change these options in an existing build directory;** select a different configuration instead.
+
+All four combinations are defined as presets in `CMakePresets.json`, which all build methods use (build script, Qt Creator, and VS Code's CMake Tools). When opening the project in Qt Creator for the first time, check the presets you want on the "Configure Project" page.
 
 ### *Running the App*
 

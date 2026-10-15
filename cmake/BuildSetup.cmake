@@ -15,15 +15,15 @@ endif()
 set(LIBRA_VARIANT "libra-${LIBRA_VERSION}-${LIBRA_BUILD_TYPE}")
 
 # Give each configuration its own build directory
-if(DEFINED CACHE{LIBRA_CONFIGURED_VARIANT} AND
-    NOT LIBRA_CONFIGURED_VARIANT STREQUAL LIBRA_VARIANT
+if(DEFINED CACHE{LIBRA_CONFIGURED_VARIANT} AND NOT LIBRA_CONFIGURED_VARIANT
+                                               STREQUAL LIBRA_VARIANT
 )
     message(
         FATAL_ERROR
             "This build directory (${CMAKE_BINARY_DIR}) was built for "
             "${LIBRA_CONFIGURED_VARIANT}, not ${LIBRA_VARIANT}. Use a separate "
-            "build directory for each configuration (tools/build-all.bash "
-            "uses build/<configuration>/), or delete this one."
+            "build directory for each configuration (the presets in "
+            "CMakePresets.json use build/<configuration>/), or delete this one."
     )
 endif()
 
