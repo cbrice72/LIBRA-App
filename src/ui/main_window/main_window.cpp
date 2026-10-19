@@ -579,6 +579,8 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::EnableCwPrimaryMode);
     connect(this, &MainWindow::EnableFreeMode,  // stop commanding pitch joint
             hebi_thread_, &HebiThread::EnableFreeMode);
+    connect(this, &MainWindow::EnableInertiaFeedforward,  // use inertia terms
+            hebi_thread_, &HebiThread::EnableInertiaFeedforward);
     connect(this, &MainWindow::UpdateHebiHandoffBand,  // update hand-off band
             hebi_thread_, &HebiThread::SetHandoffBand);
 
@@ -586,8 +588,17 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::StartLevelCalibration);
     connect(this, &MainWindow::StartHebiTwoAngleCal,  // calibrate: two angles
             hebi_thread_, &HebiThread::StartTwoAngleCalibration);
+    connect(this, &MainWindow::StartHebiFrictionCal,  // calibrate: friction
+            hebi_thread_, &HebiThread::StartFrictionCalibration);
     connect(this, &MainWindow::CancelHebiCal,  // cancel calibration
             hebi_thread_, &HebiThread::CancelCalibration);
+    connect(this, &MainWindow::SaveHebiCal,  // save calibration
+            hebi_thread_, &HebiThread::SaveCalibration);
+    connect(this, &MainWindow::LoadHebiCal,  // load calibration
+            hebi_thread_, &HebiThread::LoadCalibration);
+
+    connect(flow_controller_, &FlowController::ReportStatus,  // CW flow (İ)
+            hebi_thread_, &HebiThread::UpdateCounterweightFlow);
 
     // TankWidget only emits on level changes, so send starting CW volume now
     connect(ui_->tw_water_level_A, &TankWidget::LevelChanged,  // CW volume
@@ -618,6 +629,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleMovementStateChanged);
     connect(hebi_thread_, &HebiThread::CalibrationFinished,  // calibrated
             this, &MainWindow::HandleCalibrationFinished);
+    connect(hebi_thread_, &HebiThread::CalibrationLoaded,  // loaded from file
+            this, &MainWindow::HandleCalibrationLoaded);
 #endif
 
     // ArduinoManager slots
@@ -733,11 +746,19 @@ void MainWindow::UpdateMotionControls() {
 
     // Menu bar
     ui_->a_motion_handoff_band->setEnabled(both_connected && !arm_moving_);
+    ui_->a_motion_inertia_ff->setEnabled(!arm_moving_);
+
     ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !arm_moving_
                                               && !free_mode);
     ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !arm_moving_
                                                   && !free_mode);
+    ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !arm_moving_
+                                                 && !free_mode);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
+
+    // Other
+    ui_->a_motion_calibration_save->setEnabled(!arm_moving_);
+    ui_->a_motion_calibration_load->setEnabled(!arm_moving_);
 }
 #endif
 
@@ -843,8 +864,14 @@ void MainWindow::HandleFlowConnChanged(const bool& connected) {
         ui_->l_flow->setText(QStringLiteral("---"));
         ui_->l_flow->setStyleSheet(QString());
 
-        ui_->tw_water_level_A->UpdateFlowRate(
-            -1.0);  // fall back to hardcoded rate
+        ui_->tw_water_level_A->UpdateFlowRate(-1.0);  // use hardcoded rate
+#if LIBRA_VERSION == 1
+        ui_->tw_water_level_B->UpdateFlowRate(-1.0);
+#endif
+
+#if LIBRA_VERSION == 2
+        hebi_thread_->UpdateCounterweightFlow(-1.0);
+#endif
     }
 }
 
@@ -1054,24 +1081,45 @@ void MainWindow::HandleMovementStateChanged(const bool& moving) {
 /**
  * @brief Reports how a calibration ended.
  *
- * @param success true if the arm model was updated
+ * @param success true if the arm model or friction was updated
+ * @param arm_calibrated Whether an arm model is now available
+ *
+ * @note "Calibrated" shows the arm model only, since a friction calibration
+ *       alone doesn't enable feedforward.
  */
-void MainWindow::HandleCalibrationFinished(const bool& success) {
-    // NOTE: A failed/cancelled calibration keeps the previous arm model
-    if (success) {
+void MainWindow::HandleCalibrationFinished(const bool& success,
+                                           const bool& arm_calibrated) {
+    // NOTE: A failed/cancelled calibration keeps the previous arm model, if any
+    if (arm_calibrated) {
         ui_->l_motion_calibrated_val->setText("Yes");
         ui_->l_motion_calibrated_val->setStyleSheet(
             QString("color: %1;").arg(Color::kGreen));
+    } else if (!success) {
+        ui_->l_motion_calibrated_val->setText("Failed");
+        ui_->l_motion_calibrated_val->setStyleSheet(
+            QString("color: %1;").arg(Color::kRed));
+    }
+
+    if (success) {
         logger_->Info("Calibration finished");
     } else {
-        if (ui_->l_motion_calibrated_val->text() != "Yes") {
-            ui_->l_motion_calibrated_val->setText("Failed");
-            ui_->l_motion_calibrated_val->setStyleSheet(
-                QString("color: %1;").arg(Color::kRed));
-        }
         logger_->Warn("Calibration failed or was cancelled "
                       "(see the messages above)");
     }
+}
+
+/**
+ * @brief Shows the arm model state after loading a calibration file.
+ *
+ * @param arm_calibrated Whether an arm model is now available
+ */
+void MainWindow::HandleCalibrationLoaded(const bool& arm_calibrated) {
+    if (arm_calibrated) {
+        ui_->l_motion_calibrated_val->setText("Yes");
+        ui_->l_motion_calibrated_val->setStyleSheet(
+            QString("color: %1;").arg(Color::kGreen));
+    }
+    logger_->Info("Calibration loaded");
 }
 #endif
 

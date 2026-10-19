@@ -35,6 +35,7 @@
 #if LIBRA_VERSION == 2
 namespace Motion {
 class Libra2MotionController;  // see libra2_motion_controller.h
+struct SweepRequest;           // "
 }  // namespace Motion
 #endif
 
@@ -89,14 +90,22 @@ class HebiThread : public AbstractActuatorThread
 #if LIBRA_VERSION == 2
     void EnableCwPrimaryMode(const bool& enabled);
     void EnableFreeMode(const bool& enabled);
+    void EnableInertiaFeedforward(const bool& enabled);
     void SetHandoffBand(const double& deg);
-    void UpdateCounterweightVolume(const double& liters);
+
+    void UpdateCounterweightVolume(const double& volume);
+    void UpdateCounterweightFlow(const double& flow);
 
     // --- Calibration ---
 
     void StartLevelCalibration();
     void StartTwoAngleCalibration(const double& deg_a, const double& deg_b);
+    void StartFrictionCalibration(const double& deg_a, const double& deg_b);
     void CancelCalibration();
+
+    void SaveCalibration(const QString& file_path, const double& extension,
+                         const QString& note);
+    void LoadCalibration(const QString& file_path);
 #endif
 
   signals:
@@ -111,7 +120,8 @@ class HebiThread : public AbstractActuatorThread
     void MotionModeChanged(const bool& cw_primary);
     void FreeModeChanged(const bool& enabled);
     void MovementStateChanged(const bool& moving);
-    void CalibrationFinished(const bool& success);
+    void CalibrationFinished(const bool& success, const bool& arm_calibrated);
+    void CalibrationLoaded(const bool& arm_calibrated);
 #endif
 
   protected:
@@ -137,6 +147,7 @@ class HebiThread : public AbstractActuatorThread
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
                                  Eigen::VectorXd& cmd_eff);
+    void StartSweep(const Motion::SweepRequest& sweep);
     void ReportMotionStatus();
 #endif
 

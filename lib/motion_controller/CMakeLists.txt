@@ -6,8 +6,9 @@
 ################################################################################
 
 # Declare module dependencies
-
-#   (none)
+set(QT_PACKAGES Core)
+find_package(QT NAMES Qt6 REQUIRED COMPONENTS ${QT_PACKAGES})
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS ${QT_PACKAGES})
 
 # Create and configure the module
 set(MOTION_CONTROLLER_SOURCES
@@ -27,6 +28,8 @@ elseif(LIBRA_VERSION EQUAL 2)
     list(APPEND MOTION_CONTROLLER_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.cpp
     )
 else()
     message(
@@ -48,4 +51,6 @@ target_link_libraries(
     motion_controller
     # Project
     PUBLIC common logger
+    # Qt
+    PRIVATE Qt${QT_VERSION_MAJOR}::Core
 )

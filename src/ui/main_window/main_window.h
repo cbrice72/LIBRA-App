@@ -90,7 +90,9 @@ class MainWindow : public QMainWindow {
     void HandleMotionModeChanged(const bool& cw_primary);
     void HandleFreeModeChanged(const bool& enabled);
     void HandleMovementStateChanged(const bool& moving);
-    void HandleCalibrationFinished(const bool& success);
+    void HandleCalibrationFinished(const bool& success,
+                                   const bool& arm_calibrated);
+    void HandleCalibrationLoaded(const bool& arm_calibrated);
 #endif
 
   signals:
@@ -125,11 +127,18 @@ class MainWindow : public QMainWindow {
 #if LIBRA_VERSION == 2
     void EnableCwPrimary(const bool& enabled);
     void EnableFreeMode(const bool& enabled);
+
+    void EnableInertiaFeedforward(const bool& enabled);
     void UpdateHebiHandoffBand(const double& deg);
 
     void StartHebiLevelCal();
     void StartHebiTwoAngleCal(const double& deg_a, const double& deg_b);
+    void StartHebiFrictionCal(const double& deg_a, const double& deg_b);
     void CancelHebiCal();
+
+    void SaveHebiCal(const QString& file_path, const double& extension,
+                     const QString& note);
+    void LoadHebiCal(const QString& file_path);
 #endif
 
     // EPOS (Maxon)
@@ -157,9 +166,15 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 2
     void on_a_motion_handoff_band_triggered();
+    void on_a_motion_inertia_ff_toggled(bool checked);
+
     void on_a_motion_calibrate_level_triggered();
     void on_a_motion_calibrate_two_angle_triggered();
+    void on_a_motion_calibrate_friction_triggered();
     void on_a_motion_calibrate_cancel_triggered();
+
+    void on_a_motion_calibration_save_triggered();
+    void on_a_motion_calibration_load_triggered();
 #endif
 
     // Actuators Menu

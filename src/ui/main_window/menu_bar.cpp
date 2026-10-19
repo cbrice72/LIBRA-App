@@ -12,14 +12,18 @@
 #include <cmath>
 
 // Other Library Headers
+#include <QDateTime>        // Qt::Core
+#include <QDir>             // Qt::Core
 #include <QFileDialog>      // Qt::Widgets
 #include <QInputDialog>     // Qt::Widgets
+#include <QLineEdit>        // Qt::Widgets
 #include <QSerialPort>      // Qt::SerialPort
 #include <QSerialPortInfo>  // Qt::SerialPort
 #include <QSignalBlocker>   // Qt::Core
 
 // Project Headers
 #if LIBRA_VERSION == 2
+# include "libra2_calibration_file.h"
 # include "libra2_motion_controller.h"
 # include "open_epos_dialog.h"
 #endif
@@ -46,6 +50,8 @@ constexpr double kDefaultHandoffBandDeg = Motion::kDefaultHandoffBand * 180
                                           / M_PI;  // deg
 // TODO: guess
 constexpr double kDefaultCalAngleDeg = 20.0;  // deg (first angle +, second -)
+// TODO: guess; should be near balance and wide enough to sample
+constexpr double kDefaultFrictionHalfWindowDeg = 5.0;  // deg (window -/+)
 #endif
 
 namespace {
@@ -240,6 +246,16 @@ void MainWindow::on_a_motion_handoff_band_triggered() {
 }
 
 /**
+ * @brief Event handler for "Motion Control" menu action "Inertia feedforward".
+ *        Turns the inertia terms of the torque feedforward on or off.
+ *
+ * @param checked Whether to include inertia in the feedforward calculation
+ */
+void MainWindow::on_a_motion_inertia_ff_toggled(bool checked) {
+    emit EnableInertiaFeedforward(checked);
+}
+
+/**
  * @brief Event handler for "Motion Control" menu action "Calibrate (arm
  *        level)". Starts the level calibration.
  *
@@ -280,11 +296,106 @@ void MainWindow::on_a_motion_calibrate_two_angle_triggered() {
 }
 
 /**
+ * @brief Event handler for "Motion Control" menu action "Calibrate
+ *        (friction)...". Prompts user for a sweep window and starts the
+ *        friction calibration.
+ *
+ * @note Balance the CW near the window first; the sweep aborts above the ATC
+ *       hard limit.
+ */
+void MainWindow::on_a_motion_calibrate_friction_triggered() {
+    bool ok_a = false;
+    const double deg_a = QInputDialog::getDouble(this, "Friction Calibration",
+                                                 "Window start (deg, up = +):",
+                                                 -kDefaultFrictionHalfWindowDeg,
+                                                 -90.0, 90.0, 1, &ok_a);
+    if (!ok_a) {
+        logger_->Debug("Calibration cancelled by user");
+        return;
+    }
+
+    bool ok_b = false;
+    const double deg_b = QInputDialog::getDouble(this, "Friction Calibration",
+                                                 "Window end (deg, up = +):",
+                                                 kDefaultFrictionHalfWindowDeg,
+                                                 -90.0, 90.0, 1, &ok_b);
+    if (!ok_b) {
+        logger_->Debug("Calibration cancelled by user");
+        return;
+    }
+
+    // Motion controller checks range, width, and duration
+    emit StartHebiFrictionCal(deg_a, deg_b);
+}
+
+/**
  * @brief Event handler for "Motion Control" menu action "Cancel calibration".
  *        Cancels a running calibration.
  */
 void MainWindow::on_a_motion_calibrate_cancel_triggered() {
     emit CancelHebiCal();
+}
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Save calibration...".
+ *        Prompts the user for the current arm extension, an optional note, and
+ *        a filename, then saves the current arm model (JSON).
+ */
+void MainWindow::on_a_motion_calibration_save_triggered() {
+    bool ok_ext = false;
+    const double extension =
+        QInputDialog::getDouble(this, "Save Calibration",
+                                "Arm extension (mm from minimum):", 0.0, 0.0,
+                                100000.0, 1, &ok_ext);
+    if (!ok_ext) {
+        logger_->Debug("Calibration save cancelled by user");
+        return;
+    }
+
+    bool ok_note = false;
+    const QString note =
+        QInputDialog::getText(this, "Save Calibration",
+                              "Note (optional, e.g., payload):",
+                              QLineEdit::Normal, QString(), &ok_note);
+    if (!ok_note) {
+        logger_->Debug("Calibration save cancelled by user");
+        return;
+    }
+
+    // Default to the calibration folder with a timestamped filename
+    QDir().mkpath(Motion::kCalibrationDir);
+    const QString default_path = QDir(Motion::kCalibrationDir)
+                                     .filePath(
+                                         "libra2_calibration_"
+                                         + QDateTime::currentDateTime().toString(
+                                             "yyyy-MM-dd_HH-mm-ss")
+                                         + ".json");
+    const QString file_path =
+        QFileDialog::getSaveFileName(this, "Save Calibration", default_path,
+                                     "Calibration (*.json)");
+    if (file_path.isEmpty()) {
+        logger_->Debug("Calibration save cancelled by user");
+        return;
+    }
+
+    emit SaveHebiCal(file_path, extension, note);
+}
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Load calibration...".
+ *        Prompts the user to select a calibration file and applies it.
+ */
+void MainWindow::on_a_motion_calibration_load_triggered() {
+    const QString file_path =
+        QFileDialog::getOpenFileName(this, "Load Calibration",
+                                     Motion::kCalibrationDir,
+                                     "Calibration (*.json)");
+    if (file_path.isEmpty()) {
+        logger_->Debug("Calibration load cancelled by user");
+        return;
+    }
+
+    emit LoadHebiCal(file_path);
 }
 #endif
 

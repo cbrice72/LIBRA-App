@@ -3645,10 +3645,15 @@
      <string>Motion Control</string>
     </property>
     <addaction name="a_motion_handoff_band"/>
+    <addaction name="a_motion_inertia_ff"/>
     <addaction name="separator"/>
     <addaction name="a_motion_calibrate_level"/>
     <addaction name="a_motion_calibrate_two_angle"/>
+    <addaction name="a_motion_calibrate_friction"/>
     <addaction name="a_motion_calibrate_cancel"/>
+    <addaction name="separator"/>
+    <addaction name="a_motion_calibration_save"/>
+    <addaction name="a_motion_calibration_load"/>
    </widget>
    <widget class="QMenu" name="m_actuators">
     <property name="title">
@@ -3944,6 +3949,20 @@
     <string>How close to the target the actuator takes over from the counterweight</string>
    </property>
   </action>
+  <action name="a_motion_inertia_ff">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Inertia feedforward</string>
+   </property>
+   <property name="statusTip">
+    <string>Include the inertia terms (I and dI/dt) in the actuator's torque feedforward</string>
+   </property>
+  </action>
   <action name="a_motion_calibrate_level">
    <property name="enabled">
     <bool>false</bool>
@@ -3966,6 +3985,17 @@
     <string>Calibrate by holding the arm at two angles</string>
    </property>
   </action>
+  <action name="a_motion_calibrate_friction">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Calibrate (friction)...</string>
+   </property>
+   <property name="statusTip">
+    <string>Measure joint friction by sweeping the arm up and down at several speeds</string>
+   </property>
+  </action>
   <action name="a_motion_calibrate_cancel">
    <property name="enabled">
     <bool>false</bool>
@@ -3975,6 +4005,22 @@
    </property>
    <property name="statusTip">
     <string>Stop a running calibration</string>
+   </property>
+  </action>
+  <action name="a_motion_calibration_save">
+   <property name="text">
+    <string>Save calibration...</string>
+   </property>
+   <property name="statusTip">
+    <string>Save the arm model and friction to a file</string>
+   </property>
+  </action>
+  <action name="a_motion_calibration_load">
+   <property name="text">
+    <string>Load calibration...</string>
+   </property>
+   <property name="statusTip">
+    <string>Load an arm model and friction from a saved file</string>
    </property>
   </action>
   <action name="a_water_flow_connect">
