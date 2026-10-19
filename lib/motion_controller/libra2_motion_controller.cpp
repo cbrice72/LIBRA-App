@@ -52,8 +52,8 @@ constexpr double kCwPivotDist = 0.0;   // r_P at 0 L, A (m)
 constexpr double kCwPivotSlope = 0.0;  // r_P change per liter, B (m/L)
 constexpr double kCwHangOffset = kCwBracketHeight
                                  - kPitchJointHeight;  // q_P (m)
-// TODO: take from CAD (about pitch joint O)
-constexpr double kArmInertia = 0.0;  // (kg·m²)
+constexpr double kArmInertia =
+    47.6;  // I_CAD, from Inertial Properties -> Global -> Izz (kg·m²)
 // TODO: set from experimental data (or run the friction calibration)
 constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
 constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
