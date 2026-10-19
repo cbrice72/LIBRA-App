@@ -14,31 +14,13 @@
 #include <cmath>
 #include <iomanip>
 #include <sstream>
+#include <utility>
 
 /* --- TABLE OF CONTENTS ---
- * !Local Helpers
  * !Class Management
+ * !Class Helpers
  * !Commands
- * !Protected Functions
  */
-
-namespace Motion {
-
-//------------------------------------------------------------------------------
-// !Local Helpers
-//------------------------------------------------------------------------------
-
-/**
- * @brief Formats a number for log messages.
- *
- * @param value Number to format
- */
-std::string MotionFormat(const double& value) {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2);  // TODO: 2 decimals is a guess
-    oss << value;
-    return oss.str();
-}
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -47,12 +29,52 @@ std::string MotionFormat(const double& value) {
 /**
  * @brief Standard constructor.
  *
- * @param logger Logger to use (NOT owned; must outlive this object)
+ * @param logger Logger for this motion controller (taken over)
  * @param n_joints Number of HEBI-controlled joints (size of every array)
  */
-AbstractMotionController::AbstractMotionController(Logger& logger,
-                                                   const std::size_t& n_joints)
-    : logger_(logger), n_joints_(n_joints) {}
+AbstractMotionController::AbstractMotionController(
+    std::unique_ptr<Logger> logger, const std::size_t& n_joints)
+    : logger_(std::move(logger)), n_joints_(n_joints) {
+    logger_->Debug("Initializing motion controller");
+}
+
+/**
+ * @brief Sets whether debug messages are logged.
+ *
+ * @param enabled Whether to output verbose debug text
+ */
+void AbstractMotionController::SetDebugMode(const bool& enabled) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    logger_->SetDebugMode(enabled);
+}
+
+//------------------------------------------------------------------------------
+// !Class Helpers
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Checks that every array in a `MotionState` has one entry per joint.
+ *
+ * @param state State to check
+ */
+bool AbstractMotionController::IsValid(const Motion::MotionState& state) const {
+    return state.pos.size() == n_joints_ && state.vel.size() == n_joints_
+           && state.torque_actuator.size() == n_joints_
+           && state.ref_vel.size() == n_joints_
+           && state.ref_acc.size() == n_joints_;
+}
+
+/**
+ * @brief Formats a number for log messages.
+ *
+ * @param value Number to format
+ */
+std::string AbstractMotionController::Format(const double& value) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2);  // TODO: 2 decimals is a guess
+    oss << value;
+    return oss.str();
+}
 
 //------------------------------------------------------------------------------
 // !Commands
@@ -72,8 +94,8 @@ void AbstractMotionController::SetTarget(const std::vector<double>& target_pos) 
         valid = valid && std::isfinite(angle);
     }
     if (!valid) {
-        logger_.Warn("Ignoring invalid target (expected "
-                     + std::to_string(n_joints_) + " finite angle(s))");
+        logger_->Warn("Ignoring invalid target (expected "
+                      + std::to_string(n_joints_) + " finite angle(s))");
         return;
     }
 
@@ -99,21 +121,3 @@ void AbstractMotionController::Reset() {
     target_pos_.reset();
     OnReset();
 }
-
-//------------------------------------------------------------------------------
-// !Protected Functions
-//------------------------------------------------------------------------------
-
-/**
- * @brief Checks that every array in a `MotionState` has one entry per joint.
- *
- * @param state State to check
- */
-bool AbstractMotionController::IsValid(const MotionState& state) const {
-    return state.pos.size() == n_joints_ && state.vel.size() == n_joints_
-           && state.torque_actuator.size() == n_joints_
-           && state.ref_vel.size() == n_joints_
-           && state.ref_acc.size() == n_joints_;
-}
-
-}  // namespace Motion

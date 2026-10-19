@@ -12,6 +12,7 @@
 // C++ Standard Library Headers
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -22,25 +23,24 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Types
- * !Class
+ * !Class Declaration
  */
-
-namespace Motion {
 
 //------------------------------------------------------------------------------
 // !Types
 //------------------------------------------------------------------------------
 
 /**
+ * @brief Common definitions for talking to motion controllers.
+ */
+namespace Motion {
+
+/**
  * @brief How the actuator of one joint should be commanded this cycle.
  */
 enum class CommandMode : uint8_t {
-    // Send the position/velocity command (trajectory or hold) plus the effort
-    // feedforward, if any
-    kPositionControl,
-
-    // Send NO position/velocity command; only the effort feedforward, if any
-    kEffortOnly
+    kPositionControl,  // position/velocity command plus effort feedforward
+    kEffortOnly        // effort feedforward only
 };
 
 /**
@@ -55,8 +55,7 @@ struct MotionState {
     std::vector<double> vel;              // θ̇ (rad/s)
     std::vector<double> torque_actuator;  // torque applied by actuator (Nm)
 
-    // Commanded in previous cycle ("cmd_vel", "cmd_acc"); needed before this
-    // cycle's trajectory is evaluated
+    // Commanded in previous cycle (`cmd_vel`, `cmd_acc`)
     std::vector<double> ref_vel;  // θ̇_ref (rad/s)
     std::vector<double> ref_acc;  // θ̈_ref (rad/s²)
 
@@ -73,17 +72,17 @@ struct MotionCommand {
 
     std::vector<CommandMode> mode;
 
-    // Effort feedforward per joint (Nm), not clamped; none = don't send one
+    // Effort feedforward per joint, not clamped; none = don't send one (Nm)
     std::vector<std::optional<double>> torque_actuator_cmd;
 
     // Trajectory clock rate: 1 = normal, 0.5 = slow, 0 = paused
     double playback_rate{1.0};
 };
 
-std::string MotionFormat(const double& value);
+}  // namespace Motion
 
 //------------------------------------------------------------------------------
-// !Class
+// !Class Declaration
 //------------------------------------------------------------------------------
 
 /**
@@ -91,14 +90,13 @@ std::string MotionFormat(const double& value);
  *        strategies.
  *
  * @note There is no virtual `Update()` function: LIBRA-I and LIBRA-II are
- *       mechanically different, so each motion controller must define its own
- *       version and any extra inputs/outputs it needs.
+ *       mechanically different, so each motion controller defines its own.
  *
  * @note All public functions must lock `mutex_` to ensure thread safety.
  */
 class AbstractMotionController {
   public:
-    explicit AbstractMotionController(Logger& logger,
+    explicit AbstractMotionController(std::unique_ptr<Logger> logger,
                                       const std::size_t& n_joints);
     virtual ~AbstractMotionController() = default;
 
@@ -110,6 +108,8 @@ class AbstractMotionController {
         return n_joints_;
     }
 
+    void SetDebugMode(const bool& enabled);
+
     // --- Commands ---
 
     void SetTarget(const std::vector<double>& target_pos);
@@ -117,8 +117,7 @@ class AbstractMotionController {
     void Reset();
 
   protected:
-    // Hooks to be implemented by child classes; `mutex_` is already locked
-    // when these are called
+    // --- Hooks (called with `mutex_` locked) ---
 
     virtual void OnTargetChanged() {}
 
@@ -126,16 +125,17 @@ class AbstractMotionController {
 
     virtual void OnReset() {}
 
-    [[nodiscard]] bool IsValid(const MotionState& state) const;
+    // --- Helper Functions ---
+
+    [[nodiscard]] bool IsValid(const Motion::MotionState& state) const;
+    static std::string Format(const double& value);
 
     // --- Data Members ---
 
-    Logger& logger_;  // from parent
+    std::unique_ptr<Logger> logger_;
     const std::size_t n_joints_;
 
     mutable std::mutex mutex_;
 
     std::optional<std::vector<double>> target_pos_;
 };
-
-}  // namespace Motion

@@ -11,6 +11,7 @@
 
 // C++ Standard Library Headers
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <string>
 #include <utility>
@@ -20,20 +21,73 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
+ * !Motion Helpers
  * !CW Model
  * !Pure Equations
  * !Rest Sampler
  * !Class Management
  * !Settings & Arm Model
- * !Calibration (public)
+ * !Calibration Commands
  * !Calibration Record
  * !Control Cycle
  * !Hooks
- * !Calibration (private)
- * !Friction Calibration (private)
+ * !Model Calibration Helpers
+ * !Friction Calibration Helpers
  */
 
-namespace Motion {
+// Physical Constants
+
+constexpr double kWaterDensity = 1.0;  // ρ_water, Eq. 28 (kg/L)
+constexpr double kGrav = 9.80665;      // g (m/s²)
+
+// Mechanical Constants (heights above the arm/CW centerline)
+
+constexpr double kPitchJointHeight = 0.1005;  // pitch joint O (m)
+constexpr double kCwBracketHeight = 0.0427;   // CW hang points (m)
+
+// Model Parameters
+
+// TODO: measure r_P (0 disables calibration and feedforward)
+constexpr double kCwPivotDist = 0.0;   // r_P at 0 L, A (m)
+constexpr double kCwPivotSlope = 0.0;  // r_P change per liter, B (m/L)
+constexpr double kCwHangOffset = kCwBracketHeight
+                                 - kPitchJointHeight;  // q_P (m)
+// TODO: take from CAD (about pitch joint O)
+constexpr double kArmInertia = 0.0;  // (kg·m²)
+// TODO: set from experimental data (or run the friction calibration)
+constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
+constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
+
+// Predictive CW Command
+
+// TODO: guess; prevents valve chatter
+constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
+
+// Model Calibration
+
+// TODO: all of these are guesses; tune via experiments
+constexpr double kMaxLevelAngle = 0.0175;    // |θ| limit for level cal (rad)
+constexpr double kReachTolerance = 0.01;     // "arrived at target" (rad)
+constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
+constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
+constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
+constexpr double kRestWindowTime = 3.0;      // averaging window (s)
+constexpr double kMoveTimeout = 180.0;       // per move stage (s)
+constexpr double kSampleTimeout = 60.0;      // per sampling stage (s)
+constexpr double kMinCosForBalance = 1e-3;   // |cos θ| floor, Eq. 34/38
+
+// Friction Calibration
+
+// TODO: all of these are guesses; tune via experiments
+constexpr double kFrictionRampDist = 0.0175;     // to reach speed, ~1 deg (rad)
+constexpr double kFrictionSampleMargin = 0.035;  // unsampled ends, ~2 deg (rad)
+constexpr double kFrictionBinWidth = 0.0087;     // angle bin, ~0.5 deg (rad)
+constexpr double kFrictionSpeedTolerance = 0.1;  // allowed |θ̇ − v| / v
+constexpr int kFrictionMinBinSamples = 3;        // per bin and direction
+constexpr int kFrictionMinBins = 3;              // usable bins per speed
+// Sweep speeds as fractions of the caller's max speed (~0.5, 1, 2, 3 deg/s)
+constexpr std::array<double, 4> kFrictionSpeedFractions = {1.0 / 6.0, 1.0 / 3.0,
+                                                           2.0 / 3.0, 1.0};
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -60,13 +114,19 @@ double Sign(const double& x) {
  *
  * @param status Status to check
  */
-bool IsFrictionStage(const CalibrationStatus& status) {
-    return status == CalibrationStatus::kFrictionMovingToStart
-           || status == CalibrationStatus::kFrictionSweepUp
-           || status == CalibrationStatus::kFrictionSweepDown;
+bool IsFrictionStage(const Motion::CalibrationStatus& status) {
+    return status == Motion::CalibrationStatus::kFrictionMovingToStart
+           || status == Motion::CalibrationStatus::kFrictionSweepUp
+           || status == Motion::CalibrationStatus::kFrictionSweepDown;
 }
 
 }  // namespace
+
+//------------------------------------------------------------------------------
+// !Motion Helpers
+//------------------------------------------------------------------------------
+
+namespace Motion {
 
 /**
  * @brief Whether a calibration is running.
@@ -92,6 +152,8 @@ bool IsSameCwModel(const CwModelParams& a, const CwModelParams& b) {
            && std::abs(a.capacity - b.capacity) <= kCwParamTolerance;
 }
 
+}  // namespace Motion
+
 //------------------------------------------------------------------------------
 // !CW Model
 //------------------------------------------------------------------------------
@@ -102,7 +164,7 @@ bool IsSameCwModel(const CwModelParams& a, const CwModelParams& b) {
  * @param cw_pivot_dist CW pivot distance at 0 L, A (m); sign is ignored
  *                      (0 = "not measured yet" and leaves model invalid)
  * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L); may be
- *                       negative, so sign is kept
+ *                       negative
  * @param cw_hang_offset Hang-point offset normal to arm, from pitch joint O,
  *                       q_P (m); negative = below O
  * @param capacity Largest volume the CW can hold (L)
@@ -111,6 +173,10 @@ bool IsSameCwModel(const CwModelParams& a, const CwModelParams& b) {
  *       where r_P (pitch joint O to CW pivot P, along arm) varies linearly
  *       with volume:
  *         r_P(V) = A + B·V
+ *
+ * @note The moment A·m + (B/ρ_water)·m² must rise up to a full CW, or two
+ *       masses give the same moment. Its slope is linear in V, so checking at
+ *       capacity is enough (this also keeps r_P(V) > 0).
  */
 CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
                  const double& cw_hang_offset, const double& capacity)
@@ -133,10 +199,6 @@ CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
     dr_P_dV_ = cw_pivot_slope;
     q_P_ = cw_hang_offset;
 
-    // Moment A*m + (B/rho)*m^2 must increase up to a full CW, or two masses
-    // give the same moment and MassForMoment() is ambiguous. Its slope
-    // (A + 2*B*V) is linear in V, so checking at capacity is enough. (This also
-    // keeps r_P(V) > 0 on [0, capacity].)
     if (!(r_P_0_ + 2.0 * dr_P_dV_ * capacity_ > 0.0)) {
         error_ = "r_P line is too steep: the CW moment must increase with "
                  "volume up to full (need A + 2*B*capacity > 0)";
@@ -146,8 +208,8 @@ CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
 /**
  * @brief Gets the values that define this model.
  */
-CwModelParams CwModel::GetParams() const {
-    CwModelParams params;
+Motion::CwModelParams CwModel::GetParams() const {
+    Motion::CwModelParams params;
     params.pivot_dist = r_P_0_;
     params.pivot_slope = dr_P_dV_;
     params.hang_offset = q_P_;
@@ -262,7 +324,6 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
         return cap;
     }
 
-    // M = A'*m + c*m^2 (c = B/rho); this root form stays accurate as c -> 0
     const double c = dr_P_dV_ / kWaterDensity;
     const double disc = std::max(0.0, a_eff * a_eff + 4.0 * c * moment);
     return 2.0 * moment / (a_eff + std::sqrt(disc));
@@ -274,12 +335,9 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
  * @param mass CW mass, m_cw (kg)
  *
  * @note Code-specific CW term of the inertia in Eq. 15
- * (`D-E_Joint-Dynamics_Balance.jpg`): the hanging CW acts as a point mass at
- * its pivot P: I_cw = m_cw·(r_P(V)² + q_P²)
- *
- * @note With several bags, Σ m_i·r_i² is a bit larger than m_cw·r_P², so this
- *       slightly underestimates the CW inertia (more so the farther apart the
- * bags are).
+ *       (`D-E_Joint-Dynamics_Balance.jpg`), as a point mass at CW pivot P
+ *       (slightly low for several spread-out bags):
+ *         m_cw·(r_P(V)² + q_P²)
  */
 double CwModel::Inertia(const double& mass) const {
     const double r_P = PivotDist(mass / kWaterDensity);
@@ -293,7 +351,7 @@ double CwModel::Inertia(const double& mass) const {
  *
  * @note Code-specific derivative of `Inertia()`, for the inertia rate in Eq. 15
  *       (`D-E_Joint-Dynamics_Balance.jpg`):
- *         dI_cw/dm_cw = r_P·(r_P + 2·B·V) + q_P²
+ *         d(inertia)/dm_cw = r_P·(r_P + 2·B·V) + q_P²
  */
 double CwModel::InertiaSlope(const double& mass) const {
     const double volume = mass / kWaterDensity;
@@ -396,7 +454,7 @@ bool SolveTwoAngle(const double& arm_torque_a, const double& theta_a,
                    double& arm_level_torque, double& arm_hang_torque) {
     // Eq. 35
     const double s = std::sin(theta_b - theta_a);
-    if (std::abs(s) < std::sin(0.5 * kMinAngleSeparation)) {
+    if (std::abs(s) < std::sin(0.5 * Motion::kMinAngleSeparation)) {
         return false;
     }
     arm_level_torque = (arm_torque_a * std::sin(theta_b)
@@ -606,11 +664,10 @@ void RestSampler::Reset() {
  * @param trajectory_active Whether a trajectory is running
  * @param volume Latest CW volume (L), if known
  */
-std::optional<RestSample> RestSampler::Add(const double& dt, const double& pos,
-                                           const double& vel,
-                                           const double& torque_actuator,
-                                           const bool& trajectory_active,
-                                           const std::optional<double>& volume) {
+std::optional<Motion::RestSample> RestSampler::Add(
+    const double& dt, const double& pos, const double& vel,
+    const double& torque_actuator, const bool& trajectory_active,
+    const std::optional<double>& volume) {
     const bool still = !trajectory_active && std::abs(vel) <= kRestVelTolerance
                        && volume.has_value();
     if (!still) {
@@ -638,7 +695,7 @@ std::optional<RestSample> RestSampler::Add(const double& dt, const double& pos,
     ++count_;
 
     if (t_elapsed_s_ >= kRestWindowTime && count_ >= 2) {
-        RestSample sample;
+        Motion::RestSample sample;
         sample.theta = sum_theta_ / count_;
         sample.torque_actuator = sum_torque_ / count_;
         sample.volume = sum_volume_ / count_;
@@ -653,51 +710,61 @@ std::optional<RestSample> RestSampler::Add(const double& dt, const double& pos,
 //------------------------------------------------------------------------------
 
 /**
- * @brief Delegating constructor. Uses the kDefault* header constants (the one
- *        HebiThread uses).
+ * @brief Delegating constructor. Uses this file's model constants.
  *
- * @param logger Logger to use (NOT owned; must outlive this object)
+ * @param logger Logger for this motion controller (taken over)
  * @param cw_capacity CW capacity (L)
+ * @param torque_comp_lower_bound ATC "soft" limit (Nm)
+ * @param torque_comp_upper_bound ATC "hard" limit (Nm)
+ * @param torque_comp_slow_rate Trajectory playback rate between ATC limits
  */
-Libra2MotionController::Libra2MotionController(Logger& logger,
-                                               const double& cw_capacity)
-    : Libra2MotionController(logger, kDefaultCwPivotDist, kDefaultCwPivotSlope,
-                             kDefaultCwHangOffset, cw_capacity, kDefaultGrav,
+Libra2MotionController::Libra2MotionController(
+    std::unique_ptr<Logger> logger, const double& cw_capacity,
+    const double& torque_comp_lower_bound,
+    const double& torque_comp_upper_bound, const double& torque_comp_slow_rate)
+    : Libra2MotionController(std::move(logger), kCwPivotDist, kCwPivotSlope,
+                             kCwHangOffset, cw_capacity,
                              kDefaultFrictionCoulomb, kDefaultFrictionViscous,
-                             kDefaultArmInertia) {}
+                             kArmInertia, torque_comp_lower_bound,
+                             torque_comp_upper_bound, torque_comp_slow_rate) {}
 
 /**
  * @brief Standard constructor.
  *
- * @param logger Logger to use (NOT owned; must outlive this object)
- * @param cw_pivot_dist CW pivot distance at 0 L, A (m) (0 = not measured,
- *                      model invalid)
+ * @param logger Logger for this motion controller (taken over)
+ * @param cw_pivot_dist CW pivot distance at 0 L, A (m); 0 = not measured
  * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L)
  * @param cw_hang_offset CW hang-point offset normal to arm, from pitch joint,
  *                       q_P (m)
  * @param cw_capacity CW capacity (L)
- * @param grav Gravitational acceleration, g (m/s²)
  * @param friction_coulomb Coulomb friction torque, τ_c (Nm)
  * @param friction_viscous Viscous friction coefficient, b (Nm·s/rad)
  * @param arm_inertia Arm's moment of inertia about pitch joint (kg·m²)
+ * @param torque_comp_lower_bound ATC "soft" limit (Nm)
+ * @param torque_comp_upper_bound ATC "hard" limit (Nm)
+ * @param torque_comp_slow_rate Trajectory playback rate between ATC limits
  *
- * @note The CW's share of the inertia and its rate comes from the CW model and
- * flow rate.
+ * @note The CW's share of the inertia comes from the CW model and flow rate.
  */
 Libra2MotionController::Libra2MotionController(
-    Logger& logger, const double& cw_pivot_dist, const double& cw_pivot_slope,
-    const double& cw_hang_offset, const double& cw_capacity, const double& grav,
-    const double& friction_coulomb, const double& friction_viscous,
-    const double& arm_inertia)
-    : AbstractMotionController(logger, Joint::GetHebiStrings().size()),
+    std::unique_ptr<Logger> logger, const double& cw_pivot_dist,
+    const double& cw_pivot_slope, const double& cw_hang_offset,
+    const double& cw_capacity, const double& friction_coulomb,
+    const double& friction_viscous, const double& arm_inertia,
+    const double& torque_comp_lower_bound,
+    const double& torque_comp_upper_bound, const double& torque_comp_slow_rate)
+    : AbstractMotionController(std::move(logger),
+                               Joint::GetHebiStrings().size()),
       cw_model_(cw_pivot_dist, cw_pivot_slope, cw_hang_offset, cw_capacity),
-      grav_(grav),
       friction_coulomb_(friction_coulomb),
       friction_viscous_(friction_viscous),
-      arm_inertia_(arm_inertia) {
+      arm_inertia_(arm_inertia),
+      torque_comp_lower_bound_(torque_comp_lower_bound),
+      torque_comp_upper_bound_(torque_comp_upper_bound),
+      torque_comp_slow_rate_(torque_comp_slow_rate) {
     if (!cw_model_.IsValid()) {
-        logger_.Warn("CW model invalid: " + cw_model_.GetError()
-                     + " (calibration and feedforward are unavailable)");
+        logger_->Warn("CW model invalid: " + cw_model_.GetError()
+                      + " (calibration and feedforward are unavailable)");
     }
 }
 
@@ -714,45 +781,45 @@ Libra2MotionController::Libra2MotionController(
  *       no move in progress). Switching to tandem is always accepted; mid-move
  *       it hands off to the actuator so the arm is never left free.
  */
-bool Libra2MotionController::SetMotionMode(const MotionMode& mode) {
+bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (mode == MotionMode::kCwPrimary
+    if (mode == Motion::MotionMode::kCwPrimary
         && !(calibrated_ && cw_model_.IsValid())) {
-        logger_.Warn("CW-primary mode needs a calibrated arm model and a valid "
-                     "CW model; staying in the current mode");
+        logger_->Warn("CW-primary mode needs a calibrated arm model and a "
+                      "valid CW model; staying in the current mode");
         return false;
     }
-    if (mode == MotionMode::kCwPrimary && IsMovingLocked()) {
-        logger_.Warn("Can't switch to CW-primary while the arm is moving; "
-                     "staying in the current mode");
+    if (mode == Motion::MotionMode::kCwPrimary && IsMovingLocked()) {
+        logger_->Warn("Can't switch to CW-primary while the arm is moving; "
+                      "staying in the current mode");
         return false;
     }
 
     if (cw_phase_ == CwPhase::kCwMoving) {
-        logger_.Warn("Left CW-primary while the CW was moving the arm; handing "
-                     "off to the actuator");
+        logger_->Warn("Left CW-primary while the CW was moving the arm; "
+                      "handing off to the actuator");
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
         if (target_pos_) {
             pending_move_ = (*target_pos_)[kPitchIdx];
         }
     } else if (!IsMovingLocked()) {
-        // NOTE: A move in progress keeps its CW state; the new mode applies
-        //       from the next target (see `OnTargetChanged()`).
+        // A move in progress keeps its CW state until the next target
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = false;
     }
 
     mode_ = mode;
-    logger_.Info(std::string("Motion mode: ")
-                 + (mode == MotionMode::kTandem ? "tandem" : "CW-primary"));
+    logger_->Info(
+        std::string("Motion mode: ")
+        + (mode == Motion::MotionMode::kTandem ? "tandem" : "CW-primary"));
     return true;
 }
 
 /**
  * @brief Gets the selected motion mode.
  */
-MotionMode Libra2MotionController::GetMotionMode() const {
+Motion::MotionMode Libra2MotionController::GetMotionMode() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return mode_;
 }
@@ -769,33 +836,20 @@ bool Libra2MotionController::IsMoving() const {
 }
 
 /**
- * @brief Stores latest CW volume (from TankWidget).
+ * @brief Stores latest CW state (from WaterController).
  *
- * @param volume CW volume (L)
+ * @param volume CW volume, V (L)
+ * @param flow Net CW flow rate, V̇ (L/s); positive = filling
  */
-void Libra2MotionController::SetCwVolume(const double& volume) {
+void Libra2MotionController::SetCwState(const double& volume,
+                                        const double& flow) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (!std::isfinite(volume) || volume < 0.0) {
-        logger_.Warn("Ignoring invalid CW volume: " + MotionFormat(volume)
-                     + " L");
+    if (!std::isfinite(volume) || volume < 0.0 || !std::isfinite(flow)) {
+        logger_->Warn("Ignoring invalid CW state: " + Format(volume) + " L, "
+                      + Format(flow) + " L/s");
         return;
     }
     cw_vol_ = volume;
-}
-
-/**
- * @brief Stores latest CW flow rate (from flow Arduino), used for the inertia rate.
- *
- * @param flow Net flow rate, V̇ (L/s); positive = filling, 0 = idle or
- *                     unknown
- */
-void Libra2MotionController::SetCwFlow(const double& flow) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!std::isfinite(flow)) {
-        logger_.Warn("Ignoring invalid CW flow rate");
-        cw_flow_ = 0.0;
-        return;
-    }
     cw_flow_ = flow;
 }
 
@@ -811,21 +865,21 @@ void Libra2MotionController::EnableTorqueComp(const bool& enabled) {
     if (!atc_en_) {
         movement_en_ = true;  // "manual" mode: movement is always allowed
     }
-    logger_.Info("Automatic torque compensation "
-                 + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Info("Automatic torque compensation "
+                  + std::string(enabled ? "enabled" : "disabled"));
 }
 
 /**
- * @brief Enables or disables the inertia terms of the torque
- *        feedforward, e.g., to compare a move with and without them.
+ * @brief Enables or disables the inertia terms of the torque feedforward,
+ *        e.g., to compare a move with and without them.
  *
  * @param enabled Whether to include them
  */
 void Libra2MotionController::EnableInertiaFeedforward(const bool& enabled) {
     std::lock_guard<std::mutex> lock(mutex_);
     inertia_ff_en_ = enabled;
-    logger_.Info("Inertia feedforward "
-                 + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Info("Inertia feedforward "
+                  + std::string(enabled ? "enabled" : "disabled"));
 }
 
 /**
@@ -840,16 +894,16 @@ bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
                                                  const double& upper_bound) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
-        logger_.Warn("Ignoring invalid torque compensation bounds: lower="
-                     + MotionFormat(lower_bound)
-                     + " Nm, upper=" + MotionFormat(upper_bound) + " Nm");
+        logger_->Warn("Ignoring invalid torque compensation bounds: lower="
+                      + Format(lower_bound)
+                      + " Nm, upper=" + Format(upper_bound) + " Nm");
         return false;
     }
     torque_comp_lower_bound_ = lower_bound;
     torque_comp_upper_bound_ = upper_bound;
-    logger_.Info("Torque compensation bounds updated: lower="
-                 + MotionFormat(lower_bound)
-                 + " Nm, upper=" + MotionFormat(upper_bound) + " Nm");
+    logger_->Info("Torque compensation bounds updated: lower="
+                  + Format(lower_bound) + " Nm, upper=" + Format(upper_bound)
+                  + " Nm");
     return true;
 }
 
@@ -864,31 +918,12 @@ bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
 bool Libra2MotionController::SetHandoffBand(const double& band) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!(band > 0.0) || !std::isfinite(band)) {
-        logger_.Warn("Ignoring invalid hand-off band: " + MotionFormat(band)
-                     + " rad");
+        logger_->Warn("Ignoring invalid hand-off band: " + Format(band)
+                      + " rad");
         return false;
     }
     handoff_band_ = band;
-    logger_.Info("Hand-off band updated: " + MotionFormat(band) + " rad");
-    return true;
-}
-
-/**
- * @brief Sets the CW volume tolerance ("volume reached" deadband).
- *
- * @param tolerance Tolerance (L); prevents fill/drain chatter near target
- *                  volume
- *
- * @note Rejects a negative or non-finite tolerance and returns false.
- */
-bool Libra2MotionController::SetCwVolumeTolerance(const double& tolerance) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (!(tolerance >= 0.0) || !std::isfinite(tolerance)) {
-        logger_.Warn("Ignoring invalid CW volume tolerance: "
-                     + MotionFormat(tolerance) + " L");
-        return false;
-    }
-    cw_volume_tolerance_ = tolerance;
+    logger_->Info("Hand-off band updated: " + Format(band) + " rad");
     return true;
 }
 
@@ -911,9 +946,8 @@ void Libra2MotionController::SetArmModel(const double& arm_level_torque,
     arm_source_ = "set";
     arm_cw_params_ = cw_model_.GetParams();
     arm_samples_.clear();
-    logger_.Info(
-        "Arm model set: arm_level_torque=" + MotionFormat(arm_level_torque)
-        + " Nm, arm_hang_torque=" + MotionFormat(arm_hang_torque) + " Nm");
+    logger_->Info("Arm model set: arm_level_torque=" + Format(arm_level_torque)
+                  + " Nm, arm_hang_torque=" + Format(arm_hang_torque) + " Nm");
     CheckStability(arm_hang_torque_);
 }
 
@@ -928,9 +962,9 @@ void Libra2MotionController::ClearArmModel() {
     calibrated_ = false;
     arm_source_.clear();
     arm_samples_.clear();
-    mode_ = MotionMode::kTandem;  // CW-primary needs the model
+    mode_ = Motion::MotionMode::kTandem;  // CW-primary needs the model
     cw_phase_ = CwPhase::kIdle;
-    logger_.Info("Arm model cleared; feedforward and predictive CW disabled");
+    logger_->Info("Arm model cleared; feedforward and predictive CW disabled");
 }
 
 /**
@@ -974,12 +1008,12 @@ double Libra2MotionController::ComputeNetGravTorque(
     const double& theta, const double& cw_mass) const {
     return Libra2Model::NetGravTorque(arm_level_torque_, arm_hang_torque_,
                                       cw_model_.Moment(cw_mass),
-                                      cw_model_.HangMoment(cw_mass), grav_,
+                                      cw_model_.HangMoment(cw_mass), kGrav,
                                       theta);
 }
 
 //------------------------------------------------------------------------------
-// !Calibration (public)
+// !Calibration Commands
 //------------------------------------------------------------------------------
 
 /**
@@ -994,19 +1028,19 @@ double Libra2MotionController::ComputeNetGravTorque(
  */
 bool Libra2MotionController::StartLevelCalibration() {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (IsCalibrationRunning(status_)) {
-        logger_.Warn("Calibration already running; ignoring level request");
+    if (Motion::IsCalibrationRunning(status_)) {
+        logger_->Warn("Calibration already running; ignoring level request");
         return false;
     }
     if (!cw_model_.IsValid()) {
-        logger_.Error("Can't calibrate: CW model invalid ("
-                      + cw_model_.GetError() + ")");
+        logger_->Error("Can't calibrate: CW model invalid ("
+                       + cw_model_.GetError() + ")");
         return false;
     }
 
     two_angle_ = false;
-    BeginStage(CalibrationStatus::kSamplingLevel);
-    logger_.Info("Level calibration started (arm must be level and at rest)");
+    BeginStage(Motion::CalibrationStatus::kSamplingLevel);
+    logger_->Info("Level calibration started (arm must be level and at rest)");
     return true;
 }
 
@@ -1027,33 +1061,34 @@ bool Libra2MotionController::StartLevelCalibration() {
 bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
                                                       const double& angle_b) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (IsCalibrationRunning(status_)) {
-        logger_.Warn("Calibration already running; ignoring two-angle request");
+    if (Motion::IsCalibrationRunning(status_)) {
+        logger_->Warn("Calibration already running; ignoring two-angle "
+                      "request");
         return false;
     }
     if (!cw_model_.IsValid()) {
-        logger_.Error("Can't calibrate: CW model invalid ("
-                      + cw_model_.GetError() + ")");
+        logger_->Error("Can't calibrate: CW model invalid ("
+                       + cw_model_.GetError() + ")");
         return false;
     }
     if (!std::isfinite(angle_a) || !std::isfinite(angle_b)
-        || std::abs(angle_a) > kMaxCalibrationAngle
-        || std::abs(angle_b) > kMaxCalibrationAngle
-        || std::abs(angle_b - angle_a) < kMinAngleSeparation) {
-        logger_.Warn("Two-angle calibration rejected: need |angle| <= "
-                     + MotionFormat(kMaxCalibrationAngle) + " rad and "
-                     + "|b - a| >= " + MotionFormat(kMinAngleSeparation)
-                     + " rad (got a=" + MotionFormat(angle_a)
-                     + ", b=" + MotionFormat(angle_b) + ")");
+        || std::abs(angle_a) > Motion::kMaxCalibrationAngle
+        || std::abs(angle_b) > Motion::kMaxCalibrationAngle
+        || std::abs(angle_b - angle_a) < Motion::kMinAngleSeparation) {
+        logger_->Warn("Two-angle calibration rejected: need |angle| <= "
+                      + Format(Motion::kMaxCalibrationAngle) + " rad and "
+                      + "|b - a| >= " + Format(Motion::kMinAngleSeparation)
+                      + " rad (got a=" + Format(angle_a)
+                      + ", b=" + Format(angle_b) + ")");
         return false;
     }
 
     two_angle_ = true;
     angle_a_ = angle_a;
     angle_b_ = angle_b;
-    BeginStage(CalibrationStatus::kMovingToA);
-    logger_.Info("Two-angle calibration started: a=" + MotionFormat(angle_a)
-                 + " rad, b=" + MotionFormat(angle_b) + " rad");
+    BeginStage(Motion::CalibrationStatus::kMovingToA);
+    logger_->Info("Two-angle calibration started: a=" + Format(angle_a)
+                  + " rad, b=" + Format(angle_b) + " rad");
     return true;
 }
 
@@ -1078,33 +1113,32 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                                                       const double& angle_b,
                                                       const double& max_speed) {
     std::lock_guard<std::mutex> lock(mutex_);
-    if (IsCalibrationRunning(status_)) {
-        logger_.Warn("Calibration already running; ignoring friction request");
+    if (Motion::IsCalibrationRunning(status_)) {
+        logger_->Warn("Calibration already running; ignoring friction request");
         return false;
     }
     if (!cw_vol_) {
-        logger_.Warn("Friction calibration rejected: CW volume unknown (needed "
-                     "to check that it stays constant)");
+        logger_->Warn("Friction calibration rejected: CW volume unknown "
+                      "(needed to check that it stays constant)");
         return false;
     }
     if (!(max_speed > 0.0) || !std::isfinite(max_speed)) {
-        logger_.Error("Friction calibration rejected: invalid max speed "
-                      + MotionFormat(max_speed) + " rad/s");
+        logger_->Error("Friction calibration rejected: invalid max speed "
+                       + Format(max_speed) + " rad/s");
         return false;
     }
 
     const double lo = std::min(angle_a, angle_b);
     const double hi = std::max(angle_a, angle_b);
-    const double min_span = 2.0 * kFrictionSampleMargin
-                            + kFrictionMinSampleSpan;
     if (!std::isfinite(lo) || !std::isfinite(hi)
-        || std::abs(lo) > kMaxCalibrationAngle
-        || std::abs(hi) > kMaxCalibrationAngle || hi - lo < min_span) {
-        logger_.Warn("Friction calibration rejected: need |angle| <= "
-                     + MotionFormat(kMaxCalibrationAngle) + " rad and "
-                     + "|b - a| >= " + MotionFormat(min_span)
-                     + " rad (got a=" + MotionFormat(angle_a)
-                     + ", b=" + MotionFormat(angle_b) + ")");
+        || std::abs(lo) > Motion::kMaxCalibrationAngle
+        || std::abs(hi) > Motion::kMaxCalibrationAngle
+        || hi - lo < Motion::kFrictionMinWindow) {
+        logger_->Warn("Friction calibration rejected: need |angle| <= "
+                      + Format(Motion::kMaxCalibrationAngle) + " rad and "
+                      + "|b - a| >= " + Format(Motion::kFrictionMinWindow)
+                      + " rad (got a=" + Format(angle_a)
+                      + ", b=" + Format(angle_b) + ")");
         return false;
     }
 
@@ -1112,9 +1146,9 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     const double slowest = max_speed * kFrictionSpeedFractions.front();
     const double t_slowest_s = (hi - lo + 2.0 * kFrictionRampDist) / slowest;
     if (t_slowest_s > kMoveTimeout) {
-        logger_.Warn("Friction calibration rejected: slowest sweep takes "
-                     + MotionFormat(t_slowest_s) + " s (limit "
-                     + MotionFormat(kMoveTimeout) + " s); use a smaller window");
+        logger_->Warn("Friction calibration rejected: slowest sweep takes "
+                      + Format(t_slowest_s) + " s (limit "
+                      + Format(kMoveTimeout) + " s); use a smaller window");
         return false;
     }
 
@@ -1125,13 +1159,13 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     friction_run_.volume = *cw_vol_;
 
     two_angle_ = false;
-    BeginStage(CalibrationStatus::kFrictionMovingToStart);
-    logger_.Info("Friction calibration started: window " + MotionFormat(lo)
-                 + " to " + MotionFormat(hi) + " rad, "
-                 + std::to_string(kFrictionSpeedFractions.size())
-                 + " speeds up to " + MotionFormat(max_speed)
-                 + " rad/s (CW stays idle; aborts above "
-                 + MotionFormat(torque_comp_upper_bound_) + " Nm)");
+    BeginStage(Motion::CalibrationStatus::kFrictionMovingToStart);
+    logger_->Info("Friction calibration started: window " + Format(lo) + " to "
+                  + Format(hi) + " rad, "
+                  + std::to_string(kFrictionSpeedFractions.size())
+                  + " speeds up to " + Format(max_speed)
+                  + " rad/s (CW stays idle; aborts above "
+                  + Format(torque_comp_upper_bound_) + " Nm)");
     return true;
 }
 
@@ -1146,7 +1180,7 @@ void Libra2MotionController::CancelCalibration() {
 /**
  * @brief Gets calibration progress.
  */
-CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
+Motion::CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return status_;
 }
@@ -1170,15 +1204,14 @@ std::string Libra2MotionController::GetCalibrationMessage() const {
  *
  * @note File metadata (`saved_at`, `extension`, `note`) is left empty.
  */
-CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
+Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    CalibrationRecord record;
+    Motion::CalibrationRecord record;
     record.cw_model = cw_model_.GetParams();
-    record.grav = grav_;
     record.arm_inertia = arm_inertia_;
 
     if (calibrated_) {
-        ArmModelRecord arm;
+        Motion::ArmModelRecord arm;
         arm.source = arm_source_;
         arm.level_torque = arm_level_torque_;
         arm.hang_torque = arm_hang_torque_;
@@ -1203,47 +1236,47 @@ CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
  *       samples, the saved values are used as-is (with a warning).
  */
 bool Libra2MotionController::LoadCalibrationRecord(
-    const CalibrationRecord& record) {
+    const Motion::CalibrationRecord& record) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (IsMovingLocked()) {
-        logger_.Warn("Can't load a calibration while the arm is moving or "
-                     "calibrating");
+        logger_->Warn("Can't load a calibration while the arm is moving or "
+                      "calibrating");
         return false;
     }
     if (!record.arm_model && !record.friction) {
-        logger_.Warn("Calibration record has no arm model or friction result; "
-                     "nothing loaded");
+        logger_->Warn("Calibration record has no arm model or friction "
+                      "result; nothing loaded");
         return false;
     }
 
     if (record.arm_model) {
-        const ArmModelRecord& arm = *record.arm_model;
+        const Motion::ArmModelRecord& arm = *record.arm_model;
         double level = arm.level_torque;
         double hang_torque = arm.hang_torque;
-        CwModelParams params = arm.cw_model;
+        Motion::CwModelParams params = arm.cw_model;
 
-        if (!IsSameCwModel(arm.cw_model, cw_model_.GetParams())) {
+        if (!Motion::IsSameCwModel(arm.cw_model, cw_model_.GetParams())) {
             if (RecomputeArmModel(arm, level, hang_torque)) {
                 params = cw_model_.GetParams();
-                logger_.Info("CW model changed since this calibration; arm "
-                             "model recomputed from its raw samples (saved: "
-                             "arm_level_torque="
-                             + MotionFormat(arm.level_torque)
-                             + " Nm, arm_hang_torque="
-                             + MotionFormat(arm.hang_torque) + " Nm)");
+                logger_->Info("CW model changed since this calibration; arm "
+                              "model recomputed from its raw samples (saved: "
+                              "arm_level_torque="
+                              + Format(arm.level_torque)
+                              + " Nm, arm_hang_torque="
+                              + Format(arm.hang_torque) + " Nm)");
             } else {
-                logger_.Warn("CW model changed since this calibration, but "
-                             "its arm model can't be recomputed (no raw "
-                             "samples, or CW model invalid); using the saved "
-                             "values as-is");
+                logger_->Warn("CW model changed since this calibration, but "
+                              "its arm model can't be recomputed (no raw "
+                              "samples, or CW model invalid); using the "
+                              "saved values as-is");
             }
         }
 
-        logger_.Info("Arm model loaded: arm_level_torque "
-                     + MotionFormat(arm_level_torque_) + " -> "
-                     + MotionFormat(level) + " Nm, arm_hang_torque "
-                     + MotionFormat(arm_hang_torque_) + " -> "
-                     + MotionFormat(hang_torque) + " Nm (" + arm.source + ")");
+        logger_->Info("Arm model loaded: arm_level_torque "
+                      + Format(arm_level_torque_) + " -> " + Format(level)
+                      + " Nm, arm_hang_torque " + Format(arm_hang_torque_)
+                      + " -> " + Format(hang_torque) + " Nm (" + arm.source
+                      + ")");
         arm_level_torque_ = level;
         arm_hang_torque_ = hang_torque;
         calibrated_ = true;
@@ -1254,10 +1287,10 @@ bool Libra2MotionController::LoadCalibrationRecord(
     }
 
     if (record.friction) {
-        logger_.Info("Friction loaded: tau_c " + MotionFormat(friction_coulomb_)
-                     + " -> " + MotionFormat(record.friction->coulomb)
-                     + " Nm, b " + MotionFormat(friction_viscous_) + " -> "
-                     + MotionFormat(record.friction->viscous) + " Nm*s/rad");
+        logger_->Info("Friction loaded: tau_c " + Format(friction_coulomb_)
+                      + " -> " + Format(record.friction->coulomb) + " Nm, b "
+                      + Format(friction_viscous_) + " -> "
+                      + Format(record.friction->viscous) + " Nm*s/rad");
         friction_coulomb_ = record.friction->coulomb;
         friction_viscous_ = record.friction->viscous;
         friction_result_ = record.friction;
@@ -1285,7 +1318,7 @@ bool Libra2MotionController::LoadCalibrationRecord(
  *       keeps full speed and only the CW reacts. The hard limit always stops.
  */
 Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
-    const double& torque_magnitude, const CwCommand& direction,
+    const double& torque_magnitude, const Motion::CwCommand& direction,
     const bool& braking) {
     AtcResult result;
 
@@ -1302,9 +1335,9 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
         if (movement_en_) {
             movement_en_ = false;
 
-            logger_.Info("Movement disabled due to high torque ("
-                         + MotionFormat(torque_magnitude) + " Nm > "
-                         + MotionFormat(torque_comp_upper_bound_) + " Nm)");
+            logger_->Info("Movement disabled due to high torque ("
+                          + Format(torque_magnitude) + " Nm > "
+                          + Format(torque_comp_upper_bound_) + " Nm)");
         } else {
             result.cw_command = direction;
         }
@@ -1317,20 +1350,20 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
 
     } else {
         // Acceptable torque: stop balancing and re-enable movement
-        result.cw_command = CwCommand::kIdle;
+        result.cw_command = Motion::CwCommand::kIdle;
         if (!movement_en_) {
             movement_en_ = true;
 
-            logger_.Info("Movement re-enabled ("
-                         + MotionFormat(torque_magnitude) + " Nm < "
-                         + MotionFormat(torque_comp_lower_bound_) + " Nm)");
+            logger_->Info("Movement re-enabled (" + Format(torque_magnitude)
+                          + " Nm < " + Format(torque_comp_lower_bound_)
+                          + " Nm)");
         }
     }
 
     if (!movement_en_) {
         result.playback_rate = 0.0;
     } else {
-        result.playback_rate = in_slow_band ? kAtcSlowPlaybackRate : 1.0;
+        result.playback_rate = in_slow_band ? torque_comp_slow_rate_ : 1.0;
     }
     return result;
 }
@@ -1351,12 +1384,12 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
  *       `BalanceCwMoment()`):
  *         Δm_tgt = m_cw,bal(θ_tgt) − m_cw
  */
-std::optional<CwCommand> Libra2MotionController::PredictiveCwCommand(
+std::optional<Motion::CwCommand> Libra2MotionController::PredictiveCwCommand(
     const double& theta_tgt, const double& cw_mass, double* cw_mass_tgt) const {
     // Eq. 38 -> target mass (clamped to what the CW can hold)
     const auto moment_bal = Libra2Model::BalanceCwMoment(arm_level_torque_,
                                                          arm_hang_torque_,
-                                                         grav_, theta_tgt);
+                                                         kGrav, theta_tgt);
     if (!moment_bal) {
         return std::nullopt;
     }
@@ -1370,17 +1403,12 @@ std::optional<CwCommand> Libra2MotionController::PredictiveCwCommand(
 
     // Eq. 40a
     const double diff = *mass_tgt - cw_mass;
-    if (std::abs(diff) <= cw_volume_tolerance_ * kWaterDensity) {
-        return CwCommand::kIdle;
+    if (std::abs(diff) <= kCwVolumeTolerance * kWaterDensity) {
+        return Motion::CwCommand::kIdle;
     }
 
-    // TODO: DECISION (not asked): the command flips to idle the moment the
-    //       volume is within tolerance. Valves have latency, so water keeps
-    //       flowing for a moment after kIdle and the CW can overshoot the
-    //       tolerance, then reverse (a small fill/drain limit cycle). If that
-    //       is observed, add an early-stop margin (stop `latency * flow rate`
-    //       before the target).
-    return (diff > 0.0) ? CwCommand::kFill : CwCommand::kDrain;
+    // TODO: if valve latency makes the CW overshoot, stop early by latency·V̇
+    return (diff > 0.0) ? Motion::CwCommand::kFill : Motion::CwCommand::kDrain;
 }
 
 /**
@@ -1393,41 +1421,41 @@ std::optional<CwCommand> Libra2MotionController::PredictiveCwCommand(
  *
  * @note Returns true while the arm stays free, and false at hand-off (actuator
  *       takes over and a move is requested).
+ *
+ * @note After hand-off, the predictive CW command stays off until the next
+ *       target, so it can't refill the CW while the actuator finishes the
+ *       move. The reactive (ATC) command still trims residual torque.
  */
 bool Libra2MotionController::RunCwPrimary(const double& theta,
                                           const double& theta_tgt,
-                                          Libra2Command& command) {
+                                          Motion::Libra2Command& command) {
     double mass_tgt = 0.0;
     const auto cw = PredictiveCwCommand(theta_tgt, *cw_mass_, &mass_tgt);
     if (!cw) {
-        logger_.Warn("CW-primary: target mass undefined at this angle; handing "
-                     "off to the actuator");
+        logger_->Warn("CW-primary: target mass undefined at this angle; "
+                      "handing off to the actuator");
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
         pending_move_ = theta_tgt;
         return false;
     }
 
-    const bool volume_reached = (*cw == CwCommand::kIdle);
+    const bool volume_reached = (*cw == Motion::CwCommand::kIdle);
     const bool angle_reached = std::abs(theta - theta_tgt) <= handoff_band_;
 
     if (volume_reached || angle_reached) {
         // Log model error (the criterion that did NOT fire shows it)
-        logger_.Info(
-            "CW-primary hand-off (" + std::string(volume_reached ? "volume" : "")
-            + std::string(volume_reached && angle_reached ? "+" : "")
-            + std::string(angle_reached ? "angle" : "") + " reached): theta="
-            + MotionFormat(theta) + " rad, target=" + MotionFormat(theta_tgt)
-            + " rad, angle error=" + MotionFormat(theta - theta_tgt)
-            + " rad; volume=" + MotionFormat(*cw_mass_ / kWaterDensity)
-            + " L, target volume=" + MotionFormat(mass_tgt / kWaterDensity)
-            + " L, volume error="
-            + MotionFormat((*cw_mass_ - mass_tgt) / kWaterDensity) + " L");
+        logger_->Info("CW-primary hand-off ("
+                      + std::string(volume_reached ? "volume" : "")
+                      + std::string(volume_reached && angle_reached ? "+" : "")
+                      + std::string(angle_reached ? "angle" : "")
+                      + " reached): theta=" + Format(theta) + " rad, target="
+                      + Format(theta_tgt) + " rad, angle error="
+                      + Format(theta - theta_tgt) + " rad; volume="
+                      + Format(*cw_mass_ / kWaterDensity) + " L, target volume="
+                      + Format(mass_tgt / kWaterDensity) + " L, volume error="
+                      + Format((*cw_mass_ - mass_tgt) / kWaterDensity) + " L");
 
-        // NOTE: After the hand-off, the predictive command stays off until the
-        //       next target so it can't refill the CW while the actuator
-        //       finishes the move. The reactive (ATC) command still trims any
-        //       residual torque left by an inaccurate model.
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
         pending_move_ = theta_tgt;
@@ -1435,7 +1463,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
     }
 
     // Arm stays free (effort only); CW does the moving
-    command.mode[kPitchIdx] = CommandMode::kEffortOnly;
+    command.mode[kPitchIdx] = Motion::CommandMode::kEffortOnly;
     command.cw_command = cw;
     command.playback_rate = 1.0;
     movement_en_ = true;
@@ -1446,15 +1474,20 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
  * @brief Runs one control cycle: what to do with the actuator and CW.
  *
  * @param state Measurements and previous cycle's reference
+ *
+ * @note If anything CW-primary needs is lost while the arm is free (model, CW
+ *       volume, target, or ATC), the actuator takes over right away rather
+ *       than leaving the arm uncontrolled.
  */
-Libra2Command Libra2MotionController::Update(const MotionState& state) {
+Motion::Libra2Command Libra2MotionController::Update(
+    const Motion::MotionState& state) {
     std::lock_guard<std::mutex> lock(mutex_);
-    Libra2Command command(n_joints_);
+    Motion::Libra2Command command(n_joints_);
 
     if (!IsValid(state) || n_joints_ <= kPitchIdx) {
         if (!state_warned_) {
-            logger_.Error("MotionState arrays must each have "
-                          + std::to_string(n_joints_) + " entries");
+            logger_->Error("MotionState arrays must each have "
+                           + std::to_string(n_joints_) + " entries");
             state_warned_ = true;
         }
         return command;
@@ -1479,7 +1512,7 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
         inertia_rate_ = 0.0;
     }
 
-    const bool calibrating = IsCalibrationRunning(status_);
+    const bool calibrating = Motion::IsCalibrationRunning(status_);
     const bool model_ready = calibrated_ && cw_model_.IsValid()
                              && cw_mass_.has_value();
     std::optional<double> target;
@@ -1489,17 +1522,11 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
 
     // CW-primary: arm is left free while CW moves it
     bool arm_free = false;
-    if (mode_ == MotionMode::kCwPrimary && cw_phase_ == CwPhase::kCwMoving) {
+    if (mode_ == Motion::MotionMode::kCwPrimary
+        && cw_phase_ == CwPhase::kCwMoving) {
         if (!model_ready || !target || calibrating || !atc_en_) {
-            // NOTE: If the model, CW volume, or target is lost (or a
-            //       calibration starts, or ATC is turned off so the CW stops
-            //       responding) while the arm is free, hand off to the actuator
-            //       right away instead of leaving the arm uncontrolled. The
-            //       actuator then moves to the target if there still is one. A
-            //       free arm falling under gravity is the thing to avoid, so
-            //       this errs on the side of grabbing it.
-            logger_.Warn("CW-primary: model, CW volume, target, or ATC "
-                         "unavailable; handing off to the actuator");
+            logger_->Warn("CW-primary: model, CW volume, target, or ATC "
+                          "unavailable; handing off to the actuator");
             cw_phase_ = CwPhase::kIdle;
             cw_assist_done_ = true;
             if (target) {
@@ -1511,20 +1538,16 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
     }
 
     if (!arm_free && IsFrictionStage(status_)) {
-        // Friction sweep: constant speed and constant CW, so no throttle or CW
-        // command (the sweep aborts above the hard limit instead)
+        // Friction sweep: no throttle or CW command (aborts at hard limit)
         command.playback_rate = 1.0;
-        command.cw_command = CwCommand::kIdle;
+        command.cw_command = Motion::CwCommand::kIdle;
         RunFrictionCalibration(state, theta, vel, torque);
     } else if (!arm_free) {
-        // Tandem/holding: actuator follows trajectory (or holds) with gravity
-        // feedforward while CW works toward its target
-
-        // Throttle trajectory from measured torque (rate 1 / 0.5 / 0). Filling
-        // relieves a positive (joint-space) actuator torque. Actuator brakes
-        // when its torque opposes travel toward the target.
-        const CwCommand direction = (torque > 0.0) ? CwCommand::kFill
-                                                   : CwCommand::kDrain;
+        // Tandem/holding: ATC throttle; filling relieves positive torque, and
+        // the actuator brakes when its torque opposes travel
+        const Motion::CwCommand direction = (torque > 0.0)
+                                                ? Motion::CwCommand::kFill
+                                                : Motion::CwCommand::kDrain;
         const bool braking = target && (torque * (*target - theta) < 0.0);
         const AtcResult atc = UpdateTorqueComp(std::abs(torque), direction,
                                                braking);
@@ -1535,8 +1558,7 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
             // Feedforward off and CW reactive while calibrating
             RunCalibration(state, theta, vel, torque);
         } else {
-            // Once calibrated, predictive target replaces reactive command.
-            // After a CW-primary hand-off, reactive command stays.
+            // Predictive CW replaces reactive, except after a hand-off
             if (model_ready && target && !cw_assist_done_) {
                 const auto predicted = PredictiveCwCommand(*target, *cw_mass_,
                                                            nullptr);
@@ -1591,14 +1613,12 @@ Libra2Command Libra2MotionController::Update(const MotionState& state) {
  * @param theta_tgt Target angle, θ_tgt (rad), if any
  * @param[out] diagnostics Values to fill; uncomputable entries stay empty
  *
- * @note From Eq. 28 (`G_Estimating-State.jpg`), Eq. 36
- *       (`H_Holding-Torque-at-any-Angle.jpg`), and Eqs. 38-40
- *       (`I_Controller.jpg`); see `CwMass()`, `NetGravTorque()`,
- *       `BalanceCwMoment()`, and `TargetNetGravTorque()` for the equations.
+ * @see Libra2Model::CwMass Libra2Model::NetGravTorque
+ *      Libra2Model::BalanceCwMoment Libra2Model::TargetNetGravTorque
  */
 void Libra2MotionController::ComputeDiagnostics(
     const double& theta, const std::optional<double>& theta_tgt,
-    Libra2Diagnostics& diagnostics) const {
+    Motion::Libra2Diagnostics& diagnostics) const {
     diagnostics.cw_mass = cw_mass_;
     if (!calibrated_ || !cw_model_.IsValid()) {
         return;
@@ -1608,11 +1628,11 @@ void Libra2MotionController::ComputeDiagnostics(
         diagnostics.torque_ext_g = ComputeNetGravTorque(theta, *cw_mass_);
     }
 
-    // Eq. 38-40
+    // Eqs. 38-40
     if (theta_tgt) {
         const auto moment_bal = Libra2Model::BalanceCwMoment(arm_level_torque_,
                                                              arm_hang_torque_,
-                                                             grav_, *theta_tgt);
+                                                             kGrav, *theta_tgt);
         const auto mass_tgt = moment_bal ? cw_model_.MassForMoment(*moment_bal,
                                                                    *theta_tgt)
                                          : std::nullopt;
@@ -1621,7 +1641,7 @@ void Libra2MotionController::ComputeDiagnostics(
             if (cw_mass_) {
                 diagnostics.cw_mass_change = *mass_tgt - *cw_mass_;
                 diagnostics.torque_ext_g_tgt = Libra2Model::TargetNetGravTorque(
-                    grav_, *theta_tgt,
+                    kGrav, *theta_tgt,
                     cw_model_.EffectiveMoment(*cw_mass_, *theta_tgt),
                     *moment_bal);
             }
@@ -1645,10 +1665,9 @@ void Libra2MotionController::OnTargetChanged() {
     // A manual target overrides any calibration move
     CancelCalibrationLocked();
 
-    // Mode is read here, so a mode change applies from next target (see
-    // `SetMotionMode()`)
+    // Mode is read here, so a mode change applies from the next target
     cw_assist_done_ = false;
-    if (mode_ == MotionMode::kCwPrimary) {
+    if (mode_ == Motion::MotionMode::kCwPrimary) {
         cw_phase_ = CwPhase::kCwMoving;
         pending_move_.reset();  // hand-off requests the move
     } else {
@@ -1683,7 +1702,7 @@ void Libra2MotionController::OnReset() {
 }
 
 //------------------------------------------------------------------------------
-// !Calibration (private)
+// !Model Calibration Helpers
 //------------------------------------------------------------------------------
 
 /**
@@ -1693,16 +1712,16 @@ void Libra2MotionController::OnReset() {
  *       would otherwise run to the end of the window.
  */
 void Libra2MotionController::CancelCalibrationLocked() {
-    if (IsCalibrationRunning(status_)) {
+    if (Motion::IsCalibrationRunning(status_)) {
         if (IsFrictionStage(status_)) {
             pending_stop_ = true;
         }
-        status_ = CalibrationStatus::kIdle;
+        status_ = Motion::CalibrationStatus::kIdle;
         pending_move_.reset();
         pending_sweep_.reset();
         sampler_.Reset();
         calibration_message_ = "Calibration cancelled";
-        logger_.Info(calibration_message_);
+        logger_->Info(calibration_message_);
     }
 }
 
@@ -1712,7 +1731,7 @@ void Libra2MotionController::CancelCalibrationLocked() {
 bool Libra2MotionController::IsMovingLocked() const {
     return trajectory_active_ || (cw_phase_ == CwPhase::kCwMoving)
            || pending_move_.has_value() || pending_sweep_.has_value()
-           || IsCalibrationRunning(status_);
+           || Motion::IsCalibrationRunning(status_);
 }
 
 /**
@@ -1720,27 +1739,28 @@ bool Libra2MotionController::IsMovingLocked() const {
  *
  * @param status Stage to enter
  */
-void Libra2MotionController::BeginStage(const CalibrationStatus& status) {
+void Libra2MotionController::BeginStage(const Motion::CalibrationStatus& status) {
     status_ = status;
     t_stage_s_ = 0.0;
     sampler_.Reset();
 
     FrictionRun& run = friction_run_;
     switch (status) {
-        case CalibrationStatus::kMovingToA:
+        case Motion::CalibrationStatus::kMovingToA:
             pending_move_ = angle_a_;
             break;
-        case CalibrationStatus::kMovingToB:
+        case Motion::CalibrationStatus::kMovingToB:
             pending_move_ = angle_b_;
             break;
-        case CalibrationStatus::kFrictionMovingToStart:
+        case Motion::CalibrationStatus::kFrictionMovingToStart:
             pending_move_ = run.angle_lo;
             break;
-        case CalibrationStatus::kFrictionSweepUp:
-        case CalibrationStatus::kFrictionSweepDown:
+        case Motion::CalibrationStatus::kFrictionSweepUp:
+        case Motion::CalibrationStatus::kFrictionSweepDown:
             {
-                const bool up = (status == CalibrationStatus::kFrictionSweepUp);
-                SweepRequest sweep;
+                const bool up = (status
+                                 == Motion::CalibrationStatus::kFrictionSweepUp);
+                Motion::SweepRequest sweep;
                 sweep.from = up ? run.angle_lo : run.angle_hi;
                 sweep.to = up ? run.angle_hi : run.angle_lo;
                 sweep.speed = run.max_speed
@@ -1775,17 +1795,17 @@ void Libra2MotionController::BeginStage(const CalibrationStatus& status) {
  */
 void Libra2MotionController::FinishCalibration(const bool& success,
                                                const std::string& message) {
-    status_ = success ? CalibrationStatus::kSucceeded
-                      : CalibrationStatus::kFailed;
+    status_ = success ? Motion::CalibrationStatus::kSucceeded
+                      : Motion::CalibrationStatus::kFailed;
     pending_move_.reset();
     pending_sweep_.reset();
     sampler_.Reset();
     if (success) {
         calibration_message_ = message;
-        logger_.Info(calibration_message_);
+        logger_->Info(calibration_message_);
     } else {
         calibration_message_ = "Calibration failed: " + message;
-        logger_.Error(calibration_message_);
+        logger_->Error(calibration_message_);
     }
 }
 
@@ -1801,12 +1821,13 @@ void Libra2MotionController::FinishCalibration(const bool& success,
  *         τ_meas(θ) = −τ_actuator
  *         τ_g1(θ) = τ_meas(θ) − τ_g2(θ)
  */
-double Libra2MotionController::SampleToArmTorque(const RestSample& sample) const {
+double Libra2MotionController::SampleToArmTorque(
+    const Motion::RestSample& sample) const {
     const double cw_mass = Libra2Model::CwMass(sample.volume);
     const double cw_torque = Libra2Model::CwGravTorque(cw_model_.Moment(cw_mass),
                                                        cw_model_.HangMoment(
                                                            cw_mass),
-                                                       grav_, sample.theta);
+                                                       kGrav, sample.theta);
 
     // tau_meas = -tau_actuator (Eq. 19); then Eq. 29a
     return Libra2Model::ArmGravTorque(-sample.torque_actuator, cw_torque);
@@ -1819,20 +1840,20 @@ double Libra2MotionController::SampleToArmTorque(const RestSample& sample) const
  * @param record Saved arm model (one sample = level, two = two-angle)
  * @param[out] arm_level_torque Recomputed τ_g1,0 (Nm)
  * @param[out] arm_hang_torque Recomputed m_arm·h_1·g (Nm); level keeps the
- * saved one
+ *                             saved one
  *
  * @note Fails if the CW model is invalid or the samples can't be solved.
  */
-bool Libra2MotionController::RecomputeArmModel(const ArmModelRecord& record,
-                                               double& arm_level_torque,
-                                               double& arm_hang_torque) const {
+bool Libra2MotionController::RecomputeArmModel(
+    const Motion::ArmModelRecord& record, double& arm_level_torque,
+    double& arm_hang_torque) const {
     if (!cw_model_.IsValid()) {
         return false;
     }
 
     if (record.samples.size() == 1) {
         // Eq. 34 with the saved arm_hang_torque (as the level calibration did)
-        const RestSample& s = record.samples.front();
+        const Motion::RestSample& s = record.samples.front();
         const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(s),
                                                        s.theta,
                                                        record.hang_torque);
@@ -1846,8 +1867,8 @@ bool Libra2MotionController::RecomputeArmModel(const ArmModelRecord& record,
 
     if (record.samples.size() == 2) {
         // Eq. 35
-        const RestSample& a = record.samples[0];
-        const RestSample& b = record.samples[1];
+        const Motion::RestSample& a = record.samples[0];
+        const Motion::RestSample& b = record.samples[1];
         return Libra2Model::SolveTwoAngle(SampleToArmTorque(a), a.theta,
                                           SampleToArmTorque(b), b.theta,
                                           arm_level_torque, arm_hang_torque);
@@ -1868,16 +1889,16 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
     const double cap = cw_model_.GetCapacityMass();
     const double empty = Libra2Model::StabilityTorque(arm_hang_torque,
                                                       cw_model_.HangMoment(0.0),
-                                                      grav_);
+                                                      kGrav);
     const double full = Libra2Model::StabilityTorque(arm_hang_torque,
                                                      cw_model_.HangMoment(cap),
-                                                     grav_);
-    const std::string values = MotionFormat(empty) + " Nm empty, "
-                               + MotionFormat(full) + " Nm full";
+                                                     kGrav);
+    const std::string values = Format(empty) + " Nm empty, " + Format(full)
+                               + " Nm full";
 
     if (std::max(empty, full) < 0.0) {
-        logger_.Info("Arm model is stable at all CW volumes");
-        logger_.Debug("Stability (S + m_cw*g*q_P < 0, Eq. 26c): " + values);
+        logger_->Info("Arm model is stable at all CW volumes");
+        logger_->Debug("Stability (S + m_cw*g*q_P < 0, Eq. 26c): " + values);
         return true;
     }
 
@@ -1886,11 +1907,11 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
     if ((empty < 0.0) != (full < 0.0)) {
         const double crossover = cap * empty / (empty - full) / kWaterDensity;
         range = std::string(empty < 0.0 ? "above " : "below ")
-                + MotionFormat(crossover) + " L";
+                + Format(crossover) + " L";
     }
-    logger_.Warn("Arm model is unstable " + range
-                 + " (S + m_cw*g*q_P >= 0, Eq. 26c): " + values
-                 + "; check the calibration");
+    logger_->Warn("Arm model is unstable " + range
+                  + " (S + m_cw*g*q_P >= 0, Eq. 26c): " + values
+                  + "; check the calibration");
     return false;
 }
 
@@ -1903,16 +1924,17 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
  * @param vel Measured velocity, θ̇ (rad/s)
  * @param torque Measured actuator torque (Nm)
  */
-void Libra2MotionController::RunCalibration(const MotionState& state,
+void Libra2MotionController::RunCalibration(const Motion::MotionState& state,
                                             const double& theta,
                                             const double& vel,
                                             const double& torque) {
     t_stage_s_ += state.dt;
 
-    const bool moving_stage = (status_ == CalibrationStatus::kMovingToA
-                               || status_ == CalibrationStatus::kMovingToB);
-    const bool at_a = (status_ == CalibrationStatus::kMovingToA
-                       || status_ == CalibrationStatus::kSamplingA);
+    const bool moving_stage = (status_ == Motion::CalibrationStatus::kMovingToA
+                               || status_
+                                      == Motion::CalibrationStatus::kMovingToB);
+    const bool at_a = (status_ == Motion::CalibrationStatus::kMovingToA
+                       || status_ == Motion::CalibrationStatus::kSamplingA);
     const double target = at_a ? angle_a_ : angle_b_;
 
     if (t_stage_s_ > (moving_stage ? kMoveTimeout : kSampleTimeout)) {
@@ -1923,19 +1945,18 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
     }
 
     if (moving_stage) {
-        // Zero-length moves don't start a trajectory, so "already there"
-        // counts as arrived
+        // "Already there" counts too (zero-length moves start no trajectory)
         if (!state.trajectory_active
             && std::abs(theta - target) <= kReachTolerance
             && std::abs(vel) <= kRestVelTolerance) {
-            BeginStage(at_a ? CalibrationStatus::kSamplingA
-                            : CalibrationStatus::kSamplingB);
+            BeginStage(at_a ? Motion::CalibrationStatus::kSamplingA
+                            : Motion::CalibrationStatus::kSamplingB);
         }
         return;
     }
 
     // Sampling: pose must stay near target (except for level calibration)
-    if (status_ != CalibrationStatus::kSamplingLevel
+    if (status_ != Motion::CalibrationStatus::kSamplingLevel
         && std::abs(theta - target) > 2.0 * kReachTolerance) {
         sampler_.Reset();
         return;
@@ -1948,11 +1969,10 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
     }
     const double arm_torque = SampleToArmTorque(*sample);
 
-    if (status_ == CalibrationStatus::kSamplingLevel) {
-        if (std::abs(sample->theta) > kLevelTolerance) {
+    if (status_ == Motion::CalibrationStatus::kSamplingLevel) {
+        if (std::abs(sample->theta) > kMaxLevelAngle) {
             FinishCalibration(false, "arm is not level (theta="
-                                         + MotionFormat(sample->theta)
-                                         + " rad)");
+                                         + Format(sample->theta) + " rad)");
             return;
         }
         // Eq. 34 with current arm_hang_torque_ (0 if never calibrated)
@@ -1964,9 +1984,9 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
             return;
         }
         if (!calibrated_) {
-            logger_.Warn("arm_hang_torque not calibrated: using "
-                         "arm_hang_torque = 0 (run "
-                         "two-angle calibration to measure it)");
+            logger_->Warn("arm_hang_torque not calibrated: using "
+                          "arm_hang_torque = 0 (run two-angle calibration to "
+                          "measure it)");
         }
         arm_level_torque_ = *level;
         calibrated_ = true;
@@ -1974,15 +1994,15 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
         arm_cw_params_ = cw_model_.GetParams();
         arm_samples_ = {*sample};
         FinishCalibration(true, "Level calibration succeeded: arm_level_torque="
-                                    + MotionFormat(arm_level_torque_)
+                                    + Format(arm_level_torque_)
                                     + " Nm, arm_hang_torque="
-                                    + MotionFormat(arm_hang_torque_) + " Nm");
+                                    + Format(arm_hang_torque_) + " Nm");
         return;
     }
 
-    if (status_ == CalibrationStatus::kSamplingA) {
+    if (status_ == Motion::CalibrationStatus::kSamplingA) {
         sample_a_ = *sample;
-        BeginStage(CalibrationStatus::kMovingToB);
+        BeginStage(Motion::CalibrationStatus::kMovingToB);
         return;
     }
 
@@ -2002,15 +2022,15 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
     arm_cw_params_ = cw_model_.GetParams();
     arm_samples_ = {sample_a_, *sample};
     const bool stable = CheckStability(hang_torque);
-    FinishCalibration(true, "Two-angle calibration succeeded: arm_level_torque="
-                                + MotionFormat(arm_level_torque_)
-                                + " Nm, arm_hang_torque="
-                                + MotionFormat(arm_hang_torque_) + " Nm"
-                                + (stable ? "" : " (UNSTABLE; see log)"));
+    FinishCalibration(true,
+                      "Two-angle calibration succeeded: arm_level_torque="
+                          + Format(arm_level_torque_)
+                          + " Nm, arm_hang_torque=" + Format(arm_hang_torque_)
+                          + " Nm" + (stable ? "" : " (UNSTABLE; see log)"));
 }
 
 //------------------------------------------------------------------------------
-// !Friction Calibration (private)
+// !Friction Calibration Helpers
 //------------------------------------------------------------------------------
 
 /**
@@ -2025,10 +2045,9 @@ void Libra2MotionController::RunCalibration(const MotionState& state,
  * @note Aborts (and stops the sweep) if the torque passes the ATC hard limit
  *       or the CW volume changes, since either invalidates the sweep.
  */
-void Libra2MotionController::RunFrictionCalibration(const MotionState& state,
-                                                    const double& theta,
-                                                    const double& vel,
-                                                    const double& torque) {
+void Libra2MotionController::RunFrictionCalibration(
+    const Motion::MotionState& state, const double& theta, const double& vel,
+    const double& torque) {
     FrictionRun& run = friction_run_;
     t_stage_s_ += state.dt;
 
@@ -2037,9 +2056,9 @@ void Libra2MotionController::RunFrictionCalibration(const MotionState& state,
     if (t_stage_s_ > kMoveTimeout) {
         abort_reason = "timed out moving or sweeping";
     } else if (std::abs(torque) > torque_comp_upper_bound_) {
-        abort_reason = "torque " + MotionFormat(torque)
+        abort_reason = "torque " + Format(torque)
                        + " Nm is past the hard limit ("
-                       + MotionFormat(torque_comp_upper_bound_)
+                       + Format(torque_comp_upper_bound_)
                        + " Nm); balance the CW near the window first";
     } else if (!cw_vol_ || std::abs(*cw_vol_ - run.volume) > kRestVolTolerance) {
         abort_reason = "CW volume changed during the sweeps";
@@ -2050,15 +2069,16 @@ void Libra2MotionController::RunFrictionCalibration(const MotionState& state,
         return;
     }
 
-    const bool up = (status_ == CalibrationStatus::kFrictionSweepUp);
-    const double end = (status_ == CalibrationStatus::kFrictionSweepDown
-                        || status_ == CalibrationStatus::kFrictionMovingToStart)
-                           ? run.angle_lo
-                           : run.angle_hi;
+    const bool up = (status_ == Motion::CalibrationStatus::kFrictionSweepUp);
+    const double end =
+        (status_ == Motion::CalibrationStatus::kFrictionSweepDown
+         || status_ == Motion::CalibrationStatus::kFrictionMovingToStart)
+            ? run.angle_lo
+            : run.angle_hi;
     const double speed = run.max_speed
                          * kFrictionSpeedFractions.at(run.speed_idx);
 
-    if (status_ != CalibrationStatus::kFrictionMovingToStart) {
+    if (status_ != Motion::CalibrationStatus::kFrictionMovingToStart) {
         if (state.trajectory_active) {
             run.trajectory_seen = true;
             AddFrictionSample(theta, vel, torque, up, speed);
@@ -2078,15 +2098,15 @@ void Libra2MotionController::RunFrictionCalibration(const MotionState& state,
     }
 
     switch (status_) {
-        case CalibrationStatus::kFrictionMovingToStart:
-            BeginStage(CalibrationStatus::kFrictionSweepUp);
+        case Motion::CalibrationStatus::kFrictionMovingToStart:
+            BeginStage(Motion::CalibrationStatus::kFrictionSweepUp);
             break;
 
-        case CalibrationStatus::kFrictionSweepUp:
-            BeginStage(CalibrationStatus::kFrictionSweepDown);
+        case Motion::CalibrationStatus::kFrictionSweepUp:
+            BeginStage(Motion::CalibrationStatus::kFrictionSweepDown);
             break;
 
-        case CalibrationStatus::kFrictionSweepDown:
+        case Motion::CalibrationStatus::kFrictionSweepDown:
             {
                 std::string error;
                 if (!FinishFrictionSpeed(speed, error)) {
@@ -2095,7 +2115,7 @@ void Libra2MotionController::RunFrictionCalibration(const MotionState& state,
                 }
                 ++run.speed_idx;
                 if (run.speed_idx < kFrictionSpeedFractions.size()) {
-                    BeginStage(CalibrationStatus::kFrictionSweepUp);
+                    BeginStage(Motion::CalibrationStatus::kFrictionSweepUp);
                 } else {
                     FinishFrictionCalibration();
                 }
@@ -2168,7 +2188,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     const bool model_ready = calibrated_ && cw_model_.IsValid();
     const double cw_mass = Libra2Model::CwMass(run.volume);
 
-    FrictionPoint point;
+    Motion::FrictionPoint point;
     point.speed = speed;
     double drag_min = 0.0;
     double drag_max = 0.0;
@@ -2204,9 +2224,9 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
 
     if (point.n_bins < kFrictionMinBins) {
         error = "only " + std::to_string(point.n_bins)
-                + " angle bins had steady samples both ways at "
-                + MotionFormat(speed) + " rad/s (need "
-                + std::to_string(kFrictionMinBins) + "); use a wider window";
+                + " angle bins had steady samples both ways at " + Format(speed)
+                + " rad/s (need " + std::to_string(kFrictionMinBins)
+                + "); use a wider window";
         return false;
     }
 
@@ -2215,16 +2235,16 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     point.spread = drag_max - drag_min;
     run.points.push_back(point);
 
-    std::string msg = "Friction sweep at " + MotionFormat(speed)
-                      + " rad/s: drag=" + MotionFormat(point.drag)
-                      + " Nm (spread " + MotionFormat(point.spread)
-                      + " Nm over " + std::to_string(point.n_bins)
-                      + " bins), mean holding torque="
-                      + MotionFormat(grav_sum / n) + " Nm";
+    std::string msg = "Friction sweep at " + Format(speed)
+                      + " rad/s: drag=" + Format(point.drag) + " Nm (spread "
+                      + Format(point.spread) + " Nm over "
+                      + std::to_string(point.n_bins)
+                      + " bins), mean holding torque=" + Format(grav_sum / n)
+                      + " Nm";
     if (model_ready) {
-        msg += " (model error " + MotionFormat(model_err_sum / n) + " Nm)";
+        msg += " (model error " + Format(model_err_sum / n) + " Nm)";
     }
-    logger_.Info(msg);
+    logger_->Info(msg);
     return true;
 }
 
@@ -2253,8 +2273,8 @@ void Libra2MotionController::FinishFrictionCalibration() {
         return;
     }
     if (viscous < 0.0) {
-        logger_.Warn("Fitted b is negative (" + MotionFormat(viscous)
-                     + " Nm*s/rad), so friction looks flat; using b = 0");
+        logger_->Warn("Fitted b is negative (" + Format(viscous)
+                      + " Nm*s/rad), so friction looks flat; using b = 0");
         viscous = 0.0;
         coulomb = 0.0;
         for (const double& d : drags) {
@@ -2269,13 +2289,12 @@ void Libra2MotionController::FinishFrictionCalibration() {
         residual_rms = std::sqrt(sum_sq / static_cast<double>(drags.size()));
     }
     if (coulomb < 0.0) {
-        FinishCalibration(false, "fitted tau_c is negative ("
-                                     + MotionFormat(coulomb)
+        FinishCalibration(false, "fitted tau_c is negative (" + Format(coulomb)
                                      + " Nm); check the run");
         return;
     }
 
-    FrictionResult result;
+    Motion::FrictionResult result;
     result.coulomb = coulomb;
     result.viscous = viscous;
     result.residual_rms = residual_rms;
@@ -2287,10 +2306,8 @@ void Libra2MotionController::FinishFrictionCalibration() {
     friction_coulomb_ = coulomb;
     friction_viscous_ = viscous;
     friction_result_ = result;
-    FinishCalibration(true, "Friction calibration succeeded: tau_c="
-                                + MotionFormat(coulomb) + " Nm, b="
-                                + MotionFormat(viscous) + " Nm*s/rad (fit RMS "
-                                + MotionFormat(residual_rms) + " Nm)");
+    FinishCalibration(true,
+                      "Friction calibration succeeded: tau_c=" + Format(coulomb)
+                          + " Nm, b=" + Format(viscous) + " Nm*s/rad (fit RMS "
+                          + Format(residual_rms) + " Nm)");
 }
-
-}  // namespace Motion

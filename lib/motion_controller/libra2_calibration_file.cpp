@@ -281,7 +281,6 @@ bool SaveCalibrationFile(const CalibrationRecord& record,
     root["extension_mm"] = record.extension ? QJsonValue(*record.extension)
                                             : QJsonValue(QJsonValue::Null);
     root["note"] = QString::fromStdString(record.note);
-    root["grav_m_s2"] = record.grav;
     root["arm_inertia_kg_m2"] = record.arm_inertia;
     root["cw_model"] = CwModelToJson(record.cw_model);
     root["arm_model"] = record.arm_model
@@ -355,9 +354,7 @@ std::optional<CalibrationRecord> LoadCalibrationFile(
         record.extension = root.value("extension_mm").toDouble();
     }
 
-    if (!ReadNumber(root, "grav_m_s2", "", record.grav, error)
-        || !ReadNumber(root, "arm_inertia_kg_m2", "", record.arm_inertia,
-                       error)) {
+    if (!ReadNumber(root, "arm_inertia_kg_m2", "", record.arm_inertia, error)) {
         return std::nullopt;
     }
     if (!root.value("cw_model").isObject()
