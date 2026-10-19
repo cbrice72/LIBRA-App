@@ -13,11 +13,10 @@
 // Other Library Headers
 #include <QPainter>      // Qt::Gui
 #include <QPainterPath>  // Qt::Gui
-#include <QTimer>        // Qt::Core
 #include <QWidget>       // Qt::Widgets
 
 // Project Headers
-#include "arduino_defs.h"  // Water::State
+//   (none)
 
 /**
  * @brief A simple widget for visualizing a tank's fluid level.
@@ -32,7 +31,7 @@ class TankWidget : public QWidget {
 
   public:
     explicit TankWidget(QWidget* parent = nullptr);
-    ~TankWidget() override;
+    ~TankWidget() override = default;
 
     // Delete copy constructor
     TankWidget(const TankWidget&) = delete;
@@ -41,17 +40,10 @@ class TankWidget : public QWidget {
     // --- Getters & Setters ---
 
     double GetLevel() const;
-    double GetVolume() const;
-
-    void UpdateState(const Water::State& state);
-    void UpdateFlowRate(const double& flow);
-
-    void OverrideLevel(double new_level);
+    void SetLevel(double level);
 
   signals:
     void LevelChanged(const double& level);
-    void TankFull();
-    void TankEmpty();
 
   protected:
     // --- QWidget Overrides ---
@@ -59,16 +51,7 @@ class TankWidget : public QWidget {
     void paintEvent(QPaintEvent* event) override;
 
   private:
-    // --- Helper Functions ---
-
-    void UpdateAnimation();
-
     // --- Data Members ---
 
-    QTimer* animation_timer_{nullptr};
-
     double level_{0.0};
-    Water::State state_{Water::State::kStopped};
-    double fill_rate_;   // L/s
-    double drain_rate_;  // L/s
 };

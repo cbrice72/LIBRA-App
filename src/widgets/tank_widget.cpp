@@ -9,7 +9,7 @@
 #include "tank_widget.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <cmath>
 
 // Other Library Headers
 //   (none)
@@ -19,15 +19,9 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Class Management
- * !Class Helpers
  * !Getters & Setters
- * !Slots
  * !QWidget Overrides
  */
-
-// Widget Animation
-
-constexpr int kAnimTime = 1000 / 30;  // ms (30 FPS)
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -38,76 +32,10 @@ constexpr int kAnimTime = 1000 / 30;  // ms (30 FPS)
  *
  * @param parent Owning Qt widget
  */
-TankWidget::TankWidget(QWidget* parent)
-    : QWidget(parent),
-      animation_timer_(new QTimer(this)),
-      fill_rate_(Water::kFillRate),
-      drain_rate_(Water::kDrainRate) {
+TankWidget::TankWidget(QWidget* parent) : QWidget(parent) {
     // Configure widget appearance
     setMinimumSize(100, 100);
     setSizePolicy(QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
-
-    // Configure animation timer
-    animation_timer_->setInterval(kAnimTime);
-
-    connect(animation_timer_, &QTimer::timeout,   // Every timer timeout...
-            this, &TankWidget::UpdateAnimation);  // ... trigger animation
-}
-
-/**
- * @brief Standard destructor.
- */
-TankWidget::~TankWidget() {
-    animation_timer_->stop();
-}
-
-//------------------------------------------------------------------------------
-// !Class Helpers
-//------------------------------------------------------------------------------
-
-/**
- * @brief Controls the animated filling/draining of the tank.
- */
-void TankWidget::UpdateAnimation() {
-    if (!isVisible()) {
-        animation_timer_->stop();
-        return;
-    }
-
-    const double old_level = level_;
-    const double time_step = animation_timer_->interval() / 1000.0;  // ms -> s
-
-    // Calculate step size based on flow rate and frame time
-    switch (state_) {
-        case Water::State::kFilling:
-            level_ = qMin(level_ + (fill_rate_ / Water::kCapacity) * time_step, 1.0);
-
-            // Check if we've hit the upper limit
-            if (qFuzzyCompare(level_, 1.0)) {
-                UpdateState(Water::State::kStopped);
-                emit TankFull();
-            }
-            break;
-
-        case Water::State::kDraining:
-            level_ = qMax(level_ - (drain_rate_ / Water::kCapacity) * time_step, 0.0);
-
-            // Check if we've hit the lower limit
-            if (qFuzzyCompare(level_, 0.0)) {
-                UpdateState(Water::State::kStopped);
-                emit TankEmpty();
-            }
-            break;
-
-        case Water::State::kStopped:
-            // Do nothing
-            break;
-    }
-
-    if (!qFuzzyCompare(old_level, level_)) {
-        emit LevelChanged(level_);
-        update();
-    }
 }
 
 //------------------------------------------------------------------------------
@@ -122,90 +50,21 @@ double TankWidget::GetLevel() const {
 }
 
 /**
- * @brief Gets current fluid volume (L).
- */
-double TankWidget::GetVolume() const {
-    return level_ * Water::kCapacity;
-}
-
-/**
- * @brief Overwrites the current fluid level (WARNING: see note).
+ * @brief Sets the shown fluid level.
  *
- * @param new_level A fraction in the range [0.0, 1.0]
- *
- * @note ONLY TO BE USED IF INACCURACIES ARE NOTICED IN REAL TIME!!!
+ * @param level A fraction in the range [0.0, 1.0]
  */
-void TankWidget::OverrideLevel(double new_level) {
+void TankWidget::SetLevel(double level) {
     // Validate input
-    if (std::isnan(new_level) || std::isinf(new_level)) {
+    if (std::isnan(level) || std::isinf(level)) {
         return;
     }
-    new_level = qBound(0.0, new_level, 1.0);
+    level = qBound(0.0, level, 1.0);
 
-    // Override current level
-    if (!qFuzzyCompare(level_, new_level)) {
-        level_ = new_level;
+    if (!qFuzzyCompare(level_, level)) {
+        level_ = level;
         emit LevelChanged(level_);
         update();
-    }
-}
-
-//------------------------------------------------------------------------------
-// !Slots
-//------------------------------------------------------------------------------
-
-/**
- * @brief Controls the animation timer to change the tank's level.
- *
- * @param state New fluid system state
- */
-void TankWidget::UpdateState(const Water::State& state) {
-    // Prevent re-triggering animation if already at limits
-    if ((state == Water::State::kDraining && qFuzzyCompare(level_, 0.0))
-        || (state == Water::State::kFilling && qFuzzyCompare(level_, 1.0))) {
-        return;
-    }
-
-    state_ = state;  // manages internal logic
-
-    switch (state) {
-        case Water::State::kFilling:
-        case Water::State::kDraining:
-            // Start filling or draining the tank
-            // (NOTE: Automatically stops when full/empty)
-            if (!animation_timer_->isActive()) {
-                animation_timer_->start();
-            }
-            break;
-        case Water::State::kStopped:
-        default:
-            animation_timer_->stop();
-            break;
-    }
-}
-
-/**
- * @brief Updates the effective flow rate from measured flow data.
- *
- * @param flow Net flow rate (in mL/s); positive = inflow, negative = outflow,
- *             zero = idle, -1.0 = error
- *
- * @note Arduino provides flow rate in mL/s, but TankWidget uses L/s since its
- *       capacity is measured in L. This conversion is handled internally.
- */
-void TankWidget::UpdateFlowRate(const double& flow) {
-    if (flow > 0.0) {
-        // Filling: use the measured rate; no drain reading right now so reset it
-        fill_rate_ = flow / 1000.0;  // mL/s -> L/s
-        drain_rate_ = Water::kDrainRate;
-    } else if (flow < 0.0 && flow != -1.0) {
-        // Draining: use the measured rate; no fill reading right now so reset it
-        fill_rate_ = Water::kFillRate;
-        drain_rate_ = -flow / 1000.0;  // mL/s -> L/s
-    } else {
-        // Idle or Fault: reset to default rates
-        fill_rate_ = Water::kFillRate;
-        drain_rate_ = Water::kDrainRate;
     }
 }
 

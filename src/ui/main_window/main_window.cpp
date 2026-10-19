@@ -302,30 +302,6 @@ void MainWindow::ConfigureUi() {
 
     // ========== Water ==========
 
-    // Set up counterweight "tank" (fill state) widget
-    auto MakeTankLimHandler = [this](const std::string& tank,
-                                     const std::string& state) {
-        return [this, tank, state]() -> void {
-            if (ignore_water_level_ || !ui_->pb_atc_enable->isChecked()) {
-                return;
-            }
-            ui_->pb_atc_enable->setChecked(false);
-            logger_->Info("Tank " + tank + " estimated " + state
-                          + "; ATC disabled");
-        };
-    };
-
-    connect(ui_->tw_water_level_A, &TankWidget::TankFull,  // stop if full
-            this, MakeTankLimHandler("A", "full"));
-    connect(ui_->tw_water_level_A, &TankWidget::TankEmpty,  // stop if empty
-            this, MakeTankLimHandler("A", "empty"));
-#if LIBRA_VERSION == 1
-    connect(ui_->tw_water_level_B, &TankWidget::TankFull,  // stop if full
-            this, MakeTankLimHandler("B", "full"));
-    connect(ui_->tw_water_level_B, &TankWidget::TankEmpty,  // stop if empty
-            this, MakeTankLimHandler("B", "empty"));
-#endif
-
     // Unneeded widgets
 #if LIBRA_VERSION != 1
     RemoveUiElement(ui_->vl_counterweight_B);
@@ -469,6 +445,18 @@ void MainWindow::InitializeDeviceManagers() {
 
     connect(water_controller_, &WaterController::ReportStatus,  // get state
             this, &MainWindow::HandleWaterStatus);
+    connect(water_controller_, &WaterController::ReportVolume,  // get volume
+            this, &MainWindow::HandleWaterVolume);
+    connect(water_controller_, &WaterController::TankLimitReached,  // stop ATC
+            this, [this](const Water::Side& side, const bool& full) {
+                if (ignore_water_level_ || !ui_->pb_atc_enable->isChecked()) {
+                    return;
+                }
+                ui_->pb_atc_enable->setChecked(false);
+                logger_->Info("Tank " + Water::SideEnumToString(side)
+                              + " estimated " + (full ? "full" : "empty")
+                              + "; ATC disabled");
+            });
 
     // ========== Flow Controller ==========
 
@@ -491,9 +479,14 @@ void MainWindow::InitializeDeviceManagers() {
     connect(flow_controller_, &FlowController::ReportStatus,  // get state
             this, &MainWindow::HandleFlowStatus);
 
-    // TankWidget slots
-    connect(flow_controller_, &FlowController::ReportStatus,  // animate tank
-            ui_->tw_water_level_A, &TankWidget::UpdateFlowRate);
+#if LIBRA_VERSION == 2
+    // WaterController slots
+    // NOTE: Flow sensors are only installed on LIBRA-II
+    connect(flow_controller_, &FlowController::ReportStatus,  // CW flow rate
+            water_controller_, [this](const double& flow) {
+                water_controller_->UpdateFlowRate(Water::Side::kA, flow);
+            });
+#endif
 
 #if LIBRA_VERSION == 1
     // ========== Manipulator Controller ==========
@@ -835,17 +828,40 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
     switch (side) {
         case Water::Side::kA:
             ui_->l_water_status_A->setText(Water::StateEnumToString(state));
-            ui_->tw_water_level_A->UpdateState(state);
             break;
 #if LIBRA_VERSION == 1
         case Water::Side::kB:
             ui_->l_water_status_B->setText(Water::StateEnumToString(state));
-            ui_->tw_water_level_B->UpdateState(state);
             break;
 #endif
         default:
             // Shouldn't be able to get here
             logger_->Error("Received status for unknown fluid system side: "
+                           + Water::SideEnumToString(side) + " ("
+                           + std::to_string(static_cast<int>(side)) + ")");
+    }
+}
+
+/**
+ * @brief Shows a CW's estimated volume in its TankWidget.
+ *
+ * @param side Fluid system side
+ * @param volume CW volume (L)
+ */
+void MainWindow::HandleWaterVolume(const Water::Side& side,
+                                   const double& volume) {
+    switch (side) {
+        case Water::Side::kA:
+            ui_->tw_water_level_A->SetLevel(volume / Water::kCapacity);
+            break;
+#if LIBRA_VERSION == 1
+        case Water::Side::kB:
+            ui_->tw_water_level_B->SetLevel(volume / Water::kCapacity);
+            break;
+#endif
+        default:
+            // Shouldn't be able to get here
+            logger_->Error("Received volume for unknown fluid system side: "
                            + Water::SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
     }
@@ -864,13 +880,9 @@ void MainWindow::HandleFlowConnChanged(const bool& connected) {
         ui_->l_flow->setText(QStringLiteral("---"));
         ui_->l_flow->setStyleSheet(QString());
 
-        ui_->tw_water_level_A->UpdateFlowRate(-1.0);  // use hardcoded rate
-#if LIBRA_VERSION == 1
-        ui_->tw_water_level_B->UpdateFlowRate(-1.0);
-#endif
-
 #if LIBRA_VERSION == 2
-        hebi_thread_->UpdateCounterweightFlow(-1.0);
+        // Use hard-coded rates
+        water_controller_->UpdateFlowRate(Water::Side::kA, -1.0);
 #endif
     }
 }

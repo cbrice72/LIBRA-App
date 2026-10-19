@@ -10,6 +10,7 @@
 #include "water_controller.h"
 
 // C++ Standard Library Headers
+#include <algorithm>
 #include <bitset>
 #include <cmath>
 
@@ -24,6 +25,7 @@
  * !Class Management
  * !Class Helpers
  * !Arduino Commands (slots)
+ * !Volume Tracking (slots)
  */
 
 // Bit Positions for water_cmd_
@@ -43,6 +45,10 @@ constexpr double k5_8Pi = M_PI * 5.0 / 8.0;
 constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
 
 // NOLINTEND(readability-identifier-naming)
+
+// Volume Tracking
+
+constexpr int kVolumeTrackPeriodMs = 1000 / 30;  // ms (30 Hz)
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -80,9 +86,17 @@ std::string BytesToStr(const QByteArray& bytes) {
  * @param debug_mode Whether to output verbose debug text
  */
 WaterController::WaterController(QObject* parent, const bool& debug_mode)
-    : GenericSerialDevice(parent, debug_mode, "Water") {
+    : GenericSerialDevice(parent, debug_mode, "Water"),
+      volume_timer_(new QTimer(this)) {
     water_cmd_.resize(1);  // only 4 bits needed, so reserve 1 byte
     ClearCommand();
+
+    // Track CW volumes for the app's whole lifetime (only changes when open)
+    volume_timer_->setInterval(kVolumeTrackPeriodMs);
+    connect(volume_timer_, &QTimer::timeout,  // integrate flow
+            this, &WaterController::TrackVolume);
+    volume_clock_.start();
+    volume_timer_->start();
 }
 
 //------------------------------------------------------------------------------
@@ -244,7 +258,53 @@ void WaterController::SendStatus(const Water::Side& side) {
         }
     }
 
+    // Volume tracking follows valve state
+    const auto index = static_cast<std::size_t>(side);
+    if (index < Water::kSideCount) {
+        tanks_[index].state = state;
+    }
+
     emit ReportStatus(side, state);
+}
+
+/**
+ * @brief Integrates each CW's flow rate into its volume and reports changes.
+ *
+ * @note Water only flows while connected, and never past empty or full.
+ */
+void WaterController::TrackVolume() {
+    const double dt = volume_clock_.restart() / 1000.0;  // ms -> s
+
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+        Tank& tank = tanks_[i];
+        const auto side = static_cast<Water::Side>(i);
+
+        double flow = 0.0;
+        if (IsOpen()) {
+            if (tank.state == Water::State::kFilling
+                && tank.volume < Water::kCapacity) {
+                flow = tank.fill_rate;
+            } else if (tank.state == Water::State::kDraining
+                       && tank.volume > 0.0) {
+                flow = -tank.drain_rate;
+            }
+        }
+        if (flow == 0.0 && tank.flow == 0.0 && !tank.unreported) {
+            continue;  // nothing new
+        }
+
+        const double old_volume = tank.volume;
+        tank.volume = std::clamp(tank.volume + flow * dt, 0.0, Water::kCapacity);
+        tank.flow = flow;
+        tank.unreported = false;
+        emit ReportVolume(side, tank.volume, tank.flow);
+
+        // Only report limit reached once
+        if (tank.volume != old_volume
+            && (tank.volume == 0.0 || tank.volume == Water::kCapacity)) {
+            emit TankLimitReached(side, tank.volume == Water::kCapacity);
+        }
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -323,4 +383,62 @@ void WaterController::ForceCommand(const Water::Side& side,
 
     logger_->Info("Forced command to " + BytesToStr(water_cmd_)
                   + " (A_IN | B_IN | A_OUT | B_OUT)");
+}
+
+//------------------------------------------------------------------------------
+// !Volume Tracking (slots)
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Updates a side's fill/drain rate from measured flow. In case of error,
+ *        falls back to hard-coded rates.
+ *
+ * @param side Fluid system side
+ * @param flow Net flow rate (mL/s); positive = inflow, negative = outflow,
+ *             zero = idle, -1.0 = error
+ */
+void WaterController::UpdateFlowRate(const Water::Side& side,
+                                     const double& flow) {
+    const auto index = static_cast<std::size_t>(side);
+    if (index >= Water::kSideCount) {
+        logger_->Warn("Ignoring flow rate for unknown fluid system side: "
+                      + Water::SideEnumToString(side));
+        return;
+    }
+
+    Tank& tank = tanks_[index];
+    tank.fill_rate = Water::kFillRate;
+    tank.drain_rate = Water::kDrainRate;
+
+    if (flow > 0.0) {
+        tank.fill_rate = flow / 1000.0;  // mL/s -> L/s
+    } else if (flow < 0.0 && flow != -1.0) {
+        tank.drain_rate = -flow / 1000.0;  // mL/s -> L/s
+    }
+}
+
+/**
+ * @brief Overwrites the tracked volume (WARNING: see note).
+ *
+ * @param side Fluid system side
+ * @param volume New volume (L); clamped to [0, capacity]
+ *
+ * @note ONLY TO BE USED IF INACCURACIES ARE NOTICED IN REAL TIME!!!
+ */
+void WaterController::OverrideVolume(const Water::Side& side,
+                                     const double& volume) {
+    if (!std::isfinite(volume)) {
+        logger_->Warn("Ignoring invalid CW volume override");
+        return;
+    }
+
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+        if (side == Water::Side::kAll || static_cast<std::size_t>(side) == i) {
+            tanks_[i].volume = std::clamp(volume, 0.0, Water::kCapacity);
+            tanks_[i].unreported = true;
+        }
+    }
+
+    logger_->Info("CW volume overridden to "
+                  + QString::number(volume, 'f', 1).toStdString() + " L");
 }
