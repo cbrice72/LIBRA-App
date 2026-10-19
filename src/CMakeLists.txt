@@ -46,7 +46,7 @@ target_include_directories(
 # Tell the linker which libraries to link against
 set(LIBRA_LIBRARIES arduino_manager camera_manager common logger util)
 if(LIBRA_VERSION EQUAL 2)
-    list(APPEND LIBRA_LIBRARIES motion_controller)  # for default settings
+    list(APPEND LIBRA_LIBRARIES motion_controller)
 endif()
 
 set(LIBRA_THREADS actuator_thread)

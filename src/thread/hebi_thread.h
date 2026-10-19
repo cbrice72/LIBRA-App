@@ -30,13 +30,8 @@
 
 // Project Headers
 #include "abstract_actuator_thread.h"
-
-// Forward Declarations
 #if LIBRA_VERSION == 2
-namespace Motion {
-class Libra2MotionController;  // see libra2_motion_controller.h
-struct SweepRequest;           // "
-}  // namespace Motion
+# include "libra2_motion_controller.h"
 #endif
 
 #ifdef BUILD_WITH_ROS2
@@ -46,6 +41,7 @@ using msgJointState = sensor_msgs::msg::JointState;
 // Torque compensation constants
 constexpr double kTorqueCompLowerBound = 3.0;  // Nm
 constexpr double kTorqueCompUpperBound = 6.0;  // Nm
+constexpr double kTorqueCompSlowRate = 0.5;    // velocity rate between bounds
 
 /**
  * @brief Control class for HEBI actuators.
@@ -63,10 +59,18 @@ class HebiThread : public AbstractActuatorThread
     // NOLINTEND
 
   public:
-    explicit HebiThread(QObject* parent, const bool& debug_mode = false);
-    explicit HebiThread(QObject* parent, std::vector<std::string> families,
-                        std::vector<std::string> names,
+    explicit HebiThread(QObject* parent,
+#if LIBRA_VERSION == 2
+                        std::shared_ptr<Libra2MotionController> motion_controller,
+#endif
                         const bool& debug_mode = false);
+    explicit HebiThread(
+        QObject* parent,
+#if LIBRA_VERSION == 2
+        std::shared_ptr<Libra2MotionController> motion_controller,
+#endif
+        std::vector<std::string> families, std::vector<std::string> names,
+        const bool& debug_mode = false);
     ~HebiThread() override;
 
   public slots:
@@ -93,19 +97,12 @@ class HebiThread : public AbstractActuatorThread
     void EnableInertiaFeedforward(const bool& enabled);
     void SetHandoffBand(const double& deg);
 
-    void UpdateCounterweightVolume(const double& volume);
-    void UpdateCounterweightFlow(const double& flow);
-
     // --- Calibration ---
 
     void StartLevelCalibration();
     void StartTwoAngleCalibration(const double& deg_a, const double& deg_b);
     void StartFrictionCalibration(const double& deg_a, const double& deg_b);
     void CancelCalibration();
-
-    void SaveCalibration(const QString& file_path, const double& extension,
-                         const QString& note);
-    void LoadCalibration(const QString& file_path);
 #endif
 
   signals:
@@ -120,8 +117,7 @@ class HebiThread : public AbstractActuatorThread
     void MotionModeChanged(const bool& cw_primary);
     void FreeModeChanged(const bool& enabled);
     void MovementStateChanged(const bool& moving);
-    void CalibrationFinished(const bool& success, const bool& arm_calibrated);
-    void CalibrationLoaded(const bool& arm_calibrated);
+    void ArmModelChanged(const bool& calibrated);
 #endif
 
   protected:
@@ -142,13 +138,15 @@ class HebiThread : public AbstractActuatorThread
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
 #elif LIBRA_VERSION == 2
+    void ReportMotionStatus();
     bool ExecuteMotionController(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_pos,
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
                                  Eigen::VectorXd& cmd_eff);
+
+    bool CanCalibrate();
     void StartSweep(const Motion::SweepRequest& sweep);
-    void ReportMotionStatus();
 #endif
 
     void SendFeedback();
@@ -205,7 +203,7 @@ class HebiThread : public AbstractActuatorThread
 
     double playback_rate_{1.0};  // 0.5 in the soft torque band
 #elif LIBRA_VERSION == 2
-    std::unique_ptr<Motion::Libra2MotionController> motion_controller_;
+    std::shared_ptr<Libra2MotionController> motion_controller_;
     std::atomic<bool> free_mode_{false};
 
     // Last position/velocity command sent (actuator space)
@@ -215,6 +213,8 @@ class HebiThread : public AbstractActuatorThread
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> moving_{false};
     std::atomic<bool> calibration_running_{false};
+    std::atomic<bool> arm_calibrated_{false};
+
     double t_diag_log_elapsed_s_{0.0};  // s since last log (for throttling)
 #endif
 

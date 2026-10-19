@@ -87,8 +87,8 @@ if(LIBRA_VERSION EQUAL 2)
 endif()
 
 if(LIBRA_VERSION EQUAL 2)
-    # HebiThread hands LIBRA-II motion control to its motion controller
-    target_link_libraries(actuator_thread PRIVATE motion_controller)
+    # HebiThread is provided a motion controller to use
+    target_link_libraries(actuator_thread PUBLIC motion_controller)
 endif()
 
 if(BUILD_WITH_ROS2)

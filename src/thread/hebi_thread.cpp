@@ -26,11 +26,6 @@
 #include <QDir>          // Qt::Core
 
 // Project Headers
-#if LIBRA_VERSION == 2
-# include "arduino_defs.h"
-# include "libra2_calibration_file.h"
-# include "libra2_motion_controller.h"
-#endif
 #ifdef BUILD_WITH_ROS2
 # include "ros2_logger.h"
 #else
@@ -184,20 +179,35 @@ std::optional<double> CwCommandToReport(const Motion::CwCommand& command) {
  *        `LIBRA_VERSION`.
  *
  * @param parent Owning Qt widget
+ * @param motion_controller (LIBRA-II) Custom kinematics-informed motion controller
  * @param debug_mode Whether to output verbose debug text
  */
-HebiThread::HebiThread(QObject* parent, const bool& debug_mode)
-    : HebiThread(parent, {"LIBRA"}, Actuator::GetHebiDefault(), debug_mode) {}
+HebiThread::HebiThread(QObject* parent,
+#if LIBRA_VERSION == 2
+                       std::shared_ptr<Libra2MotionController> motion_controller,
+#endif
+                       const bool& debug_mode)
+    : HebiThread(parent,
+#if LIBRA_VERSION == 2
+                 std::move(motion_controller),
+#endif
+                 {"LIBRA"}, Actuator::GetHebiDefault(), debug_mode) {
+}
 
 /**
  * @brief Standard constructor.
  *
  * @param parent Owning Qt widget
+ * @param motion_controller (LIBRA-II) Custom kinematics-informed motion controller
  * @param families Families of actuators to search for names in
  * @param names Names of actuators to connect to
  * @param debug_mode Whether to output verbose debug text
  */
-HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
+HebiThread::HebiThread(QObject* parent,
+#if LIBRA_VERSION == 2
+                       std::shared_ptr<Libra2MotionController> motion_controller,
+#endif
+                       std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kHebi),
       families_(std::move(families)),
@@ -205,6 +215,10 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
       group_(nullptr),
       n_actuators_(names_.size()),
       loop_period_ms_(10)  // 100 Hz
+#if LIBRA_VERSION == 2
+      ,
+      motion_controller_(std::move(motion_controller))
+#endif
 #ifdef BUILD_WITH_ROS2
       ,
       rclcpp::Node("hebi_node")
@@ -217,13 +231,6 @@ HebiThread::HebiThread(QObject* parent, std::vector<std::string> families,
     logger_ = std::make_unique<QtLogger>("hebi_manager", debug_mode_);
 #endif
     logger_->Debug("Initializing HebiThread");
-
-#if LIBRA_VERSION == 2
-    // Motion controller shares this logger, so `SetDebugMode()` reaches it too
-    motion_controller_ =
-        std::make_unique<Motion::Libra2MotionController>(*logger_,
-                                                         Water::kCapacity);
-#endif
 
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
@@ -431,7 +438,8 @@ void HebiThread::CheckTorqueControl() {
         // While significant arm torque remains, keep reporting its direction
         // to WaterController
         emit ReportArmTorque(arm_torque_theta);
-        playback_rate_ = 0.5;  // helps avoid sudden stop if upper bound is hit
+        playback_rate_ =
+            kTorqueCompSlowRate;  // avoids sudden stop if upper bound is hit
 
     } else {
         // Once arm torque reaches an acceptable level, disable fluid system
@@ -569,6 +577,39 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
 
 #if LIBRA_VERSION == 2
 /**
+ * @brief Tells the UI when movement starts/stops, when a calibration fails,
+ *        and when the arm model appears or goes away.
+ *
+ * @note "Moving" covers trajectory-based motion, the CW alone moving the arm, a
+ *       queued move, and a running calibration; the UI disables mode switching
+ *       while it is true.
+ */
+void HebiThread::ReportMotionStatus() {
+    const auto status = motion_controller_->GetCalibrationStatus();
+
+    // Failure pops up once (success and cancellation are already logged)
+    if (calibration_running_ && !Motion::IsCalibrationRunning(status)) {
+        calibration_running_ = false;
+        if (status == Motion::CalibrationStatus::kFailed) {
+            emit ErrorThrown("HEBI - "
+                             + QString::fromStdString(
+                                 motion_controller_->GetCalibrationMessage()));
+        }
+    }
+
+    const bool calibrated = motion_controller_->IsCalibrated();
+    if (arm_calibrated_.exchange(calibrated) != calibrated) {
+        emit ArmModelChanged(calibrated);
+    }
+
+    const bool moving = calibration_running_ || motion_controller_->IsMoving();
+    if (moving != moving_) {
+        moving_ = moving;
+        emit MovementStateChanged(moving);
+    }
+}
+
+/**
  * @brief LIBRA-II control cycle: hands measurements to the motion controller,
  *        applies what it returns, and sends the command to the actuators.
  *
@@ -652,8 +693,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         emit ReportArmTorque(CwCommandToReport(*cmd.cw_command));
     }
 
-    // Stop requested by motion controller (aborted/cancelled friction sweep);
-    // the arm holds its last commanded pose
+    // Stop requested by motion controller (friction sweep ended early)
     if (cmd.stop_trajectory) {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
         trajectory_.reset();
@@ -671,8 +711,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         StartTrajectory(feedback_->getPosition(), move_pos);
     }
 
-    // Constant-speed sweep requested by motion controller (friction
-    // calibration); replaces any move started above
+    // Sweep requested by motion controller (replaces any move above)
     if (cmd.sweep) {
         StartSweep(*cmd.sweep);
     }
@@ -769,6 +808,21 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 }
 
 /**
+ * @brief Whether a calibration may start.
+ */
+bool HebiThread::CanCalibrate() {
+    if (group_ == nullptr) {
+        emit ErrorThrown("HEBI - Can't calibrate; not connected!");
+        return false;
+    }
+    if (free_mode_) {
+        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
+        return false;
+    }
+    return true;
+}
+
+/**
  * @brief Starts a pitch sweep: rest, ramp up to constant speed, hold it, ramp
  *        down to rest (other joints hold).
  *
@@ -845,37 +899,6 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
 
     logger_->Debug("Started sweep to " + FormatDouble(sweep.to, 3) + " rad at "
                    + FormatDouble(sweep.speed, 4) + " rad/s");
-}
-
-/**
- * @brief Tells the UI when movement starts/stops and when a calibration ends.
- *
- * @note "Moving" covers trajectory-based motion, the CW alone moving the arm, a
- *       queued move, and a running calibration; the UI disables mode switching
- *       while it is true.
- */
-void HebiThread::ReportMotionStatus() {
-    const auto status = motion_controller_->GetCalibrationStatus();
-
-    // Exactly one `CalibrationFinished` per accepted start (cancel = failure)
-    if (calibration_running_ && !Motion::IsCalibrationRunning(status)) {
-        calibration_running_ = false;
-
-        // Failure pops up (success and cancellation are already logged)
-        if (status == Motion::CalibrationStatus::kFailed) {
-            emit ErrorThrown("HEBI - "
-                             + QString::fromStdString(
-                                 motion_controller_->GetCalibrationMessage()));
-        }
-        emit CalibrationFinished(status == Motion::CalibrationStatus::kSucceeded,
-                                 motion_controller_->IsCalibrated());
-    }
-
-    const bool moving = calibration_running_ || motion_controller_->IsMoving();
-    if (moving != moving_) {
-        moving_ = moving;
-        emit MovementStateChanged(moving);
-    }
 }
 #endif  // LIBRA_VERSION == 2
 
@@ -1491,56 +1514,20 @@ void HebiThread::SetHandoffBand(const double& deg) {
     }
 }
 
-/**
- * @brief Gives the motion controller the latest CW volume.
- *
- * @param volume CW volume (L, from TankWidget)
- */
-void HebiThread::UpdateCounterweightVolume(const double& volume) {
-    motion_controller_->SetCwVolume(volume);
-}
-
-/**
- * @brief Gives the motion controller the latest CW flow rate (for the inertia
- * rate).
- *
- * @param flow Net flow rate (mL/s, from flow Arduino); positive = inflow,
- *             negative = outflow, zero = idle, -1.0 = error
- *
- * @note An error reading means the rate is unknown, so 0 is passed, which
- *       drops the CW's share of the inertia rate.
- */
-void HebiThread::UpdateCounterweightFlow(const double& flow) {
-    motion_controller_->SetCwFlow(flow == -1.0 ? 0.0
-                                               : flow / 1000.0);  // -> L/s
-}
-
 //------------------------------------------------------------------------------
 // !Calibration (slots)
 //------------------------------------------------------------------------------
 
 /**
  * @brief Starts the level calibration (arm must already be level and at rest).
- *
- * @note `CalibrationFinished` is emitted exactly once per call (also if refused
- *       or cancelled).
  */
 void HebiThread::StartLevelCalibration() {
-    if (group_ == nullptr) {
-        emit ErrorThrown("HEBI - Can't calibrate; not connected!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
+    if (!CanCalibrate()) {
         return;
     }
-    if (free_mode_) {
-        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
-        return;
-    }
-
     if (!motion_controller_->StartLevelCalibration()) {
         emit ErrorThrown("HEBI - Can't start the level calibration (see the "
                          "log for the reason)!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
         return;
     }
     calibration_running_ = true;
@@ -1552,27 +1539,16 @@ void HebiThread::StartLevelCalibration() {
  *
  * @param deg_a First angle (deg, joint space, up = +)
  * @param deg_b Second angle (deg, joint space, up = +)
- *
- * @note `CalibrationFinished` is emitted exactly once per call.
  */
 void HebiThread::StartTwoAngleCalibration(const double& deg_a,
                                           const double& deg_b) {
-    if (group_ == nullptr) {
-        emit ErrorThrown("HEBI - Can't calibrate; not connected!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
+    if (!CanCalibrate()) {
         return;
     }
-    if (free_mode_) {
-        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
-        return;
-    }
-
     if (!motion_controller_->StartTwoAngleCalibration(deg_a * kDegToRad,
                                                       deg_b * kDegToRad)) {
         emit ErrorThrown("HEBI - Can't start the two-angle calibration (see "
                          "the log for the reason)!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
         return;
     }
     calibration_running_ = true;
@@ -1586,28 +1562,18 @@ void HebiThread::StartTwoAngleCalibration(const double& deg_a,
  * @param deg_b Other end of the window (deg, joint space, up = +)
  *
  * @note Sweep speeds are fractions of `kMaxVel`, so they stay within the
- *       trajectory speed limit. `CalibrationFinished` is emitted exactly once
- *       per call.
+ *       trajectory speed limit.
  */
 void HebiThread::StartFrictionCalibration(const double& deg_a,
                                           const double& deg_b) {
-    if (group_ == nullptr) {
-        emit ErrorThrown("HEBI - Can't calibrate; not connected!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
+    if (!CanCalibrate()) {
         return;
     }
-    if (free_mode_) {
-        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
-        return;
-    }
-
     if (!motion_controller_->StartFrictionCalibration(deg_a * kDegToRad,
                                                       deg_b * kDegToRad,
                                                       kMaxVel)) {
         emit ErrorThrown("HEBI - Can't start the friction calibration (see "
                          "the log for the reason)!");
-        emit CalibrationFinished(false, motion_controller_->IsCalibrated());
         return;
     }
     calibration_running_ = true;
@@ -1622,68 +1588,5 @@ void HebiThread::CancelCalibration() {
         return;
     }
     motion_controller_->CancelCalibration();  // logs by itself
-}
-
-/**
- * @brief Saves the current arm model and friction result (with their raw
- *        data) to a JSON file.
- *
- * @param file_path File to write
- * @param extension Arm extension (mm), entered by hand
- * @param note Free-text note (e.g., payload)
- */
-void HebiThread::SaveCalibration(const QString& file_path,
-                                 const double& extension, const QString& note) {
-    Motion::CalibrationRecord record = motion_controller_->GetCalibrationRecord();
-    if (!record.arm_model && !record.friction) {
-        emit ErrorThrown("HEBI - Nothing to save; run or load a calibration "
-                         "first!");
-        return;
-    }
-    record.extension = extension;
-    record.note = note.toStdString();
-
-    std::string error;
-    if (!Motion::SaveCalibrationFile(record, file_path.toStdString(), error)) {
-        emit ErrorThrown("HEBI - Failed to save calibration: "
-                         + QString::fromStdString(error));
-        return;
-    }
-    logger_->Info("Saved calibration to: " + file_path.toStdString());
-}
-
-/**
- * @brief Loads an arm model and friction result from a JSON file.
- *
- * @param file_path File to read
- *
- * @note The motion controller recomputes the arm model from the file's raw
- *       samples if the CW model has changed since it was saved.
- */
-void HebiThread::LoadCalibration(const QString& file_path) {
-    std::string error;
-    const auto record = Motion::LoadCalibrationFile(file_path.toStdString(),
-                                                    error);
-    if (!record) {
-        emit ErrorThrown("HEBI - Failed to load calibration: "
-                         + QString::fromStdString(error));
-        return;
-    }
-
-    if (!motion_controller_->LoadCalibrationRecord(*record)) {
-        emit ErrorThrown("HEBI - Can't apply the calibration (see the log for "
-                         "the reason)!");
-        return;
-    }
-
-    const std::string extension_text = record->extension
-                                           ? FormatDouble(*record->extension, 1)
-                                                 + " mm"
-                                           : "n/a";
-    logger_->Info(
-        "Loaded calibration from: " + file_path.toStdString() + " (saved "
-        + record->saved_at + ", extension " + extension_text
-        + (record->note.empty() ? "" : ", note: " + record->note) + ")");
-    emit CalibrationLoaded(motion_controller_->IsCalibrated());
 }
 #endif

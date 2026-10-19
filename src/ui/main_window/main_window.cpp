@@ -535,11 +535,38 @@ void MainWindow::InitializeDeviceManagers() {
  * @note Only used in constructor; separate function for readability.
  */
 void MainWindow::InitializeThreads() {
+#if LIBRA_VERSION == 2
+    // ========== Motion Controller ==========
+
+    // NOTE: passed to and managed by hebi_thread_
+    motion_controller_ = std::make_shared<Libra2MotionController>(
+        std::make_unique<QtLogger>("motion_controller", debug_mode_),
+        Water::kCapacity, kTorqueCompLowerBound, kTorqueCompUpperBound,
+        kTorqueCompSlowRate);
+
+    connect(this, &MainWindow::EnableDebugMode,  // update debug mode
+            this, [this](const bool& enabled) {
+                motion_controller_->SetDebugMode(enabled);
+            });
+    connect(water_controller_, &WaterController::ReportVolume,  // CW state
+            this,
+            [this](const Water::Side& side, const double& volume,
+                   const double& flow) {
+                if (side == Water::Side::kA) {
+                    motion_controller_->SetCwState(volume, flow);
+                }
+            });
+#endif
+
     // ========== HEBI Thread ==========
 
     // NOTE: This constructor automatically determines the actuator family and
     //       names based on the LIBRA_VERSION the app is built with
+#if LIBRA_VERSION == 1
     hebi_thread_ = new HebiThread(this, debug_mode_);
+#elif LIBRA_VERSION == 2
+    hebi_thread_ = new HebiThread(this, motion_controller_, debug_mode_);
+#endif
 
     // MainWindow signals
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
@@ -585,21 +612,6 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::StartFrictionCalibration);
     connect(this, &MainWindow::CancelHebiCal,  // cancel calibration
             hebi_thread_, &HebiThread::CancelCalibration);
-    connect(this, &MainWindow::SaveHebiCal,  // save calibration
-            hebi_thread_, &HebiThread::SaveCalibration);
-    connect(this, &MainWindow::LoadHebiCal,  // load calibration
-            hebi_thread_, &HebiThread::LoadCalibration);
-
-    connect(flow_controller_, &FlowController::ReportStatus,  // CW flow (İ)
-            hebi_thread_, &HebiThread::UpdateCounterweightFlow);
-
-    // TankWidget only emits on level changes, so send starting CW volume now
-    connect(ui_->tw_water_level_A, &TankWidget::LevelChanged,  // CW volume
-            hebi_thread_, [this](double) {
-                hebi_thread_->UpdateCounterweightVolume(
-                    ui_->tw_water_level_A->GetVolume());
-            });
-    hebi_thread_->UpdateCounterweightVolume(ui_->tw_water_level_A->GetVolume());
 #endif
 
     // MainWindow slots
@@ -620,10 +632,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleFreeModeChanged);
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // lock mode UI
             this, &MainWindow::HandleMovementStateChanged);
-    connect(hebi_thread_, &HebiThread::CalibrationFinished,  // calibrated
-            this, &MainWindow::HandleCalibrationFinished);
-    connect(hebi_thread_, &HebiThread::CalibrationLoaded,  // loaded from file
-            this, &MainWindow::HandleCalibrationLoaded);
+    connect(hebi_thread_, &HebiThread::ArmModelChanged,  // calibrated
+            this, &MainWindow::HandleArmModelChanged);
 #endif
 
     // ArduinoManager slots
@@ -945,9 +955,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
             HandleMotionModeChanged(false);
         }
         if (ui_->l_motion_calibrated_val->text() == "...") {
-            ui_->l_motion_calibrated_val->setText("No");
-            ui_->l_motion_calibrated_val->setStyleSheet(
-                QString("color: %1;").arg(Color::kOrange));
+            HandleArmModelChanged(motion_controller_->IsCalibrated());
         }
         if (ui_->l_motion_state_val->text() == "...") {
             HandleMovementStateChanged(false);
@@ -1091,47 +1099,15 @@ void MainWindow::HandleMovementStateChanged(const bool& moving) {
 }
 
 /**
- * @brief Reports how a calibration ended.
+ * @brief Shows whether the motion controller has an arm model (calibrated or
+ *        loaded).
  *
- * @param success true if the arm model or friction was updated
- * @param arm_calibrated Whether an arm model is now available
- *
- * @note "Calibrated" shows the arm model only, since a friction calibration
- *       alone doesn't enable feedforward.
+ * @param calibrated Whether an arm model is available
  */
-void MainWindow::HandleCalibrationFinished(const bool& success,
-                                           const bool& arm_calibrated) {
-    // NOTE: A failed/cancelled calibration keeps the previous arm model, if any
-    if (arm_calibrated) {
-        ui_->l_motion_calibrated_val->setText("Yes");
-        ui_->l_motion_calibrated_val->setStyleSheet(
-            QString("color: %1;").arg(Color::kGreen));
-    } else if (!success) {
-        ui_->l_motion_calibrated_val->setText("Failed");
-        ui_->l_motion_calibrated_val->setStyleSheet(
-            QString("color: %1;").arg(Color::kRed));
-    }
-
-    if (success) {
-        logger_->Info("Calibration finished");
-    } else {
-        logger_->Warn("Calibration failed or was cancelled "
-                      "(see the messages above)");
-    }
-}
-
-/**
- * @brief Shows the arm model state after loading a calibration file.
- *
- * @param arm_calibrated Whether an arm model is now available
- */
-void MainWindow::HandleCalibrationLoaded(const bool& arm_calibrated) {
-    if (arm_calibrated) {
-        ui_->l_motion_calibrated_val->setText("Yes");
-        ui_->l_motion_calibrated_val->setStyleSheet(
-            QString("color: %1;").arg(Color::kGreen));
-    }
-    logger_->Info("Calibration loaded");
+void MainWindow::HandleArmModelChanged(const bool& calibrated) {
+    ui_->l_motion_calibrated_val->setText(calibrated ? "Yes" : "No");
+    ui_->l_motion_calibrated_val->setStyleSheet(
+        QString("color: %1;").arg(calibrated ? Color::kGreen : Color::kOrange));
 }
 #endif
 

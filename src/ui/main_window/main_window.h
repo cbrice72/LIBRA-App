@@ -9,6 +9,7 @@
 
 // C++ Standard Library Headers
 #include <fstream>
+#include <memory>
 #include <unordered_map>
 
 // Other Library Headers
@@ -21,6 +22,7 @@
 #include "hebi_thread.h"
 #if LIBRA_VERSION == 2
 # include "epos_thread.h"
+# include "libra2_motion_controller.h"
 #endif
 // - Device Managers
 #include "camera_manager.h"
@@ -91,9 +93,7 @@ class MainWindow : public QMainWindow {
     void HandleMotionModeChanged(const bool& cw_primary);
     void HandleFreeModeChanged(const bool& enabled);
     void HandleMovementStateChanged(const bool& moving);
-    void HandleCalibrationFinished(const bool& success,
-                                   const bool& arm_calibrated);
-    void HandleCalibrationLoaded(const bool& arm_calibrated);
+    void HandleArmModelChanged(const bool& calibrated);
 #endif
 
   signals:
@@ -136,10 +136,6 @@ class MainWindow : public QMainWindow {
     void StartHebiTwoAngleCal(const double& deg_a, const double& deg_b);
     void StartHebiFrictionCal(const double& deg_a, const double& deg_b);
     void CancelHebiCal();
-
-    void SaveHebiCal(const QString& file_path, const double& extension,
-                     const QString& note);
-    void LoadHebiCal(const QString& file_path);
 #endif
 
     // EPOS (Maxon)
@@ -303,6 +299,10 @@ class MainWindow : public QMainWindow {
     HebiThread* hebi_thread_{nullptr};  // HEBI actuator control
 #if LIBRA_VERSION == 2
     EposThread* epos_thread_{nullptr};  // EPOS (Maxon) actuator control
+
+    // Motion Control
+
+    std::shared_ptr<Libra2MotionController> motion_controller_;  // pitch joint
 #endif
 
     // Misc.
