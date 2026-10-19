@@ -12,14 +12,20 @@
 #include <cmath>
 
 // Other Library Headers
-#include <QDateTime>        // Qt::Core
-#include <QDir>             // Qt::Core
-#include <QFileDialog>      // Qt::Widgets
-#include <QInputDialog>     // Qt::Widgets
-#include <QLineEdit>        // Qt::Widgets
-#include <QSerialPort>      // Qt::SerialPort
-#include <QSerialPortInfo>  // Qt::SerialPort
-#include <QSignalBlocker>   // Qt::Core
+#include <QDateTime>         // Qt::Core
+#include <QDialog>           // Qt::Widgets
+#include <QDialogButtonBox>  // Qt::Widgets
+#include <QDir>              // Qt::Core
+#include <QDoubleSpinBox>    // Qt::Widgets
+#include <QFileDialog>       // Qt::Widgets
+#include <QFormLayout>       // Qt::Widgets
+#include <QInputDialog>      // Qt::Widgets
+#include <QLabel>            // Qt::Widgets
+#include <QLineEdit>         // Qt::Widgets
+#include <QSerialPort>       // Qt::SerialPort
+#include <QSerialPortInfo>   // Qt::SerialPort
+#include <QSignalBlocker>    // Qt::Core
+#include <QVBoxLayout>       // Qt::Widgets
 
 // Project Headers
 #if LIBRA_VERSION == 2
@@ -44,14 +50,13 @@
  */
 
 #if LIBRA_VERSION == 2
-// Motion Control Dialog Defaults
+// Motion Control Dialogs
 
-constexpr double kDefaultHandoffBandDeg = Motion::kDefaultHandoffBand * 180
-                                          / M_PI;  // deg
-// TODO: guess
-constexpr double kDefaultCalAngleDeg = 20.0;  // deg (first angle +, second -)
-// TODO: guess; should be near balance and wide enough to sample
-constexpr double kDefaultFrictionHalfWindowDeg = 5.0;  // deg (window -/+)
+constexpr double kRadToDeg = 180.0 / M_PI;
+// TODO: guesses
+constexpr double kDefaultCalAngle = 20.0;           // first +, second − (deg)
+constexpr double kDefaultFrictionHalfWindow = 5.0;  // window is ± this (deg)
+constexpr double kMaxArmExtension = 100000.0;       // input limit (mm)
 #endif
 
 namespace {
@@ -147,6 +152,57 @@ QString FindPortForDevice(const QString& expected_id,
     return {};
 }
 
+#if LIBRA_VERSION == 2
+/**
+ * @brief Sets up an OK/Cancel dialog with an explanation above a form; the
+ *        caller adds the form's rows.
+ *
+ * @param dialog Dialog to set up
+ * @param title Window title
+ * @param hint What the inputs mean and how to choose them
+ */
+QFormLayout* SetUpFormDialog(QDialog& dialog, const QString& title,
+                             const QString& hint) {
+    dialog.setWindowTitle(title);
+    auto* layout = new QVBoxLayout(&dialog);
+
+    auto* l_hint = new QLabel(hint, &dialog);
+    l_hint->setWordWrap(true);
+    layout->addWidget(l_hint);
+
+    auto* form = new QFormLayout();
+    layout->addLayout(form);
+
+    auto* buttons = new QDialogButtonBox(QDialogButtonBox::Ok
+                                             | QDialogButtonBox::Cancel,
+                                         &dialog);
+    QObject::connect(buttons, &QDialogButtonBox::accepted,  // OK
+                     &dialog, &QDialog::accept);
+    QObject::connect(buttons, &QDialogButtonBox::rejected,  // Cancel
+                     &dialog, &QDialog::reject);
+    layout->addWidget(buttons);
+
+    return form;
+}
+
+/**
+ * @brief Makes a spin box for a pitch angle (deg, up = +).
+ *
+ * @param parent Owning Qt widget
+ * @param value Starting value (deg)
+ * @param limit Largest allowed |angle| (deg)
+ */
+QDoubleSpinBox* MakeAngleSpinBox(QWidget* parent, const double& value,
+                                 const double& limit) {
+    auto* sb = new QDoubleSpinBox(parent);
+    sb->setRange(-limit, limit);
+    sb->setDecimals(1);
+    sb->setSuffix(" deg");
+    sb->setValue(value);
+    return sb;
+}
+#endif
+
 }  // namespace
 
 //------------------------------------------------------------------------------
@@ -237,7 +293,7 @@ void MainWindow::on_a_motion_handoff_band_triggered() {
     const double deg = QInputDialog::getDouble(
         this, "Hand-off Band",
         "Actuator takes over within (deg of the target):",
-        kDefaultHandoffBandDeg, 0.01, 90.0, 2, &ok);
+        Motion::kDefaultHandoffBand * kRadToDeg, 0.01, 90.0, 2, &ok);
     if (ok) {
         emit UpdateHebiHandoffBand(deg);
     } else {
@@ -267,65 +323,61 @@ void MainWindow::on_a_motion_calibrate_level_triggered() {
 
 /**
  * @brief Event handler for "Motion Control" menu action "Calibrate (two
- *        angles)...". Asks for two calibration angles (joint space) and starts
- *        the two-angle calibration.
+ *        angles)...". Asks for two calibration angles and starts the
+ *        two-angle calibration.
  */
 void MainWindow::on_a_motion_calibrate_two_angle_triggered() {
-    bool ok_a = false;
-    const double deg_a = QInputDialog::getDouble(this, "Two-Angle Calibration",
-                                                 "First angle (deg, up = +):",
-                                                 kDefaultCalAngleDeg, -90.0,
-                                                 90.0, 1, &ok_a);
-    if (!ok_a) {
+    const double limit = Motion::kMaxCalibrationAngle * kRadToDeg;
+
+    QDialog dialog(this);
+    QFormLayout* form = SetUpFormDialog(
+        dialog, "Two-Angle Calibration",
+        QString("The arm moves to each angle and rests there while its torque "
+                "is averaged. Pick angles at least %1 deg apart; the farther "
+                "apart, the better the fit. (up = +)")
+            .arg(Motion::kMinAngleSeparation * kRadToDeg, 0, 'f', 1));
+    auto* sb_a = MakeAngleSpinBox(&dialog, kDefaultCalAngle, limit);
+    auto* sb_b = MakeAngleSpinBox(&dialog, -kDefaultCalAngle, limit);
+    form->addRow("First angle:", sb_a);
+    form->addRow("Second angle:", sb_b);
+
+    if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("Calibration cancelled by user");
         return;
     }
 
-    bool ok_b = false;
-    const double deg_b = QInputDialog::getDouble(this, "Two-Angle Calibration",
-                                                 "Second angle (deg, up = +):",
-                                                 -kDefaultCalAngleDeg, -90.0,
-                                                 90.0, 1, &ok_b);
-    if (!ok_b) {
-        logger_->Debug("Calibration cancelled by user");
-        return;
-    }
-
-    // Motion controller checks range and spacing, and reports a failure
-    emit StartHebiTwoAngleCal(deg_a, deg_b);
+    // Motion controller checks spacing, and reports a failure
+    emit StartHebiTwoAngleCal(sb_a->value(), sb_b->value());
 }
 
 /**
  * @brief Event handler for "Motion Control" menu action "Calibrate
- *        (friction)...". Prompts user for a sweep window and starts the
- *        friction calibration.
- *
- * @note Balance the CW near the window first; the sweep aborts above the ATC
- *       hard limit.
+ *        (friction)...". Asks for a sweep window and starts the friction
+ *        calibration.
  */
 void MainWindow::on_a_motion_calibrate_friction_triggered() {
-    bool ok_a = false;
-    const double deg_a = QInputDialog::getDouble(this, "Friction Calibration",
-                                                 "Window start (deg, up = +):",
-                                                 -kDefaultFrictionHalfWindowDeg,
-                                                 -90.0, 90.0, 1, &ok_a);
-    if (!ok_a) {
+    const double limit = Motion::kMaxCalibrationAngle * kRadToDeg;
+
+    QDialog dialog(this);
+    QFormLayout* form = SetUpFormDialog(
+        dialog, "Friction Calibration",
+        QString("The arm sweeps up and down between these angles at several "
+                "speeds while the CW stays idle. Balance the CW near the "
+                "middle of the window first and make it at least %1 deg wide. "
+                "(up = +)")
+            .arg(Motion::kFrictionMinWindow * kRadToDeg, 0, 'f', 1));
+    auto* sb_lo = MakeAngleSpinBox(&dialog, -kDefaultFrictionHalfWindow, limit);
+    auto* sb_hi = MakeAngleSpinBox(&dialog, kDefaultFrictionHalfWindow, limit);
+    form->addRow("Window start:", sb_lo);
+    form->addRow("Window end:", sb_hi);
+
+    if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("Calibration cancelled by user");
         return;
     }
 
-    bool ok_b = false;
-    const double deg_b = QInputDialog::getDouble(this, "Friction Calibration",
-                                                 "Window end (deg, up = +):",
-                                                 kDefaultFrictionHalfWindowDeg,
-                                                 -90.0, 90.0, 1, &ok_b);
-    if (!ok_b) {
-        logger_->Debug("Calibration cancelled by user");
-        return;
-    }
-
-    // Motion controller checks range, width, and duration
-    emit StartHebiFrictionCal(deg_a, deg_b);
+    // Motion controller checks width and duration, and reports a failure
+    emit StartHebiFrictionCal(sb_lo->value(), sb_hi->value());
 }
 
 /**
@@ -338,52 +390,70 @@ void MainWindow::on_a_motion_calibrate_cancel_triggered() {
 
 /**
  * @brief Event handler for "Motion Control" menu action "Save calibration...".
- *        Prompts the user for the current arm extension, an optional note, and
- *        a filename, then saves the current arm model (JSON).
+ *        Asks for the setup it was made with, then saves the current arm model
+ *        and internal friction (JSON).
  */
 void MainWindow::on_a_motion_calibration_save_triggered() {
-    bool ok_ext = false;
-    const double extension =
-        QInputDialog::getDouble(this, "Save Calibration",
-                                "Arm extension (mm from minimum):", 0.0, 0.0,
-                                100000.0, 1, &ok_ext);
-    if (!ok_ext) {
-        logger_->Debug("Calibration save cancelled by user");
+    Motion::CalibrationRecord record = motion_controller_->GetCalibrationRecord();
+    if (!record.arm_model && !record.friction) {
+        HandleCriticalError("Calibration - Nothing to save; run or load a "
+                            "calibration first!");
         return;
     }
 
-    bool ok_note = false;
-    const QString note =
-        QInputDialog::getText(this, "Save Calibration",
-                              "Note (optional, e.g., payload):",
-                              QLineEdit::Normal, QString(), &ok_note);
-    if (!ok_note) {
+    QDialog dialog(this);
+    QFormLayout* form = SetUpFormDialog(
+        dialog, "Save Calibration",
+        "A calibration only works for the setup it was made with, so note "
+        "the arm extension and anything else that changes the arm (e.g., "
+        "payload).");
+    auto* sb_extension = new QDoubleSpinBox(&dialog);
+    sb_extension->setRange(0.0, kMaxArmExtension);
+    sb_extension->setDecimals(1);
+    sb_extension->setSuffix(" mm");
+    auto* le_note = new QLineEdit(&dialog);
+    le_note->setPlaceholderText("optional");
+    form->addRow("Arm extension (from minimum):", sb_extension);
+    form->addRow("Note:", le_note);
+
+    if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("Calibration save cancelled by user");
         return;
     }
 
     // Default to the calibration folder with a timestamped filename
     QDir().mkpath(Motion::kCalibrationDir);
-    const QString default_path = QDir(Motion::kCalibrationDir)
-                                     .filePath(
-                                         "libra2_calibration_"
-                                         + QDateTime::currentDateTime().toString(
-                                             "yyyy-MM-dd_HH-mm-ss")
-                                         + ".json");
-    const QString file_path =
-        QFileDialog::getSaveFileName(this, "Save Calibration", default_path,
-                                     "Calibration (*.json)");
+    const QString default_name = "libra2_calibration_"
+                                 + QDateTime::currentDateTime().toString(
+                                     "yyyy-MM-dd_HH-mm-ss")
+                                 + ".json";
+    const QString file_path = QFileDialog::getSaveFileName(
+        this, "Save Calibration",
+        QDir(Motion::kCalibrationDir).filePath(default_name),
+        "Calibration (*.json)");
     if (file_path.isEmpty()) {
         logger_->Debug("Calibration save cancelled by user");
         return;
     }
 
-    emit SaveHebiCal(file_path, extension, note);
+    record.extension = sb_extension->value();
+    record.note = le_note->text().toStdString();
+    std::string error;
+    if (!Motion::SaveCalibrationFile(record, file_path.toStdString(), error)) {
+        HandleCriticalError("Calibration - Failed to save: "
+                            + QString::fromStdString(error));
+        return;
+    }
+
+    logger_->Info("Saved calibration to: " + file_path.toStdString());
 }
 
 /**
  * @brief Event handler for "Motion Control" menu action "Load calibration...".
- *        Prompts the user to select a calibration file and applies it.
+ *        Asks for a calibration file and applies it.
+ *
+ * @note The motion controller recomputes the arm model from the file's raw
+ *       samples if the CW model has changed since it was saved.
  */
 void MainWindow::on_a_motion_calibration_load_triggered() {
     const QString file_path =
@@ -395,7 +465,31 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
         return;
     }
 
-    emit LoadHebiCal(file_path);
+    std::string error;
+    const auto record = Motion::LoadCalibrationFile(file_path.toStdString(),
+                                                    error);
+    if (!record) {
+        HandleCriticalError("Calibration - Failed to load: "
+                            + QString::fromStdString(error));
+        return;
+    }
+    if (!motion_controller_->LoadCalibrationRecord(*record)) {
+        HandleCriticalError(
+            "Calibration - Can't apply the calibration! (see log)");
+        return;
+    }
+
+    const QString extension = record->extension
+                                  ? QString::number(*record->extension, 'f', 1)
+                                        + " mm"
+                                  : "n/a";
+
+    logger_->Info(
+        "Loaded calibration from: " + file_path.toStdString() + " (saved "
+        + record->saved_at + ", extension " + extension.toStdString()
+        + (record->note.empty() ? "" : ", note: " + record->note) + ")");
+
+    HandleArmModelChanged(motion_controller_->IsCalibrated());
 }
 #endif
 
@@ -649,28 +743,22 @@ void MainWindow::on_a_water_flow_connect_triggered() {
 
 /**
  * @brief Event handler for "Water/Advanced" menu action "Set empty (0%)".
- *        Forces the tank (water bladder) visualization to show as empty.
+ *        Resets the tracked CW volume(s) to empty.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_empty_triggered() {
-    ui_->tw_water_level_A->OverrideLevel(0.0);
-#if LIBRA_VERSION == 1
-    ui_->tw_water_level_B->OverrideLevel(0.0);
-#endif
+    water_controller_->OverrideVolume(Water::Side::kAll, 0.0);
 }
 
 /**
  * @brief Event handler for "Water/Advanced" menu action "Set full (100%)".
- *        Forces the tank (water bladder) visualization to show as full.
+ *        Resets the tracked CW volume(s) to full.
  *
  * @note Only use if there is a discrepancy with the physical water bladders.
  */
 void MainWindow::on_a_water_set_full_triggered() {
-    ui_->tw_water_level_A->OverrideLevel(1.0);
-#if LIBRA_VERSION == 1
-    ui_->tw_water_level_B->OverrideLevel(1.0);
-#endif
+    water_controller_->OverrideVolume(Water::Side::kAll, Water::kCapacity);
 }
 
 //------------------------------------------------------------------------------
