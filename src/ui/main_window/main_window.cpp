@@ -539,10 +539,12 @@ void MainWindow::InitializeThreads() {
     // ========== Motion Controller ==========
 
     // NOTE: passed to and managed by hebi_thread_
-    motion_controller_ = std::make_shared<Libra2MotionController>(
-        std::make_unique<QtLogger>("motion_controller", debug_mode_),
-        Water::kCapacity, kTorqueCompLowerBound, kTorqueCompUpperBound,
-        kTorqueCompSlowRate);
+    motion_controller_ =
+        std::make_shared<Libra2MotionController>(Water::kCapacity,
+                                                 kTorqueCompLowerBound,
+                                                 kTorqueCompUpperBound,
+                                                 kTorqueCompSlowRate,
+                                                 debug_mode_);
 
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             this, [this](const bool& enabled) {
