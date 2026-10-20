@@ -332,11 +332,11 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         double val = 0;
 
         // Retrieve value based on feedback type
-        if (type == Actuator::Feedback::kTargetPos) {
+        if (type == Actuator::Feedback::kCommandPos) {
             val = feedback->getPositionCommand()[i] * kRadToDeg;
-        } else if (type == Actuator::Feedback::kTargetVel) {
+        } else if (type == Actuator::Feedback::kCommandVel) {
             val = feedback->getVelocityCommand()[i] * kRadToDeg;
-        } else if (type == Actuator::Feedback::kTargetTorque) {
+        } else if (type == Actuator::Feedback::kCommandTorque) {
             val = feedback->getEffortCommand()[i];
         } else if (type == Actuator::Feedback::kActualPos) {
             val = feedback->getPosition()[i] * kRadToDeg;
@@ -929,8 +929,8 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
 void HebiThread::SendFeedback() {
     // Report important statuses individually
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
-                                            Actuator::Feedback::kTargetPos),
-                        Actuator::Feedback::kTargetPos);
+                                            Actuator::Feedback::kCommandPos),
+                        Actuator::Feedback::kCommandPos);
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
                                             Actuator::Feedback::kActualPos),
                         Actuator::Feedback::kActualPos);
@@ -1021,12 +1021,12 @@ void HebiThread::PublishState() {
     const auto actual_eff_map =
         GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualTorque);
 
-    const auto target_pos_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetPos);
-    const auto target_vel_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetVel);
-    const auto target_eff_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetTorque);
+    const auto command_pos_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandPos);
+    const auto command_vel_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandVel);
+    const auto command_eff_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandTorque);
 
     // Populate messages and publish
     for (int i = 0; i < n_actuators_; ++i) {
@@ -1040,13 +1040,13 @@ void HebiThread::PublishState() {
         state_msg_.velocity[i] = actual_vel * kDegToRad;
         state_msg_.effort[i] = actual_eff;
 
-        const double target_pos = target_pos_map.at(joint);
-        const double target_vel = target_vel_map.at(joint);
-        const double target_eff = target_eff_map.at(joint);
+        const double command_pos = command_pos_map.at(joint);
+        const double command_vel = command_vel_map.at(joint);
+        const double command_eff = command_eff_map.at(joint);
 
-        target_msg_.position[i] = target_pos * kDegToRad;
-        target_msg_.velocity[i] = target_vel * kDegToRad;
-        target_msg_.effort[i] = target_eff;
+        target_msg_.position[i] = command_pos * kDegToRad;
+        target_msg_.velocity[i] = command_vel * kDegToRad;
+        target_msg_.effort[i] = command_eff;
     }
 
 # if LIBRA_VERSION == 1

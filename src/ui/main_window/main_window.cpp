@@ -351,14 +351,14 @@ void MainWindow::ConfigureUi() {
 void MainWindow::InitializeElementMaps() {
     // Central joint
 #if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kCommandPos] =
         ui_->l_target_roll;
     feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualPos] =
         ui_->l_actual_roll;
     feedback_element_map_[Joint::Name::kRoll][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_roll;
 #elif LIBRA_VERSION == 2
-    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kCommandPos] =
         ui_->l_target_yaw;
     feedback_element_map_[Joint::Name::kYaw][Actuator::Feedback::kActualPos] =
         ui_->l_actual_yaw;
@@ -366,7 +366,7 @@ void MainWindow::InitializeElementMaps() {
         ui_->l_torque_yaw;
 #endif
 
-    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kCommandPos] =
         ui_->l_target_pitch;
     feedback_element_map_[Joint::Name::kPitch][Actuator::Feedback::kActualPos] =
         ui_->l_actual_pitch;
@@ -375,21 +375,21 @@ void MainWindow::InitializeElementMaps() {
 
     // Arm
 #if LIBRA_VERSION == 1
-    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kCommandPos] =
         ui_->l_target_j1;
     feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j1;
     feedback_element_map_[Joint::Name::kJ1][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j1;
 
-    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kCommandPos] =
         ui_->l_target_j2;
     feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j2;
     feedback_element_map_[Joint::Name::kJ2][Actuator::Feedback::kActualTorque] =
         ui_->l_torque_j2;
 
-    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kTargetPos] =
+    feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kCommandPos] =
         ui_->l_target_j3;
     feedback_element_map_[Joint::Name::kJ3][Actuator::Feedback::kActualPos] =
         ui_->l_actual_j3;
@@ -957,7 +957,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
             HandleMotionModeChanged(false);
         }
         if (ui_->l_motion_calibrated_val->text() == "...") {
-            HandleArmModelChanged(motion_controller_->IsCalibrated());
+            HandleArmModelChanged(motion_controller_->IsArmCalibrated());
         }
         if (ui_->l_motion_state_val->text() == "...") {
             HandleMovementStateChanged(false);

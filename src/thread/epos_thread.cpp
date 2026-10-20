@@ -311,7 +311,7 @@ void EposThread::run() {
         }
         // clang-format off
         emit ReportFeedback({{Joint::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
-                            Actuator::Feedback::kTargetPos);
+                            Actuator::Feedback::kCommandPos);
         // clang-format on
 
         if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) == 0) {
