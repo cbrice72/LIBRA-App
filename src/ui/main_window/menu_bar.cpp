@@ -54,7 +54,7 @@
 
 constexpr double kRadToDeg = 180.0 / M_PI;
 // TODO: guesses
-constexpr double kDefaultCalAngle = 20.0;           // first +, second − (deg)
+constexpr double kDefaultCalAngle = 20.0;           // first +, second - (deg)
 constexpr double kDefaultFrictionHalfWindow = 5.0;  // window is ± this (deg)
 constexpr double kMaxArmExtension = 100000.0;       // input limit (mm)
 #endif
@@ -486,10 +486,10 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
 
     logger_->Info(
         "Loaded calibration from: " + file_path.toStdString() + " (saved "
-        + record->saved_at + ", extension " + extension.toStdString()
+        + record->timestamp + ", extension " + extension.toStdString()
         + (record->note.empty() ? "" : ", note: " + record->note) + ")");
 
-    HandleArmModelChanged(motion_controller_->IsCalibrated());
+    HandleArmModelChanged(motion_controller_->IsArmCalibrated());
 }
 #endif
 

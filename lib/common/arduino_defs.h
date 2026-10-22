@@ -51,16 +51,16 @@ enum class State : uint8_t { kStopped = 0, kFilling, kDraining };
 #if LIBRA_VERSION == 1
 // - 2*(3L + 6L + 10L)
 
-constexpr double kFillRate = 2 * 0.129;   // L/s, TODO: measure w/ flow sensors
-constexpr double kDrainRate = 2 * 0.061;  // L/s, TODO: measure w/ flow sensors
+constexpr double kFillRate = 2 * 0.129;   // L/s, experimentally estimated
+constexpr double kDrainRate = 2 * 0.061;  // L/s, experimentally estimated
 constexpr double kCapacity = 38;          // L
 constexpr std::size_t kSideCount = 2;     // A and B
 #elif LIBRA_VERSION == 2
-// - 3L + 6L + 10L
+// - 10L + 10L + 6L
 
 constexpr double kFillRate = 0.129;    // L/s, TODO: measure w/ flow sensors
 constexpr double kDrainRate = 0.061;   // L/s, TODO: measure w/ flow sensors
-constexpr double kCapacity = 19;       // L
+constexpr double kCapacity = 26;       // L
 constexpr std::size_t kSideCount = 1;  // A only
 #endif
 

@@ -332,11 +332,11 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         double val = 0;
 
         // Retrieve value based on feedback type
-        if (type == Actuator::Feedback::kTargetPos) {
+        if (type == Actuator::Feedback::kCommandPos) {
             val = feedback->getPositionCommand()[i] * kRadToDeg;
-        } else if (type == Actuator::Feedback::kTargetVel) {
+        } else if (type == Actuator::Feedback::kCommandVel) {
             val = feedback->getVelocityCommand()[i] * kRadToDeg;
-        } else if (type == Actuator::Feedback::kTargetTorque) {
+        } else if (type == Actuator::Feedback::kCommandTorque) {
             val = feedback->getEffortCommand()[i];
         } else if (type == Actuator::Feedback::kActualPos) {
             val = feedback->getPosition()[i] * kRadToDeg;
@@ -597,7 +597,7 @@ void HebiThread::ReportMotionStatus() {
         }
     }
 
-    const bool calibrated = motion_controller_->IsCalibrated();
+    const bool calibrated = motion_controller_->IsArmCalibrated();
     if (arm_calibrated_.exchange(calibrated) != calibrated) {
         emit ArmModelChanged(calibrated);
     }
@@ -630,15 +630,14 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
                                          Eigen::VectorXd& cmd_acc,
                                          Eigen::VectorXd& cmd_eff) {
     constexpr double kNone = std::numeric_limits<double>::quiet_NaN();
-    const auto n = static_cast<std::size_t>(n_actuators_);
 
-    // Connect() normally sets these; guard against a first cycle that beats it
+    // Connect() normally sets these; safe defaults just in case this runs first
     if (pos_cmd_.size() != n_actuators_ || vel_cmd_.size() != n_actuators_) {
         pos_cmd_ = feedback_->getPosition();
         vel_cmd_ = Eigen::VectorXd::Zero(n_actuators_);
     }
 
-    // Free mode: send nothing to the pitch joint
+    // Free-spin mode: no need to send anything to the pitch joint
     if (free_mode_) {
         pos_cmd_.setConstant(kNone);
         vel_cmd_.setZero();
@@ -647,7 +646,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         return true;  // nothing to send
     }
 
-    // No trajectory, no reference (e.g., after Stop())
+    // Check for active trajectory, if none (idle) prepare for new trajectory
     bool trajectory_active = false;
     {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
@@ -660,31 +659,37 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
     const double dt_s = dt.count();
 
-    // Measurements and last cycle's reference, converted to joint space
-    Motion::MotionState state;
-    state.dt = dt_s;
-    state.pos.resize(n);
-    state.vel.resize(n);
-    state.torque_actuator.resize(n);
-    state.ref_vel.resize(n);
-    state.ref_acc.resize(n);
+    // Get actual and commanded (previous) values, in joint space
+    // (NOTE: NaN = joint not driven by HEBI)
+    Motion::ActualState actual;
+    actual.pos.assign(Motion::kNumJoints, kNone);
+    actual.vel.assign(Motion::kNumJoints, kNone);
+    actual.torque.assign(Motion::kNumJoints, kNone);
+    Motion::CommandedState commanded;
+    commanded.vel.assign(Motion::kNumJoints, kNone);
+    commanded.acc.assign(Motion::kNumJoints, kNone);
+
     for (int i = 0; i < n_actuators_; ++i) {
         const auto joint = JointFromActuator(enum_names_[i]);
+        if (joint == Joint::Name::kUndefined) {
+            continue;  // logged on construction
+        }
 
-        state.pos[i] = Joint::ActuatorToJointSimple(joint,
-                                                    feedback_->getPosition()[i]);
-        state.vel[i] = Joint::ActuatorToJointSimple(joint,
-                                                    feedback_->getVelocity()[i]);
-        state.torque_actuator[i] =
+        actual.pos[joint] =
+            Joint::ActuatorToJointSimple(joint, feedback_->getPosition()[i]);
+        actual.vel[joint] =
+            Joint::ActuatorToJointSimple(joint, feedback_->getVelocity()[i]);
+        actual.torque[joint] =
             Joint::ActuatorToJointSimple(joint, feedback_->getEffort()[i]);
-        state.ref_vel[i] = Joint::ActuatorToJointSimple(joint, cmd_vel[i]);
-        state.ref_acc[i] = Joint::ActuatorToJointSimple(joint, cmd_acc[i]);
+        commanded.vel[joint] = Joint::ActuatorToJointSimple(joint, cmd_vel[i]);
+        commanded.acc[joint] = Joint::ActuatorToJointSimple(joint, cmd_acc[i]);
     }
-    state.trajectory_active = trajectory_active;
 
-    const Motion::Libra2Command cmd = motion_controller_->Update(state);
-    if (cmd.mode.size() != n) {
-        // Motion controller already logged the problem; keep last command
+    const Motion::Libra2Command cmd =
+        motion_controller_->Update(dt_s, actual, commanded, trajectory_active);
+    if (cmd.mode.size() != Motion::kNumJoints
+        || cmd.ff_torque.size() != Motion::kNumJoints) {
+        // Motion controller logs the problem; just keep last position
         return group_->sendCommand(*command_);
     }
 
@@ -693,7 +698,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         emit ReportArmTorque(CwCommandToReport(*cmd.cw_command));
     }
 
-    // Stop requested by motion controller (friction sweep ended early)
+    // Deal with stop request
     if (cmd.stop_trajectory) {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
         trajectory_.reset();
@@ -701,55 +706,61 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         logger_->Info("Trajectory stopped by motion controller");
     }
 
-    // Move requested by motion controller (calibration, CW-primary, tandem CW-actuator)
-    if (cmd.move_to && cmd.move_to->size() == n) {
-        Eigen::VectorXd move_pos(n_actuators_);
+    // Deal with move request (calibration, CW-primary, tandem CW-actuator)
+    if (cmd.move_to && cmd.move_to->size() == Motion::kNumJoints) {
+        Eigen::VectorXd move_pos = feedback_->getPosition();  // unmapped stay
         for (int i = 0; i < n_actuators_; ++i) {
-            move_pos(i) = Actuator::JointToActuatorSimple(enum_names_[i],
-                                                          (*cmd.move_to)[i]);
+            const auto joint = JointFromActuator(enum_names_[i]);
+            if (joint != Joint::Name::kUndefined) {
+                move_pos(
+                    i) = Actuator::JointToActuatorSimple(enum_names_[i],
+                                                         (*cmd.move_to)[joint]);
+            }
         }
         StartTrajectory(feedback_->getPosition(), move_pos);
     }
 
-    // Sweep requested by motion controller (replaces any move above)
+    // Sweep requested (replaces above motion plan)
     if (cmd.sweep) {
         StartSweep(*cmd.sweep);
     }
 
     bool arm_free = false;
     for (int i = 0; i < n_actuators_; ++i) {
+        const auto joint = JointFromActuator(enum_names_[i]);
         arm_free = arm_free
-                   || (cmd.mode[i] == Motion::CommandMode::kEffortOnly);
+                   || (joint != Joint::Name::kUndefined
+                       && cmd.mode[joint] == Motion::CommandMode::kTorqueOnly);
     }
 
-    // Trajectory following at motion controller's playback rate, or holding
-    // (`trajectory_` re-checked under the lock, since `Stop()` may have run)
+    // Determine base trajectory based on mode
     const double rate = std::clamp(cmd.playback_rate, 0.0, 1.0);
+
     std::unique_lock<std::mutex> lock(trajectory_mutex_);
     if (arm_free) {
-        // CW moves the arm
-        // (reset previous trajectory since hand-off will request a new one later)
+        // --- MODE 1a: PASSIVE MOVEMENT ---
+
+        // Reset previous trajectory, hand-off will request a new one later
         trajectory_.reset();
         t_trajectory_s_ = 0.0;
         cmd_vel.setZero();
         cmd_acc.setZero();
         vel_cmd_.setZero();
+
     } else if (trajectory_ != nullptr) {
-        // --- MODE 1: TRAJECTORY FOLLOWING ---
+        // --- MODE 1b: ACTIVE MOVEMENT ---
 
-        // Clock stops while playback is paused and resumes where it was
         t_trajectory_s_ += dt_s * rate;
-
         if (t_trajectory_s_ < trajectory_->getDuration()) {
             trajectory_->getState(t_trajectory_s_, &cmd_pos, &cmd_vel, &cmd_acc);
 
-            // Playing at `rate` scales velocity by rate and acceleration by
-            // rate^2, keeping the reference consistent with position
+            // Moving at `rate` scales velocity acceleration, keeping the
+            // reference consistent with position
             cmd_vel *= rate;
             cmd_acc *= rate * rate;
             vel_cmd_ = cmd_vel;
         } else {
-            // Trajectory complete: hold exact final pose
+            // Trajectory complete: hold final pose
             trajectory_->getState(trajectory_->getDuration(), &cmd_pos,
                                   &cmd_vel, &cmd_acc);
             cmd_vel.setZero();
@@ -760,46 +771,54 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
             logger_->Info("Trajectory complete");
         }
         pos_cmd_ = cmd_pos;
+
     } else {
-        // --- MODE 2: POSITION HOLDING ---
+        // --- MODE 2: HOLD POSITION ---
 
         vel_cmd_.setZero();
     }
     lock.unlock();
 
-    // Per-joint command (NaN = no command)
-    // TODO: not confirmed for Strategy 4 with NaN position/velocity/effort;
-    //       verify on hardware (support the arm the first time)
+    // Craft command using base trajectory + any model-informed feedforward
+    // TODO: not yet verified IRL with NaN position/velocity/effort
     for (int i = 0; i < n_actuators_; ++i) {
-        if (cmd.mode[i] == Motion::CommandMode::kEffortOnly) {
+        const auto joint = JointFromActuator(enum_names_[i]);
+        if (joint == Joint::Name::kUndefined) {
+            cmd_eff(i) = kNone;
+            continue;
+        }
+
+        if (cmd.mode[joint] == Motion::CommandMode::kTorqueOnly) {
+            // CW-primary: free the arm so the CW can move it
             pos_cmd_(i) = kNone;
             vel_cmd_(i) = kNone;
         } else if (std::isnan(pos_cmd_(i))) {
-            // Just left effort-only mode: hold current pose
+            // Hand-off from CW-primary: hold position
             pos_cmd_(i) = feedback_->getPosition()[i];
         }
 
         // Effort feedforward
-        const auto& torque = cmd.torque_actuator_cmd[i];
-        cmd_eff(i) = torque ? Actuator::JointToActuatorSimple(enum_names_[i],
-                                                              *torque)
-                            : kNone;
+        const auto& ff_torque = cmd.ff_torque[joint];
+        cmd_eff(i) = ff_torque ? Actuator::JointToActuatorSimple(enum_names_[i],
+                                                                 *ff_torque)
+                               : kNone;
     }
+
     command_->setPosition(pos_cmd_);
     command_->setVelocity(vel_cmd_);
     command_->setEffort(cmd_eff);
 
-    // Periodic model log: motion controller's model vs. measurements
+    // Log motion controller's model vs. measurements
     t_diag_log_elapsed_s_ += dt_s;
     if (t_diag_log_elapsed_s_ >= kDiagnosticsPeriod) {
         t_diag_log_elapsed_s_ = 0.0;
 
         const auto& d = cmd.diagnostics;
         logger_->Debug("Model - m_cw=" + FormatOptional(d.cw_mass)
-                       + " kg, tau_ext,g=" + FormatOptional(d.torque_ext_g)
-                       + " Nm, m_cw,bal(target)=" + FormatOptional(d.cw_mass_tgt)
+                       + " kg, m_cw,bal(target)=" + FormatOptional(d.cw_mass_tgt)
                        + " kg, delta_m=" + FormatOptional(d.cw_mass_change)
-                       + " kg, tau_ext,g(target)="
+                       + " kg, tau_ext,g=" + FormatOptional(d.torque_ext_g)
+                       + " Nm, tau_ext,g(target)="
                        + FormatOptional(d.torque_ext_g_tgt) + " Nm");
     }
 
@@ -910,8 +929,8 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
 void HebiThread::SendFeedback() {
     // Report important statuses individually
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
-                                            Actuator::Feedback::kTargetPos),
-                        Actuator::Feedback::kTargetPos);
+                                            Actuator::Feedback::kCommandPos),
+                        Actuator::Feedback::kCommandPos);
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
                                             Actuator::Feedback::kActualPos),
                         Actuator::Feedback::kActualPos);
@@ -1002,12 +1021,12 @@ void HebiThread::PublishState() {
     const auto actual_eff_map =
         GetJointFeedbackMap(feedback_, Actuator::Feedback::kActualTorque);
 
-    const auto target_pos_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetPos);
-    const auto target_vel_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetVel);
-    const auto target_eff_map =
-        GetJointFeedbackMap(feedback_, Actuator::Feedback::kTargetTorque);
+    const auto command_pos_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandPos);
+    const auto command_vel_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandVel);
+    const auto command_eff_map =
+        GetJointFeedbackMap(feedback_, Actuator::Feedback::kCommandTorque);
 
     // Populate messages and publish
     for (int i = 0; i < n_actuators_; ++i) {
@@ -1021,13 +1040,13 @@ void HebiThread::PublishState() {
         state_msg_.velocity[i] = actual_vel * kDegToRad;
         state_msg_.effort[i] = actual_eff;
 
-        const double target_pos = target_pos_map.at(joint);
-        const double target_vel = target_vel_map.at(joint);
-        const double target_eff = target_eff_map.at(joint);
+        const double command_pos = command_pos_map.at(joint);
+        const double command_vel = command_vel_map.at(joint);
+        const double command_eff = command_eff_map.at(joint);
 
-        target_msg_.position[i] = target_pos * kDegToRad;
-        target_msg_.velocity[i] = target_vel * kDegToRad;
-        target_msg_.effort[i] = target_eff;
+        target_msg_.position[i] = command_pos * kDegToRad;
+        target_msg_.velocity[i] = command_vel * kDegToRad;
+        target_msg_.effort[i] = command_eff;
     }
 
 # if LIBRA_VERSION == 1
@@ -1195,12 +1214,20 @@ void HebiThread::Connect() {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
         t_trajectory_s_ = 0.0;
     }
+
     motion_controller_->Reset();
-    if (motion_controller_->GetNumJoints()
-        != static_cast<std::size_t>(n_actuators_)) {
-        emit ErrorThrown("HEBI - Motion controller joint count doesn't match "
-                         "the number of actuators; its commands will be "
-                         "ignored!");
+    for (const auto& joint : motion_controller_->GetJoints()) {
+        bool driven = false;
+        for (int i = 0; i < n_actuators_; ++i) {
+            driven = driven || (JointFromActuator(enum_names_[i]) == joint);
+        }
+
+        if (!driven) {
+            emit ErrorThrown(
+                "HEBI - No connected actuator drives the "
+                + QString::fromStdString(Joint::NameEnumToString(joint))
+                + " joint; motion controller commands will be ignored!");
+        }
     }
 #endif
 
@@ -1281,13 +1308,16 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     group_->getNextFeedback(*feedback_);  // use latest position to avoid jump
     StartTrajectory(feedback_->getPosition(), target_pos);
 #elif LIBRA_VERSION == 2
-    // Motion controller does the work and requests the movement. It works in
-    // joint space (since it relies on specific kinematics)
-    std::vector<double> target_joint(n_actuators_);
+    // Motion controller does the work and requests the movement
+    // (it works in joint space since it relies on specific kinematics)
+    std::vector<double> target_joint(Motion::kNumJoints,
+                                     std::numeric_limits<double>::quiet_NaN());
     for (int i = 0; i < n_actuators_; ++i) {
-        target_joint[i] = Joint::ActuatorToJointSimple(JointFromActuator(
-                                                           enum_names_[i]),
-                                                       target_pos(i));
+        const auto joint = JointFromActuator(enum_names_[i]);
+        if (joint != Joint::Name::kUndefined) {
+            target_joint[joint] = Joint::ActuatorToJointSimple(joint,
+                                                               target_pos(i));
+        }
     }
     motion_controller_->SetTarget(target_joint);
 #endif

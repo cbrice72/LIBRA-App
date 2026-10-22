@@ -87,9 +87,9 @@ enum Name : uint8_t {
  * @see AbstractActuatorThread::ReportStatus
  */
 enum class Feedback : uint8_t {
-    kTargetPos = 0,
-    kTargetVel,
-    kTargetTorque,
+    kCommandPos = 0,
+    kCommandVel,
+    kCommandTorque,
     kActualPos,
     kActualVel,
     kActualTorque
@@ -182,12 +182,12 @@ inline std::string TypeEnumToString(const Type& type) {
  */
 inline std::string FeedbackEnumToString(const Feedback& feedback) {
     switch (feedback) {
-        case Feedback::kTargetPos:
-            return "TargetPos";
-        case Feedback::kTargetVel:  // unused in GUI
-            return "TargetVel";
-        case Feedback::kTargetTorque:  // unused in GUI
-            return "TargetTorque";
+        case Feedback::kCommandPos:
+            return "CommandPos";
+        case Feedback::kCommandVel:  // unused in GUI
+            return "CommandVel";
+        case Feedback::kCommandTorque:  // unused in GUI
+            return "CommandTorque";
         case Feedback::kActualPos:
             return "ActualPos";
         case Feedback::kActualVel:  // unused in GUI

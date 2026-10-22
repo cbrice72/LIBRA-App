@@ -10,6 +10,7 @@ set(SRC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/actuator_defs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/arduino_defs.h
     ${CMAKE_CURRENT_SOURCE_DIR}/joint_defs.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/motion_defs.h
 )
 
 add_library(common INTERFACE ${SRC_FILES})
