@@ -407,8 +407,8 @@ void WaterController::UpdateFlowRate(const Water::Side& side,
     }
 
     Tank& tank = tanks_[index];
-    tank.fill_rate = Water::kFillRate;
-    tank.drain_rate = Water::kDrainRate;
+    tank.fill_rate = 0;   // default: Water::kFillRate;
+    tank.drain_rate = 0;  // default: Water::kDrainRate;
 
     if (flow > 0.0) {
         tank.fill_rate = flow / 1000.0;  // mL/s -> L/s
