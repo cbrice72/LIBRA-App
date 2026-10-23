@@ -45,17 +45,21 @@ FlowController::FlowController(QObject* parent, const bool& debug_mode)
  * @brief Reads the current flow values (in L/s) from the FlowArduino.
  */
 void FlowController::OnUpdate() {
-    // Read data from serial port and prepare for parsing
-    const QByteArray data = serial_port_->readLine();
-    if (data.isEmpty()) {
-        return;
+    // Read all lines (in case loops misalign); keep only most recent
+    QString str_data;
+    while (serial_port_->canReadLine()) {
+        const QString line = QString::fromUtf8(serial_port_->readLine())
+                                 .trimmed();
+        if (line.isEmpty() || line.startsWith('?')) {
+            continue;  // skip blanks and device-ID query replies
+        }
+        str_data = line;
     }
-
-    const QString str_data = QString::fromUtf8(data).trimmed();
     if (str_data.isEmpty()) {
         return;
     }
 
+    // Prepare data for parsing
     const QStringList str_values = str_data.split(',');
     if (str_values.size() != 2) {
         logger_->Warn("Malformed flow data payload (\"" + str_data.toStdString()
