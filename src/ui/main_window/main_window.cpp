@@ -614,6 +614,8 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::StartFrictionCalibration);
     connect(this, &MainWindow::CancelHebiCal,  // cancel calibration
             hebi_thread_, &HebiThread::CancelCalibration);
+    connect(this, &MainWindow::EnableModelLogging,  // periodic model log
+            hebi_thread_, &HebiThread::EnableModelLogging);
 #endif
 
     // MainWindow slots

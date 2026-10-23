@@ -103,6 +103,8 @@ class HebiThread : public AbstractActuatorThread
     void StartTwoAngleCalibration(const double& deg_a, const double& deg_b);
     void StartFrictionCalibration(const double& deg_a, const double& deg_b);
     void CancelCalibration();
+
+    void EnableModelLogging(const bool& enabled);
 #endif
 
   signals:
@@ -215,7 +217,8 @@ class HebiThread : public AbstractActuatorThread
     std::atomic<bool> calibration_running_{false};
     std::atomic<bool> arm_calibrated_{false};
 
-    double t_diag_log_elapsed_s_{0.0};  // s since last log (for throttling)
+    std::atomic<bool> diag_log_en_{true};  // periodic model log
+    double t_diag_log_elapsed_s_{0.0};     // s since last log (for throttling)
 #endif
 
 #ifdef BUILD_WITH_ROS2

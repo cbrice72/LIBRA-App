@@ -136,6 +136,8 @@ class MainWindow : public QMainWindow {
     void StartHebiTwoAngleCal(const double& deg_a, const double& deg_b);
     void StartHebiFrictionCal(const double& deg_a, const double& deg_b);
     void CancelHebiCal();
+
+    void EnableModelLogging(const bool& enabled);
 #endif
 
     // EPOS (Maxon)
@@ -172,6 +174,7 @@ class MainWindow : public QMainWindow {
 
     void on_a_motion_calibration_save_triggered();
     void on_a_motion_calibration_load_triggered();
+    void on_a_motion_model_logging_toggled(bool checked);
 #endif
 
     // Actuators Menu

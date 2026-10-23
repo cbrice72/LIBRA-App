@@ -491,6 +491,16 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
 
     HandleArmModelChanged(motion_controller_->IsArmCalibrated());
 }
+
+/**
+ * @brief Event handler for "Motion Control" menu action "Log model values".
+ *        Turns the periodic model log on or off.
+ *
+ * @param checked Whether to log the model's values
+ */
+void MainWindow::on_a_motion_model_logging_toggled(bool checked) {
+    emit EnableModelLogging(checked);
+}
 #endif
 
 //------------------------------------------------------------------------------

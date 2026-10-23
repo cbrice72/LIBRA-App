@@ -810,7 +810,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
     // Log motion controller's model vs. measurements
     t_diag_log_elapsed_s_ += dt_s;
-    if (t_diag_log_elapsed_s_ >= kDiagnosticsPeriod) {
+    if (diag_log_en_ && t_diag_log_elapsed_s_ >= kDiagnosticsPeriod) {
         t_diag_log_elapsed_s_ = 0.0;
 
         const auto& d = cmd.diagnostics;
@@ -1618,5 +1618,17 @@ void HebiThread::CancelCalibration() {
         return;
     }
     motion_controller_->CancelCalibration();  // logs by itself
+}
+
+/**
+ * @brief Turns the periodic log of the motion controller's model values on or
+ *        off.
+ *
+ * @param enabled Whether to log the model values
+ */
+void HebiThread::EnableModelLogging(const bool& enabled) {
+    diag_log_en_ = enabled;
+    logger_->Info("Model value logging "
+                  + std::string(enabled ? "enabled" : "disabled"));
 }
 #endif

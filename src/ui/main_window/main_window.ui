@@ -3654,6 +3654,7 @@
     <addaction name="separator"/>
     <addaction name="a_motion_calibration_save"/>
     <addaction name="a_motion_calibration_load"/>
+    <addaction name="a_motion_model_logging"/>
    </widget>
    <widget class="QMenu" name="m_actuators">
     <property name="title">
@@ -4021,6 +4022,20 @@
    </property>
    <property name="statusTip">
     <string>Load an arm model and friction from a saved file</string>
+   </property>
+  </action>
+  <action name="a_motion_model_logging">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Log model values</string>
+   </property>
+   <property name="statusTip">
+    <string>Periodically write the model's predictions (CW mass, gravity torque) to the terminal</string>
    </property>
   </action>
   <action name="a_water_flow_connect">
