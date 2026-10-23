@@ -1096,6 +1096,8 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
  * @note Doesn't need an arm or CW model; gravity cancels between the up and
  *       down sweeps.
  *
+ * @note No feedforward during the sweeps; the PID loop alone drives the arm.
+ *
  * @note Isolates the friction component by averaging the up and down sweeps,
  *       which cancels the gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
@@ -1504,6 +1506,8 @@ Motion::Libra2Command Libra2MotionController::Update(
     const double theta = actual.pos[kPitchIdx];
     const double actual_vel = actual.vel[kPitchIdx];
     const double actual_torque = actual.torque[kPitchIdx];
+    const double ref_vel = commanded.vel[kPitchIdx];
+    const double ref_acc = commanded.acc[kPitchIdx];
     trajectory_active_ = trajectory_active;
 
     // Eq. 28: CW mass from latest volume
@@ -1584,20 +1588,9 @@ Motion::Libra2Command Libra2MotionController::Update(
                 }
             }
 
-            if (model_ready) {
-                const double torque_ext_g = ComputeNetGravTorque(theta,
-                                                                 *cw_mass_);
-                const double inertia = inertia_ff_en_ ? inertia_ : 0.0;
-                const double inertia_rate = inertia_ff_en_ ? inertia_rate_
-                                                           : 0.0;
-                command.ff_torque[kPitchIdx] =
-                    Libra2Model::FeedforwardTorque(inertia, inertia_rate,
-                                                   friction_viscous_,
-                                                   friction_coulomb_,
-                                                   commanded.acc[kPitchIdx],
-                                                   commanded.vel[kPitchIdx],
-                                                   torque_ext_g);
-            }
+            command.ff_torque[kPitchIdx] = ModelFeedforward(theta, ref_vel,
+                                                            ref_acc,
+                                                            model_ready);
         }
     }
 
@@ -1620,6 +1613,36 @@ Motion::Libra2Command Libra2MotionController::Update(
     command.diagnostics = ComputeDiagnostics(theta, target);
 
     return command;
+}
+
+/**
+ * @brief Computes the actuator torque feedforward (Nm) for the commanded motion
+ *        (Eq. 37).
+ *
+ * @param theta Actual angle, θ (rad)
+ * @param ref_vel Reference velocity, θ̇_ref (rad/s)
+ * @param ref_acc Reference acceleration, θ̈_ref (rad/s²)
+ * @param model_ready Whether the arm model and CW mass are known; if not, the
+ *                    gravity term is left out (PID loop and CW handle it)
+ *
+ * @note Friction and inertia terms always apply, so a move gets the effort to
+ *       overcome friction even before the arm model is calibrated.
+ *
+ * @see Libra2Model::FeedforwardTorque
+ */
+double Libra2MotionController::ModelFeedforward(const double& theta,
+                                                const double& ref_vel,
+                                                const double& ref_acc,
+                                                const bool& model_ready) const {
+    const double torque_ext_g = model_ready
+                                    ? ComputeNetGravTorque(theta, *cw_mass_)
+                                    : 0.0;
+    const double inertia = inertia_ff_en_ ? inertia_ : 0.0;
+    const double inertia_rate = inertia_ff_en_ ? inertia_rate_ : 0.0;
+
+    return Libra2Model::FeedforwardTorque(inertia, inertia_rate,
+                                          friction_viscous_, friction_coulomb_,
+                                          ref_acc, ref_vel, torque_ext_g);
 }
 
 /**

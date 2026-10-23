@@ -223,6 +223,11 @@ class Libra2MotionController : public AbstractMotionController {
     bool RunCwPrimary(const double& theta, const double& theta_tgt,
                       Motion::Libra2Command& command);
 
+    [[nodiscard]] double ModelFeedforward(const double& theta,
+                                          const double& ref_vel,
+                                          const double& ref_acc,
+                                          const bool& model_ready) const;
+
     [[nodiscard]] Motion::Libra2Diagnostics ComputeDiagnostics(
         const double& theta, const std::optional<double>& theta_tgt) const;
 
