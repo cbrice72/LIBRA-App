@@ -44,9 +44,8 @@ constexpr double kCwBracketHeight = 0.0427;   // CW hang points (m)
 
 // Model Parameters
 
-// TODO: measure r_P (0 disables calibration and feedforward)
-constexpr double kCwPivotDist = 0.0;   // r_P at 0 liters, A (m)
-constexpr double kCwPivotSlope = 0.0;  // r_P change per liter, B (m/L)
+constexpr double kCwPivotDist = 0.7777;      // r_P at 0 liters, A (m)
+constexpr double kCwPivotSlope = -0.001155;  // r_P change per liter, B (m/L)
 constexpr double kCwHangOffset = kCwBracketHeight
                                  - kPitchJointHeight;  // q_P (m)
 constexpr double kArmInertia =
