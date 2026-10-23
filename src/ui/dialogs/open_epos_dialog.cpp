@@ -60,8 +60,11 @@ OpenEposDialog::OpenEposDialog(QWidget* parent)
         // Get names of other devices on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetDeviceNameSelection(kMaxonFalse, name, kMaxCharBufSize,
-                                       &end_of_sel, &err_code);
+            if (VCS_GetDeviceNameSelection(kMaxonFalse, name, kMaxCharBufSize,
+                                           &end_of_sel, &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
             devices << name;
         }
     }
@@ -122,6 +125,8 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+    params_.is_set = false;
+    ui_->pb_confirm->setEnabled(false);
 
     // Get name of first protocol used on network
     QStringList protocols;
@@ -138,10 +143,13 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
         // Get names of other protocols on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetProtocolStackNameSelection(params_.device_name.data(),
-                                              kMaxonFalse, name,
-                                              kMaxCharBufSize, &end_of_sel,
-                                              &err_code);
+            if (VCS_GetProtocolStackNameSelection(params_.device_name.data(),
+                                                  kMaxonFalse, name,
+                                                  kMaxCharBufSize, &end_of_sel,
+                                                  &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
             protocols << name;
         }
     }
@@ -190,6 +198,8 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+    params_.is_set = false;
+    ui_->pb_confirm->setEnabled(false);
 
     // Get name of first interface listed on network
     QStringList interfaces;
@@ -207,10 +217,13 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
         // Get names of other interfaces on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetInterfaceNameSelection(params_.device_name.data(),
-                                          params_.protocol_name.data(),
-                                          kMaxonFalse, name, kMaxCharBufSize,
-                                          &end_of_sel, &err_code);
+            if (VCS_GetInterfaceNameSelection(params_.device_name.data(),
+                                              params_.protocol_name.data(),
+                                              kMaxonFalse, name, kMaxCharBufSize,
+                                              &end_of_sel, &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
             interfaces << name;
         }
     }
@@ -256,6 +269,8 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+    params_.is_set = false;
+    ui_->pb_confirm->setEnabled(false);
 
     // Get name of first port open on network
     QStringList ports;
@@ -273,11 +288,14 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
         // Get names of other ports on the network, if any
         while (end_of_sel == 0) {
             memset(name, '\0', kMaxCharBufSize);
-            VCS_GetPortNameSelection(params_.device_name.data(),
-                                     params_.protocol_name.data(),
-                                     params_.interface_name.data(), kMaxonFalse,
-                                     name, kMaxCharBufSize, &end_of_sel,
-                                     &err_code);
+            if (VCS_GetPortNameSelection(params_.device_name.data(),
+                                         params_.protocol_name.data(),
+                                         params_.interface_name.data(),
+                                         kMaxonFalse, name, kMaxCharBufSize,
+                                         &end_of_sel, &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
             ports << name;
         }
     }
@@ -319,6 +337,8 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+    params_.is_set = false;
+    ui_->pb_confirm->setEnabled(false);
 
     // Get first available baud rate for port
     QStringList bauds;
@@ -337,11 +357,14 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
         // Get other baud rates for port, if any
         while (end_of_sel == 0) {
             rate = 0;
-            VCS_GetBaudrateSelection(params_.device_name.data(),
-                                     params_.protocol_name.data(),
-                                     params_.interface_name.data(),
-                                     params_.port_name.data(), kMaxonFalse,
-                                     &rate, &end_of_sel, &err_code);
+            if (VCS_GetBaudrateSelection(params_.device_name.data(),
+                                         params_.protocol_name.data(),
+                                         params_.interface_name.data(),
+                                         params_.port_name.data(), kMaxonFalse,
+                                         &rate, &end_of_sel, &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
             bauds << QString::number(rate);
         }
     }

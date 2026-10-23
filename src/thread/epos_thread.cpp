@@ -310,7 +310,7 @@ void EposThread::run() {
             continue;
         }
         // clang-format off
-        emit ReportFeedback({{Joint::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg}},
+        emit ReportFeedback({{Joint::Name::kYaw, Joint::ActuatorToJointSimple(Joint::Name::kYaw, static_cast<int32_t>(t_pos) * kIncToDeg)}},
                             Actuator::Feedback::kCommandPos);
         // clang-format on
 
@@ -324,7 +324,7 @@ void EposThread::run() {
             continue;
         }
         // clang-format off
-        emit ReportFeedback({{Joint::Name::kYaw, a_pos * kIncToDeg}},
+        emit ReportFeedback({{Joint::Name::kYaw, Joint::ActuatorToJointSimple(Joint::Name::kYaw, a_pos * kIncToDeg)}},
                             Actuator::Feedback::kActualPos);
         // clang-format on
 
@@ -395,10 +395,14 @@ void EposThread::Connect() {
         while (!baud_is_valid && end_of_sel == 0) {
             // Query controller for next rate
             valid_rate = 0;
-            VCS_GetBaudrateSelection(device_name_.data(), protocol_name_.data(),
-                                     interface_name_.data(), port_name_.data(),
-                                     kEposFalse, &valid_rate, &end_of_sel,
-                                     &err_code);
+            if (VCS_GetBaudrateSelection(device_name_.data(),
+                                         protocol_name_.data(),
+                                         interface_name_.data(),
+                                         port_name_.data(), kEposFalse,
+                                         &valid_rate, &end_of_sel, &err_code)
+                == 0) {
+                break;  // avoid looping forever on a failed query
+            }
 
             // In case this check fails, build list of valid rates to output
             valid_str << std::to_string(valid_rate) << " ";
@@ -510,17 +514,18 @@ void EposThread::Disconnect() {
 
     // Close the connection via the EPOS API
     uint err_code = 0;
-    if (VCS_CloseDevice(handle_, &err_code) == 0) {
+    const bool closed = VCS_CloseDevice(handle_, &err_code) != 0;
+
+    // Void our class handle (even on error, to avoid a dangling pointer)
+    handle_ = nullptr;
+    emit Connected(false);
+
+    if (!closed) {
         emit ErrorThrown("EPOS - Problem closing device!\n"
                          + util::GetFormattedEposErrTxt("VCS_CloseDevice",
                                                         err_code, kNodeID));
-        handle_ = nullptr;  // avoid dangling pointer in case of error
         return;
     }
-
-    // Void our class handle
-    handle_ = nullptr;
-    emit Connected(false);
 
     logger_->Info("Disconnected from actuator");
 }
@@ -561,13 +566,17 @@ void EposThread::Stop() {
         return;  // do nothing
     }
 
-    // Reset class target variables to current position
+    // NOTE: Errors are collected and reported after stopping, since the error
+    //       popup would delay the stop
+    QString err;
     uint err_code = 0;
+
+    // Reset class target variables to current position
     if (VCS_GetPositionIs(handle_, kNodeID, &target_inc_, &err_code) == 0) {
-        emit ErrorThrown("EPOS - Failed to retrieve actual position!\n"
-                         + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
-                                                        err_code, kNodeID));
-        return;
+        err += "EPOS - Failed to retrieve actual position!\n"
+               + util::GetFormattedEposErrTxt("VCS_GetPositionIs", err_code,
+                                              kNodeID)
+               + "\n\n";
     }
     last_target_inc_ = target_inc_;  // disables MoveToPosition block in run()
 
@@ -575,19 +584,21 @@ void EposThread::Stop() {
     if (VCS_SetPositionProfile(handle_, kNodeID, kProfileVel, kProfileAcc,
                                kEmergencyProfileDec, &err_code)
         == 0) {
-        emit ErrorThrown(
-            "EPOS - Couldn't set emergency deceleration profile!\n"
-            + util::GetFormattedEposErrTxt("VCS_SetPositionProfile", err_code,
-                                           kNodeID));
-        return;
+        err += "EPOS - Couldn't set emergency deceleration profile!\n"
+               + util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
+                                              err_code, kNodeID)
+               + "\n\n";
+        // ... even if this fails, don't return; try to stop the actuator
     }
 
     // Stop the actuator via the EPOS API
     if (VCS_HaltPositionMovement(handle_, kNodeID, &err_code) == 0) {
-        emit ErrorThrown(
-            "EPOS - Couldn't stop actuator!\n"
-            + util::GetFormattedEposErrTxt("VCS_HaltPositionMovement", err_code,
-                                           kNodeID));
+        err += "EPOS - Couldn't stop actuator!\n"
+               + util::GetFormattedEposErrTxt("VCS_HaltPositionMovement",
+                                              err_code, kNodeID);
+        // This is the most critical error of the function, so immediately throw
+        // an error popup and return
+        emit ErrorThrown(err);
         return;
     }
 
@@ -595,10 +606,13 @@ void EposThread::Stop() {
     if (VCS_SetPositionProfile(handle_, kNodeID, kProfileVel, kProfileAcc,
                                kProfileDec, &err_code)
         == 0) {
-        emit ErrorThrown(
-            "EPOS - Couldn't restore movement profile!\n"
-            + util::GetFormattedEposErrTxt("VCS_SetPositionProfile", err_code,
-                                           kNodeID));
+        err += "EPOS - Couldn't restore movement profile!\n"
+               + util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
+                                              err_code, kNodeID);
+    }
+
+    if (!err.isEmpty()) {
+        emit ErrorThrown(err.trimmed());
         return;
     }
 
