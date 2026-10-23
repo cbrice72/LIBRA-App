@@ -50,7 +50,7 @@ const float SENSOR_MIN_FLOW_MLPS = (SENSOR_RANGE_MIN_LPM / 60.0)
                                    * 1000.0;  // milliliters/second
 const float SENSOR_MAX_FLOW_MLPS = (SENSOR_RANGE_MAX_LPM / 60.0) * 1000.0;
 
-const float RESISTOR_OHMS = 250.0;  // see calculation in "MATH" comment above
+const float RESISTOR_OHMS = 200.0;  // see calculation in "MATH" comment above
 
 const float ADC_REF_VOLTAGE = 4.3;    // Arduino Nano Every stable logic level
 const float ADC_RESOLUTION = 1024.0;  // 10-bit ADC
