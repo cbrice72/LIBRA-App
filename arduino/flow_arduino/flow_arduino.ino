@@ -22,7 +22,7 @@
 const long BAUD_RATE = 115200;
 const char DEVICE_ID[] = "flow";
 
-const float LOOP_PERIOD_MS = 500;  // 2 Hertz
+const float LOOP_PERIOD_MS = 250;  // 4 Hertz
 const float FAULT_THRESHOLD_A =
     0.0020;  // Amps; low flow cut is 5% of FS (full scale) = 0.0025 A,
              // plus slightly lower to account for variability

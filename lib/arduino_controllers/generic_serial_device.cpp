@@ -26,7 +26,7 @@
 
 // Thread Timer Intervals
 
-constexpr int kUpdateIntervalMs = 500;      // ms (2 Hz)
+constexpr int kUpdateIntervalMs = 250;      // ms (4 Hz)
 constexpr int kReconnectIntervalMs = 3000;  // ms (0.33 Hz)
 
 //------------------------------------------------------------------------------
