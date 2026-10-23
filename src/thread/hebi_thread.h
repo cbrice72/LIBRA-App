@@ -83,6 +83,7 @@ class HebiThread : public AbstractActuatorThread
     void Stop() override;
 
     void LoadGains(const QString& file_path);
+    void LoadSafety(const QString& file_path);
     void StartHebiLog();
     void StopHebiLog();
 

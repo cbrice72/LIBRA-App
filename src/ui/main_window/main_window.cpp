@@ -586,6 +586,8 @@ void MainWindow::InitializeThreads() {
 
     connect(this, &MainWindow::LoadHebiGains,  // load new gains
             hebi_thread_, &HebiThread::LoadGains);
+    connect(this, &MainWindow::LoadHebiSafety,  // load new safety limits
+            hebi_thread_, &HebiThread::LoadSafety);
     connect(ui_->a_hebi_log_start, &QAction::triggered,  // start new hebilog
             hebi_thread_, &HebiThread::StartHebiLog);
     connect(ui_->a_hebi_log_stop, &QAction::triggered,  // stop current hebilog
@@ -939,6 +941,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     ui_->a_hebi_disconnect->setEnabled(connected);
 
     ui_->a_hebi_load_gains->setEnabled(connected);
+    ui_->a_hebi_load_safety->setEnabled(connected);
     ui_->a_hebi_log_start->setEnabled(connected);
     ui_->a_hebi_log_stop->setEnabled(connected);
 

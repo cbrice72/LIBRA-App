@@ -576,6 +576,29 @@ void MainWindow::on_a_hebi_load_gains_triggered() {
 }
 
 /**
+ * @brief Event handler for "Actuators/HEBI" menu action "Load new safety
+ *        limits...". Opens a file dialog to select and load a new safety file.
+ */
+void MainWindow::on_a_hebi_load_safety_triggered() {
+    if (hebi_thread_ == nullptr) {
+        logger_->Warn("Can't load safety limits; HEBI thread not available");
+        return;
+    }
+
+    QString file_path = QFileDialog::getOpenFileName(this,
+                                                     "Select HEBI Safety File",
+                                                     "./bin/shared/hebi/",
+                                                     "XML Files (*.xml)");
+
+    if (file_path.isEmpty()) {
+        logger_->Debug("Safety file selection cancelled by user");
+        return;
+    }
+
+    emit LoadHebiSafety(file_path);
+}
+
+/**
  * @brief Event handler for "Actuators/HEBI" menu action "Override pos. limits".
  *        Toggles input SpinBox and Slider limits.
  */

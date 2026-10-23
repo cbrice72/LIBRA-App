@@ -1372,6 +1372,37 @@ void HebiThread::LoadGains(const QString& file_path) {
 }
 
 /**
+ * @brief Loads new safety limits for the connected actuators.
+ *
+ * @param file_path Path to an XML safety parameters file
+ *
+ * @note The file's velocity limit (if any) also becomes the trajectory speed
+ *       cap, from the next trajectory onward.
+ */
+void HebiThread::LoadSafety(const QString& file_path) {
+    if (group_ == nullptr) {
+        emit ErrorThrown("HEBI - Can't load safety limits; not connected!");
+        return;
+    }
+
+    hebi::GroupCommand safety_cmd(group_->size());
+    if (!safety_cmd.readSafetyParameters(file_path.toStdString())) {
+        emit ErrorThrown("HEBI - Failed to load safety limits from: "
+                         + file_path);
+        return;
+    }
+
+    if (!group_->sendCommandWithAcknowledgement(safety_cmd, kTimeout)) {
+        emit ErrorThrown(
+            "HEBI - Didn't receive acknowledgement from safety update!");
+        return;
+    }
+
+    logger_->Info("Successfully loaded safety limits from: "
+                  + file_path.toStdString());
+}
+
+/**
  * @brief Starts HEBI logging.
  *
  * @note Hebilog file names default to the following format:

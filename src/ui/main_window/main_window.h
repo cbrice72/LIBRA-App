@@ -122,6 +122,7 @@ class MainWindow : public QMainWindow {
 
     void CommandHebi(const std::vector<double>& deg);
     void LoadHebiGains(const QString& file_path);
+    void LoadHebiSafety(const QString& file_path);
     void UpdateHebiTorqueCompBounds(const double& lower_bound,
                                     const double& upper_bound);
 
@@ -184,6 +185,7 @@ class MainWindow : public QMainWindow {
 #endif
 
     void on_a_hebi_load_gains_triggered();
+    void on_a_hebi_load_safety_triggered();
     void on_a_hebi_override_limits_toggled(bool checked);
 
 #if LIBRA_VERSION == 1
