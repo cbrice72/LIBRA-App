@@ -8,9 +8,9 @@
     <max_limit>1.48</max_limit>
   </position>
   <velocity>
-    <!-- 0.5 rad ~= 28 deg/s (DEFAULT) -->
-    <min_limit>-0.5</min_limit>
-    <max_limit>0.5</max_limit>
+    <!-- 0.35 rad ~= 20 deg/s -->
+    <min_limit>-0.35</min_limit>
+    <max_limit>0.35</max_limit>
   </velocity>
   <effort>
     <!-- For X8-16: Cont. Torque = 16 Nm, Peak Torque = 38 Nm -->
