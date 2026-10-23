@@ -193,6 +193,7 @@ adobe/*
 **/install/
 
 # Local CMake preset overrides
+.qtcreator/
 CMakeUserPresets.json
 
 # Doxygen-generated files
