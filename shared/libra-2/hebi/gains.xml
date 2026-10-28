@@ -2,12 +2,12 @@
 <group_gains>
   <control_strategy>4</control_strategy>
   <position>
-    <kp>200</kp>
-    <ki>0.5</ki>
+    <kp>400</kp>
+    <ki>20</ki>
     <kd>5</kd>
     <feed_forward>0</feed_forward>
     <dead_zone>0</dead_zone>
-    <i_clamp>1</i_clamp>
+    <i_clamp>8</i_clamp>
     <punch>0</punch>
     <min_target>-80</min_target>
     <max_target>80</max_target>
@@ -18,7 +18,7 @@
     <d_on_error>1</d_on_error>
   </position>
   <velocity>
-    <kp>0.05</kp>
+    <kp>0.2</kp>
     <ki>0.01</ki>
     <kd>0</kd>
     <feed_forward>1</feed_forward>
@@ -34,7 +34,7 @@
     <d_on_error>1</d_on_error>
   </velocity>
   <effort>
-    <kp>0</kp>
+    <kp>0.1</kp>
     <ki>0</ki>
     <kd>0</kd>
     <feed_forward>1</feed_forward>
