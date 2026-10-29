@@ -9,6 +9,7 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
+#include <array>
 #include <cmath>
 
 // Other Library Headers
@@ -152,7 +153,6 @@ QString FindPortForDevice(const QString& expected_id,
     return {};
 }
 
-#if LIBRA_VERSION == 2
 /**
  * @brief Sets up an OK/Cancel dialog with an explanation above a form; the
  *        caller adds the form's rows.
@@ -185,6 +185,7 @@ QFormLayout* SetUpFormDialog(QDialog& dialog, const QString& title,
     return form;
 }
 
+#if LIBRA_VERSION == 2
 /**
  * @brief Makes a spin box for a pitch angle (deg, up = +).
  *

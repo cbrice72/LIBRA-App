@@ -3622,8 +3622,7 @@
      <property name="title">
       <string>Advanced</string>
      </property>
-     <addaction name="a_water_set_empty"/>
-     <addaction name="a_water_set_full"/>
+     <addaction name="a_water_set_mass"/>
     </widget>
     <addaction name="a_water_cw_connect"/>
     <addaction name="a_water_cw_disconnect"/>
