@@ -1090,13 +1090,13 @@ void MainWindow::HandleActuatorStatus(const QString& status,
  * @param cw_primary true if CW moves the arm and actuator takes over near
  *                   target, false if CW and actuator move the arm together.
  *
- * @note Motion controller refuses CW-primary until the arm is calibrated.
+ * @note Motion controller refuses CW Primary until the arm is calibrated.
  */
 void MainWindow::HandleMotionModeChanged(const bool& cw_primary) {
     const QSignalBlocker blocker(ui_->pb_cw_primary);  // don't re-emit
     ui_->pb_cw_primary->setChecked(cw_primary);
 
-    ui_->l_motion_mode_val->setText(cw_primary ? "CW-primary" : "Tandem");
+    ui_->l_motion_mode_val->setText(cw_primary ? "CW Primary" : "Tandem");
 }
 
 /**

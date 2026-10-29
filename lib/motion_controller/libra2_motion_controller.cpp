@@ -747,7 +747,7 @@ Libra2MotionController::Libra2MotionController(
  *
  * @param mode Mode to use from next target onward
  *
- * @note A mode change may be refused (e.g., CW-primary needs valid/non-zero arm
+ * @note A mode change may be refused (e.g., CW Primary needs valid/non-zero arm
  *       and CW models, and no move in progress). Switching to Tandem is always
  *       accepted.
  */
@@ -757,19 +757,19 @@ bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
     // Validate mode change
     if (mode == Motion::MotionMode::kCwPrimary
         && !(arm_calibrated_ && cw_model_.IsValid())) {
-        logger_->Warn("CW-primary mode needs a calibrated arm model and a "
+        logger_->Warn("CW Primary mode needs a calibrated arm model and a "
                       "valid CW model; staying in the current mode");
         return false;
     }
     if (mode == Motion::MotionMode::kCwPrimary && IsMovingLocked()) {
-        logger_->Warn("Can't switch to CW-primary while the arm is moving; "
+        logger_->Warn("Can't switch to CW Primary while the arm is moving; "
                       "staying in the current mode");
         return false;
     }
 
     // Ensure safe transition
     if (cw_phase_ == CwPhase::kCwMoving) {
-        logger_->Warn("Left CW-primary while the CW was moving the arm; "
+        logger_->Warn("Left CW Primary while the CW was moving the arm; "
                       "handing off to the actuator");
 
         cw_phase_ = CwPhase::kIdle;
@@ -787,7 +787,7 @@ bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
     mode_ = mode;
     logger_->Info(
         std::string("Motion mode: ")
-        + (mode == Motion::MotionMode::kTandem ? "Tandem" : "CW-primary"));
+        + (mode == Motion::MotionMode::kTandem ? "Tandem" : "CW Primary"));
     return true;
 }
 
@@ -885,7 +885,7 @@ bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
 }
 
 /**
- * @brief Sets the CW-primary mode's hand-off band.
+ * @brief Sets the CW Primary mode's hand-off band.
  *
  * @param band Range around target angle (rad); inside it, CW stops and
  *             actuator takes over
@@ -1431,7 +1431,7 @@ Motion::CwCommand Libra2MotionController::PredictiveCwCommand(
 }
 
 /**
- * @brief Runs one CW-primary cycle: pitch joint allowed to spin freely so the
+ * @brief Runs one CW Primary cycle: pitch joint allowed to spin freely so the
  *        CW moves it.
  *
  * @param theta Actual angle, θ (rad)
@@ -1446,7 +1446,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
                                           Motion::Libra2Command& command) {
     const auto cw_mass_tgt = TargetCwMass(theta_tgt);
     if (!cw_mass_tgt) {
-        logger_->Warn("CW-primary: target mass undefined at this angle; "
+        logger_->Warn("CW Primary: target mass undefined at this angle; "
                       "handing off to actuator");
 
         cw_phase_ = CwPhase::kIdle;
@@ -1470,7 +1470,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
         logger_->Info("CW handing control to actuator (" + reached
                       + " reached)");
         logger_->Debug(
-            "CW-Primary hand-off (" + reached + " reached):\n  actual angle="
+            "CW Primary hand-off (" + reached + " reached):\n  actual angle="
             + Format(theta) + " rad, target angle=" + Format(theta_tgt)
             + " rad, angle error=" + Format(theta - theta_tgt)
             + " rad\n  actual volume=" + Format(*cw_mass_ / kWaterDensity)
@@ -1501,7 +1501,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
  * @param commanded Commanded joint values from previous cycle
  * @param trajectory_active Whether a trajectory is running
  *
- * @note If anything CW-primary needs is lost while the arm is free (model, CW
+ * @note If anything CW Primary needs is lost while the arm is free (model, CW
  *       volume, target, or ATC), the actuator takes over immediately.
  */
 Motion::Libra2Command Libra2MotionController::Update(
@@ -1556,9 +1556,9 @@ Motion::Libra2Command Libra2MotionController::Update(
 
     if (mode_ == Motion::MotionMode::kCwPrimary
         && cw_phase_ == CwPhase::kCwMoving) {
-        // (A) CW-primary: arm spins freely while CW moves it
+        // (A) CW Primary: arm spins freely while CW moves it
         if (!model_ready || !target || calibrating || !atc_en_) {
-            logger_->Warn("CW-Primary: model, CW volume, target, or ATC "
+            logger_->Warn("CW Primary: model, CW volume, target, or ATC "
                           "unavailable; handing control to the actuator");
 
             cw_phase_ = CwPhase::kIdle;

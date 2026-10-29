@@ -2250,7 +2250,7 @@
                   <string>Counterweight moves the arm; actuator takes over near the target</string>
                  </property>
                  <property name="text">
-                  <string> CW-PRIMARY</string>
+                  <string> CW Primary</string>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>

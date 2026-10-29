@@ -207,7 +207,7 @@ void MainWindow::on_pb_atc_enable_toggled(bool checked) {
             QString("color: %1;").arg(Color::kGreen));
 
 #if LIBRA_VERSION == 2
-        // CW-primary needs ATC (see on_pb_cw_primary_toggled)
+        // CW Primary needs ATC (see on_pb_cw_primary_toggled)
         if (ui_->pb_cw_primary->isChecked()) {
             logger_->Info("ATC disabled; switching to tandem motion");
             ui_->pb_cw_primary->setChecked(false);  // emits EnableCwPrimary

@@ -706,7 +706,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         logger_->Info("Trajectory stopped by motion controller");
     }
 
-    // Deal with move request (calibration, CW-primary, tandem CW-actuator)
+    // Deal with move request (calibration, CW Primary, tandem CW-actuator)
     if (cmd.move_to && cmd.move_to->size() == Motion::kNumJoints) {
         Eigen::VectorXd move_pos = feedback_->getPosition();  // unmapped stay
         for (int i = 0; i < n_actuators_; ++i) {
@@ -789,11 +789,11 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         }
 
         if (cmd.mode[joint] == Motion::CommandMode::kTorqueOnly) {
-            // CW-primary: free the arm so the CW can move it
+            // CW Primary: free the arm so the CW can move it
             pos_cmd_(i) = kNone;
             vel_cmd_(i) = kNone;
         } else if (std::isnan(pos_cmd_(i))) {
-            // Hand-off from CW-primary: hold position
+            // Hand-off from CW Primary: hold position
             pos_cmd_(i) = feedback_->getPosition()[i];
         }
 
@@ -1514,9 +1514,9 @@ void HebiThread::SetTorqueCompBounds(const double& lower_bound,
  * @brief Selects what moves the pitch joint.
  *
  * @param enabled true = CW moves the arm and actuator takes over near target
- *                (CW-primary); false = actuator and CW work together (tandem)
+ *                (CW Primary); false = actuator and CW work together (tandem)
  *
- * @note Motion controller refuses CW-primary until the arm is calibrated, so
+ * @note Motion controller refuses CW Primary until the arm is calibrated, so
  *       the mode actually in effect is reported back for the UI.
  */
 void HebiThread::EnableCwPrimaryMode(const bool& enabled) {
@@ -1564,7 +1564,7 @@ void HebiThread::EnableInertiaFeedforward(const bool& enabled) {
 }
 
 /**
- * @brief Sets the CW-primary hand-off band.
+ * @brief Sets the CW Primary hand-off band.
  *
  * @param deg Band around target angle (deg, joint space)
  */

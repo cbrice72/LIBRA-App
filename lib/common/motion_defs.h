@@ -100,7 +100,7 @@ struct MotionCommand {
 // !LIBRA-II Constants
 //------------------------------------------------------------------------------
 
-// CW-primary Mode
+// CW Primary Mode
 
 // TODO: guess; tune via experiments
 constexpr double kDefaultHandoffBand = 0.0175;  // CW stop point, ~1 deg (rad)
