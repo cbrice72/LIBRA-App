@@ -1020,8 +1020,10 @@ bool Libra2MotionController::StartLevelCalibration() {
     // Set up and start calibration
     two_angle_ = false;
 
-    logger_->Info(
-        "Starting level calibration (arm assumed to be level and at rest)");
+    logger_->Info("Starting level calibration");
+    logger_->Debug(
+        "Level calibration: torque will be averaged when system is at rest for "
+        + Format(kRestWindowTime) + " s");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmSamplingLevel);
 
     return true;
@@ -1078,8 +1080,10 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
     angle_a_ = angle_a;
     angle_b_ = angle_b;
 
-    logger_->Info("Starting two-angle calibration: a=" + Format(angle_a)
-                  + " rad, b=" + Format(angle_b) + " rad");
+    logger_->Info("Starting two-angle calibration: a=" + FormatDeg(angle_a)
+                  + " deg, b=" + FormatDeg(angle_b) + " deg");
+    logger_->Debug("Two-angle calibration: (1) move to a, (2) average at "
+                   "rest, (3) move to b, (4) average at rest");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmMovingToA);
 
     return true;
@@ -1128,8 +1132,7 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     const double lo = std::min(angle_a, angle_b);
     const double hi = std::max(angle_a, angle_b);
     if (!std::isfinite(lo) || !std::isfinite(hi) || lo == hi) {
-        logger_->Warn("Friction calibration rejected: need |angle| <=  "
-                      "calibration rejected: need two distinct "
+        logger_->Warn("Friction calibration rejected: need two distinct "
                       "finite angles (got a="
                       + Format(angle_a) + ", b=" + Format(angle_b) + ")");
         return false;
@@ -1164,12 +1167,22 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     friction_run_.volume = *cw_vol_;
     two_angle_ = false;
 
-    logger_->Info("Starting friction calibration: window " + Format(lo) + " to "
-                  + Format(hi) + " rad, "
-                  + std::to_string(kFrictionSpeedFractions.size())
-                  + " speeds up to " + Format(max_speed)
-                  + " rad/s (CW stays idle; aborts above "
-                  + Format(torque_comp_upper_bound_) + " Nm)");
+
+    logger_->Info("Starting friction calibration: " + FormatDeg(lo) + " to "
+                  + FormatDeg(hi) + " deg at " + speeds_deg + " deg/s");
+    logger_->Debug(
+        "Friction calibration ("
+        + std::to_string(1 + 2 * kFrictionSpeedFractions.size())
+        + " steps):"
+          "\n  sampled:  "
+        + FormatDeg(lo + margin) + " to " + FormatDeg(hi - margin)
+        + " deg"
+          "\n  steps:    move to start, followed by up/down sweep at each speed"
+          "\n  CW:       stays idle at "
+        + Format(*cw_vol_)
+        + " L"
+          "\n  aborts:   above "
+        + Format(kFrictionTorqueLimit) + " Nm");
     BeginCalibrationStage(Motion::CalibrationStatus::kFrictionMovingToStart);
 
     return true;
@@ -1449,17 +1462,21 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
 
     if (volume_reached || angle_reached) {
         // Log hand-off and set up for actuator takeover
-        logger_->Info("CW-primary hand-off ("
-                      + std::string(volume_reached ? "volume" : "")
-                      + std::string(volume_reached && angle_reached ? "+" : "")
-                      + std::string(angle_reached ? "angle" : "")
-                      + " reached):\n  actual angle=" + Format(theta)
-                      + " rad, target angle=" + Format(theta_tgt)
-                      + " rad, angle error=" + Format(theta - theta_tgt)
-                      + " rad\n  actual volume="
-                      + Format(*cw_mass_ / kWaterDensity) + " L, target volume="
-                      + Format(mass_tgt / kWaterDensity) + " L, volume error="
-                      + Format((*cw_mass_ - mass_tgt) / kWaterDensity) + " L");
+        const std::string reached = std::string(volume_reached ? "volume" : "")
+                                    + std::string(
+                                        volume_reached && angle_reached ? "+"
+                                                                        : "")
+                                    + std::string(angle_reached ? "angle" : "");
+        logger_->Info("CW handing control to actuator (" + reached
+                      + " reached)");
+        logger_->Debug(
+            "CW-Primary hand-off (" + reached + " reached):\n  actual angle="
+            + Format(theta) + " rad, target angle=" + Format(theta_tgt)
+            + " rad, angle error=" + Format(theta - theta_tgt)
+            + " rad\n  actual volume=" + Format(*cw_mass_ / kWaterDensity)
+            + " L, target volume=" + Format(mass_tgt / kWaterDensity)
+            + " L, volume error="
+            + Format((*cw_mass_ - mass_tgt) / kWaterDensity) + " L");
 
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
@@ -1541,8 +1558,8 @@ Motion::Libra2Command Libra2MotionController::Update(
         && cw_phase_ == CwPhase::kCwMoving) {
         // (A) CW-primary: arm spins freely while CW moves it
         if (!model_ready || !target || calibrating || !atc_en_) {
-            logger_->Warn("CW-primary: model, CW volume, target, or ATC "
-                          "unavailable; handing off to the actuator");
+            logger_->Warn("CW-Primary: model, CW volume, target, or ATC "
+                          "unavailable; handing control to the actuator");
 
             cw_phase_ = CwPhase::kIdle;
             cw_assist_done_ = true;
@@ -2354,7 +2371,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     if (model_ready) {
         msg += " (model error " + Format(model_err_sum / n) + " Nm)";
     }
-    logger_->Info(msg);
+    logger_->Debug(msg);
 
     return true;
 }

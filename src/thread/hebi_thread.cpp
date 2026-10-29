@@ -814,12 +814,13 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         t_diag_log_elapsed_s_ = 0.0;
 
         const auto& d = cmd.diagnostics;
-        logger_->Debug("Model - m_cw=" + FormatOptional(d.cw_mass)
-                       + " kg, m_cw,bal(target)=" + FormatOptional(d.cw_mass_tgt)
-                       + " kg, delta_m=" + FormatOptional(d.cw_mass_change)
-                       + " kg, tau_ext,g=" + FormatOptional(d.torque_ext_g)
-                       + " Nm, tau_ext,g(target)="
-                       + FormatOptional(d.torque_ext_g_tgt) + " Nm");
+        logger_->Debug(
+            "Model values:\n  m_cw:              " + FormatOptional(d.cw_mass)
+            + " kg\n  m_cw,bal(target):  " + FormatOptional(d.cw_mass_tgt)
+            + " kg\n  delta_m:           " + FormatOptional(d.cw_mass_change)
+            + " kg\n  tau_ext,g:         " + FormatOptional(d.torque_ext_g)
+            + " Nm\n  tau_ext,g(target): " + FormatOptional(d.torque_ext_g_tgt)
+            + " Nm");
     }
 
     ReportMotionStatus();
