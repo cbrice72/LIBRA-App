@@ -108,6 +108,29 @@ std::string FormatDouble(const double& value, const int& precision = 2) {
 }
 
 /**
+ * @brief Gets the lowest velocity limit (rad/s) in a set of safety
+ *        parameters, if any actuator has one.
+ *
+ * @param safety_cmd Command holding safety parameters (from
+ *                   `readSafetyParameters()`)
+ */
+std::optional<double> MaxVelocityFromSafety(
+    const hebi::GroupCommand& safety_cmd) {
+    std::optional<double> max_vel;
+    for (std::size_t i = 0; i < safety_cmd.size(); ++i) {
+        const auto& actuator = safety_cmd[i].settings().actuator();
+        for (const auto* limit :
+             {&actuator.velocityLimitMin(), &actuator.velocityLimitMax()}) {
+            if (limit->has() && std::isfinite(limit->get())) {
+                const double v = std::abs(limit->get());
+                max_vel = max_vel ? std::min(*max_vel, v) : v;
+            }
+        }
+    }
+    return max_vel;
+}
+
+/**
  * @brief Maps an actuator to the joint it drives (simple joints only).
  *
  * @param actuator Named enum value of the actuator
@@ -235,6 +258,7 @@ HebiThread::HebiThread(QObject* parent,
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators_);
+    max_vel_ = kMaxVel;  // until safety parameters are loaded
 
     // "Translate" string names into corresponding enums for feedback_map
     enum_names_.resize(n_actuators_);
@@ -518,15 +542,6 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
  */
 void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
                                  const Eigen::VectorXd& target_pos) {
-    // TODO: remove this warning once the new trajectory timing has been
-    //       verified on hardware
-    if (!time_unit_warned_) {
-        time_unit_warned_ = true;
-        logger_->Warn("Trajectory time is now passed to HEBI in seconds (it "
-                      "used to be clock ticks, i.e., nanoseconds); verify that "
-                      "moves follow the expected speed");
-    }
-
     // Make position, velocity, and acceleration commands for start & end points
     Eigen::MatrixXd pos(n_actuators_, 2);
     // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
@@ -552,13 +567,19 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
     }
 
     // Calculate trajectory start and end times
+    // (NOTE: HEBI trajectories are minimum-jerk (see link below), which peak
+    //        mid-move at 15/8 their average speed; the planned move is
+    //        stretched by 15/8 so the peak happens at `max_vel_`)
+    // https://files.hebi.us/docs/matlab/hebi-matlab-2.4/HebiTrajectoryGenerator.setAlgorithm.html
+    constexpr double kPeakToAvgSpeed = 15.0 / 8.0;
+    const double t_move_s = kPeakToAvgSpeed * max_difference / max_vel_;
     Eigen::VectorXd time(2);
 #if LIBRA_VERSION == 2
     // A zero-length move would give a zero-duration (invalid) trajectory, so
     // allow at least one loop period (the shortest the loop can follow)
-    time << 0, std::max(max_difference / kMaxVel, loop_period_ms_ / 1000.0);
+    time << 0, std::max(t_move_s, loop_period_ms_ / 1000.0);
 #else
-    time << 0, max_difference / kMaxVel;
+    time << 0, t_move_s;
 #endif
 
     // Create trajectory and log start time
@@ -869,11 +890,11 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
                                                        start[i]);
         }
     }
-    if (!(sweep.speed > 0.0) || sweep.speed > kMaxVel
+    if (!(sweep.speed > 0.0) || sweep.speed > max_vel_
         || !(sweep.ramp_dist > 0.0) || dir * (ramp_start - ramp_end) < 0.0
         || dir * (ramp_end - pitch_start) <= 0.0) {
         logger_->Error("Rejected sweep: speed=" + FormatDouble(sweep.speed, 4)
-                       + " rad/s (limit " + FormatDouble(kMaxVel, 4)
+                       + " rad/s (limit " + FormatDouble(max_vel_, 4)
                        + "), from " + FormatDouble(pitch_start, 3) + " to "
                        + FormatDouble(sweep.to, 3) + " rad");
         motion_controller_->CancelCalibration();
@@ -1183,6 +1204,7 @@ void HebiThread::Connect() {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
+    SetMaxVelocity(*command_, "./bin/shared/hebi/safety.xml");
 
     // Load gains
     if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
@@ -1377,8 +1399,8 @@ void HebiThread::LoadGains(const QString& file_path) {
  *
  * @param file_path Path to an XML safety parameters file
  *
- * @note The file's velocity limit (if any) also becomes the trajectory speed
- *       cap, from the next trajectory onward.
+ * @note The file's velocity limit (if any) also becomes the max. trajectory
+ *       speed, from the next trajectory onward.
  */
 void HebiThread::LoadSafety(const QString& file_path) {
     if (group_ == nullptr) {
@@ -1398,9 +1420,33 @@ void HebiThread::LoadSafety(const QString& file_path) {
             "HEBI - Didn't receive acknowledgement from safety update!");
         return;
     }
+    SetMaxVelocity(safety_cmd, file_path.toStdString());
 
     logger_->Info("Successfully loaded safety limits from: "
                   + file_path.toStdString());
+}
+
+/**
+ * @brief Sets the maximum trajectory speed from the given safety parameters.
+ *
+ * @param safety_cmd HEBI safety parameters (from `readSafetyParameters()`)
+ * @param source Where the parameters came from (for logging purposes)
+ *
+ * @note Falls back to `kMaxVel` if no actuator has a velocity limit.
+ */
+void HebiThread::SetMaxVelocity(const hebi::GroupCommand& safety_cmd,
+                                const std::string& source) {
+    const auto limit = MaxVelocityFromSafety(safety_cmd);
+    max_vel_ = limit.value_or(kMaxVel);
+
+    if (limit) {
+        logger_->Info("Max. trajectory speed: " + FormatDouble(max_vel_, 3)
+                      + " rad/s (velocity limit in " + source + ")");
+    } else {
+        logger_->Warn("No velocity limit in " + source
+                      + "; max. trajectory speed: " + FormatDouble(max_vel_, 3)
+                      + " rad/s (default)");
+    }
 }
 
 /**

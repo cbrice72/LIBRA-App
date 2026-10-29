@@ -135,6 +135,8 @@ class HebiThread : public AbstractActuatorThread
 
     void StartTrajectory(const Eigen::VectorXd& start_pos,
                          const Eigen::VectorXd& target_pos);
+    void SetMaxVelocity(const hebi::GroupCommand& safety_cmd,
+                        const std::string& source);
 #if LIBRA_VERSION == 1
     void CheckTorqueControl();
     bool ExecuteMovement(std::chrono::duration<double> dt,
@@ -192,7 +194,7 @@ class HebiThread : public AbstractActuatorThread
 
     double t_trajectory_s_{0.0};  // s, advances by dt * playback_rate_ / cycle
 
-    bool time_unit_warned_{false};  // see `StartTrajectory()`
+    std::atomic<double> max_vel_;  // peak trajectory speed (rad/s)
 
 #if LIBRA_VERSION == 1
     // Enables logic that uses torque feedback hysteresis to control trajectory
