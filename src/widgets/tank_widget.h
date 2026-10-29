@@ -40,7 +40,8 @@ class TankWidget : public QWidget {
     // --- Getters & Setters ---
 
     double GetLevel() const;
-    void SetLevel(double level);
+    void SetCapacity(double capacity);
+    void SetVolume(double volume);
 
   signals:
     void LevelChanged(const double& level);
@@ -53,5 +54,6 @@ class TankWidget : public QWidget {
   private:
     // --- Data Members ---
 
-    double level_{0.0};
+    double capacity_{0.0};  // (L)
+    double volume_{0.0};    // (L)
 };

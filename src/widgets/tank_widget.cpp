@@ -43,27 +43,44 @@ TankWidget::TankWidget(QWidget* parent) : QWidget(parent) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Gets current fluid level, as a fraction in [0.0, 1.0].
+ * @brief Gets current fluid level as a fraction of capacity.
+ *
+ * @note May be > 1.0 if overfilled.
  */
 double TankWidget::GetLevel() const {
-    return level_;
+    return capacity_ > 0.0 ? volume_ / capacity_ : 0.0;
 }
 
 /**
- * @brief Sets the shown fluid level.
+ * @brief Sets the tank capacity (for visualizing fill level).
  *
- * @param level A fraction in the range [0.0, 1.0]
+ * @param capacity Tank capacity (L)
  */
-void TankWidget::SetLevel(double level) {
+void TankWidget::SetCapacity(double capacity) {
     // Validate input
-    if (std::isnan(level) || std::isinf(level)) {
+    if (!std::isfinite(capacity) || capacity <= 0.0) {
         return;
     }
-    level = qBound(0.0, level, 1.0);
 
-    if (!qFuzzyCompare(level_, level)) {
-        level_ = level;
-        emit LevelChanged(level_);
+    capacity_ = capacity;
+    update();
+}
+
+/**
+ * @brief Sets the shown water volume.
+ *
+ * @param volume Water volume (L)
+ */
+void TankWidget::SetVolume(double volume) {
+    // Validate input
+    if (!std::isfinite(volume)) {
+        return;
+    }
+
+    volume = qMax(volume, 0.0);  // can exceed capacity (overfilled)
+    if (!qFuzzyCompare(volume_, volume)) {
+        volume_ = volume;
+        emit LevelChanged(GetLevel());
         update();
     }
 }
@@ -92,7 +109,7 @@ void TankWidget::paintEvent(QPaintEvent*) {
     painter.drawRoundedRect(tank, corner_radius, corner_radius);
 
     // Define and draw fluid
-    const double fluid_height = tank.height() * level_;
+    const double fluid_height = tank.height() * qMin(GetLevel(), 1.0);
 
     QRectF fluid = tank.adjusted(border_thickness, tank.height() - fluid_height,
                                  -border_thickness, -border_thickness);
@@ -106,14 +123,14 @@ void TankWidget::paintEvent(QPaintEvent*) {
     painter.setBrush(gradient);
     painter.drawRoundedRect(fluid, corner_radius, corner_radius);
 
-    // Draw level percentage (middle of tank)
+    // Draw volume (middle of tank)
     painter.setPen(Qt::black);
     QFont font = painter.font();
     font.setPixelSize(16);
     painter.setFont(font);
 
     painter.drawText(tank, Qt::AlignCenter,
-                     QString("%1%").arg(qRound(level_ * 100)));
+                     QString("%1 L").arg(volume_, 0, 'f', 2));
 
     // Draw level markers (left of tank)
     const int marker_width = 10;

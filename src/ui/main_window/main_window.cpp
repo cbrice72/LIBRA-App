@@ -312,6 +312,16 @@ void MainWindow::ConfigureUi() {
     // Slots
     //   (none)
 
+    // Settings
+    ui_->tw_water_level_A->SetCapacity(Water::kSideCapacity);
+#if LIBRA_VERSION == 1
+    ui_->tw_water_level_B->SetCapacity(Water::kSideCapacity);
+#endif
+
+    ui_->l_water_ignore_level->setStyleSheet(
+        QString("color: %1;").arg(Color::kRed));
+    ui_->l_water_ignore_level->hide();  // shown if "Ignore water level" checked
+
     // ========== Motion Control ==========
 
     // Unneeded widgets
@@ -449,13 +459,27 @@ void MainWindow::InitializeDeviceManagers() {
             this, &MainWindow::HandleWaterVolume);
     connect(water_controller_, &WaterController::TankLimitReached,  // stop ATC
             this, [this](const Water::Side& side, const bool& full) {
-                if (ignore_water_level_ || !ui_->pb_atc_enable->isChecked()) {
-                    return;
+                const std::string limit = "Tank "
+                                          + Water::SideEnumToString(side)
+                                          + " estimated "
+                                          + (full ? "full" : "empty");
+
+                if (!ignore_water_level_ && ui_->pb_atc_enable->isChecked()) {
+                    ui_->pb_atc_enable->setChecked(false);
+                    logger_->Info(limit + "; ATC disabled");
                 }
-                ui_->pb_atc_enable->setChecked(false);
-                logger_->Info("Tank " + Water::SideEnumToString(side)
-                              + " estimated " + (full ? "full" : "empty")
-                              + "; ATC disabled");
+
+                // Soft guard against overfilling (can cause leaks/failure)
+                QPushButton* pb_fill = ui_->pb_water_fill_A;
+#if LIBRA_VERSION == 1
+                if (side == Water::Side::kB) {
+                    pb_fill = ui_->pb_water_fill_B;
+                }
+#endif
+                if (full && pb_fill->isChecked()) {
+                    pb_fill->click();  // uncheck (stops filling)
+                    logger_->Info(limit + "; manual fill stopped");
+                }
             });
 
     // ========== Flow Controller ==========
@@ -540,7 +564,7 @@ void MainWindow::InitializeThreads() {
 
     // NOTE: passed to and managed by hebi_thread_
     motion_controller_ =
-        std::make_shared<Libra2MotionController>(Water::kCapacity,
+        std::make_shared<Libra2MotionController>(Water::kTotalCapacity,
                                                  kTorqueCompLowerBound,
                                                  kTorqueCompUpperBound,
                                                  kTorqueCompSlowRate,
@@ -817,8 +841,7 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->a_water_cw_connect->setEnabled(!connected);
     ui_->a_water_cw_disconnect->setEnabled(connected);
 
-    ui_->a_water_set_empty->setEnabled(connected);
-    ui_->a_water_set_full->setEnabled(connected);
+    ui_->a_water_set_mass->setEnabled(connected);
 
     // UI widgets
     ui_->pb_water_fill_A->setEnabled(connected);
@@ -868,11 +891,11 @@ void MainWindow::HandleWaterVolume(const Water::Side& side,
                                    const double& volume) {
     switch (side) {
         case Water::Side::kA:
-            ui_->tw_water_level_A->SetLevel(volume / Water::kCapacity);
+            ui_->tw_water_level_A->SetVolume(volume);
             break;
 #if LIBRA_VERSION == 1
         case Water::Side::kB:
-            ui_->tw_water_level_B->SetLevel(volume / Water::kCapacity);
+            ui_->tw_water_level_B->SetVolume(volume);
             break;
 #endif
         default:

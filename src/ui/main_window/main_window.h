@@ -202,8 +202,7 @@ class MainWindow : public QMainWindow {
     void on_a_water_cw_connect_triggered();
     void on_a_water_flow_connect_triggered();
 
-    void on_a_water_set_empty_triggered();
-    void on_a_water_set_full_triggered();
+    void on_a_water_set_mass_triggered();
 
     // Quick Actions Menu
 

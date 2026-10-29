@@ -277,6 +277,7 @@ void MainWindow::on_a_atc_ignore_water_level_triggered(bool checked) {
                   + " ATC auto-stop on tank limit reached");
 
     ignore_water_level_ = checked;
+    ui_->l_water_ignore_level->setVisible(checked);
 }
 
 //------------------------------------------------------------------------------
@@ -775,23 +776,47 @@ void MainWindow::on_a_water_flow_connect_triggered() {
 }
 
 /**
- * @brief Event handler for "Water/Advanced" menu action "Set empty (0%)".
- *        Resets the tracked CW volume(s) to empty.
+ * @brief Event handler for "Water/Advanced" menu action "Set mass...".
+ *        Asks for each CW's water mass and overrides tracked volume(s).
  *
- * @note Only use if there is a discrepancy with the physical water bladders.
+ * @note Only use if the tracked volume doesn't match the CWs' actual water
+ *       (e.g., after an app restart, since volume isn't saved).
+ *
+ * @note Water density is assumed to be 1 kg/L, so mass (kg) = volume (L).
  */
-void MainWindow::on_a_water_set_empty_triggered() {
-    water_controller_->OverrideVolume(Water::Side::kAll, 0.0);
-}
+void MainWindow::on_a_water_set_mass_triggered() {
+    QDialog dialog(this);
+    QFormLayout* form =
+        SetUpFormDialog(dialog, "Set CW Mass",
+                        QString(
+                            "Enter the water mass in each CW (water density "
+                            "assumed 1 kg/L).\nCapacity: %1 kg each.")
+                            .arg(Water::kSideCapacity, 0, 'f', 1));
 
-/**
- * @brief Event handler for "Water/Advanced" menu action "Set full (100%)".
- *        Resets the tracked CW volume(s) to full.
- *
- * @note Only use if there is a discrepancy with the physical water bladders.
- */
-void MainWindow::on_a_water_set_full_triggered() {
-    water_controller_->OverrideVolume(Water::Side::kAll, Water::kCapacity);
+    std::array<QDoubleSpinBox*, Water::kSideCount> spin_boxes{};
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+        auto* sb = new QDoubleSpinBox(&dialog);
+        sb->setRange(0.0, Water::kSideCapacity);
+        sb->setDecimals(2);
+        sb->setSuffix(" kg");
+        spin_boxes[i] = sb;
+
+        const auto side = static_cast<Water::Side>(i);
+        form->addRow(Water::kSideCount > 1 ? QString::fromStdString(
+                         "CW " + Water::SideEnumToString(side) + ":")
+                                           : QString("CW:"),
+                     sb);
+    }
+
+    if (dialog.exec() != QDialog::Accepted) {
+        logger_->Debug("CW mass override cancelled by user");
+        return;
+    }
+
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+        water_controller_->OverrideVolume(static_cast<Water::Side>(i),
+                                          spin_boxes[i]->value());
+    }
 }
 
 //------------------------------------------------------------------------------

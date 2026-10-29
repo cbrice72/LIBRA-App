@@ -3160,6 +3160,19 @@
                    </item>
                   </layout>
                  </item>
+                 <item row="2" column="0" colspan="3">
+                  <widget class="QLabel" name="l_water_ignore_level">
+                   <property name="statusTip">
+                    <string>ATC won't auto-stop when a CW is estimated full/empty</string>
+                   </property>
+                   <property name="text">
+                    <string>Ignoring water level</string>
+                   </property>
+                   <property name="alignment">
+                    <set>Qt::AlignmentFlag::AlignCenter</set>
+                   </property>
+                  </widget>
+                 </item>
                 </layout>
                </widget>
               </item>
@@ -3852,20 +3865,15 @@
     <string>Restore the window to its default size</string>
    </property>
   </action>
-  <action name="a_water_set_empty">
+  <action name="a_water_set_mass">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Set empty (0%)</string>
+    <string>Set mass...</string>
    </property>
-  </action>
-  <action name="a_water_set_full">
-   <property name="enabled">
-    <bool>false</bool>
-   </property>
-   <property name="text">
-    <string>Set full (100%)</string>
+   <property name="statusTip">
+    <string>Manually set CW's tracked water mass</string>
    </property>
   </action>
   <action name="a_connect_all">

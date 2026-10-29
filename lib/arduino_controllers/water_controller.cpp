@@ -270,7 +270,8 @@ void WaterController::SendStatus(const Water::Side& side) {
 /**
  * @brief Integrates each CW's flow rate into its volume and reports changes.
  *
- * @note Water only flows while connected, and never past empty or full.
+ * @note Water only flows while connected, and never below empty.
+ * @note CWs can be overfilled (override must be enabled), so volume isn't capped.
  */
 void WaterController::TrackVolume() {
     const double dt = volume_clock_.restart() / 1000.0;  // ms -> s
@@ -281,8 +282,7 @@ void WaterController::TrackVolume() {
 
         double flow = 0.0;
         if (IsOpen()) {
-            if (tank.state == Water::State::kFilling
-                && tank.volume < Water::kCapacity) {
+            if (tank.state == Water::State::kFilling) {
                 flow = tank.fill_rate;
             } else if (tank.state == Water::State::kDraining
                        && tank.volume > 0.0) {
@@ -294,15 +294,17 @@ void WaterController::TrackVolume() {
         }
 
         const double old_volume = tank.volume;
-        tank.volume = std::clamp(tank.volume + flow * dt, 0.0, Water::kCapacity);
+        tank.volume = std::max(tank.volume + flow * dt, 0.0);
         tank.flow = flow;
         tank.unreported = false;
         emit ReportVolume(side, tank.volume, tank.flow);
 
         // Only report limit reached once
-        if (tank.volume != old_volume
-            && (tank.volume == 0.0 || tank.volume == Water::kCapacity)) {
-            emit TankLimitReached(side, tank.volume == Water::kCapacity);
+        const bool emptied = tank.volume == 0.0 && old_volume > 0.0;
+        const bool filled = tank.volume >= Water::kSideCapacity
+                            && old_volume < Water::kSideCapacity;
+        if (emptied || filled) {
+            emit TankLimitReached(side, filled);
         }
     }
 }
@@ -434,7 +436,7 @@ void WaterController::OverrideVolume(const Water::Side& side,
 
     for (std::size_t i = 0; i < Water::kSideCount; ++i) {
         if (side == Water::Side::kAll || static_cast<std::size_t>(side) == i) {
-            tanks_[i].volume = std::clamp(volume, 0.0, Water::kCapacity);
+            tanks_[i].volume = std::max(volume, 0.0);
             tanks_[i].unreported = true;
         }
     }
