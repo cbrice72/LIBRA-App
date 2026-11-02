@@ -1867,13 +1867,15 @@ void Libra2MotionController::OnReset() {
  */
 void Libra2MotionController::CancelCalibrationLocked() {
     if (Motion::IsCalibrationRunning(status_)) {
+        // Stop in-progress moves (check BEFORE clearing status)
+        if (IsFrictionStage(status_)) {
+            pending_stop_ = true;
+        }
+
         status_ = Motion::CalibrationStatus::kIdle;
 
         pending_move_.reset();
         pending_sweep_.reset();
-        if (IsFrictionStage(status_)) {
-            pending_stop_ = true;
-        }
 
         sampler_.Reset();
         calibration_progress_.clear();
