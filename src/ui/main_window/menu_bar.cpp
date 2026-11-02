@@ -317,9 +317,30 @@ void MainWindow::on_a_motion_inertia_ff_toggled(bool checked) {
  * @brief Event handler for "Motion Control" menu action "Calibrate (arm
  *        level)". Starts the level calibration.
  *
- * @note Arm must already be level and at rest.
+ * @note Needs the arm hang torque from a two-angle (or loaded) calibration,
+ *       then asks the user to confirm the arm is level.
  */
 void MainWindow::on_a_motion_calibrate_level_triggered() {
+    if (!motion_controller_->IsArmCalibrated()) {
+        HandleCriticalError(
+            "Calibration - Arm hang torque (m_arm*h_1*g) is required before "
+            "executing a level calibration; run the two-angle calibration (or "
+            "load an existing one) first!");
+        return;
+    }
+
+    QDialog dialog(this);
+    SetUpFormDialog(
+        dialog, "Level Calibration",
+        QString("Level the arm (within ±%1 deg) before continuing. Torque is "
+                "averaged once the arm is at rest.")
+            .arg(Motion::kMaxLevelAngle * kRadToDeg, 0, 'f', 1));
+
+    if (dialog.exec() != QDialog::Accepted) {
+        logger_->Debug("Calibration cancelled by user");
+        return;
+    }
+
     emit StartHebiLevelCal();
 }
 

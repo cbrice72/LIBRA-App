@@ -1124,9 +1124,15 @@ bool Libra2MotionController::StartLevelCalibration() {
         logger_->Warn("Calibration already running; ignoring level request");
         return false;
     }
+
     if (!cw_model_.IsValid()) {
         logger_->Error("Can't calibrate: invalid CW model ("
                        + cw_model_.GetError() + ")");
+        return false;
+    }
+    if (!arm_calibrated_) {
+        logger_->Warn("Can't calibrate: missing required arm hang torque "
+                      "(m_arm*h_1*g) from a two-angle (or loaded) calibration");
         return false;
     }
 
@@ -2352,12 +2358,13 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
  *
  * @param sample Averaged sample with the arm level
  *
- * @note Uses Eq. 34 with the current arm hang torque (0 if never calibrated),
- *       since one sample can't separate the two arm terms.
+ * @note Uses Eq. 34 with the current arm hang torque (from a two-angle or
+ *       loaded calibration), since one sample can't separate the two arm
+ *       terms.
  */
 void Libra2MotionController::FinishLevelCalibration(
     const Motion::RestSample& sample) {
-    if (std::abs(sample.theta) > kMaxLevelAngle) {
+    if (std::abs(sample.theta) > Motion::kMaxLevelAngle) {
         FinishCalibration(false, "arm is not level (theta="
                                      + Format(sample.theta) + " rad)");
         return;
@@ -2370,11 +2377,6 @@ void Libra2MotionController::FinishLevelCalibration(
     if (!level) {
         FinishCalibration(false, "cos(theta) too small");
         return;
-    }
-    if (!arm_calibrated_) {
-        logger_->Warn("arm_hang_torque not calibrated: using "
-                      "arm_hang_torque = 0 (run two-angle calibration to "
-                      "measure it)");
     }
 
     arm_level_torque_ = *level;

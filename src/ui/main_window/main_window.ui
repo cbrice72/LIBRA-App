@@ -3659,8 +3659,8 @@
     <addaction name="a_motion_handoff_band"/>
     <addaction name="a_motion_inertia_ff"/>
     <addaction name="separator"/>
-    <addaction name="a_motion_calibrate_level"/>
     <addaction name="a_motion_calibrate_two_angle"/>
+    <addaction name="a_motion_calibrate_level"/>
     <addaction name="a_motion_calibrate_friction"/>
     <addaction name="a_motion_calibrate_cancel"/>
     <addaction name="separator"/>

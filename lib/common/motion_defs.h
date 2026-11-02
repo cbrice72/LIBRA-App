@@ -107,7 +107,7 @@ constexpr double kDefaultHandoffBand = 0.0175;  // CW stop point, ~1 deg (rad)
 
 // Calibration Limits
 
-// TODO: check Claude-generated code
+constexpr double kMaxLevelAngle = 0.0175;     // |θ| limit for level cal (rad)
 constexpr double kMaxCalibrationAngle = 1.2;  // |θ| limit, ~69 deg (rad)
 constexpr double kMinAngleSeparation = 0.2;   // |θ_b - θ_a|, ~11 deg (rad)
 constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
