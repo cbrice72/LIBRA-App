@@ -207,8 +207,10 @@ struct Libra2Command : MotionCommand {
  * @brief Counterweight (CW) geometry informing the `CwModel`.
  */
 struct CwModelParams {
-    double pivot_dist{0.0};   // r_P at 0 liters, A (m)
-    double pivot_slope{0.0};  // r_P change per liter, B (m/L)
+    double pivot_dist{0.0};          // r_P at 0 liters, A (m)
+    double pivot_slope{0.0};         // r_P change per liter, B (m/L)
+    double mean_sq_dist{0.0};        // mean r_bag² at 0 liters, C (m²)
+    double mean_sq_dist_slope{0.0};  // mean r_bag² change per liter, D (m²/L)
     double hang_offset{0.0};  // hang points (normal to arm) from O, q_P (m)
     double capacity{0.0};     // CW capacity (L)
 };

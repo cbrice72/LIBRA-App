@@ -28,8 +28,10 @@
 #include "motion_defs.h"
 
 /**
- * @brief Hanging counterweight (CW) modeled as one mass at pivot P, whose
- *        distance along the arm (r_P) shifts with water volume.
+ * @brief Hanging counterweight (CW) model. Its gravitational torque treats the
+ *        water bags as one mass at pivot P, and its inertia uses the bags' mean
+ *        squared hang distance; both distances (along the arm) shift with water
+ *        volume.
  *
  * @note Defines the CW's share of the gravitational torque at the pitch joint
  *       (Eq. 12'), the arm's inertia (Eq. 15), and the CW mass that balances
@@ -38,6 +40,8 @@
 class CwModel {
   public:
     explicit CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
+                     const double& cw_mean_sq_dist,
+                     const double& cw_mean_sq_dist_slope,
                      const double& cw_hang_offset, const double& capacity);
 
     [[nodiscard]] bool IsValid() const {
@@ -63,9 +67,12 @@ class CwModel {
 
   private:
     [[nodiscard]] double PivotDist(const double& volume) const;
+    [[nodiscard]] double MeanSqDist(const double& volume) const;
 
     double r_P_0_{0.0};    // r_P at 0 liters, A (m)
     double dr_P_dV_{0.0};  // r_P change per liter, B (m/L)
+    double r2_0_{0.0};     // mean r_bag² at 0 liters, C (m²)
+    double dr2_dV_{0.0};   // mean r_bag² change per liter, D (m²/L)
     double q_P_{0.0};      // hang-point offset normal to arm, from O (m)
 
     double capacity_;  // CW capacity (L)
@@ -140,6 +147,7 @@ class Libra2MotionController : public AbstractMotionController {
                                     const bool& debug_mode = false);
     explicit Libra2MotionController(
         const double& cw_pivot_dist, const double& cw_pivot_slope,
+        const double& cw_mean_sq_dist, const double& cw_mean_sq_dist_slope,
         const double& cw_hang_offset, const double& cw_capacity,
         const double& friction_coulomb, const double& friction_viscous,
         const double& arm_inertia, const double& torque_comp_lower_bound,
@@ -332,7 +340,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     double inertia_{0.0};       // arm + CW (kg·m²)
     double inertia_rate_{0.0};  // from CW flow (kg·m²/s)
-    bool inertia_ff_en_{true};  // affects Eq. 37
+    bool inertia_ff_en_{false};
 
     // Movement Mode & State
 

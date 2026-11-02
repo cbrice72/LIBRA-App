@@ -123,6 +123,8 @@ QJsonObject CwModelToJson(const CwModelParams& params) {
     QJsonObject obj;
     obj["pivot_dist_m"] = params.pivot_dist;
     obj["pivot_slope_m_per_l"] = params.pivot_slope;
+    obj["mean_sq_dist_m2"] = params.mean_sq_dist;
+    obj["mean_sq_dist_slope_m2_per_l"] = params.mean_sq_dist_slope;
     obj["hang_offset_m"] = params.hang_offset;
     obj["capacity_l"] = params.capacity;
 
@@ -136,9 +138,23 @@ QJsonObject CwModelToJson(const CwModelParams& params) {
  * @param context Where `obj` sits in the file (for error messages)
  * @param[out] params CW model parameters
  * @param[out] error Reason, if a value is missing
+ *
+ * @note The mean r_bag² terms are optional and stay 0 if missing. They only
+ *       affect CW inertia, not the gravity terms an arm model is checked against.
  */
 bool CwModelFromJson(const QJsonObject& obj, const std::string& context,
                      CwModelParams& params, std::string& error) {
+    if (obj.contains("mean_sq_dist_m2")
+        && !ReadNumber(obj, "mean_sq_dist_m2", context, params.mean_sq_dist,
+                       error)) {
+        return false;
+    }
+    if (obj.contains("mean_sq_dist_slope_m2_per_l")
+        && !ReadNumber(obj, "mean_sq_dist_slope_m2_per_l", context,
+                       params.mean_sq_dist_slope, error)) {
+        return false;
+    }
+
     return ReadNumber(obj, "pivot_dist_m", context, params.pivot_dist, error)
            && ReadNumber(obj, "pivot_slope_m_per_l", context,
                          params.pivot_slope, error)

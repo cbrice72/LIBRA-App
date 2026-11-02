@@ -48,6 +48,9 @@ constexpr double kCwBracketHeight = 0.0427;   // CW hang points (m)
 
 constexpr double kCwPivotDist = 0.7777;      // r_P at 0 liters, A (m)
 constexpr double kCwPivotSlope = -0.001155;  // r_P change per liter, B (m/L)
+constexpr double kCwMeanSqDist = 0.61088;  // mean r_bag² at 0 liters, C (m²)
+constexpr double kCwMeanSqDistSlope =
+    -0.0017897;  // mean r_bag² change per liter, D (m²/L)
 constexpr double kCwHangOffset = kCwBracketHeight
                                  - kPitchJointHeight;  // q_P (m)
 constexpr double kArmInertia =
@@ -179,6 +182,9 @@ bool IsFrictionStage(const Motion::CalibrationStatus& status) {
  *
  * @param a First CW model
  * @param b Second CW model
+ *
+ * @note Only compares gravity terms, which the arm model depends on; inertia
+ *       terms (e.g., mean r_bag²) don't affect it.
  */
 bool IsSameCwModel(const Motion::CwModelParams& a,
                    const Motion::CwModelParams& b) {
@@ -201,8 +207,12 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  *
  * @param cw_pivot_dist CW pivot distance at 0 liters, A (m); sign is ignored
  *                      (0 = "not measured yet" and leaves model invalid)
- * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L); may be
- *                       negative
+ * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L)
+ * @param cw_mean_sq_dist Bags' mean squared hang distance (along arm, from O)
+ *                        at 0 liters, C (m²) (0 = "not measured yet" and leaves
+ *                        model invalid)
+ * @param cw_mean_sq_dist_slope Change in mean squared hang distance per liter,
+ *                              D (m²/L)
  * @param cw_hang_offset CW hang point offset (normal to arm) relative to pitch
  *                       joint O, q_P (m)
  * @param capacity Max. combined CW volume (L)
@@ -212,29 +222,48 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  *         r_P(V) = A + B·V.
  */
 CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
+                 const double& cw_mean_sq_dist,
+                 const double& cw_mean_sq_dist_slope,
                  const double& cw_hang_offset, const double& capacity)
     : capacity_(capacity) {
+    // Validate params
     if (!std::isfinite(capacity) || capacity <= 0.0) {
         error_ = "CW capacity must be positive";
         return;
     }
     if (!std::isfinite(cw_pivot_dist) || !std::isfinite(cw_pivot_slope)
+        || !std::isfinite(cw_mean_sq_dist)
+        || !std::isfinite(cw_mean_sq_dist_slope)
         || !std::isfinite(cw_hang_offset)) {
-        error_ = "One or more of r_P components or q_P is not a number";
+        error_ = "One or more of r_P components, mean r^2 components, or q_P "
+                 "is not a number";
         return;
     }
     if (cw_pivot_dist == 0.0) {
         error_ = "r_P is not set (intercept = 0)";
         return;
     }
+    if (cw_mean_sq_dist <= 0.0) {
+        error_ = "mean r^2 is not set (intercept <= 0)";
+        return;
+    }
 
+    // Set model properties
     r_P_0_ = std::abs(cw_pivot_dist);
     dr_P_dV_ = cw_pivot_slope;
+    r2_0_ = cw_mean_sq_dist;
+    dr2_dV_ = cw_mean_sq_dist_slope;
     q_P_ = cw_hang_offset;
 
+    // Validate mechanics
     if (!(r_P_0_ + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
         error_ = "r_P line is too steep: the CW moment must increase with "
                  "volume up to full (need A + 2*B*capacity > 0)";
+        return;
+    }
+    if (!(r2_0_ + (2.0 * dr2_dV_ * capacity_) > 0.0)) {
+        error_ = "mean r^2 line is too steep: the CW inertia must increase "
+                 "with volume up to full (need C + 2*D*capacity > 0)";
     }
 }
 
@@ -245,6 +274,8 @@ Motion::CwModelParams CwModel::GetParams() const {
     Motion::CwModelParams params;
     params.pivot_dist = r_P_0_;
     params.pivot_slope = dr_P_dV_;
+    params.mean_sq_dist = r2_0_;
+    params.mean_sq_dist_slope = dr2_dV_;
     params.hang_offset = q_P_;
     params.capacity = capacity_;
     return params;
@@ -268,6 +299,20 @@ double CwModel::GetCapacityMass() const {
  */
 double CwModel::PivotDist(const double& volume) const {
     return r_P_0_ + (dr_P_dV_ * volume);
+}
+
+/**
+ * @brief Computes the bags' mean squared hang distance (m²) along the arm from
+ *        pitch joint O at a given CW volume.
+ *
+ * @param volume CW volume, V (L)
+ *
+ * @note Code-specific linear model, fitted to per-bag weighings from Step 1 of
+ *       the motion controller experiments (2026/10/22):
+ *         ΣV_i·r_bag,i² / V = C + D·V
+ */
+double CwModel::MeanSqDist(const double& volume) const {
+    return r2_0_ + (dr2_dV_ * volume);
 }
 
 /**
@@ -362,13 +407,15 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
  *
  * @param mass CW mass, m_cw (kg)
  *
- * @note Code-specific CW term of the inertia in Eq. 15, as a point mass at CW
- *       pivot P:
- *         m_cw·(r_P(V)² + q_P²)
+ * @note Uses `MeanSqDist()` for bags' spread since only total volume is known:
+ *         I_cw = ρ_water·ΣV_i·r_bag,i² + m_cw·q_P² = m_cw·(C + D·V + q_P²)
  */
 double CwModel::Inertia(const double& mass) const {
-    const double r_P = PivotDist(mass / kWaterDensity);
-    return mass * ((r_P * r_P) + (q_P_ * q_P_));
+    // TODO: use the following after completing Step 5 of the motion controller
+    //       experiments (2026-10-22); see `PLAN.md`
+    // const double r_P = PivotDist(mass / kWaterDensity);
+    // return mass * (r_P * r_P + q_P_ * q_P_);
+    return mass * (MeanSqDist(mass / kWaterDensity) + (q_P_ * q_P_));
 }
 
 /**
@@ -377,14 +424,18 @@ double CwModel::Inertia(const double& mass) const {
  * @param mass CW mass, m_cw (kg)
  *
  * @note Code-specific derivative of `Inertia()` for the inertia rate in Eq. 15:
- *         d(inertia)/dm_cw = r_P·(r_P + 2·B·V) + q_P²
+ *         d(inertia)/dm_cw = C + 2·D·V + q_P²
  *
  * @see CwModel::Inertia
  */
 double CwModel::InertiaSlope(const double& mass) const {
+    // TODO: use the following after completing Step 5 of the motion controller
+    //       experiments (2026-10-22); see `PLAN.md`
+    // const double volume = mass / kWaterDensity;
+    // const double r_P = PivotDist(volume);
+    // return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
     const double volume = mass / kWaterDensity;
-    const double r_P = PivotDist(volume);
-    return (r_P * (r_P + (2.0 * dr_P_dV_ * volume))) + (q_P_ * q_P_);
+    return r2_0_ + (2.0 * dr2_dV_ * volume) + (q_P_ * q_P_);
 }
 
 //------------------------------------------------------------------------------
@@ -806,17 +857,22 @@ Libra2MotionController::Libra2MotionController(
     const double& cw_capacity, const double& torque_comp_lower_bound,
     const double& torque_comp_upper_bound, const double& torque_comp_slow_rate,
     const bool& debug_mode)
-    : Libra2MotionController(kCwPivotDist, kCwPivotSlope, kCwHangOffset,
-                             cw_capacity, kDefaultFrictionCoulomb,
-                             kDefaultFrictionViscous, kArmInertia,
-                             torque_comp_lower_bound, torque_comp_upper_bound,
-                             torque_comp_slow_rate, debug_mode) {}
+    : Libra2MotionController(kCwPivotDist, kCwPivotSlope, kCwMeanSqDist,
+                             kCwMeanSqDistSlope, kCwHangOffset, cw_capacity,
+                             kDefaultFrictionCoulomb, kDefaultFrictionViscous,
+                             kArmInertia, torque_comp_lower_bound,
+                             torque_comp_upper_bound, torque_comp_slow_rate,
+                             debug_mode) {}
 
 /**
  * @brief Standard constructor.
  *
  * @param cw_pivot_dist CW pivot distance at 0 liters, A (m); 0 = not measured
  * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L)
+ * @param cw_mean_sq_dist Bags' mean squared hang distance at 0 liters, C (m²);
+ *                        0 = not measured
+ * @param cw_mean_sq_dist_slope Change in mean squared hang distance per liter,
+ *                              D (m²/L)
  * @param cw_hang_offset CW hang point offset (normal to arm) relative to pitch
  *                       joint O, q_P (m)
  * @param cw_capacity CW capacity (L)
@@ -832,13 +888,15 @@ Libra2MotionController::Libra2MotionController(
  */
 Libra2MotionController::Libra2MotionController(
     const double& cw_pivot_dist, const double& cw_pivot_slope,
+    const double& cw_mean_sq_dist, const double& cw_mean_sq_dist_slope,
     const double& cw_hang_offset, const double& cw_capacity,
     const double& friction_coulomb, const double& friction_viscous,
     const double& arm_inertia, const double& torque_comp_lower_bound,
     const double& torque_comp_upper_bound, const double& torque_comp_slow_rate,
     const bool& debug_mode)
     : AbstractMotionController({Joint::Name::kPitch}, debug_mode),
-      cw_model_(cw_pivot_dist, cw_pivot_slope, cw_hang_offset, cw_capacity),
+      cw_model_(cw_pivot_dist, cw_pivot_slope, cw_mean_sq_dist,
+                cw_mean_sq_dist_slope, cw_hang_offset, cw_capacity),
       friction_coulomb_(friction_coulomb),
       friction_viscous_(friction_viscous),
       arm_inertia_(arm_inertia),
@@ -1703,7 +1761,8 @@ Motion::Libra2Command Libra2MotionController::Update(
     cw_mass_ = cw_vol_ ? std::optional<double>(Libra2Model::CwMass(*cw_vol_))
                        : std::nullopt;
 
-    // Eq. 15: inertia and its rate, with the CW's share (ṁ_cw = ρ_water·V̇)
+    // Eq. 15: inertia and its rate, with the CW's share (ṁ_cw = ρ_water·V̇);
+    // CW terms are code-specific (see `CwModel::Inertia()`/`InertiaSlope()`)
     if (cw_mass_ && cw_model_.IsValid()) {
         inertia_ = arm_inertia_ + cw_model_.Inertia(*cw_mass_);
         inertia_rate_ = cw_model_.InertiaSlope(*cw_mass_) * kWaterDensity
