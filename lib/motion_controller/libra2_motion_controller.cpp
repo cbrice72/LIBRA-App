@@ -64,8 +64,7 @@ constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
 // Model Calibration
 
 // TODO: all of these are guesses; tune via experiments
-constexpr double kMaxLevelAngle = 0.0175;    // |θ| limit for level cal (rad)
-constexpr double kReachTolerance = 0.01;     // "arrived at target" (rad)
+constexpr double kReachTolerance = 0.0175;  // "arrived at target", ~1 deg (rad)
 constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
 constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
 constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
