@@ -120,7 +120,9 @@ class HebiThread : public AbstractActuatorThread
     void MotionModeChanged(const bool& cw_primary);
     void FreeModeChanged(const bool& enabled);
     void MovementStateChanged(const bool& moving);
+
     void ArmModelChanged(const bool& calibrated);
+    void CalibrationProgressChanged(const QString& text, const bool& running);
 #endif
 
   protected:
@@ -219,6 +221,7 @@ class HebiThread : public AbstractActuatorThread
     std::atomic<bool> moving_{false};
     std::atomic<bool> calibration_running_{false};
     std::atomic<bool> arm_calibrated_{false};
+    std::string last_progress_;  // last calibration step sent to the UI
 
     std::atomic<bool> diag_log_en_{true};  // periodic model log
     double t_diag_log_elapsed_s_{0.0};     // s since last log (for throttling)

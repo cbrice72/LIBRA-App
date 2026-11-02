@@ -614,10 +614,23 @@ void HebiThread::ReportMotionStatus() {
     // Failure pops up once (success and cancellation are already logged)
     if (calibration_running_ && !Motion::IsCalibrationRunning(status)) {
         calibration_running_ = false;
+        last_progress_.clear();
+
+        const QString message = QString::fromStdString(
+            motion_controller_->GetCalibrationMessage());
+        emit CalibrationProgressChanged(message, false);
         if (status == Motion::CalibrationStatus::kFailed) {
-            emit ErrorThrown("HEBI - "
-                             + QString::fromStdString(
-                                 motion_controller_->GetCalibrationMessage()));
+            emit ErrorThrown("HEBI - " + message);
+        }
+    }
+
+    // Current calibration step, whenever it changes
+    if (calibration_running_) {
+        const std::string progress = motion_controller_->GetCalibrationProgress();
+        if (!progress.empty() && progress != last_progress_) {
+            last_progress_ = progress;
+            emit CalibrationProgressChanged(QString::fromStdString(progress),
+                                            true);
         }
     }
 

@@ -70,6 +70,8 @@ constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
 constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
 constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
 constexpr double kRestWindowTime = 3.0;      // averaging window (s)
+
+constexpr double kProgressLogPeriod = 15.0;  // "still running" log period (s)
 constexpr double kMoveTimeout = 180.0;       // per move stage (s)
 constexpr double kSampleTimeout = 60.0;      // per sampling stage (s)
 constexpr double kMinCosForBalance = 1e-3;   // |cosθ| floor, Eq. 34/38'
@@ -1296,6 +1298,15 @@ std::string Libra2MotionController::GetCalibrationMessage() const {
     return calibration_msg_;
 }
 
+/**
+ * @brief Gets the running calibration's current step (e.g., "Friction
+ *        calibration [3/9]: ..."); empty if none is running.
+ */
+std::string Libra2MotionController::GetCalibrationProgress() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return calibration_progress_;
+}
+
 //------------------------------------------------------------------------------
 // !Calibration Record
 //------------------------------------------------------------------------------
@@ -1863,6 +1874,7 @@ void Libra2MotionController::CancelCalibrationLocked() {
         }
 
         sampler_.Reset();
+        calibration_progress_.clear();
 
         calibration_msg_ = "Calibration cancelled";
         logger_->Info(calibration_msg_);
@@ -1932,6 +1944,130 @@ void Libra2MotionController::BeginCalibrationStage(
         default:
             break;
     }
+
+    calibration_progress_ = DescribeCalibrationStage();
+    if (!calibration_progress_.empty()) {
+        logger_->Debug(calibration_progress_);
+    }
+    t_progress_log_s_ = 0.0;
+}
+
+/**
+ * @brief Describes the active calibration step (for progress messages).
+ *
+ * @note Returns empty string if no calibration is running.
+ */
+std::string Libra2MotionController::DescribeCalibrationStage() const {
+    const FrictionRun& fr = friction_run_;
+    const auto n_speeds = static_cast<int>(kFrictionSpeedFractions.size());
+    const std::string at_rest = "averaging torque once system at rest for "
+                                + Format(kRestWindowTime) + " s";
+
+    std::string name;
+    int step = 0;
+    int total = 0;
+    std::string action;
+
+    switch (status_) {
+        case Motion::CalibrationStatus::kArmSamplingLevel:
+            name = "Level";
+            step = 1;
+            total = 1;
+            action = at_rest;
+            break;
+        case Motion::CalibrationStatus::kArmMovingToA:
+        case Motion::CalibrationStatus::kArmSamplingA:
+        case Motion::CalibrationStatus::kArmMovingToB:
+        case Motion::CalibrationStatus::kArmSamplingB:
+            {
+                const bool at_a =
+                    (status_ == Motion::CalibrationStatus::kArmMovingToA
+                     || status_ == Motion::CalibrationStatus::kArmSamplingA);
+                const bool moving =
+                    (status_ == Motion::CalibrationStatus::kArmMovingToA
+                     || status_ == Motion::CalibrationStatus::kArmMovingToB);
+                const std::string label = at_a ? "a" : "b";
+
+                name = "Two-angle";
+                step = (at_a ? 1 : 3) + (moving ? 0 : 1);
+                total = 4;
+                action = moving ? "moving to " + label + "="
+                                      + FormatDeg(at_a ? angle_a_ : angle_b_)
+                                      + " deg"
+                                : "at " + label + ", " + at_rest;
+                break;
+            }
+        case Motion::CalibrationStatus::kFrictionMovingToStart:
+            name = "Friction";
+            step = 1;
+            total = 1 + 2 * n_speeds;
+            action = "moving to window start " + FormatDeg(fr.angle_lo)
+                     + " deg";
+            break;
+        case Motion::CalibrationStatus::kFrictionSweepUp:
+        case Motion::CalibrationStatus::kFrictionSweepDown:
+            {
+                const bool going_up =
+                    (status_ == Motion::CalibrationStatus::kFrictionSweepUp);
+                const auto idx = static_cast<int>(fr.speed_idx);
+                const double speed = fr.max_speed
+                                     * kFrictionSpeedFractions.at(fr.speed_idx);
+                const double t_sweep_s = SweepTime(fr.angle_lo, fr.angle_hi,
+                                                   speed,
+                                                   RampDist(speed, fr.inertia));
+
+                name = "Friction";
+                step = 2 + 2 * idx + (going_up ? 0 : 1);
+                total = 1 + 2 * n_speeds;
+                action = "speed " + std::to_string(idx + 1) + "/"
+                         + std::to_string(n_speeds) + " (" + FormatDeg(speed)
+                         + " deg/s), sweeping " + (going_up ? "up" : "down")
+                         + " to "
+                         + FormatDeg(going_up ? fr.angle_hi : fr.angle_lo)
+                         + " deg (~"
+                         + std::to_string(static_cast<int>(std::ceil(t_sweep_s)))
+                         + " s)";
+                break;
+            }
+        default:
+            return "";
+    }
+
+    return name + " calibration [" + std::to_string(step) + "/"
+           + std::to_string(total) + "]: " + action;
+}
+
+/**
+ * @brief Logs a "still running" line every `kProgressLogPeriod`, to
+ *        give the user visual feedback during slow steps.
+ *
+ * @param dt Time since last cycle (s)
+ * @param timeout Time limit of active step (s)
+ * @param theta Actual angle, θ (rad)
+ * @param actual_vel Actual velocity, θ̇ (rad/s)
+ * @param trajectory_active Whether a trajectory is running
+ */
+void Libra2MotionController::LogCalibrationProgress(
+    const double& dt, const double& timeout, const double& theta,
+    const double& actual_vel, const bool& trajectory_active) {
+    t_progress_log_s_ += dt;
+    if (t_progress_log_s_ < kProgressLogPeriod) {
+        return;
+    }
+    t_progress_log_s_ = 0.0;
+
+    logger_->Debug(calibration_progress_ + "\n  still running: "
+                   + std::to_string(static_cast<int>(t_stage_s_)) + " of "
+                   + std::to_string(static_cast<int>(timeout))
+                   + " s before timeout"
+                     "\n  angle:         "
+                   + FormatDeg(theta)
+                   + " deg"
+                     "\n  speed:         "
+                   + FormatDeg(actual_vel)
+                   + " deg/s"
+                     "\n  trajectory:    "
+                   + (trajectory_active ? "running" : "finished"));
 }
 
 /**
@@ -1948,6 +2084,7 @@ void Libra2MotionController::FinishCalibration(const bool& success,
     pending_move_.reset();
     pending_sweep_.reset();
     sampler_.Reset();
+    calibration_progress_.clear();
 
     if (success) {
         calibration_msg_ = message;
@@ -2090,12 +2227,14 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
                        || status_ == Motion::CalibrationStatus::kArmSamplingA);
     const double target = at_a ? angle_a_ : angle_b_;
 
-    if (t_stage_s_ > (moving_stage ? kMoveTimeout : kSampleTimeout)) {
+    const double timeout = moving_stage ? kMoveTimeout : kSampleTimeout;
+    if (t_stage_s_ > timeout) {
         FinishCalibration(false, moving_stage
                                      ? "timed out moving to target"
                                      : "timed out waiting for steady state");
         return;
     }
+    LogCalibrationProgress(dt, timeout, theta, actual_vel, trajectory_active);
 
     // Sampling stages: average once steady
     std::optional<Motion::RestSample> sample;
@@ -2271,6 +2410,8 @@ void Libra2MotionController::RunFrictionCalibration(
         FinishCalibration(false, abort_reason);
         return;
     }
+    LogCalibrationProgress(dt, kMoveTimeout, theta, actual_vel,
+                           trajectory_active);
 
     const bool going_up = (status_
                            == Motion::CalibrationStatus::kFrictionSweepUp);
@@ -2455,14 +2596,20 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     point.spread = drag_max - drag_min;
     run.points.push_back(point);
 
-    std::string msg = "Friction sweep at " + Format(speed)
-                      + " rad/s: drag=" + Format(point.drag) + " Nm (spread "
+    std::string msg = "Friction speed " + std::to_string(run.speed_idx + 1)
+                      + "/" + std::to_string(kFrictionSpeedFractions.size())
+                      + " done (" + FormatDeg(speed)
+                      + " deg/s):"
+                        "\n  drag:           "
+                      + Format(point.drag) + " Nm (spread "
                       + Format(point.spread) + " Nm over "
                       + std::to_string(point.n_bins)
-                      + " bins), mean holding torque=" + Format(grav_sum / n)
-                      + " Nm";
+                      + " bins)"
+                        "\n  holding torque: "
+                      + Format(grav_sum / n) + " Nm (mean)";
     if (model_ready) {
-        msg += " (model error " + Format(model_err_sum / n) + " Nm)";
+        msg += "\n  model error:    " + Format(model_err_sum / n)
+               + " Nm (mean)";
     }
     logger_->Debug(msg);
 

@@ -93,7 +93,9 @@ class MainWindow : public QMainWindow {
     void HandleMotionModeChanged(const bool& cw_primary);
     void HandleFreeModeChanged(const bool& enabled);
     void HandleMovementStateChanged(const bool& moving);
+
     void HandleArmModelChanged(const bool& calibrated);
+    void HandleCalibrationProgress(const QString& text, const bool& running);
 #endif
 
   signals:

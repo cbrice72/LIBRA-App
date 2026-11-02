@@ -664,6 +664,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleMovementStateChanged);
     connect(hebi_thread_, &HebiThread::ArmModelChanged,  // calibrated
             this, &MainWindow::HandleArmModelChanged);
+    connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
+            this, &MainWindow::HandleCalibrationProgress);
 #endif
 
     // ArduinoManager slots
@@ -1138,6 +1140,21 @@ void MainWindow::HandleArmModelChanged(const bool& calibrated) {
     ui_->l_motion_calibrated_val->setText(calibrated ? "Yes" : "No");
     ui_->l_motion_calibrated_val->setStyleSheet(
         QString("color: %1;").arg(calibrated ? Color::kGreen : Color::kOrange));
+}
+
+/**
+ * @brief Shows an in-progress calibration's status in the status bar. If a
+ *        calibration recently finished, instead shows its outcome for up to
+ *        `kOutcomeTimeout` seconds.
+ *
+ * @param text Current calibration step, or how it ended
+ * @param running Whether the calibration is still running
+ */
+void MainWindow::HandleCalibrationProgress(const QString& text,
+                                           const bool& running) {
+    constexpr int kOutcomeTimeout = 15000;  // ms
+
+    statusBar()->showMessage(text, running ? 0 : kOutcomeTimeout);
 }
 #endif
 

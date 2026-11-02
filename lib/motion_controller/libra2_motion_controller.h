@@ -164,6 +164,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] Motion::CalibrationStatus GetCalibrationStatus() const;
     [[nodiscard]] std::string GetCalibrationMessage() const;
+    [[nodiscard]] std::string GetCalibrationProgress() const;
 
     // --- Calibration Record ---
 
@@ -252,6 +253,11 @@ class Libra2MotionController : public AbstractMotionController {
     void BeginCalibrationStage(const Motion::CalibrationStatus& status);
     void FinishCalibration(const bool& success, const std::string& message);
 
+    [[nodiscard]] std::string DescribeCalibrationStage() const;
+    void LogCalibrationProgress(const double& dt, const double& timeout,
+                                const double& theta, const double& actual_vel,
+                                const bool& trajectory_active);
+
     [[nodiscard]] double SampleToArmTorque(
         const Motion::RestSample& sample) const;
     [[nodiscard]] std::optional<Motion::ArmModel> RecomputeArmModel(
@@ -319,6 +325,9 @@ class Libra2MotionController : public AbstractMotionController {
     double t_stage_s_{0.0};  // seconds
 
     std::string calibration_msg_;  // how the previous calibration ended
+
+    std::string calibration_progress_;  // current step; empty when not running
+    double t_progress_log_s_{0.0};      // seconds since last progress log
 
     // Arm Calibration
 
