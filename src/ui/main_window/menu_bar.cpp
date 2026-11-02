@@ -54,10 +54,10 @@
 // Motion Control Dialogs
 
 constexpr double kRadToDeg = 180.0 / M_PI;
-// TODO: guesses
-constexpr double kDefaultCalAngle = 20.0;           // first +, second - (deg)
-constexpr double kDefaultFrictionHalfWindow = 5.0;  // window is ± this (deg)
-constexpr double kMaxArmExtension = 100000.0;       // input limit (mm)
+
+constexpr double kDefaultCalHalfWindow = 20.0;       // ± current angle (deg)
+constexpr double kDefaultFrictionHalfWindow = 15.0;  // window is ± this (deg)
+constexpr double kMaxArmExtension = 100000.0;        // input limit (mm)
 #endif
 
 namespace {
@@ -357,10 +357,21 @@ void MainWindow::on_a_motion_calibrate_two_angle_triggered() {
         dialog, "Two-Angle Calibration",
         QString("The arm moves to each angle and rests there while its torque "
                 "is averaged. Pick angles at least %1 deg apart; the farther "
-                "apart, the better the fit. (up = +)")
-            .arg(Motion::kMinAngleSeparation * kRadToDeg, 0, 'f', 1));
-    auto* sb_a = MakeAngleSpinBox(&dialog, kDefaultCalAngle, limit);
-    auto* sb_b = MakeAngleSpinBox(&dialog, -kDefaultCalAngle, limit);
+                "apart, the better the fit. Defaults to the current angle ± %2 "
+                "deg.")
+            .arg(Motion::kMinAngleSeparation * kRadToDeg, 0, 'f', 1)
+            .arg(kDefaultCalHalfWindow, 0, 'f', 1));
+
+    // Center suggested window on the current pitch angle (nearest whole deg)
+    const double center = std::round(
+        feedback_element_map_.at(Joint::Name::kPitch)
+            .at(Actuator::Feedback::kActualPos)
+            ->text()
+            .toDouble());
+    auto* sb_a = MakeAngleSpinBox(&dialog, center + kDefaultCalHalfWindow,
+                                  limit);
+    auto* sb_b = MakeAngleSpinBox(&dialog, center - kDefaultCalHalfWindow,
+                                  limit);
     form->addRow("First angle:", sb_a);
     form->addRow("Second angle:", sb_b);
 
@@ -369,7 +380,7 @@ void MainWindow::on_a_motion_calibrate_two_angle_triggered() {
         return;
     }
 
-    // Motion controller checks spacing, and reports a failure
+    // Motion controller checks spacing, and reports any failures
     emit StartHebiTwoAngleCal(sb_a->value(), sb_b->value());
 }
 
@@ -409,7 +420,7 @@ void MainWindow::on_a_motion_calibrate_friction_triggered() {
         return;
     }
 
-    // Motion controller checks width and duration, and reports a failure
+    // Motion controller checks width and duration, and reports any failures
     emit StartHebiFrictionCal(sb_lo->value(), sb_hi->value());
 }
 
