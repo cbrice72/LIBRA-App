@@ -177,6 +177,8 @@ class MainWindow : public QMainWindow {
 
     void on_a_motion_calibration_save_triggered();
     void on_a_motion_calibration_load_triggered();
+    void on_a_motion_calibration_clear_triggered();
+
     void on_a_motion_model_logging_toggled(bool checked);
 #endif
 

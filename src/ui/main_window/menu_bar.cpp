@@ -537,6 +537,29 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
 }
 
 /**
+ * @brief Event handler for "Motion Control" menu action "Clear calibration".
+ *        Asks user for confirmation before clearing all model data.
+ */
+void MainWindow::on_a_motion_calibration_clear_triggered() {
+    QDialog dialog(this);
+    SetUpFormDialog(
+        dialog, "Clear Calibration",
+        "Clears the arm and friction models, so new calibrations start from "
+        "scratch.\n[WARNING] Unsaved calibration results will be lost!");
+    if (dialog.exec() != QDialog::Accepted) {
+        logger_->Debug("Calibration clear cancelled by user");
+        return;
+    }
+
+    if (!motion_controller_->ClearModel()) {
+        HandleCriticalError("Calibration - Can't clear while arm is active!");
+        return;
+    }
+
+    HandleArmModelChanged(motion_controller_->IsArmCalibrated());
+}
+
+/**
  * @brief Event handler for "Motion Control" menu action "Log model values".
  *        Turns the periodic model log on or off.
  *

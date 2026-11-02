@@ -794,6 +794,7 @@ void MainWindow::UpdateMotionControls() {
     // Other
     ui_->a_motion_calibration_save->setEnabled(!arm_moving_);
     ui_->a_motion_calibration_load->setEnabled(!arm_moving_);
+    ui_->a_motion_calibration_clear->setEnabled(!arm_moving_);
 }
 #endif
 

@@ -3666,6 +3666,7 @@
     <addaction name="separator"/>
     <addaction name="a_motion_calibration_save"/>
     <addaction name="a_motion_calibration_load"/>
+    <addaction name="a_motion_calibration_clear"/>
     <addaction name="a_motion_model_logging"/>
    </widget>
    <widget class="QMenu" name="m_actuators">
@@ -4041,6 +4042,14 @@
    </property>
    <property name="statusTip">
     <string>Load an arm model and friction from a saved file</string>
+   </property>
+  </action>
+  <action name="a_motion_calibration_clear">
+   <property name="text">
+    <string>Clear calibration</string>
+   </property>
+   <property name="statusTip">
+    <string>Clear the arm and friction models</string>
    </property>
   </action>
   <action name="a_motion_model_logging">

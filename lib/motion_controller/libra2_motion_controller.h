@@ -172,7 +172,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     void SetArmModel(const double& arm_level_torque,
                      const double& arm_hang_torque);
-    void ClearArmModel();
+    bool ClearModel();
 
     [[nodiscard]] bool IsArmCalibrated() const;
 

@@ -1045,20 +1045,35 @@ void Libra2MotionController::SetArmModel(const double& arm_level_torque,
 }
 
 /**
- * @brief Resets the arm model.
+ * @brief Resets the arm and friction models. Fails if the arm is currently
+ *        calibrating or in motion.
+ *
+ * @return Whether the models were cleared
  */
-void Libra2MotionController::ClearArmModel() {
+bool Libra2MotionController::ClearModel() {
     std::lock_guard<std::mutex> lock(mutex_);
+
+    if (IsMovingLocked()) {
+        logger_->Warn("Can't clear motion controller model while arm is in "
+                      "motion or calibrating");
+        return false;
+    }
 
     arm_level_torque_ = 0.0;
     arm_hang_torque_ = 0.0;
     arm_calibrated_ = false;
     arm_source_.clear();
-    arm_samples_.clear();
     mode_ = Motion::MotionMode::kTandem;  // safe default
     cw_phase_ = CwPhase::kIdle;
 
-    logger_->Info("Arm model cleared; feedforward and predictive CW disabled");
+    friction_coulomb_ = 0.0;
+    friction_viscous_ = 0.0;
+    friction_model_.reset();  // back to startup defaults
+
+    logger_->Info("Arm and friction models cleared; feedforward and predictive "
+                  "CW disabled");
+
+    return true;
 }
 
 /**
