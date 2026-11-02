@@ -2000,6 +2000,8 @@ void Libra2MotionController::BeginCalibrationStage(
                     fr.down_sum.assign(n_bins, 0.0);
                     fr.up_count.assign(n_bins, 0);
                     fr.down_count.assign(n_bins, 0);
+                    fr.range_samples = 0;
+                    fr.steady_samples = 0;
                 }
                 break;
             }
@@ -2537,7 +2539,7 @@ void Libra2MotionController::RunFrictionCalibration(
 }
 
 /**
- * @brief Bins a friction sweep sample if it is inside the sampled span and at
+ * @brief Bins a friction sweep sample if it is inside the sampled range and at
  *        steady speed.
  *
  * @param dt Time since last cycle (s)
@@ -2562,6 +2564,7 @@ void Libra2MotionController::AddFrictionSample(
     if (theta < lo || theta > hi) {
         return;  // near a window edge
     }
+    ++run.range_samples;
 
     // Skip sudden jerks and jitters, which add error to calibration result
     const double mean_vel = run.vel_avg.Add(dt, actual_vel);
@@ -2569,6 +2572,7 @@ void Libra2MotionController::AddFrictionSample(
     if (std::abs(mean_vel - sweep_vel) > kFrictionSpeedTolerance * speed) {
         return;  // not at steady speed
     }
+    ++run.steady_samples;
 
     // Bin by angle so up/down sweeps are compared at equal gravitational torque
     const std::size_t n_bins = run.up_sum.size();
@@ -2639,11 +2643,20 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         point.drag += drag;
         grav_sum += holding;
 
+        // Keep the bin for the calibration record
+        const double theta_bin = lo
+                                 + ((static_cast<double>(i) + 0.5)
+                                    * kFrictionBinWidth);
+        Motion::FrictionBin bin;
+        bin.theta = theta_bin;
+        bin.drag = drag;
+        bin.holding = holding;
+        bin.n_up = run.up_count[i];
+        bin.n_down = run.down_count[i];
+        point.bins.push_back(bin);
+
         // Holding torque should equal -τ_ext,g at bin center
         if (model_ready) {
-            const double theta_bin = lo
-                                     + ((static_cast<double>(i) + 0.5)
-                                        * kFrictionBinWidth);
             model_err_sum += holding + ComputeNetGravTorque(theta_bin, cw_mass);
         }
 
@@ -2662,6 +2675,14 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     const auto n = static_cast<double>(point.n_bins);
     point.drag /= n;
     point.spread = drag_max - drag_min;
+
+    // Low steady fraction = uneven sweep speed (stick-slip), so noisier drag
+    point.steady_fraction = (run.range_samples > 0)
+                                ? static_cast<double>(run.steady_samples)
+                                      / run.range_samples
+                                : 0.0;
+    const auto steady_pct = static_cast<int>(
+        std::lround(100.0 * point.steady_fraction));
     run.points.push_back(point);
 
     std::string msg = "Friction speed " + std::to_string(run.speed_idx + 1)
@@ -2673,6 +2694,9 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
                       + Format(point.spread) + " Nm over "
                       + std::to_string(point.n_bins)
                       + " bins)"
+                        "\n  steady samples: "
+                      + std::to_string(steady_pct)
+                      + "% of samples in the sampled range"
                         "\n  holding torque: "
                       + Format(grav_sum / n) + " Nm (mean)";
     if (model_ready) {

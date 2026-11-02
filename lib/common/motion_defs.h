@@ -237,6 +237,17 @@ struct ArmModel {
 };
 
 /**
+ * @brief One angle bin of a friction sweep, sampled in both directions.
+ */
+struct FrictionBin {
+    double theta{0.0};    // bin center (rad)
+    double drag{0.0};     // (τ_up - τ_down) / 2 (Nm)
+    double holding{0.0};  // (τ_up + τ_down) / 2, i.e., -τ_ext,g (Nm)
+    int n_up{0};          // upwards sweep samples
+    int n_down{0};        // downwards sweep samples
+};
+
+/**
  * @brief One point of the friction line  (i.e., measurement at one sweep speed).
  */
 struct FrictionPoint {
@@ -245,6 +256,9 @@ struct FrictionPoint {
 
     double spread{0.0};  // (max - min) of per-bin drag (Nm)
     int n_bins{0};       // bins sampled in both directions
+
+    double steady_fraction{0.0};  // in-range samples at steady speed
+    std::vector<FrictionBin> bins;
 };
 
 /**

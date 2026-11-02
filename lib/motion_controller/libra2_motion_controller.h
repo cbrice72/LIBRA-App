@@ -241,6 +241,8 @@ class Libra2MotionController : public AbstractMotionController {
         std::vector<double> down_sum;
         std::vector<int> up_count;
         std::vector<int> down_count;
+        int range_samples{0};   // valid samples inside sampled range
+        int steady_samples{0};  // ... of those, at steady speed
 
         std::vector<Motion::FrictionPoint> points;
     };

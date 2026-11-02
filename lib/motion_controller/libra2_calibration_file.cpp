@@ -233,6 +233,20 @@ QJsonObject FrictionToJson(const FrictionModel& friction) {
         point["drag_nm"] = p.drag;
         point["spread_nm"] = p.spread;
         point["n_bins"] = p.n_bins;
+        point["steady_fraction"] = p.steady_fraction;
+
+        QJsonArray bins;
+        for (const auto& bin : p.bins) {
+            QJsonObject b;
+            b["angle_rad"] = bin.theta;
+            b["drag_nm"] = bin.drag;
+            b["holding_nm"] = bin.holding;
+            b["n_up"] = bin.n_up;
+            b["n_down"] = bin.n_down;
+            bins.append(b);
+        }
+        point["bins"] = bins;
+
         points.append(point);
     }
 
@@ -293,6 +307,30 @@ bool FrictionFromJson(const QJsonObject& obj, const std::string& context,
             return false;
         }
         point.n_bins = static_cast<int>(n_bins);
+
+        // Optional
+        point.steady_fraction = p.value("steady_fraction").toDouble(0.0);
+
+        const QJsonArray bins = p.value("bins").toArray();
+        for (int j = 0; j < bins.size(); ++j) {
+            const std::string bin_context = point_context + "bins["
+                                            + std::to_string(j) + "].";
+            const QJsonObject b = bins.at(j).toObject();
+            FrictionBin bin;
+            double n_up = 0.0;
+            double n_down = 0.0;
+            if (!ReadNumber(b, "angle_rad", bin_context, bin.theta, error)
+                || !ReadNumber(b, "drag_nm", bin_context, bin.drag, error)
+                || !ReadNumber(b, "holding_nm", bin_context, bin.holding, error)
+                || !ReadNumber(b, "n_up", bin_context, n_up, error)
+                || !ReadNumber(b, "n_down", bin_context, n_down, error)) {
+                return false;
+            }
+            bin.n_up = static_cast<int>(n_up);
+            bin.n_down = static_cast<int>(n_down);
+            point.bins.push_back(bin);
+        }
+
         friction.points.push_back(point);
     }
     return true;
