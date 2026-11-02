@@ -2643,7 +2643,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         point.drag += drag;
         grav_sum += holding;
 
-        // Keep the bin for the calibration record
+        // Save bin for calibration record
         const double theta_bin = lo
                                  + ((static_cast<double>(i) + 0.5)
                                     * kFrictionBinWidth);
@@ -2711,8 +2711,11 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
 /**
  * @brief Fits the friction line through all speeds and applies it.
  *
- * @note A negative slope means friction is flat within noise, so b = 0 and τ_c
- *       is the mean drag. A negative τ_c fails the calibration.
+ * @note Code-specific rule (not in the not in the notebook scans): a negative
+ *       slope means friction is flat within noise, so b = 0 and τ_c is the mean
+ *       drag. A negative τ_c within the largest bin spread means friction is
+ *       too small to measure, so τ_c = 0 and b is refit through the origin;
+ *       otherwise, the calibration fails.
  */
 void Libra2MotionController::FinishFrictionCalibration() {
     const FrictionRun& run = friction_run_;
@@ -2742,21 +2745,48 @@ void Libra2MotionController::FinishFrictionCalibration() {
             model.coulomb += d;
         }
         model.coulomb /= static_cast<double>(drags.size());
-
-        double sum_sq = 0.0;
-        for (const double& d : drags) {
-            sum_sq += (d - model.coulomb) * (d - model.coulomb);
-        }
-        model.residual_rms = std::sqrt(sum_sq
-                                       / static_cast<double>(drags.size()));
     }
 
     if (model.coulomb < 0.0) {
-        FinishCalibration(false, "fitted tau_c is negative ("
-                                     + Format(model.coulomb)
-                                     + " Nm); check the run");
-        return;
+        // Bin spread is the drag noise floor
+        double noise = 0.0;
+        for (const auto& p : run.points) {
+            noise = std::max(noise, p.spread);
+        }
+
+        if (-model.coulomb > noise) {
+            FinishCalibration(false, "fitted tau_c is negative ("
+                                         + Format(model.coulomb)
+                                         + " Nm), past the bin spread ("
+                                         + Format(noise)
+                                         + " Nm); check the run");
+            return;  // nonsensical result
+        }
+
+        logger_->Info("Fitted tau_c is negative (" + Format(model.coulomb)
+                      + " Nm) but within bin spread (" + Format(noise)
+                      + " Nm), so friction is negligible; using tau_c = 0");
+
+        // Refit b through the origin
+        double s_vv = 0.0;
+        double s_vd = 0.0;
+        for (std::size_t i = 0; i < speeds.size(); ++i) {
+            s_vv += speeds[i] * speeds[i];
+            s_vd += speeds[i] * drags[i];
+        }
+
+        model.coulomb = 0.0;
+        model.viscous = std::max(0.0, s_vd / s_vv);
     }
+
+    double sum_sq = 0.0;
+    for (std::size_t i = 0; i < speeds.size(); ++i) {
+        const double r = drags[i]
+                         - (model.coulomb + (model.viscous * speeds[i]));
+        sum_sq += r * r;
+    }
+
+    model.residual_rms = std::sqrt(sum_sq / static_cast<double>(drags.size()));
 
     // Apply model
     model.angle_lo = run.angle_lo;
