@@ -66,15 +66,19 @@ constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
 // TODO: all of these are guesses; tune via experiments
 constexpr double kMaxLevelAngle = 0.0175;    // |θ| limit for level cal (rad)
 constexpr double kReachTolerance = 0.01;     // "arrived at target" (rad)
-constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
 constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
+constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
 constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
 constexpr double kRestWindowTime = 3.0;      // averaging window (s)
 
 constexpr double kProgressLogPeriod = 15.0;  // "still running" log period (s)
 constexpr double kMoveTimeout = 180.0;       // per move stage (s)
 constexpr double kSampleTimeout = 60.0;      // per sampling stage (s)
-constexpr double kMinCosForBalance = 1e-3;   // |cosθ| floor, Eq. 34/38'
+
+// Velocity averaging window for rest and steady speed checks, arbitrary (s);
+// at rest, raw vel noise is ~0.6 deg/s but its 0.75 s mean stays < 0.2 deg/s
+constexpr double kVelAvgWindow = 0.75;
+constexpr double kMinCosForBalance = 1e-3;  // |cosθ| floor, Eq. 34/38'
 
 // Friction Calibration
 
@@ -669,13 +673,57 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
 }  // namespace Libra2Model
 
 //------------------------------------------------------------------------------
+// !Velocity Averager
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Clears averaging history.
+ */
+void VelocityAverager::Reset() {
+    history_.clear();
+    time_ = 0.0;
+    sum_ = 0.0;
+}
+
+/**
+ * @brief Adds one cycle's velocity and returns the time-weighted mean over the
+ *        last `kVelAvgWindow`.
+ *
+ * @param dt Time since last cycle (s)
+ * @param vel Actual velocity, θ̇ (rad/s)
+ */
+double VelocityAverager::Add(const double& dt, const double& vel) {
+    history_.emplace_back(dt, vel);
+    time_ += dt;
+    sum_ += dt * vel;
+
+    while (history_.size() > 1
+           && time_ - history_.front().first >= kVelAvgWindow) {
+        const auto& [old_dt, old_vel] = history_.front();
+        time_ -= old_dt;
+        sum_ -= old_dt * old_vel;
+        history_.pop_front();
+    }
+
+    return (time_ > 0.0) ? sum_ / time_ : vel;
+}
+
+//------------------------------------------------------------------------------
 // !Rest Sampler
 //------------------------------------------------------------------------------
 
 /**
- * @brief Discards the active sampling window.
+ * @brief Clears active sampling window, including velocity history.
  */
 void RestSampler::Reset() {
+    vel_avg_.Reset();
+    RestartWindow();
+}
+
+/**
+ * @brief Clears active sampling window.
+ */
+void RestSampler::RestartWindow() {
     count_ = 0;
     t_elapsed_s_ = 0.0;
     sum_theta_ = 0.0;
@@ -684,7 +732,7 @@ void RestSampler::Reset() {
 }
 
 /**
- * @brief Adds one cycle of measurements to the active sampling window; returns
+ * @brief Adds one cycle of measurements to active sampling window; returns
  *        averages once window is complete.
  *
  * @param dt Time since last cycle (s)
@@ -693,25 +741,30 @@ void RestSampler::Reset() {
  * @param torque Actual actuator torque, τ_actuator (Nm)
  * @param trajectory_active Whether a trajectory is running
  * @param volume Latest CW volume (L), if known
+ *
+ * @note Stillness is judged on velocity averaged over `kVelAvgWindow`.
  */
 std::optional<Motion::RestSample> RestSampler::Add(
     const double& dt, const double& pos, const double& vel,
     const double& torque, const bool& trajectory_active,
     const std::optional<double>& volume) {
-    const bool still = !trajectory_active && std::abs(vel) <= kRestVelTolerance
+    const double mean_vel = vel_avg_.Add(dt, vel);
+    const bool still = !trajectory_active
+                       && std::abs(mean_vel) <= kRestVelTolerance
                        && volume.has_value();
     if (!still) {
-        Reset();
+        RestartWindow();
         return std::nullopt;
     }
 
-    // Restart window if pose or CW volume drifted from where it began
+    // Restart window if pose or CW volume drifted since start
     if (count_ > 0
         && (std::abs(pos - anchor_theta_) > kRestPosTolerance
             || std::abs(*volume - anchor_volume_) > kRestVolTolerance)) {
-        Reset();
+        RestartWindow();
     }
 
+    // Accumulate values
     if (count_ == 0) {
         anchor_theta_ = pos;
         anchor_volume_ = *volume;
@@ -725,13 +778,15 @@ std::optional<Motion::RestSample> RestSampler::Add(
     ++count_;
 
     if (t_elapsed_s_ >= kRestWindowTime && count_ >= 2) {
+        // Window finished, return results
         Motion::RestSample sample;
         sample.theta = sum_theta_ / count_;
         sample.torque = sum_torque_ / count_;
         sample.volume = sum_volume_ / count_;
-        Reset();
+        RestartWindow();
         return sample;
     }
+
     return std::nullopt;
 }
 
@@ -1933,6 +1988,9 @@ void Libra2MotionController::BeginCalibrationStage(
                 pending_sweep_ = sweep;
                 fr.trajectory_seen = false;
 
+                // Each sweep averages vel from its own start
+                fr.vel_avg.Reset();
+
                 if (going_up) {
                     // Each run starts with an upwards sweep and fresh history
                     const auto n_bins = static_cast<std::size_t>(std::ceil(
@@ -2430,7 +2488,8 @@ void Libra2MotionController::RunFrictionCalibration(
     if (status_ != Motion::CalibrationStatus::kFrictionMovingToStart) {
         if (trajectory_active) {
             run.trajectory_seen = true;
-            AddFrictionSample(theta, actual_vel, actual_torque, going_up, speed);
+            AddFrictionSample(dt, theta, actual_vel, actual_torque, going_up,
+                              speed);
             return;
         }
         if (!run.trajectory_seen) {
@@ -2481,28 +2540,33 @@ void Libra2MotionController::RunFrictionCalibration(
  * @brief Bins a friction sweep sample if it is inside the sampled span and at
  *        steady speed.
  *
+ * @param dt Time since last cycle (s)
  * @param theta Actual angle, θ (rad)
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param actual_torque Actual actuator torque, τ_actuator (Nm)
  * @param going_up Whether this is the up sweep
  * @param speed Sweep speed, v (rad/s)
+ *
+ * @note Steady speed is judged on velocity averaged over `kVelAvgWindow`, since
+ *       raw velocity feedback tends to jitter above `kFrictionSpeedTolerance`
+ *       (even when the sweep is steady).
  */
-void Libra2MotionController::AddFrictionSample(const double& theta,
-                                               const double& actual_vel,
-                                               const double& actual_torque,
-                                               const bool& going_up,
-                                               const double& speed) {
+void Libra2MotionController::AddFrictionSample(
+    const double& dt, const double& theta, const double& actual_vel,
+    const double& actual_torque, const bool& going_up, const double& speed) {
     FrictionRun& run = friction_run_;
 
-    // Skip window edges, where ramps add inertia and the CW may swing
+    // Skip window edges, where ramps add inertia and CW may swing
     const double lo = run.angle_lo + run.margin;
     const double hi = run.angle_hi - run.margin;
     if (theta < lo || theta > hi) {
         return;  // near a window edge
     }
 
+    // Skip sudden jerks and jitters, which add error to calibration result
+    const double mean_vel = run.vel_avg.Add(dt, actual_vel);
     const double sweep_vel = going_up ? speed : -speed;
-    if (std::abs(actual_vel - sweep_vel) > kFrictionSpeedTolerance * speed) {
+    if (std::abs(mean_vel - sweep_vel) > kFrictionSpeedTolerance * speed) {
         return;  // not at steady speed
     }
 
