@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <iomanip>
+#include <sstream>
 #include <string>
 
 // Project Headers
@@ -74,16 +76,22 @@ constexpr double kMinCosForBalance = 1e-3;   // |cosθ| floor, Eq. 34/38'
 
 // Friction Calibration
 
-// TODO: all of these are guesses; tune via experiments
-constexpr double kFrictionRampDist = 0.0175;     // to reach speed, ~1 deg (rad)
-constexpr double kFrictionSampleMargin = 0.035;  // unsampled ends, ~2 deg (rad)
-constexpr double kFrictionBinWidth = 0.0087;     // angle bin, ~0.5 deg (rad)
-constexpr double kFrictionSpeedTolerance = 0.1;  // allowed |θ̇ - v| / v
-constexpr int kFrictionMinBinSamples = 3;        // per bin and direction
-constexpr int kFrictionMinBins = 3;              // usable bins per speed
-// Sweep speeds as fractions of the caller's max speed (~0.5, 1, 2, 3 deg/s)
+// Sweep speeds as fractions of actuator max speed
 constexpr std::array<double, 4> kFrictionSpeedFractions = {1.0 / 6.0, 1.0 / 3.0,
                                                            2.0 / 3.0, 1.0};
+
+// TODO: all of these are arbitrary; tune via experiments
+constexpr double kFrictionTorqueLimit = 14.0;  // abort if above this |τ| (Nm)
+constexpr double kFrictionLimitTime = 0.5;     // ... for this long (s)
+
+constexpr double kFrictionRampTorque = 4.0;      // inertia torque per ramp (Nm)
+constexpr double kFrictionMinRampDist = 0.0175;  // shortest ramp, ~1 deg (rad)
+constexpr double kFrictionSampleMargin = 0.0175;  // unsampled past ramps (rad)
+constexpr double kFrictionSpeedTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
+
+constexpr double kFrictionBinWidth = 0.0087;  // angle bin, ~0.5 deg (rad)
+constexpr int kFrictionMinBinSamples = 3;     // per bin and direction
+constexpr int kFrictionMinBins = 3;           // usable bins per speed
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -100,6 +108,53 @@ constexpr std::size_t kPitchIdx = Joint::Name::kPitch;
  */
 double Sign(const double& x) {
     return (x > 0.0) - (x < 0.0);
+}
+
+/**
+ * @brief Formats an angle (rad) or speed (rad/s) in degrees.
+ *
+ * @param rad Value to format
+ */
+std::string FormatDeg(const double& rad) {
+    constexpr double kRadToDeg = 180.0 / M_PI;
+
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1) << rad * kRadToDeg;
+    return oss.str();
+}
+
+/**
+ * @brief Gets the friction sweep ramp length (rad) that keeps the torque
+ *        needed to accelerate the arm within `kFrictionRampTorque`.
+ *
+ * @param speed Sweep speed, v (rad/s)
+ * @param inertia Arm + CW moment of inertia, I (kg·m²)
+ *
+ * @note Code-specific equation (not in the notebook scans). HEBI's uses a
+ *       minimum-jerk ramp, which from rest to speed v over distance d takes
+ *       T = 2·d/v seconds (see `HebiThread::StartSweep()`). With zero accel at
+ *       both ends, its position is d·(2τ³ - τ⁴) for τ = t/T, so it peaks at an
+ *       accel of 3·d/T² = 0.75·v²/d, giving us d = 0.75·I·v² / τ_ramp.
+ */
+double RampDist(const double& speed, const double& inertia) {
+    return std::max(kFrictionMinRampDist,
+                    0.75 * inertia * speed * speed / kFrictionRampTorque);
+}
+
+/**
+ * @brief Estimates how long one friction sweep will take (s).
+ *
+ * @param lo Window start (rad)
+ * @param hi Window end (rad)
+ * @param speed Sweep speed (rad/s)
+ * @param ramp_dist Length of each ramp (rad)
+ *
+ * @note Code-specific equation (not in the notebook scans). Usually, each ramp
+ *       is traversed at half speed, giving us: t = (θ_hi - θ_lo + 2·d) / v.
+ */
+double SweepTime(const double& lo, const double& hi, const double& speed,
+                 const double& ramp_dist) {
+    return (hi - lo + 2.0 * ramp_dist) / speed;
 }
 
 /**
@@ -1149,9 +1204,30 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
         return false;
     }
 
+    // Ramps widen with speed, so fastest sweep determines unsampled ends
+    const double inertia = arm_inertia_
+                           + (cw_model_.IsValid() ? cw_model_.Inertia(
+                                  Libra2Model::CwMass(*cw_vol_))
+                                                  : 0.0);
+    const double longest_ramp = RampDist(max_speed, inertia);
+    const double margin = longest_ramp + kFrictionSampleMargin;
+
+    const double min_window = 2.0 * margin
+                              + kFrictionMinBins * kFrictionBinWidth;
+    if (hi - lo < min_window) {
+        logger_->Warn("Friction calibration rejected: window is "
+                      + FormatDeg(hi - lo) + " deg, need at least "
+                      + FormatDeg(min_window) + " deg (the "
+                      + FormatDeg(max_speed) + " deg/s sweeps take "
+                      + FormatDeg(longest_ramp)
+                      + " deg at each end to speed up and slow down)");
+        return false;
+    }
+
     // Ensure slowest sweep fits in one move stage
     const double slowest = max_speed * kFrictionSpeedFractions.front();
-    const double t_slowest_s = (hi - lo + 2.0 * kFrictionRampDist) / slowest;
+    const double t_slowest_s = SweepTime(lo, hi, slowest,
+                                         RampDist(slowest, inertia));
     if (t_slowest_s > kMoveTimeout) {
         logger_->Warn("Friction calibration rejected: slowest sweep takes "
                       + Format(t_slowest_s) + " s (limit "
@@ -1165,8 +1241,16 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     friction_run_.angle_hi = hi;
     friction_run_.max_speed = max_speed;
     friction_run_.volume = *cw_vol_;
+    friction_run_.inertia = inertia;
+    friction_run_.margin = margin;
     two_angle_ = false;
 
+    // Sweep speeds, for the start log
+    std::string speeds_deg;
+    for (const double& fraction : kFrictionSpeedFractions) {
+        speeds_deg += (speeds_deg.empty() ? "" : ", ")
+                      + FormatDeg(max_speed * fraction);
+    }
 
     logger_->Info("Starting friction calibration: " + FormatDeg(lo) + " to "
                   + FormatDeg(hi) + " deg at " + speeds_deg + " deg/s");
@@ -1828,16 +1912,16 @@ void Libra2MotionController::BeginCalibrationStage(
                 sweep.to = going_up ? fr.angle_hi : fr.angle_lo;
                 sweep.speed = fr.max_speed
                               * kFrictionSpeedFractions.at(fr.speed_idx);
-                sweep.ramp_dist = kFrictionRampDist;
+                sweep.ramp_dist = RampDist(sweep.speed, fr.inertia);
 
                 pending_sweep_ = sweep;
                 fr.trajectory_seen = false;
 
                 if (going_up) {
                     // Each run starts with an upwards sweep and fresh history
-                    const auto n_bins = static_cast<std::size_t>(std::ceil(
-                        (fr.angle_hi - fr.angle_lo - 2.0 * kFrictionSampleMargin)
-                        / kFrictionBinWidth));
+                    const auto n_bins = static_cast<std::size_t>(
+                        std::ceil((fr.angle_hi - fr.angle_lo - 2.0 * fr.margin)
+                                  / kFrictionBinWidth));
                     fr.up_sum.assign(n_bins, 0.0);
                     fr.down_sum.assign(n_bins, 0.0);
                     fr.up_count.assign(n_bins, 0);
@@ -2151,8 +2235,9 @@ void Libra2MotionController::FinishTwoAngleCalibration(
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param actual_torque Actual actuator torque, τ_actuator (Nm)
  *
- * @note Aborts (and stops the sweep) if the torque passes the ATC hard limit
- *       or the CW volume changes.
+ * @note Aborts (and stops the sweep) if the torque stays above
+ *       `kFrictionTorqueLimit` for `kFrictionLimitTime`, or if the CW volume
+ *       changes.
  */
 void Libra2MotionController::RunFrictionCalibration(
     const double& dt, const bool& trajectory_active, const double& theta,
@@ -2160,15 +2245,23 @@ void Libra2MotionController::RunFrictionCalibration(
     FrictionRun& run = friction_run_;
     t_stage_s_ += dt;
 
+    // Brief spikes shouldn't count against the limit
+    if (std::abs(actual_torque) > kFrictionTorqueLimit) {
+        run.t_over_limit_s += dt;
+    } else {
+        run.t_over_limit_s = 0.0;
+    }
+
     // Abort guards
     std::string abort_reason;
     if (t_stage_s_ > kMoveTimeout) {
         abort_reason = "timed out moving or sweeping";
-    } else if (std::abs(actual_torque) > torque_comp_upper_bound_) {
-        abort_reason = "torque " + Format(actual_torque)
-                       + " Nm is past the hard limit ("
-                       + Format(torque_comp_upper_bound_)
-                       + " Nm); balance the CW near the window first";
+    } else if (run.t_over_limit_s >= kFrictionLimitTime) {
+        abort_reason = "torque (" + Format(actual_torque)
+                       + " Nm) stayed above the calibration's torque limit ("
+                       + Format(kFrictionTorqueLimit) + " Nm) for "
+                       + Format(kFrictionLimitTime)
+                       + " s; balance the CW or narrow/move the window";
     } else if (!cw_vol_ || std::abs(*cw_vol_ - run.volume) > kRestVolTolerance) {
         abort_reason = "CW volume changed during the sweeps";
     }
@@ -2257,8 +2350,8 @@ void Libra2MotionController::AddFrictionSample(const double& theta,
     FrictionRun& run = friction_run_;
 
     // Skip window edges, where ramps add inertia and the CW may swing
-    const double lo = run.angle_lo + kFrictionSampleMargin;
-    const double hi = run.angle_hi - kFrictionSampleMargin;
+    const double lo = run.angle_lo + run.margin;
+    const double hi = run.angle_hi - run.margin;
     if (theta < lo || theta > hi) {
         return;  // near a window edge
     }
@@ -2302,7 +2395,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     FrictionRun& run = friction_run_;
 
     const bool model_ready = arm_calibrated_ && cw_model_.IsValid();
-    const double lo = run.angle_lo + kFrictionSampleMargin;
+    const double lo = run.angle_lo + run.margin;
     const double cw_mass = Libra2Model::CwMass(run.volume);
 
     Motion::FrictionPoint point;

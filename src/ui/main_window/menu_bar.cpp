@@ -363,13 +363,23 @@ void MainWindow::on_a_motion_calibrate_friction_triggered() {
     QDialog dialog(this);
     QFormLayout* form = SetUpFormDialog(
         dialog, "Friction Calibration",
-        QString("The arm sweeps up and down between these angles at several "
-                "speeds while the CW stays idle. Balance the CW near the "
-                "middle of the window first and make it at least %1 deg wide. "
-                "(up = +)")
-            .arg(Motion::kFrictionMinWindow * kRadToDeg, 0, 'f', 1));
-    auto* sb_lo = MakeAngleSpinBox(&dialog, -kDefaultFrictionHalfWindow, limit);
-    auto* sb_hi = MakeAngleSpinBox(&dialog, kDefaultFrictionHalfWindow, limit);
+        QString("The arm will sweep up and down between the specified angles "
+                "at several speeds, with the CW idle (balance CW near middle "
+                "of window first!!). Faster sweeps need longer ramps (speed "
+                "up/slow down distance), so narrow windows are rejected; see "
+                "log for minimum. Default: current angle ± %1 deg.")
+            .arg(kDefaultFrictionHalfWindow, 0, 'f', 1));
+
+    // Center suggested window on the current pitch angle (nearest whole deg)
+    const double center = std::round(
+        feedback_element_map_.at(Joint::Name::kPitch)
+            .at(Actuator::Feedback::kActualPos)
+            ->text()
+            .toDouble());
+    auto* sb_lo = MakeAngleSpinBox(&dialog, center - kDefaultFrictionHalfWindow,
+                                   limit);
+    auto* sb_hi = MakeAngleSpinBox(&dialog, center + kDefaultFrictionHalfWindow,
+                                   limit);
     form->addRow("Window start:", sb_lo);
     form->addRow("Window end:", sb_hi);
 

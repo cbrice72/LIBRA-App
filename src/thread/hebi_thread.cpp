@@ -53,9 +53,12 @@ constexpr int32_t kTimeout = 3000;  // ms
 constexpr double kMaxVel = 0.052;   // rad/s (~3 deg/s)
 
 #if LIBRA_VERSION == 2
+constexpr double kMaxSweepVel = 0.1047;  // for friction sweep, rad/s (~6 deg/s)
+#endif
+
 // Motion Controller Logging
 
-// TODO: guess; how often the debug log shows the model's values
+#if LIBRA_VERSION == 2
 constexpr double kDiagnosticsPeriod = 3.0;  // s
 #endif
 
@@ -1669,17 +1672,18 @@ void HebiThread::StartTwoAngleCalibration(const double& deg_a,
  * @param deg_a One end of the window (deg, joint space, up = +)
  * @param deg_b Other end of the window (deg, joint space, up = +)
  *
- * @note Sweep speeds are fractions of `kMaxVel`, so they stay within the
- *       trajectory speed limit.
+ * @note Sweep speeds are fractions of `kMaxSweepVel` (or `max_vel_`, if
+ *       lower).
  */
 void HebiThread::StartFrictionCalibration(const double& deg_a,
                                           const double& deg_b) {
     if (!CanCalibrate()) {
         return;
     }
-    if (!motion_controller_->StartFrictionCalibration(deg_a * kDegToRad,
-                                                      deg_b * kDegToRad,
-                                                      kMaxVel)) {
+    if (!motion_controller_
+             ->StartFrictionCalibration(deg_a * kDegToRad, deg_b * kDegToRad,
+                                        std::min(kMaxSweepVel,
+                                                 max_vel_.load()))) {
         emit ErrorThrown("HEBI - Can't start the friction calibration (see "
                          "the log for the reason)!");
         return;

@@ -196,11 +196,14 @@ class Libra2MotionController : public AbstractMotionController {
         double angle_hi{0.0};   // window end (rad)
         double max_speed{0.0};  // (rad/s)
 
-        double volume{0.0};  // initial CW volume (L)
+        double volume{0.0};   // initial CW volume (L)
+        double inertia{0.0};  // arm + CW, used to set ramp lengths (kg·m²)
+        double margin{0.0};   // unsampled area at each window end (rad)
 
         std::size_t speed_idx{0};
 
-        bool trajectory_seen{false};  // current sweep has started
+        bool trajectory_seen{false};  // whether the planned sweep has started
+        double t_over_limit_s{0.0};   // time over the |τ| limit (s)
 
         // Per-bin torque sums/counts for the current speed
         std::vector<double> up_sum;
