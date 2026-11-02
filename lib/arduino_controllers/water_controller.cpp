@@ -294,7 +294,7 @@ void WaterController::TrackVolume() {
         }
 
         const double old_volume = tank.volume;
-        tank.volume = std::max(tank.volume + flow * dt, 0.0);
+        tank.volume = std::max(tank.volume + (flow * dt), 0.0);
         tank.flow = flow;
         tank.unreported = false;
         emit ReportVolume(side, tank.volume, tank.flow);

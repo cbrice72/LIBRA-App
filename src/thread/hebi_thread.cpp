@@ -894,8 +894,8 @@ bool HebiThread::CanCalibrate() {
  */
 void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
     const double dir = (sweep.to > sweep.from) ? 1.0 : -1.0;
-    const double ramp_end = sweep.from + dir * sweep.ramp_dist;
-    const double ramp_start = sweep.to - dir * sweep.ramp_dist;
+    const double ramp_end = sweep.from + (dir * sweep.ramp_dist);
+    const double ramp_start = sweep.to - (dir * sweep.ramp_dist);
     const auto& start = feedback_->getPosition();
 
     // Pitch must start before the first ramp ends, at a speed within limits
@@ -928,7 +928,7 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
     const double t_const_s = std::abs(ramp_start - ramp_end) / sweep.speed;
 
     Eigen::VectorXd time(4);
-    time << 0, t_ramp_s, t_ramp_s + t_const_s, 2.0 * t_ramp_s + t_const_s;
+    time << 0, t_ramp_s, t_ramp_s + t_const_s, (2.0 * t_ramp_s) + t_const_s;
     Eigen::MatrixXd pos(n_actuators_, 4);
     Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(n_actuators_, 4);
     Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(n_actuators_, 4);

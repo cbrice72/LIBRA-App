@@ -139,7 +139,7 @@ void TankWidget::paintEvent(QPaintEvent*) {
 
     for (int i = 0; i <= num_markers; ++i) {
         double y = tank.top() + (tank.height() * i / num_markers);
-        painter.drawLine(tank.left() - margin / 2, y,
+        painter.drawLine(tank.left() - (margin / 2.0), y,
                          tank.left() + marker_width, y);
     }
 }

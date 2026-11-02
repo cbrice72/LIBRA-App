@@ -156,7 +156,7 @@ double RampDist(const double& speed, const double& inertia) {
  */
 double SweepTime(const double& lo, const double& hi, const double& speed,
                  const double& ramp_dist) {
-    return (hi - lo + 2.0 * ramp_dist) / speed;
+    return (hi - lo + (2.0 * ramp_dist)) / speed;
 }
 
 /**
@@ -229,7 +229,7 @@ CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
     dr_P_dV_ = cw_pivot_slope;
     q_P_ = cw_hang_offset;
 
-    if (!(r_P_0_ + 2.0 * dr_P_dV_ * capacity_ > 0.0)) {
+    if (!(r_P_0_ + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
         error_ = "r_P line is too steep: the CW moment must increase with "
                  "volume up to full (need A + 2*B*capacity > 0)";
     }
@@ -264,7 +264,7 @@ double CwModel::GetCapacityMass() const {
  *         r_P(V) = A + B·V
  */
 double CwModel::PivotDist(const double& volume) const {
-    return r_P_0_ + dr_P_dV_ * volume;
+    return r_P_0_ + (dr_P_dV_ * volume);
 }
 
 /**
@@ -305,7 +305,7 @@ double CwModel::HangMoment(const double& mass) const {
  *         m_cw·(r_P(V) + q_P·tanθ)
  */
 double CwModel::EffectiveMoment(const double& mass, const double& theta) const {
-    return Moment(mass) + HangMoment(mass) * std::tan(theta);
+    return Moment(mass) + (HangMoment(mass) * std::tan(theta));
 }
 
 /**
@@ -333,8 +333,8 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
     }
 
     // Effective lever must keep the moment rising from empty to full
-    const double a_eff = r_P_0_ + q_P_ * std::tan(theta);
-    if (!(a_eff > 0.0) || !(a_eff + 2.0 * dr_P_dV_ * capacity_ > 0.0)) {
+    const double a_eff = r_P_0_ + (q_P_ * std::tan(theta));
+    if (!(a_eff > 0.0) || !(a_eff + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
         return std::nullopt;
     }
 
@@ -350,7 +350,7 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
 
     // Solve for m_cw
     const double c = dr_P_dV_ / kWaterDensity;
-    const double disc = std::max(0.0, a_eff * a_eff + 4.0 * c * moment);
+    const double disc = std::max(0.0, (a_eff * a_eff) + (4.0 * c * moment));
     return 2.0 * moment / (a_eff + std::sqrt(disc));
 }
 
@@ -365,7 +365,7 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
  */
 double CwModel::Inertia(const double& mass) const {
     const double r_P = PivotDist(mass / kWaterDensity);
-    return mass * (r_P * r_P + q_P_ * q_P_);
+    return mass * ((r_P * r_P) + (q_P_ * q_P_));
 }
 
 /**
@@ -381,7 +381,7 @@ double CwModel::Inertia(const double& mass) const {
 double CwModel::InertiaSlope(const double& mass) const {
     const double volume = mass / kWaterDensity;
     const double r_P = PivotDist(volume);
-    return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
+    return (r_P * (r_P + (2.0 * dr_P_dV_ * volume))) + (q_P_ * q_P_);
 }
 
 //------------------------------------------------------------------------------
@@ -421,7 +421,8 @@ double CwMass(const double& volume) {
 double CwGravTorque(const double& cw_moment, const double& cw_hang_moment,
                     const double& grav, const double& theta) {
     return grav
-           * (cw_moment * std::cos(theta) + cw_hang_moment * std::sin(theta));
+           * ((cw_moment * std::cos(theta))
+              + (cw_hang_moment * std::sin(theta)));
 }
 
 /**
@@ -459,7 +460,7 @@ std::optional<double> ArmLevelTorque(const double& arm_torque,
     if (std::abs(c) < kMinCosForBalance) {
         return std::nullopt;
     }
-    return (arm_torque - arm_hang_torque * std::sin(theta)) / c;
+    return (arm_torque - (arm_hang_torque * std::sin(theta))) / c;
 }
 
 /**
@@ -488,11 +489,11 @@ std::optional<Motion::ArmModel> SolveTwoAngle(const double& arm_torque_a,
     }
 
     Motion::ArmModel model;
-    model.level_torque = (arm_torque_a * std::sin(theta_b)
-                          - arm_torque_b * std::sin(theta_a))
+    model.level_torque = ((arm_torque_a * std::sin(theta_b))
+                          - (arm_torque_b * std::sin(theta_a)))
                          / s;
-    model.hang_torque = (arm_torque_b * std::cos(theta_a)
-                         - arm_torque_a * std::cos(theta_b))
+    model.hang_torque = ((arm_torque_b * std::cos(theta_a))
+                         - (arm_torque_a * std::cos(theta_b)))
                         / s;
     return model;
 }
@@ -515,8 +516,8 @@ double NetGravTorque(const double& arm_level_torque,
                      const double& arm_hang_torque, const double& cw_moment,
                      const double& cw_hang_moment, const double& grav,
                      const double& theta) {
-    return (arm_level_torque + grav * cw_moment) * std::cos(theta)
-           + (arm_hang_torque + grav * cw_hang_moment) * std::sin(theta);
+    return ((arm_level_torque + (grav * cw_moment)) * std::cos(theta))
+           + ((arm_hang_torque + (grav * cw_hang_moment)) * std::sin(theta));
 }
 
 /**
@@ -532,7 +533,7 @@ double NetGravTorque(const double& arm_level_torque,
  */
 double StabilityTorque(const double& arm_hang_torque,
                        const double& cw_hang_moment, const double& grav) {
-    return arm_hang_torque + grav * cw_hang_moment;
+    return arm_hang_torque + (grav * cw_hang_moment);
 }
 
 /**
@@ -557,8 +558,8 @@ double FeedforwardTorque(const double& inertia, const double& inertia_rate,
                          const double& friction_viscous,
                          const double& friction_coulomb, const double& ref_acc,
                          const double& ref_vel, const double& net_grav_torque) {
-    return inertia * ref_acc + (friction_viscous + inertia_rate) * ref_vel
-           + friction_coulomb * Sign(ref_vel) - net_grav_torque;
+    return (inertia * ref_acc) + ((friction_viscous + inertia_rate) * ref_vel)
+           + (friction_coulomb * Sign(ref_vel)) - net_grav_torque;
 }
 
 /**
@@ -583,7 +584,7 @@ std::optional<double> BalanceCwMoment(const double& arm_level_torque,
     if (std::abs(std::cos(theta)) < kMinCosForBalance) {
         return std::nullopt;
     }
-    return -(arm_level_torque + arm_hang_torque * std::tan(theta)) / grav;
+    return -(arm_level_torque + (arm_hang_torque * std::tan(theta))) / grav;
 }
 
 /**
@@ -652,11 +653,12 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
     // Determine friction coefficients (+ residuals)
     Motion::FrictionModel model;
     model.viscous = s_vf / s_vv;
-    model.coulomb = mean_f - model.viscous * mean_v;
+    model.coulomb = mean_f - (model.viscous * mean_v);
 
     double sum_sq = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
-        const double r = drags[i] - (model.coulomb + model.viscous * speeds[i]);
+        const double r = drags[i]
+                         - (model.coulomb + (model.viscous * speeds[i]));
         sum_sq += r * r;
     }
     model.residual_rms = std::sqrt(sum_sq / static_cast<double>(n));
@@ -1214,8 +1216,8 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     const double longest_ramp = RampDist(max_speed, inertia);
     const double margin = longest_ramp + kFrictionSampleMargin;
 
-    const double min_window = 2.0 * margin
-                              + kFrictionMinBins * kFrictionBinWidth;
+    const double min_window = (2.0 * margin)
+                              + (kFrictionMinBins * kFrictionBinWidth);
     if (hi - lo < min_window) {
         logger_->Warn("Friction calibration rejected: window is "
                       + FormatDeg(hi - lo) + " deg, need at least "
@@ -1258,7 +1260,7 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                   + FormatDeg(hi) + " deg at " + speeds_deg + " deg/s");
     logger_->Debug(
         "Friction calibration ("
-        + std::to_string(1 + 2 * kFrictionSpeedFractions.size())
+        + std::to_string(1 + (2 * kFrictionSpeedFractions.size()))
         + " steps):"
           "\n  sampled:  "
         + FormatDeg(lo + margin) + " to " + FormatDeg(hi - margin)
@@ -1931,9 +1933,9 @@ void Libra2MotionController::BeginCalibrationStage(
 
                 if (going_up) {
                     // Each run starts with an upwards sweep and fresh history
-                    const auto n_bins = static_cast<std::size_t>(
-                        std::ceil((fr.angle_hi - fr.angle_lo - 2.0 * fr.margin)
-                                  / kFrictionBinWidth));
+                    const auto n_bins = static_cast<std::size_t>(std::ceil(
+                        (fr.angle_hi - fr.angle_lo - (2.0 * fr.margin))
+                        / kFrictionBinWidth));
                     fr.up_sum.assign(n_bins, 0.0);
                     fr.down_sum.assign(n_bins, 0.0);
                     fr.up_count.assign(n_bins, 0);
@@ -2000,7 +2002,7 @@ std::string Libra2MotionController::DescribeCalibrationStage() const {
         case Motion::CalibrationStatus::kFrictionMovingToStart:
             name = "Friction";
             step = 1;
-            total = 1 + 2 * n_speeds;
+            total = 1 + (2 * n_speeds);
             action = "moving to window start " + FormatDeg(fr.angle_lo)
                      + " deg";
             break;
@@ -2017,8 +2019,8 @@ std::string Libra2MotionController::DescribeCalibrationStage() const {
                                                    RampDist(speed, fr.inertia));
 
                 name = "Friction";
-                step = 2 + 2 * idx + (going_up ? 0 : 1);
-                total = 1 + 2 * n_speeds;
+                step = 2 + (2 * idx) + (going_up ? 0 : 1);
+                total = 1 + (2 * n_speeds);
                 action = "speed " + std::to_string(idx + 1) + "/"
                          + std::to_string(n_speeds) + " (" + FormatDeg(speed)
                          + " deg/s), sweeping " + (going_up ? "up" : "down")
@@ -2574,8 +2576,8 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         // Holding torque should equal -τ_ext,g at bin center
         if (model_ready) {
             const double theta_bin = lo
-                                     + (static_cast<double>(i) + 0.5)
-                                           * kFrictionBinWidth;
+                                     + ((static_cast<double>(i) + 0.5)
+                                        * kFrictionBinWidth);
             model_err_sum += holding + ComputeNetGravTorque(theta_bin, cw_mass);
         }
 
