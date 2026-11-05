@@ -78,8 +78,10 @@ constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
 // TODO: input after measuring
 constexpr double kEtaConduitMinLength = 0.0;  // L_conduit,min (m)
 
-// TODO: input after measuring
-constexpr double kEtaTipMass = 1.049;  // m_tip (kg)
+constexpr double kSensorSuiteMass = 0.2917;  // D456 + SF45/B w/ mounts (kg)
+constexpr double kEtaTipMountMass = 0.0215;  // (kg)
+constexpr double kEtaTipMass = kSensorSuiteMass
+                               + kEtaTipMountMass;  // m_tip (kg)
 
 // Predictive CW Command
 
