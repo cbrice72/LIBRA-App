@@ -780,7 +780,9 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
             + Motion::FormatNum((*cw_mass_ - mass_tgt) / Motion::kWaterDensity)
             + " L");
 
+        predictive_cw_mass_ = mass_tgt;
         HandOffToActuator();
+
         return false;
     }
 
@@ -800,9 +802,48 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
 void Libra2MotionController::HandOffToActuator() {
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = true;
+    reactive_cw_used_ = false;
+
     if (target_pos_) {
         pending_move_ = (*target_pos_)[kPitchIdx];
     }
+}
+
+/**
+ * @brief Logs the error between the predictive CW's estimated balancing mass
+ *        and the actual mass the reactive CW settled at, once the arm and water
+ *        are at rest.
+ *
+ * @param reactive Reactive CW command from ATC this cycle
+ * @param angle Actual angle, θ (rad)
+ * @param torque Actual actuator torque (Nm)
+ *
+ * @note Only logs if reactive CW moved after predictive CW finished; otherwise
+ *       the predicted mass held the torque below ATC's lower bound.
+ */
+void Libra2MotionController::LogPredictiveCwError(
+    const std::optional<Motion::CwCommand>& reactive, const double& angle,
+    const double& torque) {
+    if (reactive && *reactive != Motion::CwCommand::kIdle) {
+        reactive_cw_used_ = true;
+        return;
+    }
+
+    // Settled: torque below ATC's lower bound, arm and water stopped
+    if (!reactive_cw_used_ || reactive != Motion::CwCommand::kIdle
+        || trajectory_active_ || cw_flow_ != 0.0) {
+        return;
+    }
+
+    const double predicted = *predictive_cw_mass_ / Motion::kWaterDensity;
+    const double settled = *cw_mass_ / Motion::kWaterDensity;
+    logger_->Info("Reactive CW settled at " + Motion::FormatNum(settled)
+                  + " L vs. predicted " + Motion::FormatNum(predicted)
+                  + " L (error " + Motion::FormatNum(settled - predicted)
+                  + " L) at angle=" + Motion::FormatNum(angle)
+                  + " rad, torque=" + Motion::FormatNum(torque) + " Nm");
+
+    predictive_cw_mass_.reset();
 }
 
 /**
@@ -895,13 +936,23 @@ Motion::Libra2Command Libra2MotionController::Update(
             // Feedforward off and CW reactive while calibrating
             calibrator_.Update(cycle);
         } else {
-            // Predictive CW replaces reactive (except after hand-off)
+            // Predictive CW replaces reactive until it reaches its target
+            // mass; reactive then handles any torque left above ATC bounds
             if (model_ready && target && !cw_assist_done_) {
                 const auto cw_mass_tgt = TargetCwMass(*target);
                 if (cw_mass_tgt) {
-                    command.cw_command = PredictiveCwCommand(*cw_mass_tgt,
-                                                             *cw_mass_);
+                    const Motion::CwCommand cw =
+                        PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
+                    if (cw == Motion::CwCommand::kIdle) {
+                        cw_assist_done_ = true;
+                        predictive_cw_mass_ = *cw_mass_tgt;
+                        reactive_cw_used_ = false;
+                    } else {
+                        command.cw_command = cw;
+                    }
                 }
+            } else if (predictive_cw_mass_ && cw_mass_) {
+                LogPredictiveCwError(atc.cw_command, angle, actual_torque);
             }
 
             command.ff_torque[kPitchIdx] = ModelFeedforward(angle, ref_vel,
@@ -1053,6 +1104,7 @@ void Libra2MotionController::OnTargetChanged() {
 
     // Mode change applies from the next target
     cw_assist_done_ = false;
+    predictive_cw_mass_.reset();
     if (mode_ == Motion::MotionMode::kCwPrimary) {
         cw_phase_ = CwPhase::kCwMoving;
         pending_move_.reset();  // eventual hand-off requests the move
@@ -1070,6 +1122,8 @@ void Libra2MotionController::OnStop() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
+    predictive_cw_mass_.reset();
+
     pending_move_.reset();
 }
 
@@ -1082,9 +1136,12 @@ void Libra2MotionController::OnReset() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
+    predictive_cw_mass_.reset();
+
     pending_move_.reset();
     trajectory_active_ = false;
     movement_en_ = true;
+
     state_warned_ = false;
 }
 
