@@ -302,8 +302,6 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] double SampleToArmTorque(
         const Motion::RestSample& sample) const;
-    [[nodiscard]] std::optional<Motion::ArmModel> RecomputeArmModel(
-        const Motion::ArmModel& saved) const;
     bool CheckStability(const double& arm_hang_torque);
     void CancelCalibrationLocked();
     [[nodiscard]] double LevelTorqueAtExtension() const;
@@ -325,11 +323,8 @@ class Libra2MotionController : public AbstractMotionController {
     double arm_hang_torque_{0.0};   // m_arm·h_1·g (Nm)
     bool arm_calibrated_{false};
 
-    std::string arm_source_;                       // see `ArmModel`
-    Motion::CwModelParams arm_cw_params_;          // reference CW model
-    std::vector<Motion::RestSample> arm_samples_;  // source calibration samples
-    // TODO: check Claude-generated code
-    double arm_eta_extension_{0.0};  // ETA extension at calibration (m)
+    std::string arm_source_;               // see `ArmModel`
+    Motion::CwModelParams arm_cw_params_;  // reference CW model
 
     std::optional<Motion::FrictionModel> friction_model_;
 

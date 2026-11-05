@@ -1176,10 +1176,6 @@ double Libra2MotionController::GetEtaExtension() const {
  * @param arm_level_torque Arm gravitational torque at level and min. ETA
  *                         extension, τ_g1,0 (Nm)
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- *
- * @note No raw samples are kept, so a saved record of it can't be recomputed
- *       if the CW model changes. Use `LoadCalibrationRecord()` for saved
- *       calibrations.
  */
 void Libra2MotionController::SetArmModel(const double& arm_level_torque,
                                          const double& arm_hang_torque) {
@@ -1190,8 +1186,6 @@ void Libra2MotionController::SetArmModel(const double& arm_level_torque,
     arm_calibrated_ = true;
     arm_source_ = "set";
     arm_cw_params_ = cw_model_.GetParams();
-    arm_samples_.clear();
-    arm_eta_extension_ = 0.0;
     logger_->Info("Arm model set: arm_level_torque=" + Format(arm_level_torque)
                   + " Nm, arm_hang_torque=" + Format(arm_hang_torque) + " Nm");
 
@@ -1217,8 +1211,6 @@ bool Libra2MotionController::ClearModel() {
     arm_hang_torque_ = 0.0;
     arm_calibrated_ = false;
     arm_source_.clear();
-    // TODO: check Claude-generated code
-    arm_eta_extension_ = 0.0;
     mode_ = Motion::MotionMode::kTandem;  // safe default
     cw_phase_ = CwPhase::kIdle;
 
@@ -1584,9 +1576,6 @@ Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
         arm.level_torque = arm_level_torque_;
         arm.hang_torque = arm_hang_torque_;
         arm.cw_model = arm_cw_params_;
-        arm.samples = arm_samples_;
-        // TODO: check Claude-generated code
-        arm.eta_extension = arm_eta_extension_;
         record.arm_model = arm;
     }
     record.friction = friction_model_;
@@ -1599,8 +1588,8 @@ Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
  *
  * @param record A full or partial calibration
  *
- * @note If the CW model changed since the arm model was made, the arm model is
- *       recomputed from its raw samples with the current CW model.
+ * @note If the CW model changed since the arm model was made, the saved arm
+ *       model is used as-is (with a warning).
  */
 bool Libra2MotionController::LoadCalibrationRecord(
     const Motion::CalibrationRecord& record) {
@@ -1638,9 +1627,6 @@ bool Libra2MotionController::LoadCalibrationRecord(
         arm_calibrated_ = true;
         arm_source_ = arm.source;
         arm_cw_params_ = arm.cw_model;
-        arm_samples_ = arm.samples;
-        // TODO: check Claude-generated code
-        arm_eta_extension_ = arm.eta_extension;
 
         CheckStability(arm_hang_torque_);
     }
@@ -2373,70 +2359,6 @@ double Libra2MotionController::SampleToArmTorque(
 }
 
 /**
- * @brief Recomputes a saved arm model from its raw samples using the current
- *        CW model.
- *
- * @param saved Arm model (one sample = level, two = two-angle)
- *
- * @note τ_g1,0 is converted to min. ETA extension (see
- *       `LevelTorqueAtExtension()`).
- *
- * @see Libra2Model::EtaMomentChange
- */
-std::optional<Motion::ArmModel> Libra2MotionController::RecomputeArmModel(
-    const Motion::ArmModel& saved) const {
-    if (!cw_model_.IsValid()) {
-        return std::nullopt;
-    }
-
-    Motion::ArmModel model = saved;
-    model.cw_model = cw_model_.GetParams();
-
-    // Level calibrated
-    if (saved.samples.size() == 1) {
-        // Eq. 34 with the saved arm_hang_torque
-        const Motion::RestSample& s = saved.samples.front();
-        const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(s),
-                                                       s.theta,
-                                                       saved.hang_torque);
-        if (!level) {
-            return std::nullopt;
-        }
-        // TODO: check Claude-generated code
-        // Convert to min. ETA extension (Eq. 44)
-        model.level_torque = *level
-                             + (kGrav
-                                * Libra2Model::EtaMomentChange(
-                                    saved.eta_extension));
-        return model;
-    }
-
-    // Two-angle calibrated
-    if (saved.samples.size() == 2) {
-        // Eq. 35
-        const Motion::RestSample& a = saved.samples[0];
-        const Motion::RestSample& b = saved.samples[1];
-        const auto solved = Libra2Model::SolveTwoAngle(SampleToArmTorque(a),
-                                                       a.theta,
-                                                       SampleToArmTorque(b),
-                                                       b.theta);
-        if (!solved) {
-            return std::nullopt;
-        }
-        // TODO: check Claude-generated code
-        // Convert to min. ETA extension (Eq. 44)
-        model.level_torque = solved->level_torque
-                             + (kGrav
-                                * Libra2Model::EtaMomentChange(
-                                    saved.eta_extension));
-        model.hang_torque = solved->hang_torque;
-        return model;
-    }
-
-    return std::nullopt;
-}
-
-/**
  * @brief Checks whether the arm is stable at every possible CW volume.
  *
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
@@ -2589,9 +2511,6 @@ void Libra2MotionController::FinishLevelCalibration(
     arm_calibrated_ = true;
     arm_source_ = "level";
     arm_cw_params_ = cw_model_.GetParams();
-    arm_samples_ = {sample};
-    // TODO: check Claude-generated code
-    arm_eta_extension_ = eta_extension_;
 
     // TODO: check Claude-generated code
     FinishCalibration(true,
@@ -2632,9 +2551,6 @@ void Libra2MotionController::FinishTwoAngleCalibration(
     arm_calibrated_ = true;
     arm_source_ = "two-angle";
     arm_cw_params_ = cw_model_.GetParams();
-    arm_samples_ = {sample_a_, sample_b};
-    // TODO: check Claude-generated code
-    arm_eta_extension_ = eta_extension_;
     const bool stable = CheckStability(arm_hang_torque_);
 
     FinishCalibration(true,

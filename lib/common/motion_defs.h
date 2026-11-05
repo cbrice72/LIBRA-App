@@ -231,12 +231,10 @@ struct RestSample {
 struct ArmModel {
     std::string source;  // "level", "two-angle", or "set"
 
-    double level_torque{0.0};   // τ_g1,0 at min. ETA extension (Nm)
-    double hang_torque{0.0};    // m_arm·h_1·g (Nm)
-    double eta_extension{0.0};  // ETA extension the samples were taken at (m)
+    CwModelParams cw_model;  // CW model used to compute it
 
-    CwModelParams cw_model;           // CW model used to compute it
-    std::vector<RestSample> samples;  // raw; level: 1, two-angle: 2 (a, b)
+    double level_torque{0.0};  // τ_g1,0 at min. ETA extension (Nm)
+    double hang_torque{0.0};   // m_arm·h_1·g (Nm)
 };
 
 /**

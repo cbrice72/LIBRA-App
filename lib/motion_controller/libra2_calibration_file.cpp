@@ -169,25 +169,11 @@ bool CwModelFromJson(const QJsonObject& obj, const std::string& context,
  * @param arm Arm model record
  */
 QJsonObject ArmModelToJson(const ArmModel& arm) {
-    // Raw data
-    QJsonArray samples;
-    for (const auto& s : arm.samples) {
-        QJsonObject sample;
-        sample["theta_rad"] = s.theta;
-        sample["torque_nm"] = s.torque;
-        sample["volume_l"] = s.volume;
-        samples.append(sample);
-    }
-
-    // Model data
     QJsonObject obj;
     obj["source"] = QString::fromStdString(arm.source);
     obj["level_torque_nm"] = arm.level_torque;
     obj["hang_torque_nm"] = arm.hang_torque;
     obj["cw_model"] = CwModelToJson(arm.cw_model);
-    obj["samples"] = samples;
-    // TODO: check Claude-generated code
-    obj["eta_extension_m"] = arm.eta_extension;
 
     return obj;
 }
@@ -213,28 +199,6 @@ bool ArmModelFromJson(const QJsonObject& obj, const std::string& context,
         || !CwModelFromJson(cw_obj, context + "cw_model.", arm.cw_model,
                             error)) {
         return false;
-    }
-    // TODO: check Claude-generated code
-    // Older files predate ETA extension (taken at min. extension)
-    arm.eta_extension = obj.value("eta_extension_m").toDouble(0.0);
-
-    // Raw data
-    arm.samples.clear();
-    const QJsonArray samples = obj.value("samples").toArray();
-    for (int i = 0; i < samples.size(); ++i) {
-        const std::string sample_context = context + "samples["
-                                           + std::to_string(i) + "].";
-        const QJsonObject s = samples.at(i).toObject();
-        RestSample sample;
-
-        if (!ReadNumber(s, "theta_rad", sample_context, sample.theta, error)
-            || !ReadNumber(s, "torque_nm", sample_context, sample.torque, error)
-            || !ReadNumber(s, "volume_l", sample_context, sample.volume,
-                           error)) {
-            return false;
-        }
-
-        arm.samples.push_back(sample);
     }
 
     return true;

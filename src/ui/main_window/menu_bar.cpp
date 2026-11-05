@@ -496,8 +496,8 @@ void MainWindow::on_a_motion_calibration_save_triggered() {
  * @brief Event handler for "Motion Control" menu action "Load calibration...".
  *        Asks for a calibration file and applies it.
  *
- * @note The motion controller recomputes the arm model from the file's raw
- *       samples if the CW model has changed since it was saved.
+ * @note If the CW model has changed since the file was saved, its arm model
+ *       is still used (with a warning).
  */
 void MainWindow::on_a_motion_calibration_load_triggered() {
     const QString file_path =
