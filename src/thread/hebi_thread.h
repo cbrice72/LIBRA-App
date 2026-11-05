@@ -153,6 +153,7 @@ class HebiThread : public AbstractActuatorThread
                                  Eigen::VectorXd& cmd_eff);
 
     bool CanCalibrate();
+    [[nodiscard]] Eigen::VectorXd HeldPosition() const;
     void StartSweep(const Motion::SweepRequest& sweep);
 #endif
 
@@ -213,9 +214,9 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<Libra2MotionController> motion_controller_;
     std::atomic<bool> free_mode_{false};
 
-    // Last position/velocity command sent (actuator space)
-    Eigen::VectorXd pos_cmd_;  // rad
-    Eigen::VectorXd vel_cmd_;  // rad/s
+    // Latest position/velocity command (actuator space)
+    Eigen::VectorXd latest_cmd_pos_;  // rad
+    Eigen::VectorXd latest_cmd_vel_;  // rad/s
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> moving_{false};

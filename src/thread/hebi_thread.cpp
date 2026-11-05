@@ -669,15 +669,16 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
     constexpr double kNone = std::numeric_limits<double>::quiet_NaN();
 
     // Connect() normally sets these; safe defaults just in case this runs first
-    if (pos_cmd_.size() != n_actuators_ || vel_cmd_.size() != n_actuators_) {
-        pos_cmd_ = feedback_->getPosition();
-        vel_cmd_ = Eigen::VectorXd::Zero(n_actuators_);
+    if (latest_cmd_pos_.size() != n_actuators_
+        || latest_cmd_vel_.size() != n_actuators_) {
+        latest_cmd_pos_ = feedback_->getPosition();
+        latest_cmd_vel_ = Eigen::VectorXd::Zero(n_actuators_);
     }
 
     // Free-spin mode: no need to send anything to the pitch joint
     if (free_mode_) {
-        pos_cmd_.setConstant(kNone);
-        vel_cmd_.setZero();
+        latest_cmd_pos_.setConstant(kNone);
+        latest_cmd_vel_.setZero();
         emit ReportArmTorque(std::nullopt);
         ReportMotionStatus();
         return true;  // nothing to send
@@ -745,16 +746,17 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
     // Deal with move request (calibration, CW Primary, tandem CW-actuator)
     if (cmd.move_to && cmd.move_to->size() == Motion::kNumJoints) {
-        Eigen::VectorXd move_pos = feedback_->getPosition();  // unmapped stay
+        const Eigen::VectorXd start_pos = HeldPosition();
+        Eigen::VectorXd end_pos = start_pos;
         for (int i = 0; i < n_actuators_; ++i) {
             const auto joint = JointFromActuator(enum_names_[i]);
             if (joint != Joint::Name::kUndefined) {
-                move_pos(
+                end_pos(
                     i) = Actuator::JointToActuatorSimple(enum_names_[i],
                                                          (*cmd.move_to)[joint]);
             }
         }
-        StartTrajectory(feedback_->getPosition(), move_pos);
+        StartTrajectory(start_pos, end_pos);
     }
 
     // Sweep requested (replaces above motion plan)
@@ -782,7 +784,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         t_trajectory_s_ = 0.0;
         cmd_vel.setZero();
         cmd_acc.setZero();
-        vel_cmd_.setZero();
+        latest_cmd_vel_.setZero();
 
     } else if (trajectory_ != nullptr) {
         // --- MODE 1b: ACTIVE MOVEMENT ---
@@ -795,24 +797,24 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
             // reference consistent with position
             cmd_vel *= rate;
             cmd_acc *= rate * rate;
-            vel_cmd_ = cmd_vel;
+            latest_cmd_vel_ = cmd_vel;
         } else {
             // Trajectory complete: hold final pose
             trajectory_->getState(trajectory_->getDuration(), &cmd_pos,
                                   &cmd_vel, &cmd_acc);
             cmd_vel.setZero();
             cmd_acc.setZero();
-            vel_cmd_.setZero();
+            latest_cmd_vel_.setZero();
             trajectory_.reset();
 
             logger_->Info("Trajectory complete");
         }
-        pos_cmd_ = cmd_pos;
+        latest_cmd_pos_ = cmd_pos;
 
     } else {
         // --- MODE 2: HOLD POSITION ---
 
-        vel_cmd_.setZero();
+        latest_cmd_vel_.setZero();
     }
     lock.unlock();
 
@@ -827,11 +829,11 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
         if (cmd.mode[joint] == Motion::CommandMode::kTorqueOnly) {
             // CW Primary: free the arm so the CW can move it
-            pos_cmd_(i) = kNone;
-            vel_cmd_(i) = kNone;
-        } else if (std::isnan(pos_cmd_(i))) {
+            latest_cmd_pos_(i) = kNone;
+            latest_cmd_vel_(i) = kNone;
+        } else if (std::isnan(latest_cmd_pos_(i))) {
             // Hand-off from CW Primary: hold position
-            pos_cmd_(i) = feedback_->getPosition()[i];
+            latest_cmd_pos_(i) = feedback_->getPosition()[i];
         }
 
         // Effort feedforward
@@ -841,8 +843,8 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
                                : kNone;
     }
 
-    command_->setPosition(pos_cmd_);
-    command_->setVelocity(vel_cmd_);
+    command_->setPosition(latest_cmd_pos_);
+    command_->setVelocity(latest_cmd_vel_);
     command_->setEffort(cmd_eff);
 
     // Log motion controller's model vs. measurements
@@ -880,15 +882,34 @@ bool HebiThread::CanCalibrate() {
 }
 
 /**
+ * @brief Gets the pose the position loop is holding
+ *
+ * @note Starting from measured pose instead would cause the actuators to "jump"
+ *       the position command by the position error, suddenly dropping any
+ *       torque from the P gain.
+ */
+Eigen::VectorXd HebiThread::HeldPosition() const {
+    Eigen::VectorXd held = feedback_->getPosition();
+    if (latest_cmd_pos_.size() != held.size()) {
+        return held;
+    }
+    for (int i = 0; i < held.size(); ++i) {
+        if (std::isfinite(latest_cmd_pos_(i))) {
+            held(i) = latest_cmd_pos_(i);
+        }
+    }
+    return held;
+}
+
+/**
  * @brief Starts a pitch sweep: rest, ramp up to constant speed, hold it, ramp
  *        down to rest (other joints hold).
  *
  * @param sweep Sweep to follow (joint space)
  *
- * @note Starts from the measured pose rather than `sweep.from`, so there's no
- *       jump. With position, speed, and zero acceleration fixed at each
- *       waypoint, the middle segment is exactly constant speed, and each ramp
- *       (speed v over distance d) takes 2·d / v.
+ * @note With position, speed, and zero acceleration fixed at each waypoint, the
+ *       middle segment is exactly constant speed, and each ramp (speed v over
+ *       distance d) takes 2·d / v.
  *
  * @note A rejected sweep cancels the calibration that requested it.
  */
@@ -896,7 +917,7 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
     const double dir = (sweep.to > sweep.from) ? 1.0 : -1.0;
     const double ramp_end = sweep.from + (dir * sweep.ramp_dist);
     const double ramp_start = sweep.to - (dir * sweep.ramp_dist);
-    const auto& start = feedback_->getPosition();
+    const Eigen::VectorXd start = HeldPosition();
 
     // Pitch must start before the first ramp ends, at a speed within limits
     double pitch_start = sweep.from;
@@ -1247,8 +1268,8 @@ void HebiThread::Connect() {
 
 #if LIBRA_VERSION == 2
     // Same pose for loop's position hold; reset motion controller and clock
-    pos_cmd_ = feedback_->getPosition();
-    vel_cmd_ = Eigen::VectorXd::Zero(n_actuators_);
+    latest_cmd_pos_ = feedback_->getPosition();
+    latest_cmd_vel_ = Eigen::VectorXd::Zero(n_actuators_);
     {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
         t_trajectory_s_ = 0.0;
