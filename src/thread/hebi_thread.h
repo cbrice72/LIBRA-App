@@ -137,20 +137,20 @@ class HebiThread : public AbstractActuatorThread
 
     void StartTrajectory(const Eigen::VectorXd& start_pos,
                          const Eigen::VectorXd& target_pos);
-    void SetMaxVelocity(const hebi::GroupCommand& safety_cmd,
-                        const std::string& source);
+    void SetMaxVel(const hebi::GroupCommand& safety_cmd,
+                   const std::string& source);
 #if LIBRA_VERSION == 1
     void CheckTorqueControl();
     bool ExecuteMovement(std::chrono::duration<double> dt,
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
-                         Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_eff);
+                         Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_trq);
 #elif LIBRA_VERSION == 2
     void ReportMotionStatus();
     bool ExecuteMotionController(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_pos,
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
-                                 Eigen::VectorXd& cmd_eff);
+                                 Eigen::VectorXd& cmd_trq);
 
     bool CanCalibrate();
     [[nodiscard]] Eigen::VectorXd HeldPosition() const;

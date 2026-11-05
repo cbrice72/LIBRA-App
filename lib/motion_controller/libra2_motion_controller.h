@@ -56,9 +56,9 @@ class CwModel {
     [[nodiscard]] double Moment(const double& mass) const;
     [[nodiscard]] double HangMoment(const double& mass) const;
     [[nodiscard]] double EffectiveMoment(const double& mass,
-                                         const double& theta) const;
+                                         const double& angle) const;
     [[nodiscard]] std::optional<double> MassForMoment(const double& moment,
-                                                      const double& theta) const;
+                                                      const double& angle) const;
 
     [[nodiscard]] double Inertia(const double& mass) const;
     [[nodiscard]] double InertiaSlope(const double& mass) const;
@@ -82,7 +82,7 @@ class CwModel {
  * @brief Time-weighted moving average of velocity over `kVelAvgWindow`, since
  *        raw values are too noisy to compare against small thresholds.
  */
-class VelocityAverager {
+class VelAverager {
   public:
     void Reset();
     double Add(const double& dt, const double& vel);
@@ -113,15 +113,15 @@ class RestSampler {
   private:
     void RestartWindow();
 
-    VelocityAverager vel_avg_;  // kept across window restarts
+    VelAverager vel_avg_;  // kept across window restarts
 
     int count_{0};
     double t_elapsed_s_{0.0};  // seconds
 
-    double anchor_theta_{0.0};
+    double anchor_angle_{0.0};
     double anchor_volume_{0.0};
 
-    double sum_theta_{0.0};
+    double sum_angle_{0.0};
     double sum_torque_{0.0};
     double sum_volume_{0.0};
 };
@@ -182,7 +182,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] double GetArmLevelTorque() const;
     [[nodiscard]] double GetArmHangTorque() const;
-    [[nodiscard]] double ComputeNetGravTorque(const double& theta,
+    [[nodiscard]] double ComputeNetGravTorque(const double& angle,
                                               const double& cw_mass) const;
 
     // --- Calibration ---
@@ -190,7 +190,7 @@ class Libra2MotionController : public AbstractMotionController {
     bool StartLevelCalibration();
     bool StartTwoAngleCalibration(const double& angle_a, const double& angle_b);
     bool StartFrictionCalibration(const double& angle_a, const double& angle_b,
-                                  const double& max_speed);
+                                  const double& max_vel);
     void CancelCalibration();
 
     [[nodiscard]] Motion::CalibrationStatus GetCalibrationStatus() const;
@@ -224,20 +224,20 @@ class Libra2MotionController : public AbstractMotionController {
      * @brief Friction calibration state.
      */
     struct FrictionRun {
-        double angle_lo{0.0};   // window start (rad)
-        double angle_hi{0.0};   // window end (rad)
-        double max_speed{0.0};  // (rad/s)
+        double angle_lo{0.0};  // window start (rad)
+        double angle_hi{0.0};  // window end (rad)
+        double max_vel{0.0};   // (rad/s)
 
         double volume{0.0};   // initial CW volume (L)
         double inertia{0.0};  // arm + CW, used to set ramp lengths (kg·m²)
         double margin{0.0};   // unsampled area at each window end (rad)
 
-        std::size_t speed_idx{0};
+        std::size_t vel_idx{0};
 
         bool trajectory_seen{false};  // whether the planned sweep has started
-        double t_over_limit_s{0.0};   // time over the |τ| limit (s)
+        double t_over_max_s{0.0};     // time over the |τ| limit (s)
 
-        VelocityAverager vel_avg;  // current sweep's θ̇, for the steady check
+        VelAverager vel_avg;  // current sweep's θ̇, for the steady check
 
         // Per-bin torque sums/counts for the current speed
         std::vector<double> up_sum;
@@ -256,34 +256,34 @@ class Libra2MotionController : public AbstractMotionController {
                                const Motion::CwCommand& direction,
                                const bool& braking);
     [[nodiscard]] std::optional<double> TargetCwMass(
-        const double& theta_tgt) const;
+        const double& angle_tgt) const;
     [[nodiscard]] Motion::CwCommand PredictiveCwCommand(
         const double& cw_mass_tgt, const double& cw_mass) const;
-    bool RunCwPrimary(const double& theta, const double& theta_tgt,
+    bool RunCwPrimary(const double& angle, const double& angle_tgt,
                       Motion::Libra2Command& command);
 
-    [[nodiscard]] double ModelFeedforward(const double& theta,
+    [[nodiscard]] double ModelFeedforward(const double& angle,
                                           const double& ref_vel,
                                           const double& ref_acc,
                                           const bool& model_ready) const;
 
     [[nodiscard]] Motion::Libra2Diagnostics ComputeDiagnostics(
-        const double& theta, const std::optional<double>& theta_tgt) const;
+        const double& angle, const std::optional<double>& angle_tgt) const;
 
     void RunArmCalibration(const double& dt, const bool& trajectory_active,
-                           const double& theta, const double& actual_vel,
+                           const double& angle, const double& actual_vel,
                            const double& actual_torque);
     void FinishLevelCalibration(const Motion::RestSample& sample);
     void FinishTwoAngleCalibration(const Motion::RestSample& sample_b);
 
     void RunFrictionCalibration(const double& dt, const bool& trajectory_active,
-                                const double& theta, const double& actual_vel,
+                                const double& angle, const double& actual_vel,
                                 const double& actual_torque);
-    void AddFrictionSample(const double& dt, const double& theta,
+    void AddFrictionSample(const double& dt, const double& angle,
                            const double& actual_vel,
                            const double& actual_torque, const bool& going_up,
-                           const double& speed);
-    bool FinishFrictionSpeed(const double& speed, std::string& error);
+                           const double& vel);
+    bool FinishFrictionVel(const double& vel, std::string& error);
     void FinishFrictionCalibration();
 
     void BeginCalibrationStage(const Motion::CalibrationStatus& status);
@@ -291,7 +291,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] std::string DescribeCalibrationStage() const;
     void LogCalibrationProgress(const double& dt, const double& timeout,
-                                const double& theta, const double& actual_vel,
+                                const double& angle, const double& actual_vel,
                                 const bool& trajectory_active);
 
     [[nodiscard]] double SampleToArmTorque(
@@ -324,9 +324,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     // CW State (from WaterController)
 
-    std::optional<double> cw_vol_;   // V (L)
-    std::optional<double> cw_mass_;  // m_cw (kg) -- Eq. 28
-    double cw_flow_{0.0};            // V̇ (L/s)
+    std::optional<double> cw_volume_;  // V (L)
+    std::optional<double> cw_mass_;    // m_cw (kg) -- Eq. 28
+    double cw_flow_{0.0};              // V̇ (L/s)
 
     // Dynamics (Eq. 15)
 

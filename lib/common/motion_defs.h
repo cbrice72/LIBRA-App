@@ -179,7 +179,7 @@ struct Libra2Diagnostics {
 struct SweepRequest {
     double from{0.0};       // start angle (rad)
     double to{0.0};         // end angle (rad)
-    double speed{0.0};      // speed between ramps, > 0 (rad/s)
+    double vel{0.0};        // speed between ramps, > 0 (rad/s)
     double ramp_dist{0.0};  // length of each ramp (rad)
 };
 
@@ -220,7 +220,7 @@ struct CwModelParams {
  *        solved from one (level) or two (two-angle) of these.
  */
 struct RestSample {
-    double theta{0.0};   // mean actual angle (rad)
+    double angle{0.0};   // mean actual angle (rad)
     double torque{0.0};  // mean actual actuator torque, τ_actuator (Nm)
     double volume{0.0};  // mean CW volume (L)
 };
@@ -241,7 +241,7 @@ struct ArmModel {
  * @brief One angle bin of a friction sweep, sampled in both directions.
  */
 struct FrictionBin {
-    double theta{0.0};    // bin center (rad)
+    double angle{0.0};    // bin center (rad)
     double drag{0.0};     // (τ_up - τ_down) / 2 (Nm)
     double holding{0.0};  // (τ_up + τ_down) / 2, i.e., -τ_ext,g (Nm)
     int n_up{0};          // upwards sweep samples
@@ -252,8 +252,8 @@ struct FrictionBin {
  * @brief One point of the friction line  (i.e., measurement at one sweep speed).
  */
 struct FrictionPoint {
-    double speed{0.0};  // v (rad/s)
-    double drag{0.0};   // (τ_up - τ_down) / 2, averaged over bins (Nm)
+    double vel{0.0};   // v (rad/s)
+    double drag{0.0};  // (τ_up - τ_down) / 2, averaged over bins (Nm)
 
     double spread{0.0};  // (max - min) of per-bin drag (Nm)
     int n_bins{0};       // bins sampled in both directions

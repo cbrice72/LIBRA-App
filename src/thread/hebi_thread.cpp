@@ -117,8 +117,7 @@ std::string FormatDouble(const double& value, const int& precision = 2) {
  * @param safety_cmd Command holding safety parameters (from
  *                   `readSafetyParameters()`)
  */
-std::optional<double> MaxVelocityFromSafety(
-    const hebi::GroupCommand& safety_cmd) {
+std::optional<double> MaxVelFromSafety(const hebi::GroupCommand& safety_cmd) {
     std::optional<double> max_vel;
     for (std::size_t i = 0; i < safety_cmd.size(); ++i) {
         const auto& actuator = safety_cmd[i].settings().actuator();
@@ -491,7 +490,7 @@ void HebiThread::CheckTorqueControl() {
  * @param cmd_pos Position command buffer
  * @param cmd_vel Velocity command buffer
  * @param cmd_acc Acceleration command buffer
- * @param cmd_eff Effort command buffer
+ * @param cmd_trq Torque command buffer
  *
  * @note Command buffers are reused to avoid repeated allocations at 100 Hz.
  */
@@ -499,7 +498,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
                                  Eigen::VectorXd& cmd_pos,
                                  Eigen::VectorXd& cmd_vel,
                                  Eigen::VectorXd& cmd_acc,
-                                 Eigen::VectorXd& cmd_eff) {
+                                 Eigen::VectorXd& cmd_trq) {
     // Playback rate from ATC hysteresis (0 = paused)
     const double rate = movement_en_ ? playback_rate_ : 0.0;
 
@@ -536,10 +535,10 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
 #endif  // LIBRA_VERSION == 1
 
 /**
- * @brief Starts a rest-to-rest trajectory between two poses.
+ * @brief Starts a trajectory between two poses.
  *
- * @param start_pos Start pose (rad, actuator space)
- * @param target_pos End pose (rad, actuator space)
+ * @param start_pos Start pose (rad)
+ * @param target_pos End pose (rad)
  *
  * @note LIBRA-I calls this from the `MainWindow` thread (via `SetTarget()`).
  *       LIBRA-II calls this from the motion control loop (via `move_to`).
@@ -575,8 +574,8 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
     //        mid-move at 15/8 their average speed; the planned move is
     //        stretched by 15/8 so the peak happens at `max_vel_`)
     // https://files.hebi.us/docs/matlab/hebi-matlab-2.4/HebiTrajectoryGenerator.setAlgorithm.html
-    constexpr double kPeakToAvgSpeed = 15.0 / 8.0;
-    const double t_move_s = kPeakToAvgSpeed * max_difference / max_vel_;
+    constexpr double kPeakToAvgVel = 15.0 / 8.0;
+    const double t_move_s = kPeakToAvgVel * max_difference / max_vel_;
     Eigen::VectorXd time(2);
 #if LIBRA_VERSION == 2
     // A zero-length move would give a zero-duration (invalid) trajectory, so
@@ -652,21 +651,22 @@ void HebiThread::ReportMotionStatus() {
  *        applies what it returns, and sends the command to the actuators.
  *
  * @param dt Time since last control cycle
- * @param cmd_pos Trajectory position buffer (rad, actuator space)
- * @param cmd_vel Velocity reference buffer (rad/s, actuator space); holds
- *                PREVIOUS cycle's reference on entry
- * @param cmd_acc Acceleration reference buffer (rad/s², actuator space); same
- * @param cmd_eff Effort command buffer (Nm, actuator space)
+ * @param cmd_pos Trajectory position buffer (rad)
+ * @param cmd_vel Velocity reference buffer (rad/s); holds PREVIOUS cycle's
+ *                reference on entry
+ * @param cmd_acc Acceleration reference buffer (rad/s²);  holds PREVIOUS
+ *                cycle's reference on entry
+ * @param cmd_trq Torque command buffer (Nm)
  *
- * @note Motion controller only sees joint space; conversion to and from
- *       actuator space happens here. Command buffers are reused to avoid
- *       repeated allocations at 100 Hz.
+ * @note Motion controller only sees "joint space"; conversion to and from
+ *       "actuator space" happens here. Command buffers are reused to avoid
+ *       repeated allocations.
  */
 bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
                                          Eigen::VectorXd& cmd_pos,
                                          Eigen::VectorXd& cmd_vel,
                                          Eigen::VectorXd& cmd_acc,
-                                         Eigen::VectorXd& cmd_eff) {
+                                         Eigen::VectorXd& cmd_trq) {
     constexpr double kNone = std::numeric_limits<double>::quiet_NaN();
 
     // Connect() normally sets these; safe defaults just in case this runs first
@@ -824,7 +824,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
     for (int i = 0; i < n_actuators_; ++i) {
         const auto joint = JointFromActuator(enum_names_[i]);
         if (joint == Joint::Name::kUndefined) {
-            cmd_eff(i) = kNone;
+            cmd_trq(i) = kNone;
             continue;
         }
 
@@ -839,14 +839,14 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
 
         // Effort feedforward
         const auto& ff_torque = cmd.ff_torque[joint];
-        cmd_eff(i) = ff_torque ? Actuator::JointToActuatorSimple(enum_names_[i],
+        cmd_trq(i) = ff_torque ? Actuator::JointToActuatorSimple(enum_names_[i],
                                                                  *ff_torque)
                                : kNone;
     }
 
     command_->setPosition(latest_cmd_pos_);
     command_->setVelocity(latest_cmd_vel_);
-    command_->setEffort(cmd_eff);
+    command_->setEffort(cmd_trq);
 
     // Log motion controller's model vs. measurements
     t_diag_log_elapsed_s_ += dt_s;
@@ -928,10 +928,10 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
                                                        start[i]);
         }
     }
-    if (!(sweep.speed > 0.0) || sweep.speed > max_vel_
-        || !(sweep.ramp_dist > 0.0) || dir * (ramp_start - ramp_end) < 0.0
+    if (!(sweep.vel > 0.0) || sweep.vel > max_vel_ || !(sweep.ramp_dist > 0.0)
+        || dir * (ramp_start - ramp_end) < 0.0
         || dir * (ramp_end - pitch_start) <= 0.0) {
-        logger_->Error("Rejected sweep: speed=" + FormatDouble(sweep.speed, 4)
+        logger_->Error("Rejected sweep: speed=" + FormatDouble(sweep.vel, 4)
                        + " rad/s (limit " + FormatDouble(max_vel_, 4)
                        + "), from " + FormatDouble(pitch_start, 3) + " to "
                        + FormatDouble(sweep.to, 3) + " rad");
@@ -944,10 +944,10 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
     // Waypoints (joint space): rest, constant speed starts, ends, rest
     const std::array<double, 4> pitch_pos = {pitch_start, ramp_end, ramp_start,
                                              sweep.to};
-    const std::array<double, 4> pitch_vel = {0.0, dir * sweep.speed,
-                                             dir * sweep.speed, 0.0};
-    const double t_ramp_s = 2.0 * sweep.ramp_dist / sweep.speed;
-    const double t_const_s = std::abs(ramp_start - ramp_end) / sweep.speed;
+    const std::array<double, 4> pitch_vel = {0.0, dir * sweep.vel,
+                                             dir * sweep.vel, 0.0};
+    const double t_ramp_s = 2.0 * sweep.ramp_dist / sweep.vel;
+    const double t_const_s = std::abs(ramp_start - ramp_end) / sweep.vel;
 
     Eigen::VectorXd time(4);
     time << 0, t_ramp_s, t_ramp_s + t_const_s, (2.0 * t_ramp_s) + t_const_s;
@@ -977,7 +977,7 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
     }
 
     logger_->Debug("Started sweep to " + FormatDouble(sweep.to, 3) + " rad at "
-                   + FormatDouble(sweep.speed, 4) + " rad/s");
+                   + FormatDouble(sweep.vel, 4) + " rad/s");
 }
 #endif  // LIBRA_VERSION == 2
 
@@ -1144,7 +1144,7 @@ void HebiThread::run() {
     Eigen::VectorXd cmd_pos = Eigen::VectorXd::Zero(n_actuators_);
     Eigen::VectorXd cmd_vel = Eigen::VectorXd::Zero(n_actuators_);
     Eigen::VectorXd cmd_acc = Eigen::VectorXd::Zero(n_actuators_);  // <- traj
-    Eigen::VectorXd cmd_eff = Eigen::VectorXd::Zero(n_actuators_);  // -> cmd
+    Eigen::VectorXd cmd_trq = Eigen::VectorXd::Zero(n_actuators_);  // -> cmd
 
     // For dynamic compensation (DynamicComp)
     auto last_loop_time = std::chrono::steady_clock::now();
@@ -1175,11 +1175,11 @@ void HebiThread::run() {
         // Execute control logic
 #if LIBRA_VERSION == 2
         const bool command_sent = ExecuteMotionController(dt, cmd_pos, cmd_vel,
-                                                          cmd_acc, cmd_eff);
+                                                          cmd_acc, cmd_trq);
 #else
         CheckTorqueControl();
         const bool command_sent = ExecuteMovement(dt, cmd_pos, cmd_vel, cmd_acc,
-                                                  cmd_eff);
+                                                  cmd_trq);
 #endif
         if (!command_sent) {
             emit ErrorThrown("HEBI - Failed to send actuator command; "
@@ -1242,7 +1242,7 @@ void HebiThread::Connect() {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
-    SetMaxVelocity(*command_, "./bin/shared/hebi/safety.xml");
+    SetMaxVel(*command_, "./bin/shared/hebi/safety.xml");
 
     // Load gains
     if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
@@ -1458,7 +1458,7 @@ void HebiThread::LoadSafety(const QString& file_path) {
             "HEBI - Didn't receive acknowledgement from safety update!");
         return;
     }
-    SetMaxVelocity(safety_cmd, file_path.toStdString());
+    SetMaxVel(safety_cmd, file_path.toStdString());
 
     logger_->Info("Successfully loaded safety limits from: "
                   + file_path.toStdString());
@@ -1472,9 +1472,9 @@ void HebiThread::LoadSafety(const QString& file_path) {
  *
  * @note Falls back to `kMaxVel` if no actuator has a velocity limit.
  */
-void HebiThread::SetMaxVelocity(const hebi::GroupCommand& safety_cmd,
-                                const std::string& source) {
-    const auto limit = MaxVelocityFromSafety(safety_cmd);
+void HebiThread::SetMaxVel(const hebi::GroupCommand& safety_cmd,
+                           const std::string& source) {
+    const auto limit = MaxVelFromSafety(safety_cmd);
     max_vel_ = limit.value_or(kMaxVel);
 
     if (limit) {

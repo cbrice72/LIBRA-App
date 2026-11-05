@@ -91,8 +91,8 @@ constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
 constexpr double kReachTolerance = 0.0175;  // "arrived at target", ~1 deg (rad)
 constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
 constexpr double kRestVelTolerance = 0.005;  // allowed drift in window (rad/s)
-constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
-constexpr double kRestWindowTime = 3.0;      // averaging window (s)
+constexpr double kRestVolumeTolerance = 0.01;  // allowed CW change in window (L)
+constexpr double kRestWindowTime = 3.0;        // averaging window (s)
 
 constexpr double kProgressLogPeriod = 15.0;  // heartbeat message (s)
 constexpr double kMoveTimeout = 180.0;       // (s)
@@ -106,7 +106,7 @@ constexpr double kMinCosForBalance = 1e-3;  // |cosθ| floor, Eq. 34/38'
 // Friction Calibration
 
 // Sweep speeds as fractions of actuator max speed
-constexpr std::array<double, 4> kFrictionSpeedFractions = {
+constexpr std::array<double, 4> kFrictionVelFractions = {
     1.0 / 6.0,
     1.0 / 3.0,
     2.0 / 3.0,
@@ -114,13 +114,13 @@ constexpr std::array<double, 4> kFrictionSpeedFractions = {
 };
 
 // TODO: all of these are arbitrary; tune via experiments
-constexpr double kFrictionTorqueLimit = 14.0;  // abort if above this |τ| (Nm)
-constexpr double kFrictionLimitTime = 0.5;     // ... for this long (s)
+constexpr double kMaxFrictionTorque = 14.0;     // abort if above this |τ| (Nm)
+constexpr double kMaxFrictionTorqueTime = 0.5;  // ... for this long (s)
 
 constexpr double kFrictionRampTorque = 4.0;      // inertia torque per ramp (Nm)
 constexpr double kFrictionMinRampDist = 0.0175;  // shortest ramp, ~1 deg (rad)
 constexpr double kFrictionSampleMargin = 0.0175;  // unsampled ends (rad)
-constexpr double kFrictionSpeedTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
+constexpr double kFrictionVelTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
 
 constexpr double kFrictionBinWidth = 0.0087;  // angle bin, ~0.5 deg (rad)
 constexpr int kFrictionMinBinSamples = 3;     // per bin and direction
@@ -160,7 +160,7 @@ std::string FormatDeg(const double& rad) {
  * @brief Gets the friction sweep ramp length (rad) that keeps the torque
  *        needed to accelerate the arm within `kFrictionRampTorque`.
  *
- * @param speed Sweep speed, v (rad/s)
+ * @param vel Sweep speed, v (rad/s)
  * @param inertia Arm + CW moment of inertia, I (kg·m²)
  *
  * @note Code-specific equation. HEBI's API uses a minimum-jerk ramp, which from
@@ -174,9 +174,9 @@ std::string FormatDeg(const double& rad) {
  *
  *       Which gives d = 0.75·I·v² / τ_ramp.
  */
-double RampDist(const double& speed, const double& inertia) {
+double RampDist(const double& vel, const double& inertia) {
     return std::max(kFrictionMinRampDist,
-                    0.75 * inertia * speed * speed / kFrictionRampTorque);
+                    0.75 * inertia * vel * vel / kFrictionRampTorque);
 }
 
 /**
@@ -184,16 +184,16 @@ double RampDist(const double& speed, const double& inertia) {
  *
  * @param lo Window start (rad)
  * @param hi Window end (rad)
- * @param speed Sweep speed (rad/s)
+ * @param vel Sweep speed (rad/s)
  * @param ramp_dist Length of each ramp (rad)
  *
  * @note Code-specific equation. Usually, each ramp is traversed at half speed,
  *       which gives:
  *         t = (θ_hi - θ_lo + 2·d) / v
  */
-double SweepTime(const double& lo, const double& hi, const double& speed,
+double SweepTime(const double& lo, const double& hi, const double& vel,
                  const double& ramp_dist) {
-    return (hi - lo + (2.0 * ramp_dist)) / speed;
+    return (hi - lo + (2.0 * ramp_dist)) / vel;
 }
 
 /**
@@ -376,14 +376,14 @@ double CwModel::HangMoment(const double& mass) const {
  *        an angle.
  *
  * @param mass CW mass, m_cw (kg)
- * @param theta Pitch angle, θ (rad)
+ * @param angle Pitch angle, θ (rad)
  *
  * @note Code-specific extension of Eq. 38' for r_P that varies with volume;
  *       dividing CW torque by g·cosθ gives:
  *         m_cw·(r_P(V) + q_P·tanθ)
  */
-double CwModel::EffectiveMoment(const double& mass, const double& theta) const {
-    return Moment(mass) + (HangMoment(mass) * std::tan(theta));
+double CwModel::EffectiveMoment(const double& mass, const double& angle) const {
+    return Moment(mass) + (HangMoment(mass) * std::tan(angle));
 }
 
 /**
@@ -391,7 +391,7 @@ double CwModel::EffectiveMoment(const double& mass, const double& theta) const {
  *        (inverse of `EffectiveMoment()`).
  *
  * @param moment Requested effective moment, M (kg·m)
- * @param theta Pitch angle, θ (rad)
+ * @param angle Pitch angle, θ (rad)
  *
  * @note Result is bound to [0, capacity]. Returns none if the model is invalid
  *       or the effective lever is too short at the given angle (i.e., if moment
@@ -405,13 +405,13 @@ double CwModel::EffectiveMoment(const double& mass, const double& theta) const {
  * @see CwModel::EffectiveMoment
  */
 std::optional<double> CwModel::MassForMoment(const double& moment,
-                                             const double& theta) const {
+                                             const double& angle) const {
     if (!IsValid()) {
         return std::nullopt;
     }
 
     // Effective lever must keep the moment rising from empty to full
-    const double a_eff = r_P_0_ + (q_P_ * std::tan(theta));
+    const double a_eff = r_P_0_ + (q_P_ * std::tan(angle));
     if (!(a_eff > 0.0) || !(a_eff + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
         return std::nullopt;
     }
@@ -422,7 +422,7 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
     }
 
     const double cap = GetCapacityMass();
-    if (moment >= EffectiveMoment(cap, theta)) {
+    if (moment >= EffectiveMoment(cap, angle)) {
         return cap;
     }
 
@@ -538,16 +538,16 @@ double EtaMomentChange(const double& extension) {
  * @param cw_moment CW gravitational moment along arm, m_cw·r_P (kg·m)
  * @param cw_hang_moment CW gravitational moment normal to arm, m_cw·q_P (kg·m)
  * @param grav Gravitational acceleration, g (m/s²)
- * @param theta Pitch angle, θ (rad)
+ * @param angle Pitch angle, θ (rad)
  *
  * @note From Eq. 29b':
  *         τ_g2(θ) = m_cw·g·(r_P·cosθ + q_P·sinθ)
  */
 double CwGravTorque(const double& cw_moment, const double& cw_hang_moment,
-                    const double& grav, const double& theta) {
+                    const double& grav, const double& angle) {
     return grav
-           * ((cw_moment * std::cos(theta))
-              + (cw_hang_moment * std::sin(theta)));
+           * ((cw_moment * std::cos(angle))
+              + (cw_hang_moment * std::sin(angle)));
 }
 
 /**
@@ -569,8 +569,8 @@ double ArmGravTorque(const double& torque_meas, const double& cw_grav_torque) {
  * @brief Computes the arm's gravitational torque (Nm) at level from one
  *        measurement at any angle.
  *
- * @param arm_torque Arm's gravitational torque at `theta`, τ_g1(θ) (Nm)
- * @param theta Pitch angle, θ (rad)
+ * @param arm_torque Arm's gravitational torque at `angle`, τ_g1(θ) (Nm)
+ * @param angle Pitch angle, θ (rad)
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
  *
  * @note Returns none if cosθ is too small.
@@ -579,13 +579,13 @@ double ArmGravTorque(const double& torque_meas, const double& cw_grav_torque) {
  *         τ_g1,0 = (τ_g1(θ) - g·m_arm·h_1·sinθ) / cosθ
  */
 std::optional<double> ArmLevelTorque(const double& arm_torque,
-                                     const double& theta,
+                                     const double& angle,
                                      const double& arm_hang_torque) {
-    const double c = std::cos(theta);
+    const double c = std::cos(angle);
     if (std::abs(c) < kMinCosForBalance) {
         return std::nullopt;
     }
-    return (arm_torque - (arm_hang_torque * std::sin(theta))) / c;
+    return (arm_torque - (arm_hang_torque * std::sin(angle))) / c;
 }
 
 /**
@@ -593,9 +593,9 @@ std::optional<double> ArmLevelTorque(const double& arm_torque,
  *        measurements.
  *
  * @param arm_torque_a Arm's gravitational torque at angle a, τ_g1(θ_a) (Nm)
- * @param theta_a Angle a, θ_a (rad)
+ * @param angle_a Angle a, θ_a (rad)
  * @param arm_torque_b Arm's gravitational torque at angle b, τ_g1(θ_b) (Nm)
- * @param theta_b Angle b, θ_b (rad)
+ * @param angle_b Angle b, θ_b (rad)
  *
  * @note Fails if the angles are too close together.
  *
@@ -605,20 +605,20 @@ std::optional<double> ArmLevelTorque(const double& arm_torque,
  *                       / sin(θ_b - θ_a)
  */
 std::optional<Motion::ArmModel> SolveTwoAngle(const double& arm_torque_a,
-                                              const double& theta_a,
+                                              const double& angle_a,
                                               const double& arm_torque_b,
-                                              const double& theta_b) {
-    const double s = std::sin(theta_b - theta_a);
+                                              const double& angle_b) {
+    const double s = std::sin(angle_b - angle_a);
     if (std::abs(s) < std::sin(0.5 * Motion::kMinAngleSeparation)) {
         return std::nullopt;
     }
 
     Motion::ArmModel model;
-    model.level_torque = ((arm_torque_a * std::sin(theta_b))
-                          - (arm_torque_b * std::sin(theta_a)))
+    model.level_torque = ((arm_torque_a * std::sin(angle_b))
+                          - (arm_torque_b * std::sin(angle_a)))
                          / s;
-    model.hang_torque = ((arm_torque_b * std::cos(theta_a))
-                         - (arm_torque_a * std::cos(theta_b)))
+    model.hang_torque = ((arm_torque_b * std::cos(angle_a))
+                         - (arm_torque_a * std::cos(angle_b)))
                         / s;
     return model;
 }
@@ -631,7 +631,7 @@ std::optional<Motion::ArmModel> SolveTwoAngle(const double& arm_torque_a,
  * @param cw_moment CW gravitational moment along arm, m_cw·r_P (kg·m)
  * @param cw_hang_moment CW gravitational moment normal to arm, m_cw·q_P (kg·m)
  * @param grav Gravitational acceleration, g (m/s²)
- * @param theta Pitch angle, θ (rad)
+ * @param angle Pitch angle, θ (rad)
  *
  * @note From Eq. 36':
  *         τ_ext,g(θ) = (τ_g1,0 + m_cw·g·r_P)·cosθ
@@ -640,9 +640,9 @@ std::optional<Motion::ArmModel> SolveTwoAngle(const double& arm_torque_a,
 double NetGravTorque(const double& arm_level_torque,
                      const double& arm_hang_torque, const double& cw_moment,
                      const double& cw_hang_moment, const double& grav,
-                     const double& theta) {
-    return ((arm_level_torque + (grav * cw_moment)) * std::cos(theta))
-           + ((arm_hang_torque + (grav * cw_hang_moment)) * std::sin(theta));
+                     const double& angle) {
+    return ((arm_level_torque + (grav * cw_moment)) * std::cos(angle))
+           + ((arm_hang_torque + (grav * cw_hang_moment)) * std::sin(angle));
 }
 
 /**
@@ -694,7 +694,7 @@ double FeedforwardTorque(const double& inertia, const double& inertia_rate,
  * @param arm_level_torque Arm gravitational torque at level, τ_g1,0 (Nm)
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
  * @param grav Gravitational acceleration, g (m/s²)
- * @param theta Angle to balance at, θ (rad)
+ * @param angle Angle to balance at, θ (rad)
  *
  * @note Returns none if cosθ is too small.
  *
@@ -705,11 +705,11 @@ double FeedforwardTorque(const double& inertia, const double& inertia_rate,
  */
 std::optional<double> BalanceCwMoment(const double& arm_level_torque,
                                       const double& arm_hang_torque,
-                                      const double& grav, const double& theta) {
-    if (std::abs(std::cos(theta)) < kMinCosForBalance) {
+                                      const double& grav, const double& angle) {
+    if (std::abs(std::cos(angle)) < kMinCosForBalance) {
         return std::nullopt;
     }
-    return -(arm_level_torque + (arm_hang_torque * std::tan(theta))) / grav;
+    return -(arm_level_torque + (arm_hang_torque * std::tan(angle))) / grav;
 }
 
 /**
@@ -717,7 +717,7 @@ std::optional<double> BalanceCwMoment(const double& arm_level_torque,
  *        current CW state.
  *
  * @param grav Gravitational acceleration, g (m/s²)
- * @param theta_tgt Target angle, θ_tgt (rad)
+ * @param angle_tgt Target angle, θ_tgt (rad)
  * @param cw_moment_eff Current effective CW moment at target (kg·m), from
  *                      `CwModel::EffectiveMoment()`
  * @param cw_moment_bal Effective CW moment balancing arm at target (kg·m),
@@ -727,17 +727,17 @@ std::optional<double> BalanceCwMoment(const double& arm_level_torque,
  *       with the effective moments of `BalanceCwMoment()`:
  *         τ_ext,g(θ_tgt) = g·cosθ_tgt·(M_eff(m_cw) - M_eff(m_cw,bal))
  */
-double TargetNetGravTorque(const double& grav, const double& theta_tgt,
+double TargetNetGravTorque(const double& grav, const double& angle_tgt,
                            const double& cw_moment_eff,
                            const double& cw_moment_bal) {
-    return grav * std::cos(theta_tgt) * (cw_moment_eff - cw_moment_bal);
+    return grav * std::cos(angle_tgt) * (cw_moment_eff - cw_moment_bal);
 }
 
 /**
  * @brief Fits a least-squares line through the friction sweep results (drag vs.
  *        speed).
  *
- * @param speeds Sweep speeds, v (rad/s)
+ * @param vels Sweep speeds, v (rad/s)
  * @param drags Drag at each speed, (τ_up - τ_down) / 2 (Nm)
  *
  * @note Returns the fit (intercept τ_c, slope b, and RMS of residuals; other
@@ -749,8 +749,8 @@ double TargetNetGravTorque(const double& grav, const double& theta_tgt,
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  */
 std::optional<Motion::FrictionModel> FitFrictionLine(
-    const std::vector<double>& speeds, const std::vector<double>& drags) {
-    const std::size_t n = speeds.size();
+    const std::vector<double>& vels, const std::vector<double>& drags) {
+    const std::size_t n = vels.size();
     if (n < 2 || drags.size() != n) {
         return std::nullopt;
     }
@@ -759,7 +759,7 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
     double mean_v = 0.0;
     double mean_f = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
-        mean_v += speeds[i];
+        mean_v += vels[i];
         mean_f += drags[i];
     }
     mean_v /= static_cast<double>(n);
@@ -769,8 +769,8 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
     double s_vv = 0.0;
     double s_vf = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
-        s_vv += (speeds[i] - mean_v) * (speeds[i] - mean_v);
-        s_vf += (speeds[i] - mean_v) * (drags[i] - mean_f);
+        s_vv += (vels[i] - mean_v) * (vels[i] - mean_v);
+        s_vf += (vels[i] - mean_v) * (drags[i] - mean_f);
     }
     if (!(s_vv > 0.0)) {
         return std::nullopt;
@@ -783,8 +783,7 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
 
     double sum_sq = 0.0;
     for (std::size_t i = 0; i < n; ++i) {
-        const double r = drags[i]
-                         - (model.coulomb + (model.viscous * speeds[i]));
+        const double r = drags[i] - (model.coulomb + (model.viscous * vels[i]));
         sum_sq += r * r;
     }
     model.residual_rms = std::sqrt(sum_sq / static_cast<double>(n));
@@ -801,7 +800,7 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
 /**
  * @brief Clears averaging history.
  */
-void VelocityAverager::Reset() {
+void VelAverager::Reset() {
     history_.clear();
     time_ = 0.0;
     sum_ = 0.0;
@@ -814,7 +813,7 @@ void VelocityAverager::Reset() {
  * @param dt Time since last cycle (s)
  * @param vel Actual velocity, θ̇ (rad/s)
  */
-double VelocityAverager::Add(const double& dt, const double& vel) {
+double VelAverager::Add(const double& dt, const double& vel) {
     history_.emplace_back(dt, vel);
     time_ += dt;
     sum_ += dt * vel;
@@ -848,7 +847,7 @@ void RestSampler::Reset() {
 void RestSampler::RestartWindow() {
     count_ = 0;
     t_elapsed_s_ = 0.0;
-    sum_theta_ = 0.0;
+    sum_angle_ = 0.0;
     sum_torque_ = 0.0;
     sum_volume_ = 0.0;
 }
@@ -881,20 +880,20 @@ std::optional<Motion::RestSample> RestSampler::Add(
 
     // Restart window if pose or CW volume drifted since start
     if (count_ > 0
-        && (std::abs(pos - anchor_theta_) > kRestPosTolerance
-            || std::abs(*volume - anchor_volume_) > kRestVolTolerance)) {
+        && (std::abs(pos - anchor_angle_) > kRestPosTolerance
+            || std::abs(*volume - anchor_volume_) > kRestVolumeTolerance)) {
         RestartWindow();
     }
 
     // Accumulate values
     if (count_ == 0) {
-        anchor_theta_ = pos;
+        anchor_angle_ = pos;
         anchor_volume_ = *volume;
     } else {
         t_elapsed_s_ += dt;
     }
 
-    sum_theta_ += pos;
+    sum_angle_ += pos;
     sum_torque_ += torque;
     sum_volume_ += *volume;
     ++count_;
@@ -902,7 +901,7 @@ std::optional<Motion::RestSample> RestSampler::Add(
     if (t_elapsed_s_ >= kRestWindowTime && count_ >= 2) {
         // Window finished, return results
         Motion::RestSample sample;
-        sample.theta = sum_theta_ / count_;
+        sample.angle = sum_angle_ / count_;
         sample.torque = sum_torque_ / count_;
         sample.volume = sum_volume_ / count_;
         RestartWindow();
@@ -1068,7 +1067,7 @@ void Libra2MotionController::SetCwState(const double& volume,
         return;
     }
 
-    cw_vol_ = volume;
+    cw_volume_ = volume;
     cw_flow_ = flow;
 }
 
@@ -1199,8 +1198,8 @@ void Libra2MotionController::SetArmModel(const double& arm_level_torque,
     arm_calibrated_ = true;
     arm_source_ = "set";
     arm_cw_params_ = cw_model_.GetParams();
-    logger_->Info("Arm model set: arm_level_torque=" + Format(arm_level_torque)
-                  + " Nm, arm_hang_torque=" + Format(arm_hang_torque) + " Nm");
+    logger_->Info("Arm model set: τ_g1,0=" + Format(arm_level_torque)
+                  + " Nm, m_arm*h_1*g=" + Format(arm_hang_torque) + " Nm");
 
     CheckStability(arm_hang_torque_);
 }
@@ -1267,7 +1266,7 @@ double Libra2MotionController::GetArmHangTorque() const {
  * @brief Computes the net gravitational torque (Nm) about pitch joint O for a
  *        given angle and CW mass.
  *
- * @param theta Pitch angle, θ (rad)
+ * @param angle Pitch angle, θ (rad)
  * @param cw_mass CW mass, m_cw (kg)
  *
  * @note Mutex lock not required since `Update()` calls it while holding the
@@ -1278,12 +1277,12 @@ double Libra2MotionController::GetArmHangTorque() const {
  *      Libra2MotionController::LevelTorqueAtExtension
  */
 double Libra2MotionController::ComputeNetGravTorque(
-    const double& theta, const double& cw_mass) const {
+    const double& angle, const double& cw_mass) const {
     return Libra2Model::NetGravTorque(LevelTorqueAtExtension(),
                                       arm_hang_torque_,
                                       cw_model_.Moment(cw_mass),
                                       cw_model_.HangMoment(cw_mass), kGrav,
-                                      theta);
+                                      angle);
 }
 
 /**
@@ -1411,8 +1410,7 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
  *
  * @param angle_a One end of the window (rad)
  * @param angle_b Other end of the window (rad)
- * @param max_speed Max. actuator speed (rad/s); sweep speeds are fractions
- *                  of it
+ * @param max_vel Max. actuator speed (rad/s); sweep speeds are fractions of it
  *
  * @note Doesn't need an arm or CW model; gravity cancels between the up and
  *       down sweeps.
@@ -1423,11 +1421,11 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
  *       which cancels the gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  *
- * @see kFrictionSpeedFractions Libra2Model::FitFrictionLine
+ * @see kFrictionVelFractions Libra2Model::FitFrictionLine
  */
 bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                                                       const double& angle_b,
-                                                      const double& max_speed) {
+                                                      const double& max_vel) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (Motion::IsCalibrationRunning(status_)) {
@@ -1436,13 +1434,13 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     }
 
     // Validate params
-    if (!cw_vol_) {
+    if (!cw_volume_) {
         logger_->Warn("Friction calibration rejected: CW volume unknown");
         return false;
     }
-    if (!(max_speed > 0.0) || !std::isfinite(max_speed)) {
+    if (!(max_vel > 0.0) || !std::isfinite(max_vel)) {
         logger_->Error("Friction calibration rejected: invalid max speed "
-                       + Format(max_speed) + " rad/s");
+                       + Format(max_vel) + " rad/s");
         return false;
     }
 
@@ -1469,9 +1467,9 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     // Ramps widen with speed, so fastest sweep determines unsampled ends
     const double inertia = arm_inertia_
                            + (cw_model_.IsValid() ? cw_model_.Inertia(
-                                  Libra2Model::CwMass(*cw_vol_))
+                                  Libra2Model::CwMass(*cw_volume_))
                                                   : 0.0);
-    const double longest_ramp = RampDist(max_speed, inertia);
+    const double longest_ramp = RampDist(max_vel, inertia);
     const double margin = longest_ramp + kFrictionSampleMargin;
 
     const double min_window = (2.0 * margin)
@@ -1479,15 +1477,14 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     if (hi - lo < min_window) {
         logger_->Warn("Friction calibration rejected: window is "
                       + FormatDeg(hi - lo) + " deg, need at least "
-                      + FormatDeg(min_window) + " deg (the "
-                      + FormatDeg(max_speed) + " deg/s sweeps take "
-                      + FormatDeg(longest_ramp)
+                      + FormatDeg(min_window) + " deg (the " + FormatDeg(max_vel)
+                      + " deg/s sweeps take " + FormatDeg(longest_ramp)
                       + " deg at each end to speed up and slow down)");
         return false;
     }
 
     // Ensure slowest sweep fits in one move stage
-    const double slowest = max_speed * kFrictionSpeedFractions.front();
+    const double slowest = max_vel * kFrictionVelFractions.front();
     const double t_slowest_s = SweepTime(lo, hi, slowest,
                                          RampDist(slowest, inertia));
     if (t_slowest_s > kMoveTimeout) {
@@ -1501,34 +1498,34 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
     friction_run_ = FrictionRun();
     friction_run_.angle_lo = lo;
     friction_run_.angle_hi = hi;
-    friction_run_.max_speed = max_speed;
-    friction_run_.volume = *cw_vol_;
+    friction_run_.max_vel = max_vel;
+    friction_run_.volume = *cw_volume_;
     friction_run_.inertia = inertia;
     friction_run_.margin = margin;
     two_angle_ = false;
 
     // Sweep speeds, for the start log
-    std::string speeds_deg;
-    for (const double& fraction : kFrictionSpeedFractions) {
-        speeds_deg += (speeds_deg.empty() ? "" : ", ")
-                      + FormatDeg(max_speed * fraction);
+    std::string vels_deg;
+    for (const double& fraction : kFrictionVelFractions) {
+        vels_deg += (vels_deg.empty() ? "" : ", ")
+                    + FormatDeg(max_vel * fraction);
     }
 
     logger_->Info("Starting friction calibration: " + FormatDeg(lo) + " to "
-                  + FormatDeg(hi) + " deg at " + speeds_deg + " deg/s");
+                  + FormatDeg(hi) + " deg at " + vels_deg + " deg/s");
     logger_->Debug(
         "Friction calibration ("
-        + std::to_string(1 + (2 * kFrictionSpeedFractions.size()))
+        + std::to_string(1 + (2 * kFrictionVelFractions.size()))
         + " steps):"
           "\n  sampled:  "
         + FormatDeg(lo + margin) + " to " + FormatDeg(hi - margin)
         + " deg"
           "\n  steps:    move to start, followed by up/down sweep at each speed"
           "\n  CW:       stays idle at "
-        + Format(*cw_vol_)
+        + Format(*cw_volume_)
         + " L"
           "\n  aborts:   above "
-        + Format(kFrictionTorqueLimit) + " Nm");
+        + Format(kMaxFrictionTorque) + " Nm");
     BeginCalibrationStage(Motion::CalibrationStatus::kFrictionMovingToStart);
 
     return true;
@@ -1730,7 +1727,7 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
  * @brief Computes the CW mass (kg) that balances the arm at a target angle,
  *        m_cw,bal(θ_tgt), clamped to CW capacity.
  *
- * @param theta_tgt Target angle, θ_tgt (rad)
+ * @param angle_tgt Target angle, θ_tgt (rad)
  *
  * @note Returns none if balance is undefined at this angle.
  *
@@ -1738,14 +1735,14 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
  *      Libra2MotionController::LevelTorqueAtExtension
  */
 std::optional<double> Libra2MotionController::TargetCwMass(
-    const double& theta_tgt) const {
+    const double& angle_tgt) const {
     const auto moment_bal =
         Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(), arm_hang_torque_,
-                                     kGrav, theta_tgt);
+                                     kGrav, angle_tgt);
     if (!moment_bal) {
         return std::nullopt;
     }
-    return cw_model_.MassForMoment(*moment_bal, theta_tgt);
+    return cw_model_.MassForMoment(*moment_bal, angle_tgt);
 }
 
 /**
@@ -1775,31 +1772,31 @@ Motion::CwCommand Libra2MotionController::PredictiveCwCommand(
  * @brief Runs one CW Primary cycle: pitch joint allowed to spin freely so the
  *        CW moves it.
  *
- * @param theta Actual angle, θ (rad)
- * @param theta_tgt Target angle, θ_tgt (rad)
+ * @param angle Actual angle, θ (rad)
+ * @param angle_tgt Target angle, θ_tgt (rad)
  * @param[in,out] command Command with CW adjustment and free-spinning pitch
  *
  * @note Returns true while CW controls the free-spinning arm, and false at
  *       hand-off (where actuator takes over and a proper move is requested).
  */
-bool Libra2MotionController::RunCwPrimary(const double& theta,
-                                          const double& theta_tgt,
+bool Libra2MotionController::RunCwPrimary(const double& angle,
+                                          const double& angle_tgt,
                                           Motion::Libra2Command& command) {
-    const auto cw_mass_tgt = TargetCwMass(theta_tgt);
+    const auto cw_mass_tgt = TargetCwMass(angle_tgt);
     if (!cw_mass_tgt) {
         logger_->Warn("CW Primary: target mass undefined at this angle; "
                       "handing off to actuator");
 
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
-        pending_move_ = theta_tgt;
+        pending_move_ = angle_tgt;
         return false;
     }
     const double mass_tgt = *cw_mass_tgt;
     const Motion::CwCommand cw = PredictiveCwCommand(mass_tgt, *cw_mass_);
 
     const bool volume_reached = (cw == Motion::CwCommand::kIdle);
-    const bool angle_reached = std::abs(theta - theta_tgt) <= handoff_band_;
+    const bool angle_reached = std::abs(angle - angle_tgt) <= handoff_band_;
 
     if (volume_reached || angle_reached) {
         // Log hand-off and set up for actuator takeover
@@ -1812,8 +1809,8 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
                       + " reached)");
         logger_->Debug(
             "CW Primary hand-off (" + reached + " reached):\n  actual angle="
-            + Format(theta) + " rad, target angle=" + Format(theta_tgt)
-            + " rad, angle error=" + Format(theta - theta_tgt)
+            + Format(angle) + " rad, target angle=" + Format(angle_tgt)
+            + " rad, angle error=" + Format(angle - angle_tgt)
             + " rad\n  actual volume=" + Format(*cw_mass_ / kWaterDensity)
             + " L, target volume=" + Format(mass_tgt / kWaterDensity)
             + " L, volume error="
@@ -1821,7 +1818,7 @@ bool Libra2MotionController::RunCwPrimary(const double& theta,
 
         cw_phase_ = CwPhase::kIdle;
         cw_assist_done_ = true;
-        pending_move_ = theta_tgt;
+        pending_move_ = angle_tgt;
         return false;
     }
 
@@ -1861,7 +1858,7 @@ Motion::Libra2Command Libra2MotionController::Update(
     }
 
     // Update state
-    const double theta = actual.pos[kPitchIdx];
+    const double angle = actual.pos[kPitchIdx];
     const double actual_vel = actual.vel[kPitchIdx];
     const double actual_torque = actual.torque[kPitchIdx];
     const double ref_vel = commanded.vel[kPitchIdx];
@@ -1869,8 +1866,9 @@ Motion::Libra2Command Libra2MotionController::Update(
     trajectory_active_ = trajectory_active;
 
     // Eq. 28: CW mass from latest volume
-    cw_mass_ = cw_vol_ ? std::optional<double>(Libra2Model::CwMass(*cw_vol_))
-                       : std::nullopt;
+    cw_mass_ = cw_volume_
+                   ? std::optional<double>(Libra2Model::CwMass(*cw_volume_))
+                   : std::nullopt;
 
     // Eq. 15: inertia and its rate, with the CW's share (ṁ_cw = ρ_water·V̇);
     // CW terms are code-specific (see `CwModel::Inertia()`/`InertiaSlope()`)
@@ -1909,7 +1907,7 @@ Motion::Libra2Command Libra2MotionController::Update(
                 pending_move_ = *target;
             }
         } else {
-            arm_free = RunCwPrimary(theta, *target, command);
+            arm_free = RunCwPrimary(angle, *target, command);
         }
     }
 
@@ -1917,7 +1915,7 @@ Motion::Libra2Command Libra2MotionController::Update(
         // Friction sweep: no throttle or CW command necessary
         command.playback_rate = 1.0;
         command.cw_command = Motion::CwCommand::kIdle;
-        RunFrictionCalibration(dt, trajectory_active, theta, actual_vel,
+        RunFrictionCalibration(dt, trajectory_active, angle, actual_vel,
                                actual_torque);
 
     } else if (!arm_free) {
@@ -1926,7 +1924,7 @@ Motion::Libra2Command Libra2MotionController::Update(
                                                 ? Motion::CwCommand::kFill
                                                 : Motion::CwCommand::kDrain;
         const bool braking = target
-                             && (actual_torque * (*target - theta) < 0.0);
+                             && (actual_torque * (*target - angle) < 0.0);
         const AtcResult atc = UpdateTorqueComp(std::abs(actual_torque),
                                                direction, braking);
 
@@ -1935,7 +1933,7 @@ Motion::Libra2Command Libra2MotionController::Update(
 
         if (calibrating) {
             // Feedforward off and CW reactive while calibrating
-            RunArmCalibration(dt, trajectory_active, theta, actual_vel,
+            RunArmCalibration(dt, trajectory_active, angle, actual_vel,
                               actual_torque);
         } else {
             // Predictive CW replaces reactive (except after hand-off)
@@ -1947,7 +1945,7 @@ Motion::Libra2Command Libra2MotionController::Update(
                 }
             }
 
-            command.ff_torque[kPitchIdx] = ModelFeedforward(theta, ref_vel,
+            command.ff_torque[kPitchIdx] = ModelFeedforward(angle, ref_vel,
                                                             ref_acc,
                                                             model_ready);
         }
@@ -1969,7 +1967,7 @@ Motion::Libra2Command Libra2MotionController::Update(
         pending_sweep_.reset();
     }
 
-    command.diagnostics = ComputeDiagnostics(theta, target);
+    command.diagnostics = ComputeDiagnostics(angle, target);
 
     return command;
 }
@@ -1978,7 +1976,7 @@ Motion::Libra2Command Libra2MotionController::Update(
  * @brief Computes the actuator torque feedforward (Nm) for the commanded motion
  *        (Eq. 37).
  *
- * @param theta Actual angle, θ (rad)
+ * @param angle Actual angle, θ (rad)
  * @param ref_vel Reference velocity, θ̇_ref (rad/s)
  * @param ref_acc Reference acceleration, θ̈_ref (rad/s²)
  * @param model_ready Whether the arm model and CW mass are known; if not, the
@@ -1989,12 +1987,12 @@ Motion::Libra2Command Libra2MotionController::Update(
  *
  * @see Libra2Model::FeedforwardTorque
  */
-double Libra2MotionController::ModelFeedforward(const double& theta,
+double Libra2MotionController::ModelFeedforward(const double& angle,
                                                 const double& ref_vel,
                                                 const double& ref_acc,
                                                 const bool& model_ready) const {
     const double torque_ext_g = model_ready
-                                    ? ComputeNetGravTorque(theta, *cw_mass_)
+                                    ? ComputeNetGravTorque(angle, *cw_mass_)
                                     : 0.0;
     const double inertia = inertia_ff_en_ ? inertia_ : 0.0;
     const double inertia_rate = inertia_ff_en_ ? inertia_rate_ : 0.0;
@@ -2007,8 +2005,8 @@ double Libra2MotionController::ModelFeedforward(const double& theta,
 /**
  * @brief Computes diagnostic data about the active model.
  *
- * @param theta Actual angle, θ (rad)
- * @param theta_tgt Target angle, θ_tgt (rad), if any
+ * @param angle Actual angle, θ (rad)
+ * @param angle_tgt Target angle, θ_tgt (rad), if any
  *
  * @note Entries that can't be computed (i.e., no model, CW volume, or target)
  *       are left empty.
@@ -2018,7 +2016,7 @@ double Libra2MotionController::ModelFeedforward(const double& theta,
  *      Libra2MotionController::LevelTorqueAtExtension
  */
 Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
-    const double& theta, const std::optional<double>& theta_tgt) const {
+    const double& angle, const std::optional<double>& angle_tgt) const {
     Motion::Libra2Diagnostics diagnostics;
     diagnostics.cw_mass = cw_mass_;
     if (!arm_calibrated_ || !cw_model_.IsValid()) {
@@ -2026,24 +2024,24 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
     }
 
     if (cw_mass_) {
-        diagnostics.torque_ext_g = ComputeNetGravTorque(theta, *cw_mass_);
+        diagnostics.torque_ext_g = ComputeNetGravTorque(angle, *cw_mass_);
     }
 
     // Eqs. 38'-40
-    if (theta_tgt) {
+    if (angle_tgt) {
         const auto moment_bal =
             Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(),
-                                         arm_hang_torque_, kGrav, *theta_tgt);
+                                         arm_hang_torque_, kGrav, *angle_tgt);
         const auto mass_tgt = moment_bal ? cw_model_.MassForMoment(*moment_bal,
-                                                                   *theta_tgt)
+                                                                   *angle_tgt)
                                          : std::nullopt;
         if (mass_tgt) {
             diagnostics.cw_mass_tgt = *mass_tgt;
             if (cw_mass_) {
                 diagnostics.cw_mass_change = *mass_tgt - *cw_mass_;
                 diagnostics.torque_ext_g_tgt = Libra2Model::TargetNetGravTorque(
-                    kGrav, *theta_tgt,
-                    cw_model_.EffectiveMoment(*cw_mass_, *theta_tgt),
+                    kGrav, *angle_tgt,
+                    cw_model_.EffectiveMoment(*cw_mass_, *angle_tgt),
                     *moment_bal);
             }
         }
@@ -2172,9 +2170,8 @@ void Libra2MotionController::BeginCalibrationStage(
                 Motion::SweepRequest sweep;
                 sweep.from = going_up ? fr.angle_lo : fr.angle_hi;
                 sweep.to = going_up ? fr.angle_hi : fr.angle_lo;
-                sweep.speed = fr.max_speed
-                              * kFrictionSpeedFractions.at(fr.speed_idx);
-                sweep.ramp_dist = RampDist(sweep.speed, fr.inertia);
+                sweep.vel = fr.max_vel * kFrictionVelFractions.at(fr.vel_idx);
+                sweep.ramp_dist = RampDist(sweep.vel, fr.inertia);
 
                 pending_sweep_ = sweep;
                 fr.trajectory_seen = false;
@@ -2214,7 +2211,7 @@ void Libra2MotionController::BeginCalibrationStage(
  */
 std::string Libra2MotionController::DescribeCalibrationStage() const {
     const FrictionRun& fr = friction_run_;
-    const auto n_speeds = static_cast<int>(kFrictionSpeedFractions.size());
+    const auto n_vels = static_cast<int>(kFrictionVelFractions.size());
     const std::string at_rest = "averaging torque once system at rest for "
                                 + Format(kRestWindowTime) + " s";
 
@@ -2255,7 +2252,7 @@ std::string Libra2MotionController::DescribeCalibrationStage() const {
         case Motion::CalibrationStatus::kFrictionMovingToStart:
             name = "Friction";
             step = 1;
-            total = 1 + (2 * n_speeds);
+            total = 1 + (2 * n_vels);
             action = "moving to window start " + FormatDeg(fr.angle_lo)
                      + " deg";
             break;
@@ -2264,18 +2261,18 @@ std::string Libra2MotionController::DescribeCalibrationStage() const {
             {
                 const bool going_up =
                     (status_ == Motion::CalibrationStatus::kFrictionSweepUp);
-                const auto idx = static_cast<int>(fr.speed_idx);
-                const double speed = fr.max_speed
-                                     * kFrictionSpeedFractions.at(fr.speed_idx);
+                const auto idx = static_cast<int>(fr.vel_idx);
+                const double vel = fr.max_vel
+                                   * kFrictionVelFractions.at(fr.vel_idx);
                 const double t_sweep_s = SweepTime(fr.angle_lo, fr.angle_hi,
-                                                   speed,
-                                                   RampDist(speed, fr.inertia));
+                                                   vel,
+                                                   RampDist(vel, fr.inertia));
 
                 name = "Friction";
                 step = 2 + (2 * idx) + (going_up ? 0 : 1);
-                total = 1 + (2 * n_speeds);
+                total = 1 + (2 * n_vels);
                 action = "speed " + std::to_string(idx + 1) + "/"
-                         + std::to_string(n_speeds) + " (" + FormatDeg(speed)
+                         + std::to_string(n_vels) + " (" + FormatDeg(vel)
                          + " deg/s), sweeping " + (going_up ? "up" : "down")
                          + " to "
                          + FormatDeg(going_up ? fr.angle_hi : fr.angle_lo)
@@ -2298,12 +2295,12 @@ std::string Libra2MotionController::DescribeCalibrationStage() const {
  *
  * @param dt Time since last cycle (s)
  * @param timeout Time limit of active step (s)
- * @param theta Actual angle, θ (rad)
+ * @param angle Actual angle, θ (rad)
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param trajectory_active Whether a trajectory is running
  */
 void Libra2MotionController::LogCalibrationProgress(
-    const double& dt, const double& timeout, const double& theta,
+    const double& dt, const double& timeout, const double& angle,
     const double& actual_vel, const bool& trajectory_active) {
     t_progress_log_s_ += dt;
     if (t_progress_log_s_ < kProgressLogPeriod) {
@@ -2316,7 +2313,7 @@ void Libra2MotionController::LogCalibrationProgress(
                    + std::to_string(static_cast<int>(timeout))
                    + " s before timeout"
                      "\n  angle:         "
-                   + FormatDeg(theta)
+                   + FormatDeg(angle)
                    + " deg"
                      "\n  speed:         "
                    + FormatDeg(actual_vel)
@@ -2368,7 +2365,7 @@ double Libra2MotionController::SampleToArmTorque(
     const double cw_torque = Libra2Model::CwGravTorque(cw_model_.Moment(cw_mass),
                                                        cw_model_.HangMoment(
                                                            cw_mass),
-                                                       kGrav, sample.theta);
+                                                       kGrav, sample.angle);
 
     return Libra2Model::ArmGravTorque(-sample.torque, cw_torque);
 }
@@ -2418,13 +2415,13 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
  *
  * @param dt Time since last cycle (s)
  * @param trajectory_active Whether a trajectory is running
- * @param theta Actual angle, θ (rad)
+ * @param angle Actual angle, θ (rad)
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param actual_torque Actual actuator torque, τ_actuator (Nm)
  */
 void Libra2MotionController::RunArmCalibration(const double& dt,
                                                const bool& trajectory_active,
-                                               const double& theta,
+                                               const double& angle,
                                                const double& actual_vel,
                                                const double& actual_torque) {
     t_stage_s_ += dt;
@@ -2443,20 +2440,20 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
                                      : "timed out waiting for steady state");
         return;
     }
-    LogCalibrationProgress(dt, timeout, theta, actual_vel, trajectory_active);
+    LogCalibrationProgress(dt, timeout, angle, actual_vel, trajectory_active);
 
     // Sampling stages: average once steady
     std::optional<Motion::RestSample> sample;
     if (!moving_stage) {
         // Sampling is invalid if pose drifts (except for level calibration)
         if (status_ != Motion::CalibrationStatus::kArmSamplingLevel
-            && std::abs(theta - target) > 2.0 * kReachTolerance) {
+            && std::abs(angle - target) > 2.0 * kReachTolerance) {
             sampler_.Reset();
             return;
         }
 
-        sample = sampler_.Add(dt, theta, actual_vel, actual_torque,
-                              trajectory_active, cw_vol_);
+        sample = sampler_.Add(dt, angle, actual_vel, actual_torque,
+                              trajectory_active, cw_volume_);
         if (!sample) {
             return;
         }
@@ -2467,7 +2464,7 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
         case Motion::CalibrationStatus::kArmMovingToB:
             // Start next step of an active calibration
             if (!trajectory_active
-                && std::abs(theta - target) <= kReachTolerance
+                && std::abs(angle - target) <= kReachTolerance
                 && std::abs(actual_vel) <= kRestVelTolerance) {
                 BeginCalibrationStage(
                     at_a ? Motion::CalibrationStatus::kArmSamplingA
@@ -2507,15 +2504,15 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
  */
 void Libra2MotionController::FinishLevelCalibration(
     const Motion::RestSample& sample) {
-    if (std::abs(sample.theta) > Motion::kMaxLevelAngle) {
+    if (std::abs(sample.angle) > Motion::kMaxLevelAngle) {
         FinishCalibration(false, "arm is not level (theta="
-                                     + Format(sample.theta) + " rad)");
+                                     + Format(sample.angle) + " rad)");
         return;
     }
 
     // Eq. 34 with current arm_hang_torque_
     const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(sample),
-                                                   sample.theta,
+                                                   sample.angle,
                                                    arm_hang_torque_);
     if (!level) {
         FinishCalibration(false, "cos(theta) too small");
@@ -2530,11 +2527,10 @@ void Libra2MotionController::FinishLevelCalibration(
     arm_cw_params_ = cw_model_.GetParams();
 
     FinishCalibration(true,
-                      "Level calibration succeeded: arm_level_torque="
+                      "Level calibration succeeded: τ_g1,0="
                           + Format(arm_level_torque_) + " Nm"
                           + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
-                          + ", arm_hang_torque=" + Format(arm_hang_torque_)
-                          + " Nm");
+                          + ", m_arm*h_1*g=" + Format(arm_hang_torque_) + " Nm");
 }
 
 /**
@@ -2552,9 +2548,9 @@ void Libra2MotionController::FinishTwoAngleCalibration(
     const Motion::RestSample& sample_b) {
     // Eq. 35 with measured angles
     const auto solved = Libra2Model::SolveTwoAngle(SampleToArmTorque(sample_a_),
-                                                   sample_a_.theta,
+                                                   sample_a_.angle,
                                                    SampleToArmTorque(sample_b),
-                                                   sample_b.theta);
+                                                   sample_b.angle);
     if (!solved) {
         FinishCalibration(false, "measured angles too close together");
         return;
@@ -2570,11 +2566,11 @@ void Libra2MotionController::FinishTwoAngleCalibration(
     const bool stable = CheckStability(arm_hang_torque_);
 
     FinishCalibration(true,
-                      "Two-angle calibration succeeded: arm_level_torque="
+                      "Two-angle calibration succeeded: τ_g1,0="
                           + Format(arm_level_torque_) + " Nm"
                           + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
-                          + ", arm_hang_torque=" + Format(arm_hang_torque_)
-                          + " Nm" + (stable ? "" : " (UNSTABLE; see log)"));
+                          + ", m_arm*h_1*g=" + Format(arm_hang_torque_) + " Nm"
+                          + (stable ? "" : " (UNSTABLE; see log)"));
 }
 
 //------------------------------------------------------------------------------
@@ -2586,38 +2582,39 @@ void Libra2MotionController::FinishTwoAngleCalibration(
  *
  * @param dt Time since last cycle (s)
  * @param trajectory_active Whether a trajectory is running
- * @param theta Actual angle, θ (rad)
+ * @param angle Actual angle, θ (rad)
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param actual_torque Actual actuator torque, τ_actuator (Nm)
  *
  * @note Aborts (and stops the sweep) if the torque stays above
- *       `kFrictionTorqueLimit` for `kFrictionLimitTime`, or if the CW volume
+ *       `kMaxFrictionTorque` for `kMaxFrictionTorqueTime`, or if the CW volume
  *       changes.
  */
 void Libra2MotionController::RunFrictionCalibration(
-    const double& dt, const bool& trajectory_active, const double& theta,
+    const double& dt, const bool& trajectory_active, const double& angle,
     const double& actual_vel, const double& actual_torque) {
     FrictionRun& run = friction_run_;
     t_stage_s_ += dt;
 
     // Brief spikes shouldn't count against the limit
-    if (std::abs(actual_torque) > kFrictionTorqueLimit) {
-        run.t_over_limit_s += dt;
+    if (std::abs(actual_torque) > kMaxFrictionTorque) {
+        run.t_over_max_s += dt;
     } else {
-        run.t_over_limit_s = 0.0;
+        run.t_over_max_s = 0.0;
     }
 
     // Abort guards
     std::string abort_reason;
     if (t_stage_s_ > kMoveTimeout) {
         abort_reason = "timed out moving or sweeping";
-    } else if (run.t_over_limit_s >= kFrictionLimitTime) {
+    } else if (run.t_over_max_s >= kMaxFrictionTorqueTime) {
         abort_reason = "torque (" + Format(actual_torque)
                        + " Nm) stayed above the calibration's torque limit ("
-                       + Format(kFrictionTorqueLimit) + " Nm) for "
-                       + Format(kFrictionLimitTime)
+                       + Format(kMaxFrictionTorque) + " Nm) for "
+                       + Format(kMaxFrictionTorqueTime)
                        + " s; balance the CW or narrow/move the window";
-    } else if (!cw_vol_ || std::abs(*cw_vol_ - run.volume) > kRestVolTolerance) {
+    } else if (!cw_volume_
+               || std::abs(*cw_volume_ - run.volume) > kRestVolumeTolerance) {
         abort_reason = "CW volume changed during the sweeps";
     }
 
@@ -2626,7 +2623,7 @@ void Libra2MotionController::RunFrictionCalibration(
         FinishCalibration(false, abort_reason);
         return;
     }
-    LogCalibrationProgress(dt, kMoveTimeout, theta, actual_vel,
+    LogCalibrationProgress(dt, kMoveTimeout, angle, actual_vel,
                            trajectory_active);
 
     const bool going_up = (status_
@@ -2636,14 +2633,13 @@ void Libra2MotionController::RunFrictionCalibration(
          || status_ == Motion::CalibrationStatus::kFrictionMovingToStart)
             ? run.angle_lo
             : run.angle_hi;
-    const double speed = run.max_speed
-                         * kFrictionSpeedFractions.at(run.speed_idx);
+    const double vel = run.max_vel * kFrictionVelFractions.at(run.vel_idx);
 
     if (status_ != Motion::CalibrationStatus::kFrictionMovingToStart) {
         if (trajectory_active) {
             run.trajectory_seen = true;
-            AddFrictionSample(dt, theta, actual_vel, actual_torque, going_up,
-                              speed);
+            AddFrictionSample(dt, angle, actual_vel, actual_torque, going_up,
+                              vel);
             return;
         }
         if (!run.trajectory_seen) {
@@ -2653,7 +2649,7 @@ void Libra2MotionController::RunFrictionCalibration(
 
     // Wait until the move/sweep has ended at rest at its end
     const bool arrived = !trajectory_active
-                         && std::abs(theta - end) <= kReachTolerance
+                         && std::abs(angle - end) <= kReachTolerance
                          && std::abs(actual_vel) <= kRestVelTolerance;
     if (!arrived) {
         return;
@@ -2671,12 +2667,12 @@ void Libra2MotionController::RunFrictionCalibration(
         case Motion::CalibrationStatus::kFrictionSweepDown:
             {
                 std::string error;
-                if (!FinishFrictionSpeed(speed, error)) {
+                if (!FinishFrictionVel(vel, error)) {
                     FinishCalibration(false, error);
                     return;
                 }
-                ++run.speed_idx;
-                if (run.speed_idx < kFrictionSpeedFractions.size()) {
+                ++run.vel_idx;
+                if (run.vel_idx < kFrictionVelFractions.size()) {
                     BeginCalibrationStage(
                         Motion::CalibrationStatus::kFrictionSweepUp);
                 } else {
@@ -2695,33 +2691,33 @@ void Libra2MotionController::RunFrictionCalibration(
  *        steady speed.
  *
  * @param dt Time since last cycle (s)
- * @param theta Actual angle, θ (rad)
+ * @param angle Actual angle, θ (rad)
  * @param actual_vel Actual velocity, θ̇ (rad/s)
  * @param actual_torque Actual actuator torque, τ_actuator (Nm)
  * @param going_up Whether this is the up sweep
- * @param speed Sweep speed, v (rad/s)
+ * @param vel Sweep speed, v (rad/s)
  *
  * @note Steady speed is judged on velocity averaged over `kVelAvgWindow`, since
- *       raw velocity feedback tends to jitter above `kFrictionSpeedTolerance`
+ *       raw velocity feedback tends to jitter above `kFrictionVelTolerance`
  *       (even when the sweep is steady).
  */
 void Libra2MotionController::AddFrictionSample(
-    const double& dt, const double& theta, const double& actual_vel,
-    const double& actual_torque, const bool& going_up, const double& speed) {
+    const double& dt, const double& angle, const double& actual_vel,
+    const double& actual_torque, const bool& going_up, const double& vel) {
     FrictionRun& run = friction_run_;
 
     // Skip window edges, where ramps add inertia and CW may swing
     const double lo = run.angle_lo + run.margin;
     const double hi = run.angle_hi - run.margin;
-    if (theta < lo || theta > hi) {
+    if (angle < lo || angle > hi) {
         return;  // near a window edge
     }
     ++run.range_samples;
 
     // Skip sudden jerks and jitters, which add error to calibration result
     const double mean_vel = run.vel_avg.Add(dt, actual_vel);
-    const double sweep_vel = going_up ? speed : -speed;
-    if (std::abs(mean_vel - sweep_vel) > kFrictionSpeedTolerance * speed) {
+    const double sweep_vel = going_up ? vel : -vel;
+    if (std::abs(mean_vel - sweep_vel) > kFrictionVelTolerance * vel) {
         return;  // not at steady speed
     }
     ++run.steady_samples;
@@ -2733,7 +2729,7 @@ void Libra2MotionController::AddFrictionSample(
     }
 
     const auto bin = std::min(n_bins - 1, static_cast<std::size_t>(
-                                              (theta - lo) / kFrictionBinWidth));
+                                              (angle - lo) / kFrictionBinWidth));
     if (going_up) {
         run.up_sum[bin] += actual_torque;
         ++run.up_count[bin];
@@ -2747,15 +2743,15 @@ void Libra2MotionController::AddFrictionSample(
  * @brief Turns one speed's binned sweeps into a friction point, and logs the
  *        gravity curve they give.
  *
- * @param speed Sweep speed, v (rad/s)
+ * @param vel Sweep speed, v (rad/s)
  * @param[out] error Descriptive reason for failure, if any
  *
  * @note Code-specific equation based on Eqs. 18 and 19a at constant speed.
  *       Per angle bin, with actual actuator torque (so bin mean = -τ_ext,g):
  *         drag = (τ_up - τ_down) / 2 τ_g(θ) = (τ_up + τ_down) / 2
  */
-bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
-                                                 std::string& error) {
+bool Libra2MotionController::FinishFrictionVel(const double& vel,
+                                               std::string& error) {
     FrictionRun& run = friction_run_;
 
     const bool model_ready = arm_calibrated_ && cw_model_.IsValid();
@@ -2763,7 +2759,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     const double cw_mass = Libra2Model::CwMass(run.volume);
 
     Motion::FrictionPoint point;
-    point.speed = speed;
+    point.vel = vel;
     double drag_min = 0.0;
     double drag_max = 0.0;
     double grav_sum = 0.0;
@@ -2795,11 +2791,11 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         grav_sum += holding;
 
         // Save bin for calibration record
-        const double theta_bin = lo
+        const double angle_bin = lo
                                  + ((static_cast<double>(i) + 0.5)
                                     * kFrictionBinWidth);
         Motion::FrictionBin bin;
-        bin.theta = theta_bin;
+        bin.angle = angle_bin;
         bin.drag = drag;
         bin.holding = holding;
         bin.n_up = run.up_count[i];
@@ -2808,7 +2804,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
 
         // Holding torque should equal -τ_ext,g at bin center
         if (model_ready) {
-            model_err_sum += holding + ComputeNetGravTorque(theta_bin, cw_mass);
+            model_err_sum += holding + ComputeNetGravTorque(angle_bin, cw_mass);
         }
 
         ++point.n_bins;
@@ -2817,7 +2813,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     if (point.n_bins < kFrictionMinBins) {
         error = "only " + std::to_string(point.n_bins)
                 + " angle bins had steady samples in both directions at "
-                + Format(speed) + " rad/s (need "
+                + Format(vel) + " rad/s (need "
                 + std::to_string(kFrictionMinBins) + "); use a wider window";
         return false;
     }
@@ -2836,9 +2832,9 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         std::lround(100.0 * point.steady_fraction));
     run.points.push_back(point);
 
-    std::string msg = "Friction speed " + std::to_string(run.speed_idx + 1)
-                      + "/" + std::to_string(kFrictionSpeedFractions.size())
-                      + " done (" + FormatDeg(speed)
+    std::string msg = "Friction speed " + std::to_string(run.vel_idx + 1) + "/"
+                      + std::to_string(kFrictionVelFractions.size()) + " done ("
+                      + FormatDeg(vel)
                       + " deg/s):"
                         "\n  drag:           "
                       + Format(point.drag) + " Nm (spread "
@@ -2870,14 +2866,14 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
 void Libra2MotionController::FinishFrictionCalibration() {
     const FrictionRun& run = friction_run_;
 
-    std::vector<double> speeds;
+    std::vector<double> vels;
     std::vector<double> drags;
     for (const auto& p : run.points) {
-        speeds.push_back(p.speed);
+        vels.push_back(p.vel);
         drags.push_back(p.drag);
     }
 
-    auto fit = Libra2Model::FitFrictionLine(speeds, drags);
+    auto fit = Libra2Model::FitFrictionLine(vels, drags);
     if (!fit) {
         FinishCalibration(false, "friction line fit failed (need two or more "
                                  "speeds)");
@@ -2920,9 +2916,9 @@ void Libra2MotionController::FinishFrictionCalibration() {
         // Refit b through the origin
         double s_vv = 0.0;
         double s_vd = 0.0;
-        for (std::size_t i = 0; i < speeds.size(); ++i) {
-            s_vv += speeds[i] * speeds[i];
-            s_vd += speeds[i] * drags[i];
+        for (std::size_t i = 0; i < vels.size(); ++i) {
+            s_vv += vels[i] * vels[i];
+            s_vd += vels[i] * drags[i];
         }
 
         model.coulomb = 0.0;
@@ -2930,9 +2926,8 @@ void Libra2MotionController::FinishFrictionCalibration() {
     }
 
     double sum_sq = 0.0;
-    for (std::size_t i = 0; i < speeds.size(); ++i) {
-        const double r = drags[i]
-                         - (model.coulomb + (model.viscous * speeds[i]));
+    for (std::size_t i = 0; i < vels.size(); ++i) {
+        const double r = drags[i] - (model.coulomb + (model.viscous * vels[i]));
         sum_sq += r * r;
     }
 
