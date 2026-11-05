@@ -32,8 +32,8 @@ elseif(LIBRA_VERSION EQUAL 2)
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_model.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibrator.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibrator.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.h
-        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_json.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_json.cpp
     )
 else()
     message(

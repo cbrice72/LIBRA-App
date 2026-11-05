@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   libra2_calibration_file.h
+ * @file   libra2_calibration_json.h
  * @brief  Saves/loads LIBRA-II calibration records as JSON; header file.
  *
  * @author Christian Brice
@@ -8,7 +8,6 @@
 #pragma once
 
 // C++ Standard Library Headers
-#include <optional>
 #include <string>
 
 // Project Headers
@@ -19,9 +18,8 @@ namespace Motion {
 // Default folder for calibration files (relative to the run directory)
 constexpr const char* kCalibrationDir = "./calibration";
 
-bool SaveCalibrationFile(const CalibrationRecord& record,
-                         const std::string& file_path, std::string& error);
-std::optional<CalibrationRecord> LoadCalibrationFile(
-    const std::string& file_path, std::string& error);
+void SaveCalibrationJson(const CalibrationRecord& record,
+                         const std::string& file_path);
+[[nodiscard]] CalibrationRecord LoadCalibrationJson(const std::string& file_path);
 
 }  // namespace Motion

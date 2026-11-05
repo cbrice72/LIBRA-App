@@ -1,5 +1,5 @@
 /******************************************************************************
- * @file   libra2_calibration_file.cpp
+ * @file   libra2_calibration_json.cpp
  * @brief  Saves/loads LIBRA-II calibration records as JSON; implementation
  *         file.
  *
@@ -7,10 +7,11 @@
  ******************************************************************************/
 
 // Related Header
-#include "libra2_calibration_file.h"
+#include "libra2_calibration_json.h"
 
 // C++ Standard Library Headers
-#include <utility>
+#include <optional>
+#include <stdexcept>
 
 // Other Library Headers
 #include <QDateTime>      // Qt::Core
@@ -46,21 +47,18 @@ namespace {
  * @param obj Object to read from
  * @param key Key to read
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] out Value read
- * @param[out] error Reason, if missing or NaN
+ *
+ * @throws std::runtime_error If missing or non-numeric
  */
-bool ReadNumber(const QJsonObject& obj, const QString& key,
-                const std::string& context, double& out, std::string& error) {
+double ReadNumber(const QJsonObject& obj, const QString& key,
+                  const std::string& context) {
     const QJsonValue value = obj.value(key);
-
     if (!value.isDouble()) {
-        error = "missing or non-numeric \"" + context + key.toStdString()
-                + "\"";
-        return false;
+        throw std::runtime_error("missing or non-numeric \"" + context
+                                 + key.toStdString() + "\"");
     }
 
-    out = value.toDouble();
-    return true;
+    return value.toDouble();
 }
 
 /**
@@ -69,21 +67,18 @@ bool ReadNumber(const QJsonObject& obj, const QString& key,
  * @param obj Object to read from
  * @param key Key to read
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] out Object read
- * @param[out] error Reason, if missing or not an object
+ *
+ * @throws std::runtime_error If missing or not an object
  */
-bool ReadObject(const QJsonObject& obj, const QString& key,
-                const std::string& context, QJsonObject& out,
-                std::string& error) {
+QJsonObject ReadObject(const QJsonObject& obj, const QString& key,
+                       const std::string& context) {
     const QJsonValue value = obj.value(key);
-
     if (!value.isObject()) {
-        error = "missing or non-object \"" + context + key.toStdString() + "\"";
-        return false;
+        throw std::runtime_error("missing or non-object \"" + context
+                                 + key.toStdString() + "\"");
     }
 
-    out = value.toObject();
-    return true;
+    return value.toObject();
 }
 
 /**
@@ -92,26 +87,25 @@ bool ReadObject(const QJsonObject& obj, const QString& key,
  * @param obj Object to read from
  * @param key Key to read
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] out Object read, if any
- * @param[out] error Reason, if present but not an object
+ *
+ * @note Returns none if the key is missing or null.
+ *
+ * @throws std::runtime_error If present but not an object
  */
-bool ReadOptionalObject(const QJsonObject& obj, const QString& key,
-                        const std::string& context,
-                        std::optional<QJsonObject>& out, std::string& error) {
+std::optional<QJsonObject> ReadOptionalObject(const QJsonObject& obj,
+                                              const QString& key,
+                                              const std::string& context) {
     const QJsonValue value = obj.value(key);
     if (value.isNull() || value.isUndefined()) {
-        out.reset();
-        return true;
+        return std::nullopt;
     }
 
     if (!value.isObject()) {
-        error = "\"" + context + key.toStdString()
-                + "\" must be an object or null";
-        return false;
+        throw std::runtime_error("\"" + context + key.toStdString()
+                                 + "\" must be an object or null");
     }
 
-    out = value.toObject();
-    return true;
+    return value.toObject();
 }
 
 /**
@@ -136,31 +130,31 @@ QJsonObject CwModelToJson(const CwModelParams& params) {
  *
  * @param obj JSON object
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] params CW model parameters
- * @param[out] error Reason, if a value is missing
  *
  * @note The mean r_bag² terms are optional and stay 0 if missing. They only
  *       affect CW inertia, not the gravity terms an arm model is checked against.
+ *
+ * @throws std::runtime_error If a value is missing
  */
-bool CwModelFromJson(const QJsonObject& obj, const std::string& context,
-                     CwModelParams& params, std::string& error) {
-    if (obj.contains("mean_sq_dist_m2")
-        && !ReadNumber(obj, "mean_sq_dist_m2", context, params.mean_sq_dist,
-                       error)) {
-        return false;
+CwModelParams CwModelFromJson(const QJsonObject& obj,
+                              const std::string& context) {
+    CwModelParams params;
+    params.pivot_dist = ReadNumber(obj, "pivot_dist_m", context);
+    params.pivot_slope = ReadNumber(obj, "pivot_slope_m_per_l", context);
+    params.hang_offset = ReadNumber(obj, "hang_offset_m", context);
+    params.capacity = ReadNumber(obj, "capacity_l", context);
+
+    // Optional
+    if (obj.contains("mean_sq_dist_m2")) {
+        params.mean_sq_dist = ReadNumber(obj, "mean_sq_dist_m2", context);
     }
-    if (obj.contains("mean_sq_dist_slope_m2_per_l")
-        && !ReadNumber(obj, "mean_sq_dist_slope_m2_per_l", context,
-                       params.mean_sq_dist_slope, error)) {
-        return false;
+    if (obj.contains("mean_sq_dist_slope_m2_per_l")) {
+        params.mean_sq_dist_slope = ReadNumber(obj,
+                                               "mean_sq_dist_slope_m2_per_l",
+                                               context);
     }
 
-    return ReadNumber(obj, "pivot_dist_m", context, params.pivot_dist, error)
-           && ReadNumber(obj, "pivot_slope_m_per_l", context,
-                         params.pivot_slope, error)
-           && ReadNumber(obj, "hang_offset_m", context, params.hang_offset,
-                         error)
-           && ReadNumber(obj, "capacity_l", context, params.capacity, error);
+    return params;
 }
 
 /**
@@ -183,25 +177,22 @@ QJsonObject ArmModelToJson(const ArmModel& arm) {
  *
  * @param obj JSON object
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] arm Arm model record
- * @param[out] error Reason, if a value is missing
+ *
+ * @throws std::runtime_error If a value is missing
  */
-bool ArmModelFromJson(const QJsonObject& obj, const std::string& context,
-                      ArmModel& arm, std::string& error) {
+ArmModel ArmModelFromJson(const QJsonObject& obj, const std::string& context) {
+    ArmModel arm;
+
     // How the model was computed
     arm.source = obj.value("source").toString().toStdString();
 
     // Model data
-    QJsonObject cw_obj;
-    if (!ReadNumber(obj, "level_torque_nm", context, arm.level_torque, error)
-        || !ReadNumber(obj, "hang_torque_nm", context, arm.hang_torque, error)
-        || !ReadObject(obj, "cw_model", context, cw_obj, error)
-        || !CwModelFromJson(cw_obj, context + "cw_model.", arm.cw_model,
-                            error)) {
-        return false;
-    }
+    arm.level_torque = ReadNumber(obj, "level_torque_nm", context);
+    arm.hang_torque = ReadNumber(obj, "hang_torque_nm", context);
+    arm.cw_model = CwModelFromJson(ReadObject(obj, "cw_model", context),
+                                   context + "cw_model.");
 
-    return true;
+    return arm;
 }
 
 /**
@@ -253,45 +244,39 @@ QJsonObject FrictionToJson(const FrictionModel& friction) {
  *
  * @param obj JSON object
  * @param context Where `obj` sits in the file (for error messages)
- * @param[out] friction Friction result
- * @param[out] error Reason, if a value is missing or negative
+ *
+ * @throws std::runtime_error If a value is missing or negative
  */
-bool FrictionFromJson(const QJsonObject& obj, const std::string& context,
-                      FrictionModel& friction, std::string& error) {
+FrictionModel FrictionFromJson(const QJsonObject& obj,
+                               const std::string& context) {
+    FrictionModel friction;
+
     // Model data
-    if (!ReadNumber(obj, "coulomb_nm", context, friction.coulomb, error)
-        || !ReadNumber(obj, "viscous_nm_s_per_rad", context, friction.viscous,
-                       error)
-        || !ReadNumber(obj, "residual_rms_nm", context, friction.residual_rms,
-                       error)
-        || !ReadNumber(obj, "angle_lo_rad", context, friction.angle_lo, error)
-        || !ReadNumber(obj, "angle_hi_rad", context, friction.angle_hi, error)
-        || !ReadNumber(obj, "volume_l", context, friction.volume, error)) {
-        return false;
-    }
+    friction.coulomb = ReadNumber(obj, "coulomb_nm", context);
+    friction.viscous = ReadNumber(obj, "viscous_nm_s_per_rad", context);
+    friction.residual_rms = ReadNumber(obj, "residual_rms_nm", context);
+    friction.angle_lo = ReadNumber(obj, "angle_lo_rad", context);
+    friction.angle_hi = ReadNumber(obj, "angle_hi_rad", context);
+    friction.volume = ReadNumber(obj, "volume_l", context);
 
     if (friction.coulomb < 0.0 || friction.viscous < 0.0) {
-        error = "\"" + context + "coulomb_nm\" and \"" + context
-                + "viscous_nm_s_per_rad\" must not be negative";
-        return false;
+        throw std::runtime_error("\"" + context + "coulomb_nm\" and \"" + context
+                                 + "viscous_nm_s_per_rad\" must not be "
+                                   "negative");
     }
 
     // Raw data
-    friction.points.clear();
     const QJsonArray points = obj.value("points").toArray();
     for (int i = 0; i < points.size(); ++i) {
         const std::string point_context = context + "points["
                                           + std::to_string(i) + "].";
         const QJsonObject p = points.at(i).toObject();
+
         FrictionPoint point;
-        double n_bins = 0.0;
-        if (!ReadNumber(p, "speed_rad_s", point_context, point.vel, error)
-            || !ReadNumber(p, "drag_nm", point_context, point.drag, error)
-            || !ReadNumber(p, "spread_nm", point_context, point.spread, error)
-            || !ReadNumber(p, "n_bins", point_context, n_bins, error)) {
-            return false;
-        }
-        point.n_bins = static_cast<int>(n_bins);
+        point.vel = ReadNumber(p, "speed_rad_s", point_context);
+        point.drag = ReadNumber(p, "drag_nm", point_context);
+        point.spread = ReadNumber(p, "spread_nm", point_context);
+        point.n_bins = static_cast<int>(ReadNumber(p, "n_bins", point_context));
 
         // Optional
         point.steady_fraction = p.value("steady_fraction").toDouble(0.0);
@@ -301,24 +286,20 @@ bool FrictionFromJson(const QJsonObject& obj, const std::string& context,
             const std::string bin_context = point_context + "bins["
                                             + std::to_string(j) + "].";
             const QJsonObject b = bins.at(j).toObject();
+
             FrictionBin bin;
-            double n_up = 0.0;
-            double n_down = 0.0;
-            if (!ReadNumber(b, "angle_rad", bin_context, bin.angle, error)
-                || !ReadNumber(b, "drag_nm", bin_context, bin.drag, error)
-                || !ReadNumber(b, "holding_nm", bin_context, bin.holding, error)
-                || !ReadNumber(b, "n_up", bin_context, n_up, error)
-                || !ReadNumber(b, "n_down", bin_context, n_down, error)) {
-                return false;
-            }
-            bin.n_up = static_cast<int>(n_up);
-            bin.n_down = static_cast<int>(n_down);
+            bin.angle = ReadNumber(b, "angle_rad", bin_context);
+            bin.drag = ReadNumber(b, "drag_nm", bin_context);
+            bin.holding = ReadNumber(b, "holding_nm", bin_context);
+            bin.n_up = static_cast<int>(ReadNumber(b, "n_up", bin_context));
+            bin.n_down = static_cast<int>(ReadNumber(b, "n_down", bin_context));
             point.bins.push_back(bin);
         }
 
         friction.points.push_back(point);
     }
-    return true;
+
+    return friction;
 }
 
 }  // namespace
@@ -332,10 +313,11 @@ bool FrictionFromJson(const QJsonObject& obj, const std::string& context,
  *
  * @param record Record to save
  * @param file_path File to write (overwrites if exists)
- * @param[out] error Reason, if saving failed
+ *
+ * @throws std::runtime_error If saving failed
  */
-bool SaveCalibrationFile(const CalibrationRecord& record,
-                         const std::string& file_path, std::string& error) {
+void SaveCalibrationJson(const CalibrationRecord& record,
+                         const std::string& file_path) {
     QJsonObject root;
 
     // For validation purposes
@@ -362,61 +344,52 @@ bool SaveCalibrationFile(const CalibrationRecord& record,
     const QString path = QString::fromStdString(file_path);
     const QString dir = QFileInfo(path).absolutePath();
     if (!QDir().mkpath(dir)) {
-        error = "can't create folder " + dir.toStdString();
-        return false;
+        throw std::runtime_error("can't create folder " + dir.toStdString());
     }
 
     // (NOTE: QSaveFile only replaces the old file once writing finishes)
     QSaveFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        error = file.errorString().toStdString();
-        return false;
+        throw std::runtime_error(file.errorString().toStdString());
     }
     file.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
     if (!file.commit()) {
-        error = file.errorString().toStdString();
-        return false;
+        throw std::runtime_error(file.errorString().toStdString());
     }
-
-    return true;
 }
 
 /**
  * @brief Reads a calibration record from a JSON file.
  *
  * @param file_path File to read
- * @param[out] error Reason, if loading failed
  *
- * @note Returns none on failure.
+ * @throws std::runtime_error If the file can't be read or isn't a valid
+ *         calibration record
  */
-std::optional<CalibrationRecord> LoadCalibrationFile(
-    const std::string& file_path, std::string& error) {
+CalibrationRecord LoadCalibrationJson(const std::string& file_path) {
     // Open and parse the file
     QFile file(QString::fromStdString(file_path));
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        error = file.errorString().toStdString();
-        return std::nullopt;
+        throw std::runtime_error(file.errorString().toStdString());
     }
 
     QJsonParseError parse_error;
     const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(),
                                                       &parse_error);
     if (doc.isNull() || !doc.isObject()) {
-        error = "not valid JSON (" + parse_error.errorString().toStdString()
-                + ")";
-        return std::nullopt;
+        throw std::runtime_error(
+            "not valid JSON (" + parse_error.errorString().toStdString() + ")");
     }
     const QJsonObject root = doc.object();
 
     // Validation
     if (root.value("format").toString() != kFormatName) {
-        error = "not a LIBRA-II calibration file";
-        return std::nullopt;
+        throw std::runtime_error("not a LIBRA-II calibration file");
     }
     const int version = root.value("format_version").toInt(-1);
     if (version != kFormatVersion) {
-        error = "unsupported format version " + std::to_string(version);
-        return std::nullopt;
+        throw std::runtime_error("unsupported format version "
+                                 + std::to_string(version));
     }
 
     // Metadata
@@ -428,34 +401,15 @@ std::optional<CalibrationRecord> LoadCalibrationFile(
     record.note = root.value("note").toString().toStdString();
 
     // Models
-    QJsonObject cw_obj;
-    if (!ReadObject(root, "cw_model", "", cw_obj, error)
-        || !CwModelFromJson(cw_obj, "cw_model.", record.cw_model, error)
-        || !ReadNumber(root, "arm_inertia_kg_m2", "", record.arm_inertia,
-                       error)) {
-        return std::nullopt;
-    }
+    record.cw_model = CwModelFromJson(ReadObject(root, "cw_model", ""),
+                                      "cw_model.");
+    record.arm_inertia = ReadNumber(root, "arm_inertia_kg_m2", "");
 
-    std::optional<QJsonObject> arm_obj;
-    std::optional<QJsonObject> friction_obj;
-    if (!ReadOptionalObject(root, "arm_model", "", arm_obj, error)
-        || !ReadOptionalObject(root, "friction", "", friction_obj, error)) {
-        return std::nullopt;
+    if (const auto arm_obj = ReadOptionalObject(root, "arm_model", "")) {
+        record.arm_model = ArmModelFromJson(*arm_obj, "arm_model.");
     }
-
-    if (arm_obj) {
-        ArmModel arm;
-        if (!ArmModelFromJson(*arm_obj, "arm_model.", arm, error)) {
-            return std::nullopt;
-        }
-        record.arm_model = std::move(arm);
-    }
-    if (friction_obj) {
-        FrictionModel friction;
-        if (!FrictionFromJson(*friction_obj, "friction.", friction, error)) {
-            return std::nullopt;
-        }
-        record.friction = std::move(friction);
+    if (const auto friction_obj = ReadOptionalObject(root, "friction", "")) {
+        record.friction = FrictionFromJson(*friction_obj, "friction.");
     }
 
     return record;

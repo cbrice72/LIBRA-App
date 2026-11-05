@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <array>
 #include <cmath>
+#include <stdexcept>
 
 // Other Library Headers
 #include <QDateTime>         // Qt::Core
@@ -30,7 +31,7 @@
 
 // Project Headers
 #if LIBRA_VERSION == 2
-# include "libra2_calibration_file.h"
+# include "libra2_calibration_json.h"
 # include "libra2_motion_controller.h"
 # include "open_epos_dialog.h"
 #endif
@@ -482,10 +483,11 @@ void MainWindow::on_a_motion_calibration_save_triggered() {
 
     record.extension = sb_extension->value();
     record.note = le_note->text().toStdString();
-    std::string error;
-    if (!Motion::SaveCalibrationFile(record, file_path.toStdString(), error)) {
+    try {
+        Motion::SaveCalibrationJson(record, file_path.toStdString());
+    } catch (const std::runtime_error& e) {
         HandleCriticalError("Calibration - Failed to save: "
-                            + QString::fromStdString(error));
+                            + QString::fromStdString(e.what()));
         return;
     }
 
@@ -509,29 +511,29 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
         return;
     }
 
-    std::string error;
-    const auto record = Motion::LoadCalibrationFile(file_path.toStdString(),
-                                                    error);
-    if (!record) {
+    Motion::CalibrationRecord record;
+    try {
+        record = Motion::LoadCalibrationJson(file_path.toStdString());
+    } catch (const std::runtime_error& e) {
         HandleCriticalError("Calibration - Failed to load: "
-                            + QString::fromStdString(error));
+                            + QString::fromStdString(e.what()));
         return;
     }
-    if (!motion_controller_->LoadCalibrationRecord(*record)) {
+    if (!motion_controller_->LoadCalibrationRecord(record)) {
         HandleCriticalError(
             "Calibration - Can't apply the calibration! (see log)");
         return;
     }
 
-    const QString extension = record->extension
-                                  ? QString::number(*record->extension, 'f', 1)
+    const QString extension = record.extension
+                                  ? QString::number(*record.extension, 'f', 1)
                                         + " mm"
                                   : "n/a";
 
     logger_->Info(
         "Loaded calibration from: " + file_path.toStdString() + " (saved "
-        + record->timestamp + ", extension " + extension.toStdString()
-        + (record->note.empty() ? "" : ", note: " + record->note) + ")");
+        + record.timestamp + ", extension " + extension.toStdString()
+        + (record.note.empty() ? "" : ", note: " + record.note) + ")");
 
     HandleArmModelChanged(motion_controller_->IsArmCalibrated());
 }
