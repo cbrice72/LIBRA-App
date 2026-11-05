@@ -13,9 +13,7 @@
 
 // C++ Standard Library Headers
 #include <cstdint>
-#include <deque>
 #include <optional>
-#include <utility>
 #include <vector>
 
 // Other Library Headers
@@ -23,56 +21,9 @@
 
 // Project Headers
 #include "abstract_motion_controller.h"
+#include "libra2_calibrator.h"
 #include "libra2_model.h"
 #include "motion_defs.h"
-
-/**
- * @brief Time-weighted moving average of velocity over `kVelAvgWindow`, since
- *        raw values are too noisy to compare against small thresholds.
- */
-class VelAverager {
-  public:
-    void Reset();
-    double Add(const double& dt, const double& vel);
-
-  private:
-    std::deque<std::pair<double, double>> history_;  // (dt, θ̇) pairs
-    double time_{0.0};                               // Σdt (s)
-    double sum_{0.0};                                // Σθ̇·dt (rad)
-};
-
-/**
- * @brief Static-equilibrium measurement for arm model calibration.
- *
- * @note At rest, actuator torque equals holding torque (Eq. 19a), so averages
- *       taken while the arm and counterweight (CW) volume stay steady give one
- *       point of the gravity model.
- */
-class RestSampler {
-  public:
-    void Reset();
-
-    std::optional<Motion::RestSample> Add(const double& dt, const double& pos,
-                                          const double& vel,
-                                          const double& torque,
-                                          const bool& trajectory_active,
-                                          const std::optional<double>& volume);
-
-  private:
-    void RestartWindow();
-
-    VelAverager vel_avg_;  // kept across window restarts
-
-    int count_{0};
-    double t_elapsed_s_{0.0};  // seconds
-
-    double anchor_angle_{0.0};
-    double anchor_volume_{0.0};
-
-    double sum_angle_{0.0};
-    double sum_torque_{0.0};
-    double sum_volume_{0.0};
-};
 
 /**
  * @brief Model-based pitch control for LIBRA-II. Augments the HEBI API's
@@ -153,36 +104,6 @@ class Libra2MotionController : public AbstractMotionController {
         std::optional<Motion::CwCommand> cw_command;
     };
 
-    /**
-     * @brief Friction calibration state.
-     */
-    struct FrictionRun {
-        double angle_lo{0.0};  // window start (rad)
-        double angle_hi{0.0};  // window end (rad)
-        double max_vel{0.0};   // (rad/s)
-
-        double volume{0.0};   // initial CW volume (L)
-        double inertia{0.0};  // arm + CW, used to set ramp lengths (kg·m²)
-        double margin{0.0};   // unsampled area at each window end (rad)
-
-        std::size_t vel_idx{0};
-
-        bool trajectory_seen{false};  // whether the planned sweep has started
-        double t_over_max_s{0.0};     // time over the |τ| limit (s)
-
-        VelAverager vel_avg;  // current sweep's θ̇, for the steady check
-
-        // Per-bin torque sums/counts for the current speed
-        std::vector<double> up_sum;
-        std::vector<double> down_sum;
-        std::vector<int> up_count;
-        std::vector<int> down_count;
-        int range_samples{0};   // valid samples inside sampled range
-        int steady_samples{0};  // ... of those, at steady speed
-
-        std::vector<Motion::FrictionPoint> points;
-    };
-
     // --- Helper Functions ---
 
     AtcResult UpdateTorqueComp(const double& torque_magnitude,
@@ -206,34 +127,14 @@ class Libra2MotionController : public AbstractMotionController {
     [[nodiscard]] Motion::Libra2Diagnostics ComputeDiagnostics(
         const double& angle, const std::optional<double>& angle_tgt) const;
 
-    void RunArmCalibration(const double& dt, const bool& trajectory_active,
-                           const double& angle, const double& actual_vel,
-                           const double& actual_torque);
     void FinishLevelCalibration(const Motion::RestSample& sample);
-    void FinishTwoAngleCalibration(const Motion::RestSample& sample_b);
-
-    void RunFrictionCalibration(const double& dt, const bool& trajectory_active,
-                                const double& angle, const double& actual_vel,
-                                const double& actual_torque);
-    void AddFrictionSample(const double& dt, const double& angle,
-                           const double& actual_vel,
-                           const double& actual_torque, const bool& going_up,
-                           const double& vel);
-    bool FinishFrictionVel(const double& vel, std::string& error);
-    void FinishFrictionCalibration();
-
-    void BeginCalibrationStage(const Motion::CalibrationStatus& status);
-    void FinishCalibration(const bool& success, const std::string& message);
-
-    [[nodiscard]] std::string DescribeCalibrationStage() const;
-    void LogCalibrationProgress(const double& dt, const double& timeout,
-                                const double& angle, const double& actual_vel,
-                                const bool& trajectory_active);
+    void FinishTwoAngleCalibration(const Motion::RestSample& sample_a,
+                                   const Motion::RestSample& sample_b);
+    void FinishFrictionCalibration(const Motion::FrictionModel& model);
 
     [[nodiscard]] double SampleToArmTorque(
         const Motion::RestSample& sample) const;
     bool CheckStability(const double& arm_hang_torque);
-    void CancelCalibrationLocked();
     [[nodiscard]] double LevelTorqueAtExtension() const;
 
     [[nodiscard]] bool IsMovingLocked() const;
@@ -282,31 +183,11 @@ class Libra2MotionController : public AbstractMotionController {
     double torque_comp_upper_bound_;      // "hard" limit (Nm)
     const double torque_comp_slow_rate_;  // movement rate between limits
 
-    // Calibration Metadata
+    // Calibration
 
-    Motion::CalibrationStatus status_{Motion::CalibrationStatus::kIdle};
-    double t_stage_s_{0.0};  // seconds
-
-    std::string calibration_msg_;  // how the previous calibration ended
-
-    std::string calibration_progress_;  // current step; empty when not running
-    double t_progress_log_s_{0.0};      // seconds since last progress log
-
-    // Arm Calibration
-
-    bool two_angle_{false};
-    double angle_a_{0.0};          // (rad)
-    double angle_b_{0.0};          // (rad)
-    Motion::RestSample sample_a_;  // two-angle: first angle's sample
-    RestSampler sampler_;
-
-    // Friction Calibration
-
-    FrictionRun friction_run_;
+    Libra2Calibrator calibrator_;
 
     std::optional<double> pending_move_;  // pitch angle (rad)
-    std::optional<Motion::SweepRequest> pending_sweep_;
-    bool pending_stop_{false};
 
     bool state_warned_{false};  // avoid spamming the log with repeated warnings
 };

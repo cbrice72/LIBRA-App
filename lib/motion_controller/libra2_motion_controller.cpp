@@ -10,7 +10,6 @@
 
 // C++ Standard Library Headers
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <string>
 
@@ -19,15 +18,13 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
- * !Rest Sampler
  * !Class Management
  * !Settings & Arm Model
  * !Calibration Commands
  * !Calibration Record
  * !Control Cycle
  * !Hooks
- * !Model Calibration Helpers
- * !Friction Calibration Helpers
+ * !Calibration Results
  */
 
 // Mechanical Constants (heights above the arm/CW centerline)
@@ -57,45 +54,6 @@ constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
 // TODO: arbitrary; tune via experiments
 constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
 
-// Model Calibration
-
-constexpr double kReachTolerance = 0.0175;  // "arrived at target", ~1 deg (rad)
-constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
-constexpr double kRestVelTolerance = 0.005;  // allowed drift in window (rad/s)
-constexpr double kRestVolumeTolerance = 0.01;  // allowed CW change in window (L)
-constexpr double kRestWindowTime = 3.0;        // averaging window (s)
-
-constexpr double kProgressLogPeriod = 15.0;  // heartbeat message (s)
-constexpr double kMoveTimeout = 180.0;       // (s)
-constexpr double kSamplingTimeout = 60.0;    // (s)
-
-// Velocity averaging window for rest and steady speed checks, arbitrary (s);
-// at rest, raw vel noise is ~0.6 deg/s but its 0.75 s mean stays < 0.2 deg/s
-constexpr double kVelAvgWindow = 0.75;
-
-// Friction Calibration
-
-// Sweep speeds as fractions of actuator max speed
-constexpr std::array<double, 4> kFrictionVelFractions = {
-    1.0 / 6.0,
-    1.0 / 3.0,
-    2.0 / 3.0,
-    1.0,
-};
-
-// TODO: all of these are arbitrary; tune via experiments
-constexpr double kMaxFrictionTorque = 14.0;     // abort if above this |τ| (Nm)
-constexpr double kMaxFrictionTorqueTime = 0.5;  // ... for this long (s)
-
-constexpr double kFrictionRampTorque = 4.0;      // inertia torque per ramp (Nm)
-constexpr double kFrictionMinRampDist = 0.0175;  // shortest ramp, ~1 deg (rad)
-constexpr double kFrictionSampleMargin = 0.0175;  // unsampled ends (rad)
-constexpr double kFrictionVelTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
-
-constexpr double kFrictionBinWidth = 0.0087;  // angle bin, ~0.5 deg (rad)
-constexpr int kFrictionMinBinSamples = 3;     // per bin and direction
-constexpr int kFrictionMinBins = 3;           // usable bins per speed
-
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -103,57 +61,6 @@ constexpr int kFrictionMinBins = 3;           // usable bins per speed
 namespace {
 
 constexpr std::size_t kPitchIdx = Joint::Name::kPitch;
-
-/**
- * @brief Gets the friction sweep ramp length (rad) that keeps the torque
- *        needed to accelerate the arm within `kFrictionRampTorque`.
- *
- * @param vel Sweep speed, v (rad/s)
- * @param inertia Arm + CW moment of inertia, I (kg·m²)
- *
- * @note Code-specific equation. HEBI's API uses a minimum-jerk ramp, which from
- *       rest to speed v over distance d takes T = 2·d/v seconds (see
- *       `HebiThread::StartSweep()`). With zero acceleration at both ends, its
- *       position is:
- *         d·(2τ³ - τ⁴) for τ = t/T,
- *
- *       Peaking at an acceleration of:
- *         3·d/T² = 0.75·v²/d
- *
- *       Which gives d = 0.75·I·v² / τ_ramp.
- */
-double RampDist(const double& vel, const double& inertia) {
-    return std::max(kFrictionMinRampDist,
-                    0.75 * inertia * vel * vel / kFrictionRampTorque);
-}
-
-/**
- * @brief Estimates how long one friction sweep will take (s).
- *
- * @param lo Window start (rad)
- * @param hi Window end (rad)
- * @param vel Sweep speed (rad/s)
- * @param ramp_dist Length of each ramp (rad)
- *
- * @note Code-specific equation. Usually, each ramp is traversed at half speed,
- *       which gives:
- *         t = (θ_hi - θ_lo + 2·d) / v
- */
-double SweepTime(const double& lo, const double& hi, const double& vel,
-                 const double& ramp_dist) {
-    return (hi - lo + (2.0 * ramp_dist)) / vel;
-}
-
-/**
- * @brief Checks whether a status belongs to the friction calibration.
- *
- * @param status Status to check
- */
-bool IsFrictionStage(const Motion::CalibrationStatus& status) {
-    return status == Motion::CalibrationStatus::kFrictionMovingToStart
-           || status == Motion::CalibrationStatus::kFrictionSweepUp
-           || status == Motion::CalibrationStatus::kFrictionSweepDown;
-}
 
 /**
  * @brief Checks whether two counterweight (CW) models are the same (within
@@ -174,183 +81,7 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
            && std::abs(a.capacity - b.capacity) <= kCwParamTolerance;
 }
 
-/**
- * @brief Fits a least-squares line through the friction sweep results (drag vs.
- *        speed).
- *
- * @param vels Sweep speeds, v (rad/s)
- * @param drags Drag at each speed, (τ_up - τ_down) / 2 (Nm)
- *
- * @note Returns the fit (intercept τ_c, slope b, and RMS of residuals; other
- *       fields empty), or none with fewer than two distinct speeds.
- *
- * @note Code-specific equation, based on Eq. 18 at constant speed (θ̈ = 0,
- *       İ = 0). Isolates the friction component by averaging the up/down
- *       sweeps, which should cancel gravitational torque:
- *         (τ_up - τ_down) / 2 = b·v + τ_c
- */
-std::optional<Motion::FrictionModel> FitFrictionLine(
-    const std::vector<double>& vels, const std::vector<double>& drags) {
-    const std::size_t n = vels.size();
-    if (n < 2 || drags.size() != n) {
-        return std::nullopt;
-    }
-
-    // Compute means
-    double mean_v = 0.0;
-    double mean_f = 0.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        mean_v += vels[i];
-        mean_f += drags[i];
-    }
-    mean_v /= static_cast<double>(n);
-    mean_f /= static_cast<double>(n);
-
-    // Compute slope and intercept
-    double s_vv = 0.0;
-    double s_vf = 0.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        s_vv += (vels[i] - mean_v) * (vels[i] - mean_v);
-        s_vf += (vels[i] - mean_v) * (drags[i] - mean_f);
-    }
-    if (!(s_vv > 0.0)) {
-        return std::nullopt;
-    }
-
-    // Determine friction coefficients (+ residuals)
-    Motion::FrictionModel model;
-    model.viscous = s_vf / s_vv;
-    model.coulomb = mean_f - (model.viscous * mean_v);
-
-    double sum_sq = 0.0;
-    for (std::size_t i = 0; i < n; ++i) {
-        const double r = drags[i] - (model.coulomb + (model.viscous * vels[i]));
-        sum_sq += r * r;
-    }
-    model.residual_rms = std::sqrt(sum_sq / static_cast<double>(n));
-
-    return model;
-}
-
 }  // namespace
-
-//------------------------------------------------------------------------------
-// !Velocity Averager
-//------------------------------------------------------------------------------
-
-/**
- * @brief Clears averaging history.
- */
-void VelAverager::Reset() {
-    history_.clear();
-    time_ = 0.0;
-    sum_ = 0.0;
-}
-
-/**
- * @brief Adds one cycle's velocity and returns the time-weighted mean over the
- *        last `kVelAvgWindow`.
- *
- * @param dt Time since last cycle (s)
- * @param vel Actual velocity, θ̇ (rad/s)
- */
-double VelAverager::Add(const double& dt, const double& vel) {
-    history_.emplace_back(dt, vel);
-    time_ += dt;
-    sum_ += dt * vel;
-
-    while (history_.size() > 1
-           && time_ - history_.front().first >= kVelAvgWindow) {
-        const auto& [old_dt, old_vel] = history_.front();
-        time_ -= old_dt;
-        sum_ -= old_dt * old_vel;
-        history_.pop_front();
-    }
-
-    return (time_ > 0.0) ? sum_ / time_ : vel;
-}
-
-//------------------------------------------------------------------------------
-// !Rest Sampler
-//------------------------------------------------------------------------------
-
-/**
- * @brief Clears active sampling window, including velocity history.
- */
-void RestSampler::Reset() {
-    vel_avg_.Reset();
-    RestartWindow();
-}
-
-/**
- * @brief Clears active sampling window.
- */
-void RestSampler::RestartWindow() {
-    count_ = 0;
-    t_elapsed_s_ = 0.0;
-    sum_angle_ = 0.0;
-    sum_torque_ = 0.0;
-    sum_volume_ = 0.0;
-}
-
-/**
- * @brief Adds one cycle of measurements to active sampling window; returns
- *        averages once window is complete.
- *
- * @param dt Time since last cycle (s)
- * @param pos Actual angle, θ (rad)
- * @param vel Actual velocity, θ̇ (rad/s)
- * @param torque Actual actuator torque, τ_actuator (Nm)
- * @param trajectory_active Whether a trajectory is running
- * @param volume Latest CW volume (L), if known
- *
- * @note Stillness is judged on velocity averaged over `kVelAvgWindow`.
- */
-std::optional<Motion::RestSample> RestSampler::Add(
-    const double& dt, const double& pos, const double& vel,
-    const double& torque, const bool& trajectory_active,
-    const std::optional<double>& volume) {
-    const double mean_vel = vel_avg_.Add(dt, vel);
-    const bool still = !trajectory_active
-                       && std::abs(mean_vel) <= kRestVelTolerance
-                       && volume.has_value();
-    if (!still) {
-        RestartWindow();
-        return std::nullopt;
-    }
-
-    // Restart window if pose or CW volume drifted since start
-    if (count_ > 0
-        && (std::abs(pos - anchor_angle_) > kRestPosTolerance
-            || std::abs(*volume - anchor_volume_) > kRestVolumeTolerance)) {
-        RestartWindow();
-    }
-
-    // Accumulate values
-    if (count_ == 0) {
-        anchor_angle_ = pos;
-        anchor_volume_ = *volume;
-    } else {
-        t_elapsed_s_ += dt;
-    }
-
-    sum_angle_ += pos;
-    sum_torque_ += torque;
-    sum_volume_ += *volume;
-    ++count_;
-
-    if (t_elapsed_s_ >= kRestWindowTime && count_ >= 2) {
-        // Window finished, return results
-        Motion::RestSample sample;
-        sample.angle = sum_angle_ / count_;
-        sample.torque = sum_torque_ / count_;
-        sample.volume = sum_volume_ / count_;
-        RestartWindow();
-        return sample;
-    }
-
-    return std::nullopt;
-}
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -370,15 +101,21 @@ Libra2MotionController::Libra2MotionController(
     const double& torque_comp_upper_bound, const double& torque_comp_slow_rate,
     const bool& debug_mode)
     : AbstractMotionController({Joint::Name::kPitch}, debug_mode),
-      cw_model_(Motion::CwModelParams{kCwPivotDist, kCwPivotSlope,
-                                      kCwMeanSqDist, kCwMeanSqDistSlope,
-                                      kCwHangOffset, cw_capacity}),
+      cw_model_(Motion::CwModelParams{
+          kCwPivotDist,
+          kCwPivotSlope,
+          kCwMeanSqDist,
+          kCwMeanSqDistSlope,
+          kCwHangOffset,
+          cw_capacity,
+      }),
       friction_coulomb_(kDefaultFrictionCoulomb),
       friction_viscous_(kDefaultFrictionViscous),
       arm_inertia_(kArmInertia),
       torque_comp_lower_bound_(torque_comp_lower_bound),
       torque_comp_upper_bound_(torque_comp_upper_bound),
-      torque_comp_slow_rate_(torque_comp_slow_rate) {
+      torque_comp_slow_rate_(torque_comp_slow_rate),
+      calibrator_(*logger_) {
     if (!cw_model_.IsValid()) {
         logger_->Warn("CW model invalid: " + cw_model_.GetError()
                       + " (calibration and feedforward are unavailable)");
@@ -673,14 +410,11 @@ double Libra2MotionController::LevelTorqueAtExtension() const {
  *
  * @note Uses Eq. 34 at the measured angle (near 0), which reduces to Eq. 31:
  *         τ_g1,0 = τ_meas(0) - m_cw·g·r_P
+ *
+ * @see Libra2MotionController::FinishLevelCalibration
  */
 bool Libra2MotionController::StartLevelCalibration() {
     std::lock_guard<std::mutex> lock(mutex_);
-
-    if (Motion::IsCalibrationRunning(status_)) {
-        logger_->Warn("Calibration already running; ignoring level request");
-        return false;
-    }
 
     if (!cw_model_.IsValid()) {
         logger_->Error("Can't calibrate: invalid CW model ("
@@ -693,16 +427,7 @@ bool Libra2MotionController::StartLevelCalibration() {
         return false;
     }
 
-    // Set up and start calibration
-    two_angle_ = false;
-
-    logger_->Info("Starting level calibration");
-    logger_->Debug(
-        "Level calibration: torque will be averaged when system is at rest for "
-        + Motion::FormatNum(kRestWindowTime) + " s");
-    BeginCalibrationStage(Motion::CalibrationStatus::kArmSamplingLevel);
-
-    return true;
+    return calibrator_.StartLevelCalibration();
 }
 
 /**
@@ -714,59 +439,19 @@ bool Libra2MotionController::StartLevelCalibration() {
  * @note From Eq. 35c:
  *         τ_g1,0 = (τ_g1(θ_a)·sinθ_b - τ_g1(θ_b)·sinθ_a) / sin(θ_b - θ_a)
  *
- * @see Libra2Model::SolveTwoAngle
+ * @see Libra2MotionController::FinishTwoAngleCalibration
  */
 bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
                                                       const double& angle_b) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (Motion::IsCalibrationRunning(status_)) {
-        logger_->Warn(
-            "Calibration already running; ignoring two-angle request");
-        return false;
-    }
     if (!cw_model_.IsValid()) {
         logger_->Error("Can't calibrate: invalid CW model ("
                        + cw_model_.GetError() + ")");
         return false;
     }
 
-    // Validate params
-    if (!std::isfinite(angle_a) || !std::isfinite(angle_b)
-        || angle_a == angle_b) {
-        logger_->Warn("Two-angle calibration rejected: need two distinct "
-                      "finite angles (got a="
-                      + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    } else if (std::abs(angle_a) > Motion::kMaxCalibrationAngle
-               || std::abs(angle_b) > Motion::kMaxCalibrationAngle) {
-        logger_->Warn("Two-angle calibration rejected: need |angle| <= "
-                      + Motion::FormatNum(Motion::kMaxCalibrationAngle)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    } else if (std::abs(angle_b - angle_a) < Motion::kMinAngleSeparation) {
-        logger_->Warn("Two-angle calibration rejected: need |b - a| >= "
-                      + Motion::FormatNum(Motion::kMinAngleSeparation)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    }
-
-    // Set up and start calibration
-    two_angle_ = true;
-    angle_a_ = angle_a;
-    angle_b_ = angle_b;
-
-    logger_->Info("Starting two-angle calibration: a="
-                  + Motion::FormatRadAsDeg(angle_a)
-                  + " deg, b=" + Motion::FormatRadAsDeg(angle_b) + " deg");
-    logger_->Debug("Two-angle calibration: (1) move to a, (2) average at "
-                   "rest, (3) move to b, (4) average at rest");
-    BeginCalibrationStage(Motion::CalibrationStatus::kArmMovingToA);
-
-    return true;
+    return calibrator_.StartTwoAngleCalibration(angle_a, angle_b);
 }
 
 /**
@@ -785,121 +470,26 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
  *       which cancels the gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  *
- * @see kFrictionVelFractions FitFrictionLine
+ * @see Libra2MotionController::FinishFrictionCalibration
  */
 bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                                                       const double& angle_b,
                                                       const double& max_vel) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (Motion::IsCalibrationRunning(status_)) {
-        logger_->Warn("Calibration already running; ignoring friction request");
-        return false;
-    }
-
-    // Validate params
     if (!cw_volume_) {
         logger_->Warn("Friction calibration rejected: CW volume unknown");
         return false;
     }
-    if (!(max_vel > 0.0) || !std::isfinite(max_vel)) {
-        logger_->Error("Friction calibration rejected: invalid max speed "
-                       + Motion::FormatNum(max_vel) + " rad/s");
-        return false;
-    }
 
-    const double lo = std::min(angle_a, angle_b);
-    const double hi = std::max(angle_a, angle_b);
-    if (!std::isfinite(lo) || !std::isfinite(hi) || lo == hi) {
-        logger_->Warn("Friction calibration rejected: need two distinct "
-                      "finite angles (got a="
-                      + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    } else if (std::abs(lo) > Motion::kMaxCalibrationAngle
-               || std::abs(hi) > Motion::kMaxCalibrationAngle) {
-        logger_->Warn("Friction calibration rejected: need |angle| <= "
-                      + Motion::FormatNum(Motion::kMaxCalibrationAngle)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    } else if (hi - lo < Motion::kFrictionMinWindow) {
-        logger_->Warn("Friction calibration rejected: need |b - a| >= "
-                      + Motion::FormatNum(Motion::kFrictionMinWindow)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
-        return false;
-    }
-
-    // Ramps widen with speed, so fastest sweep determines unsampled ends
+    // Arm + CW, for the sweeps' ramp lengths
     const double inertia = arm_inertia_
                            + (cw_model_.IsValid() ? cw_model_.Inertia(
                                   Libra2Model::CwMass(*cw_volume_))
                                                   : 0.0);
-    const double longest_ramp = RampDist(max_vel, inertia);
-    const double margin = longest_ramp + kFrictionSampleMargin;
 
-    const double min_window = (2.0 * margin)
-                              + (kFrictionMinBins * kFrictionBinWidth);
-    if (hi - lo < min_window) {
-        logger_->Warn("Friction calibration rejected: window is "
-                      + Motion::FormatRadAsDeg(hi - lo) + " deg, need at least "
-                      + Motion::FormatRadAsDeg(min_window) + " deg (the "
-                      + Motion::FormatRadAsDeg(max_vel) + " deg/s sweeps take "
-                      + Motion::FormatRadAsDeg(longest_ramp)
-                      + " deg at each end to speed up and slow down)");
-        return false;
-    }
-
-    // Ensure slowest sweep fits in one move stage
-    const double slowest = max_vel * kFrictionVelFractions.front();
-    const double t_slowest_s = SweepTime(lo, hi, slowest,
-                                         RampDist(slowest, inertia));
-    if (t_slowest_s > kMoveTimeout) {
-        logger_->Warn("Friction calibration rejected: slowest sweep takes "
-                      + Motion::FormatNum(t_slowest_s) + " s (limit "
-                      + Motion::FormatNum(kMoveTimeout)
-                      + " s); use a smaller window");
-        return false;
-    }
-
-    // Set up and start calibration
-    friction_run_ = FrictionRun();
-    friction_run_.angle_lo = lo;
-    friction_run_.angle_hi = hi;
-    friction_run_.max_vel = max_vel;
-    friction_run_.volume = *cw_volume_;
-    friction_run_.inertia = inertia;
-    friction_run_.margin = margin;
-    two_angle_ = false;
-
-    // Sweep speeds, for the start log
-    std::string vels_deg;
-    for (const double& fraction : kFrictionVelFractions) {
-        vels_deg += (vels_deg.empty() ? "" : ", ")
-                    + Motion::FormatRadAsDeg(max_vel * fraction);
-    }
-
-    logger_->Info("Starting friction calibration: " + Motion::FormatRadAsDeg(lo)
-                  + " to " + Motion::FormatRadAsDeg(hi) + " deg at " + vels_deg
-                  + " deg/s");
-    logger_->Debug(
-        "Friction calibration ("
-        + std::to_string(1 + (2 * kFrictionVelFractions.size()))
-        + " steps):"
-          "\n  sampled:  "
-        + Motion::FormatRadAsDeg(lo + margin) + " to "
-        + Motion::FormatRadAsDeg(hi - margin)
-        + " deg"
-          "\n  steps:    move to start, followed by up/down sweep at each speed"
-          "\n  CW:       stays idle at "
-        + Motion::FormatNum(*cw_volume_)
-        + " L"
-          "\n  aborts:   above "
-        + Motion::FormatNum(kMaxFrictionTorque) + " Nm");
-    BeginCalibrationStage(Motion::CalibrationStatus::kFrictionMovingToStart);
-
-    return true;
+    return calibrator_.StartFrictionCalibration(angle_a, angle_b, max_vel,
+                                                *cw_volume_, inertia);
 }
 
 /**
@@ -907,7 +497,7 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
  */
 void Libra2MotionController::CancelCalibration() {
     std::lock_guard<std::mutex> lock(mutex_);
-    CancelCalibrationLocked();
+    calibrator_.CancelCalibration();
 }
 
 /**
@@ -915,7 +505,7 @@ void Libra2MotionController::CancelCalibration() {
  */
 Motion::CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return status_;
+    return calibrator_.GetCalibrationStatus();
 }
 
 /**
@@ -923,7 +513,7 @@ Motion::CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
  */
 std::string Libra2MotionController::GetCalibrationMessage() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return calibration_msg_;
+    return calibrator_.GetCalibrationMessage();
 }
 
 /**
@@ -932,7 +522,7 @@ std::string Libra2MotionController::GetCalibrationMessage() const {
  */
 std::string Libra2MotionController::GetCalibrationProgress() const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return calibration_progress_;
+    return calibrator_.GetCalibrationProgress();
 }
 
 //------------------------------------------------------------------------------
@@ -1247,7 +837,10 @@ Motion::Libra2Command Libra2MotionController::Update(
                    ? std::optional<double>(Libra2Model::CwMass(*cw_volume_))
                    : std::nullopt;
 
-    const bool calibrating = Motion::IsCalibrationRunning(status_);
+    const Libra2Calibrator::PitchCycle cycle{
+        dt, angle, actual_vel, actual_torque, trajectory_active, cw_volume_,
+    };
+    const bool calibrating = calibrator_.IsRunning();
     const bool model_ready = arm_model_ && cw_model_.IsValid()
                              && cw_mass_.has_value();
 
@@ -1272,12 +865,11 @@ Motion::Libra2Command Libra2MotionController::Update(
         }
     }
 
-    if (!arm_free && IsFrictionStage(status_)) {
+    if (!arm_free && calibrator_.IsFrictionRunning()) {
         // Friction sweep: no throttle or CW command necessary
         command.playback_rate = 1.0;
         command.cw_command = Motion::CwCommand::kIdle;
-        RunFrictionCalibration(dt, trajectory_active, angle, actual_vel,
-                               actual_torque);
+        calibrator_.Update(cycle);
 
     } else if (!arm_free) {
         // (B) Tandem/Holding: ATC throttle applies,
@@ -1294,8 +886,7 @@ Motion::Libra2Command Libra2MotionController::Update(
 
         if (calibrating) {
             // Feedforward off and CW reactive while calibrating
-            RunArmCalibration(dt, trajectory_active, angle, actual_vel,
-                              actual_torque);
+            calibrator_.Update(cycle);
         } else {
             // Predictive CW replaces reactive (except after hand-off)
             if (model_ready && target && !cw_assist_done_) {
@@ -1312,10 +903,25 @@ Motion::Libra2Command Libra2MotionController::Update(
         }
     }
 
+    // Apply calibration results
+    const Libra2Calibrator::Output calibration = calibrator_.TakeOutput();
+    if (calibration.level_sample) {
+        FinishLevelCalibration(*calibration.level_sample);
+    }
+    if (calibration.two_angle_samples) {
+        FinishTwoAngleCalibration(calibration.two_angle_samples->first,
+                                  calibration.two_angle_samples->second);
+    }
+    if (calibration.friction) {
+        FinishFrictionCalibration(*calibration.friction);
+    }
+
     // Deal with requests
-    if (pending_stop_) {
+    if (calibration.stop_trajectory) {
         command.stop_trajectory = true;
-        pending_stop_ = false;
+    }
+    if (calibration.move_to) {
+        pending_move_ = calibration.move_to;
     }
     if (pending_move_) {
         std::vector<double> move = actual.pos;
@@ -1323,10 +929,7 @@ Motion::Libra2Command Libra2MotionController::Update(
         command.move_to = move;
         pending_move_.reset();
     }
-    if (pending_sweep_) {
-        command.sweep = pending_sweep_;
-        pending_sweep_.reset();
-    }
+    command.sweep = calibration.sweep;
 
     command.diagnostics = ComputeDiagnostics(angle, target);
 
@@ -1438,7 +1041,7 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
  *       choice of how to reach a target is made here only.
  */
 void Libra2MotionController::OnTargetChanged() {
-    CancelCalibrationLocked();
+    calibrator_.CancelCalibration();
 
     // Mode change applies from the next target
     cw_assist_done_ = false;
@@ -1455,7 +1058,7 @@ void Libra2MotionController::OnTargetChanged() {
  * @brief Handles a cleared target: cancels any calibration and CW assistance.
  */
 void Libra2MotionController::OnStop() {
-    CancelCalibrationLocked();
+    calibrator_.CancelCalibration();
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
@@ -1467,42 +1070,14 @@ void Libra2MotionController::OnStop() {
  *        friction.
  */
 void Libra2MotionController::OnReset() {
-    CancelCalibrationLocked();
+    calibrator_.Reset();
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
     pending_move_.reset();
-    pending_stop_ = false;
     trajectory_active_ = false;
     movement_en_ = true;
     state_warned_ = false;
-}
-
-//------------------------------------------------------------------------------
-// !Model Calibration Helpers
-//------------------------------------------------------------------------------
-
-/**
- * @brief Cancels a running calibration (`mutex_` must already be held).
- */
-void Libra2MotionController::CancelCalibrationLocked() {
-    if (Motion::IsCalibrationRunning(status_)) {
-        // Stop in-progress moves (check BEFORE clearing status)
-        if (IsFrictionStage(status_)) {
-            pending_stop_ = true;
-        }
-
-        status_ = Motion::CalibrationStatus::kIdle;
-
-        pending_move_.reset();
-        pending_sweep_.reset();
-
-        sampler_.Reset();
-        calibration_progress_.clear();
-
-        calibration_msg_ = "Calibration cancelled";
-        logger_->Info(calibration_msg_);
-    }
 }
 
 /**
@@ -1511,219 +1086,12 @@ void Libra2MotionController::CancelCalibrationLocked() {
  */
 bool Libra2MotionController::IsMovingLocked() const {
     return trajectory_active_ || (cw_phase_ == CwPhase::kCwMoving)
-           || pending_move_.has_value() || pending_sweep_.has_value()
-           || Motion::IsCalibrationRunning(status_);
+           || pending_move_.has_value() || calibrator_.IsRunning();
 }
 
-/**
- * @brief Enters a calibration stage and, if applicable, requests a move.
- *
- * @param status Calibration stage to transition to
- */
-void Libra2MotionController::BeginCalibrationStage(
-    const Motion::CalibrationStatus& status) {
-    status_ = status;
-    t_stage_s_ = 0.0;
-    sampler_.Reset();
-
-    FrictionRun& fr = friction_run_;
-    switch (status) {
-        case Motion::CalibrationStatus::kArmMovingToA:
-            pending_move_ = angle_a_;
-            break;
-        case Motion::CalibrationStatus::kArmMovingToB:
-            pending_move_ = angle_b_;
-            break;
-        case Motion::CalibrationStatus::kFrictionMovingToStart:
-            pending_move_ = fr.angle_lo;
-            break;
-        case Motion::CalibrationStatus::kFrictionSweepUp:
-        case Motion::CalibrationStatus::kFrictionSweepDown:
-            {
-                const bool going_up =
-                    (status == Motion::CalibrationStatus::kFrictionSweepUp);
-
-                Motion::SweepRequest sweep;
-                sweep.from = going_up ? fr.angle_lo : fr.angle_hi;
-                sweep.to = going_up ? fr.angle_hi : fr.angle_lo;
-                sweep.vel = fr.max_vel * kFrictionVelFractions.at(fr.vel_idx);
-                sweep.ramp_dist = RampDist(sweep.vel, fr.inertia);
-
-                pending_sweep_ = sweep;
-                fr.trajectory_seen = false;
-
-                // Each sweep averages vel from its own start
-                fr.vel_avg.Reset();
-
-                if (going_up) {
-                    // Each run starts with an upwards sweep and fresh history
-                    const auto n_bins = static_cast<std::size_t>(std::ceil(
-                        (fr.angle_hi - fr.angle_lo - (2.0 * fr.margin))
-                        / kFrictionBinWidth));
-                    fr.up_sum.assign(n_bins, 0.0);
-                    fr.down_sum.assign(n_bins, 0.0);
-                    fr.up_count.assign(n_bins, 0);
-                    fr.down_count.assign(n_bins, 0);
-                    fr.range_samples = 0;
-                    fr.steady_samples = 0;
-                }
-                break;
-            }
-        default:
-            break;
-    }
-
-    calibration_progress_ = DescribeCalibrationStage();
-    if (!calibration_progress_.empty()) {
-        logger_->Debug(calibration_progress_);
-    }
-    t_progress_log_s_ = 0.0;
-}
-
-/**
- * @brief Describes the active calibration step (for progress messages).
- *
- * @note Returns empty string if no calibration is running.
- */
-std::string Libra2MotionController::DescribeCalibrationStage() const {
-    const FrictionRun& fr = friction_run_;
-    const auto n_vels = static_cast<int>(kFrictionVelFractions.size());
-    const std::string at_rest = "averaging torque once system at rest for "
-                                + Motion::FormatNum(kRestWindowTime) + " s";
-
-    std::string name;
-    int step = 0;
-    int total = 0;
-    std::string action;
-
-    switch (status_) {
-        case Motion::CalibrationStatus::kArmSamplingLevel:
-            name = "Level";
-            step = 1;
-            total = 1;
-            action = at_rest;
-            break;
-        case Motion::CalibrationStatus::kArmMovingToA:
-        case Motion::CalibrationStatus::kArmSamplingA:
-        case Motion::CalibrationStatus::kArmMovingToB:
-        case Motion::CalibrationStatus::kArmSamplingB:
-            {
-                const bool at_a =
-                    (status_ == Motion::CalibrationStatus::kArmMovingToA
-                     || status_ == Motion::CalibrationStatus::kArmSamplingA);
-                const bool moving =
-                    (status_ == Motion::CalibrationStatus::kArmMovingToA
-                     || status_ == Motion::CalibrationStatus::kArmMovingToB);
-                const std::string label = at_a ? "a" : "b";
-
-                name = "Two-angle";
-                step = (at_a ? 1 : 3) + (moving ? 0 : 1);
-                total = 4;
-                action = moving ? "moving to " + label + "="
-                                      + Motion::FormatRadAsDeg(at_a ? angle_a_
-                                                                    : angle_b_)
-                                      + " deg"
-                                : "at " + label + ", " + at_rest;
-                break;
-            }
-        case Motion::CalibrationStatus::kFrictionMovingToStart:
-            name = "Friction";
-            step = 1;
-            total = 1 + (2 * n_vels);
-            action = "moving to window start "
-                     + Motion::FormatRadAsDeg(fr.angle_lo) + " deg";
-            break;
-        case Motion::CalibrationStatus::kFrictionSweepUp:
-        case Motion::CalibrationStatus::kFrictionSweepDown:
-            {
-                const bool going_up =
-                    (status_ == Motion::CalibrationStatus::kFrictionSweepUp);
-                const auto idx = static_cast<int>(fr.vel_idx);
-                const double vel = fr.max_vel
-                                   * kFrictionVelFractions.at(fr.vel_idx);
-                const double t_sweep_s = SweepTime(fr.angle_lo, fr.angle_hi,
-                                                   vel,
-                                                   RampDist(vel, fr.inertia));
-
-                name = "Friction";
-                step = 2 + (2 * idx) + (going_up ? 0 : 1);
-                total = 1 + (2 * n_vels);
-                action = "speed " + std::to_string(idx + 1) + "/"
-                         + std::to_string(n_vels) + " ("
-                         + Motion::FormatRadAsDeg(vel) + " deg/s), sweeping "
-                         + (going_up ? "up" : "down") + " to "
-                         + Motion::FormatRadAsDeg(going_up ? fr.angle_hi
-                                                           : fr.angle_lo)
-                         + " deg (~"
-                         + std::to_string(static_cast<int>(std::ceil(t_sweep_s)))
-                         + " s)";
-                break;
-            }
-        default:
-            return "";
-    }
-
-    return name + " calibration [" + std::to_string(step) + "/"
-           + std::to_string(total) + "]: " + action;
-}
-
-/**
- * @brief Logs a "still running" line every `kProgressLogPeriod`, to
- *        give the user visual feedback during slow steps.
- *
- * @param dt Time since last cycle (s)
- * @param timeout Time limit of active step (s)
- * @param angle Actual angle, θ (rad)
- * @param actual_vel Actual velocity, θ̇ (rad/s)
- * @param trajectory_active Whether a trajectory is running
- */
-void Libra2MotionController::LogCalibrationProgress(
-    const double& dt, const double& timeout, const double& angle,
-    const double& actual_vel, const bool& trajectory_active) {
-    t_progress_log_s_ += dt;
-    if (t_progress_log_s_ < kProgressLogPeriod) {
-        return;
-    }
-    t_progress_log_s_ = 0.0;
-
-    logger_->Debug(calibration_progress_ + "\n  still running: "
-                   + std::to_string(static_cast<int>(t_stage_s_)) + " of "
-                   + std::to_string(static_cast<int>(timeout))
-                   + " s before timeout"
-                     "\n  angle:         "
-                   + Motion::FormatRadAsDeg(angle)
-                   + " deg"
-                     "\n  speed:         "
-                   + Motion::FormatRadAsDeg(actual_vel)
-                   + " deg/s"
-                     "\n  trajectory:    "
-                   + (trajectory_active ? "running" : "finished"));
-}
-
-/**
- * @brief Ends a calibration and logs the outcome.
- *
- * @param success Whether the arm model or friction was updated
- * @param message Descriptive outcome (success: the result; failure: the reason)
- */
-void Libra2MotionController::FinishCalibration(const bool& success,
-                                               const std::string& message) {
-    status_ = success ? Motion::CalibrationStatus::kSucceeded
-                      : Motion::CalibrationStatus::kFailed;
-
-    pending_move_.reset();
-    pending_sweep_.reset();
-    sampler_.Reset();
-    calibration_progress_.clear();
-
-    if (success) {
-        calibration_msg_ = message;
-        logger_->Info(calibration_msg_);
-    } else {
-        calibration_msg_ = "Calibration failed: " + message;
-        logger_->Error(calibration_msg_);
-    }
-}
+//------------------------------------------------------------------------------
+// !Calibration Results
+//------------------------------------------------------------------------------
 
 /**
  * @brief Converts an averaged rest sample into the arm's own gravitational
@@ -1796,86 +1164,6 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
 }
 
 /**
- * @brief Advances the active arm calibration (level or two-angle) by one cycle.
- *
- * @param dt Time since last cycle (s)
- * @param trajectory_active Whether a trajectory is running
- * @param angle Actual angle, θ (rad)
- * @param actual_vel Actual velocity, θ̇ (rad/s)
- * @param actual_torque Actual actuator torque, τ_actuator (Nm)
- */
-void Libra2MotionController::RunArmCalibration(const double& dt,
-                                               const bool& trajectory_active,
-                                               const double& angle,
-                                               const double& actual_vel,
-                                               const double& actual_torque) {
-    t_stage_s_ += dt;
-
-    const bool moving_stage =
-        (status_ == Motion::CalibrationStatus::kArmMovingToA
-         || status_ == Motion::CalibrationStatus::kArmMovingToB);
-    const bool at_a = (status_ == Motion::CalibrationStatus::kArmMovingToA
-                       || status_ == Motion::CalibrationStatus::kArmSamplingA);
-    const double target = at_a ? angle_a_ : angle_b_;
-
-    const double timeout = moving_stage ? kMoveTimeout : kSamplingTimeout;
-    if (t_stage_s_ > timeout) {
-        FinishCalibration(false, moving_stage
-                                     ? "timed out moving to target"
-                                     : "timed out waiting for steady state");
-        return;
-    }
-    LogCalibrationProgress(dt, timeout, angle, actual_vel, trajectory_active);
-
-    // Sampling stages: average once steady
-    std::optional<Motion::RestSample> sample;
-    if (!moving_stage) {
-        // Sampling is invalid if pose drifts (except for level calibration)
-        if (status_ != Motion::CalibrationStatus::kArmSamplingLevel
-            && std::abs(angle - target) > 2.0 * kReachTolerance) {
-            sampler_.Reset();
-            return;
-        }
-
-        sample = sampler_.Add(dt, angle, actual_vel, actual_torque,
-                              trajectory_active, cw_volume_);
-        if (!sample) {
-            return;
-        }
-    }
-
-    switch (status_) {
-        case Motion::CalibrationStatus::kArmMovingToA:
-        case Motion::CalibrationStatus::kArmMovingToB:
-            // Start next step of an active calibration
-            if (!trajectory_active
-                && std::abs(angle - target) <= kReachTolerance
-                && std::abs(actual_vel) <= kRestVelTolerance) {
-                BeginCalibrationStage(
-                    at_a ? Motion::CalibrationStatus::kArmSamplingA
-                         : Motion::CalibrationStatus::kArmSamplingB);
-            }
-            break;
-
-        case Motion::CalibrationStatus::kArmSamplingLevel:
-            FinishLevelCalibration(*sample);
-            break;
-
-        case Motion::CalibrationStatus::kArmSamplingA:
-            sample_a_ = *sample;
-            BeginCalibrationStage(Motion::CalibrationStatus::kArmMovingToB);
-            break;
-
-        case Motion::CalibrationStatus::kArmSamplingB:
-            FinishTwoAngleCalibration(*sample);
-            break;
-
-        default:
-            break;
-    }
-}
-
-/**
  * @brief Solves the arm model from a level sample and applies it.
  *
  * @param sample Averaged sample with the arm level
@@ -1890,9 +1178,10 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
 void Libra2MotionController::FinishLevelCalibration(
     const Motion::RestSample& sample) {
     if (std::abs(sample.angle) > Motion::kMaxLevelAngle) {
-        FinishCalibration(false, "arm is not level (theta="
-                                     + Motion::FormatNum(sample.angle)
-                                     + " rad)");
+        calibrator_.FinishCalibration(false,
+                                      "arm is not level (theta="
+                                          + Motion::FormatNum(sample.angle)
+                                          + " rad)");
         return;
     }
 
@@ -1901,7 +1190,7 @@ void Libra2MotionController::FinishLevelCalibration(
     const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(sample),
                                                    sample.angle, hang_torque);
     if (!level) {
-        FinishCalibration(false, "cos(theta) too small");
+        calibrator_.FinishCalibration(false, "cos(theta) too small");
         return;
     }
 
@@ -1915,19 +1204,22 @@ void Libra2MotionController::FinishLevelCalibration(
     arm.hang_torque = hang_torque;
     arm_model_ = arm;
 
-    FinishCalibration(true,
-                      "Level calibration succeeded: τ_g1,0="
-                          + Motion::FormatNum(arm.level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
-                          + ", m_arm*h_1*g="
-                          + Motion::FormatNum(arm.hang_torque) + " Nm");
+    calibrator_.FinishCalibration(true, "Level calibration succeeded: τ_g1,0="
+                                            + Motion::FormatNum(arm.level_torque)
+                                            + " Nm"
+                                            + (eta_extension_ > 0.0
+                                                   ? " (at min. extension)"
+                                                   : "")
+                                            + ", m_arm*h_1*g="
+                                            + Motion::FormatNum(arm.hang_torque)
+                                            + " Nm");
 }
 
 /**
  * @brief Solves the arm model from the samples at both angles and applies it.
  *
- * @param sample_b Averaged sample at the second angle (`sample_a_` is already
- *                 stored internally)
+ * @param sample_a Averaged sample at the first angle
+ * @param sample_b Averaged sample at the second angle
  *
  * @note τ_g1,0 is converted to min. ETA extension (see
  *       `LevelTorqueAtExtension()`).
@@ -1935,14 +1227,15 @@ void Libra2MotionController::FinishLevelCalibration(
  * @see Libra2Model::SolveTwoAngle Libra2Model::EtaMomentChange
  */
 void Libra2MotionController::FinishTwoAngleCalibration(
-    const Motion::RestSample& sample_b) {
+    const Motion::RestSample& sample_a, const Motion::RestSample& sample_b) {
     // Eq. 35 with measured angles
-    auto arm = Libra2Model::SolveTwoAngle(SampleToArmTorque(sample_a_),
-                                          sample_a_.angle,
+    auto arm = Libra2Model::SolveTwoAngle(SampleToArmTorque(sample_a),
+                                          sample_a.angle,
                                           SampleToArmTorque(sample_b),
                                           sample_b.angle);
     if (!arm) {
-        FinishCalibration(false, "measured angles too close together");
+        calibrator_.FinishCalibration(false,
+                                      "measured angles too close together");
         return;
     }
 
@@ -1954,390 +1247,54 @@ void Libra2MotionController::FinishTwoAngleCalibration(
     arm_model_ = arm;
     const bool stable = CheckStability(arm->hang_torque);
 
-    FinishCalibration(true,
-                      "Two-angle calibration succeeded: τ_g1,0="
-                          + Motion::FormatNum(arm->level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
-                          + ", m_arm*h_1*g="
-                          + Motion::FormatNum(arm->hang_torque) + " Nm"
-                          + (stable ? "" : " (UNSTABLE; see log)"));
-}
-
-//------------------------------------------------------------------------------
-// !Friction Calibration Helpers
-//------------------------------------------------------------------------------
-
-/**
- * @brief Advances the running friction calibration by one cycle.
- *
- * @param dt Time since last cycle (s)
- * @param trajectory_active Whether a trajectory is running
- * @param angle Actual angle, θ (rad)
- * @param actual_vel Actual velocity, θ̇ (rad/s)
- * @param actual_torque Actual actuator torque, τ_actuator (Nm)
- *
- * @note Aborts (and stops the sweep) if the torque stays above
- *       `kMaxFrictionTorque` for `kMaxFrictionTorqueTime`, or if the CW volume
- *       changes.
- */
-void Libra2MotionController::RunFrictionCalibration(
-    const double& dt, const bool& trajectory_active, const double& angle,
-    const double& actual_vel, const double& actual_torque) {
-    FrictionRun& run = friction_run_;
-    t_stage_s_ += dt;
-
-    // Brief spikes shouldn't count against the limit
-    if (std::abs(actual_torque) > kMaxFrictionTorque) {
-        run.t_over_max_s += dt;
-    } else {
-        run.t_over_max_s = 0.0;
-    }
-
-    // Abort guards
-    std::string abort_reason;
-    if (t_stage_s_ > kMoveTimeout) {
-        abort_reason = "timed out moving or sweeping";
-    } else if (run.t_over_max_s >= kMaxFrictionTorqueTime) {
-        abort_reason = "torque (" + Motion::FormatNum(actual_torque)
-                       + " Nm) stayed above the calibration's torque limit ("
-                       + Motion::FormatNum(kMaxFrictionTorque) + " Nm) for "
-                       + Motion::FormatNum(kMaxFrictionTorqueTime)
-                       + " s; balance the CW or narrow/move the window";
-    } else if (!cw_volume_
-               || std::abs(*cw_volume_ - run.volume) > kRestVolumeTolerance) {
-        abort_reason = "CW volume changed during the sweeps";
-    }
-
-    if (!abort_reason.empty()) {
-        pending_stop_ = true;
-        FinishCalibration(false, abort_reason);
-        return;
-    }
-    LogCalibrationProgress(dt, kMoveTimeout, angle, actual_vel,
-                           trajectory_active);
-
-    const bool going_up = (status_
-                           == Motion::CalibrationStatus::kFrictionSweepUp);
-    const double end =
-        (status_ == Motion::CalibrationStatus::kFrictionSweepDown
-         || status_ == Motion::CalibrationStatus::kFrictionMovingToStart)
-            ? run.angle_lo
-            : run.angle_hi;
-    const double vel = run.max_vel * kFrictionVelFractions.at(run.vel_idx);
-
-    if (status_ != Motion::CalibrationStatus::kFrictionMovingToStart) {
-        if (trajectory_active) {
-            run.trajectory_seen = true;
-            AddFrictionSample(dt, angle, actual_vel, actual_torque, going_up,
-                              vel);
-            return;
-        }
-        if (!run.trajectory_seen) {
-            return;  // sweep requested but not started yet
-        }
-    }
-
-    // Wait until the move/sweep has ended at rest at its end
-    const bool arrived = !trajectory_active
-                         && std::abs(angle - end) <= kReachTolerance
-                         && std::abs(actual_vel) <= kRestVelTolerance;
-    if (!arrived) {
-        return;
-    }
-
-    switch (status_) {
-        case Motion::CalibrationStatus::kFrictionMovingToStart:
-            BeginCalibrationStage(Motion::CalibrationStatus::kFrictionSweepUp);
-            break;
-
-        case Motion::CalibrationStatus::kFrictionSweepUp:
-            BeginCalibrationStage(Motion::CalibrationStatus::kFrictionSweepDown);
-            break;
-
-        case Motion::CalibrationStatus::kFrictionSweepDown:
-            {
-                std::string error;
-                if (!FinishFrictionVel(vel, error)) {
-                    FinishCalibration(false, error);
-                    return;
-                }
-                ++run.vel_idx;
-                if (run.vel_idx < kFrictionVelFractions.size()) {
-                    BeginCalibrationStage(
-                        Motion::CalibrationStatus::kFrictionSweepUp);
-                } else {
-                    FinishFrictionCalibration();
-                }
-                break;
-            }
-
-        default:
-            break;
-    }
+    calibrator_.FinishCalibration(
+        true, "Two-angle calibration succeeded: τ_g1,0="
+                  + Motion::FormatNum(arm->level_torque) + " Nm"
+                  + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                  + ", m_arm*h_1*g=" + Motion::FormatNum(arm->hang_torque)
+                  + " Nm" + (stable ? "" : " (UNSTABLE; see log)"));
 }
 
 /**
- * @brief Bins a friction sweep sample if it is inside the sampled range and at
- *        steady speed.
+ * @brief Applies a fitted friction model, and checks the arm model against the
+ *        sweeps' holding torques.
  *
- * @param dt Time since last cycle (s)
- * @param angle Actual angle, θ (rad)
- * @param actual_vel Actual velocity, θ̇ (rad/s)
- * @param actual_torque Actual actuator torque, τ_actuator (Nm)
- * @param going_up Whether this is the up sweep
- * @param vel Sweep speed, v (rad/s)
+ * @param model Friction model from the calibrator
  *
- * @note Steady speed is judged on velocity averaged over `kVelAvgWindow`, since
- *       raw velocity feedback tends to jitter above `kFrictionVelTolerance`
- *       (even when the sweep is steady).
+ * @note Each bin's holding torque should equal -τ_ext,g(θ) at its center, so
+ *       the model error per speed is the bins' mean of:
+ *         holding + τ_ext,g(θ_bin)
  */
-void Libra2MotionController::AddFrictionSample(
-    const double& dt, const double& angle, const double& actual_vel,
-    const double& actual_torque, const bool& going_up, const double& vel) {
-    FrictionRun& run = friction_run_;
-
-    // Skip window edges, where ramps add inertia and CW may swing
-    const double lo = run.angle_lo + run.margin;
-    const double hi = run.angle_hi - run.margin;
-    if (angle < lo || angle > hi) {
-        return;  // near a window edge
-    }
-    ++run.range_samples;
-
-    // Skip sudden jerks and jitters, which add error to calibration result
-    const double mean_vel = run.vel_avg.Add(dt, actual_vel);
-    const double sweep_vel = going_up ? vel : -vel;
-    if (std::abs(mean_vel - sweep_vel) > kFrictionVelTolerance * vel) {
-        return;  // not at steady speed
-    }
-    ++run.steady_samples;
-
-    // Bin by angle so up/down sweeps are compared at equal gravitational torque
-    const std::size_t n_bins = run.up_sum.size();
-    if (n_bins == 0) {
-        return;
-    }
-
-    const auto bin = std::min(n_bins - 1, static_cast<std::size_t>(
-                                              (angle - lo) / kFrictionBinWidth));
-    if (going_up) {
-        run.up_sum[bin] += actual_torque;
-        ++run.up_count[bin];
-    } else {
-        run.down_sum[bin] += actual_torque;
-        ++run.down_count[bin];
-    }
-}
-
-/**
- * @brief Turns one speed's binned sweeps into a friction point, and logs the
- *        gravity curve they give.
- *
- * @param vel Sweep speed, v (rad/s)
- * @param[out] error Descriptive reason for failure, if any
- *
- * @note Code-specific equation based on Eqs. 18 and 19a at constant speed.
- *       Per angle bin, with actual actuator torque (so bin mean = -τ_ext,g):
- *         drag = (τ_up - τ_down) / 2 τ_g(θ) = (τ_up + τ_down) / 2
- */
-bool Libra2MotionController::FinishFrictionVel(const double& vel,
-                                               std::string& error) {
-    FrictionRun& run = friction_run_;
-
-    const bool model_ready = arm_model_ && cw_model_.IsValid();
-    const double lo = run.angle_lo + run.margin;
-    const double cw_mass = Libra2Model::CwMass(run.volume);
-
-    Motion::FrictionPoint point;
-    point.vel = vel;
-    double drag_min = 0.0;
-    double drag_max = 0.0;
-    double grav_sum = 0.0;
-    double model_err_sum = 0.0;
-
-    for (std::size_t i = 0; i < run.up_sum.size(); ++i) {
-        if (run.up_count[i] < kFrictionMinBinSamples
-            || run.down_count[i] < kFrictionMinBinSamples) {
-            // Not enough samples to compare
-            continue;
-        }
-
-        // Friction flips sign between sweeps and gravity doesn't, so half the
-        // difference is friction and half the sum is holding torque
-        const double up = run.up_sum[i] / run.up_count[i];
-        const double down = run.down_sum[i] / run.down_count[i];
-        const double drag = 0.5 * (up - down);
-        const double holding = 0.5 * (up + down);
-
-        // Track how drag varies across bins
-        if (point.n_bins == 0) {
-            drag_min = drag;
-            drag_max = drag;
-        }
-
-        drag_min = std::min(drag_min, drag);
-        drag_max = std::max(drag_max, drag);
-        point.drag += drag;
-        grav_sum += holding;
-
-        // Save bin for calibration record
-        const double angle_bin = lo
-                                 + ((static_cast<double>(i) + 0.5)
-                                    * kFrictionBinWidth);
-        Motion::FrictionBin bin;
-        bin.angle = angle_bin;
-        bin.drag = drag;
-        bin.holding = holding;
-        bin.n_up = run.up_count[i];
-        bin.n_down = run.down_count[i];
-        point.bins.push_back(bin);
-
-        // Holding torque should equal -τ_ext,g at bin center
-        if (model_ready) {
-            model_err_sum += holding + ComputeNetGravTorque(angle_bin, cw_mass);
-        }
-
-        ++point.n_bins;
-    }
-
-    if (point.n_bins < kFrictionMinBins) {
-        error = "only " + std::to_string(point.n_bins)
-                + " angle bins had steady samples in both directions at "
-                + Motion::FormatNum(vel) + " rad/s (need "
-                + std::to_string(kFrictionMinBins) + "); use a wider window";
-        return false;
-    }
-
-    // Average drag over the bins and record this speed's friction point
-    const auto n = static_cast<double>(point.n_bins);
-    point.drag /= n;
-    point.spread = drag_max - drag_min;
-
-    // Low steady fraction = uneven sweep speed (stick-slip), so noisier drag
-    point.steady_fraction = (run.range_samples > 0)
-                                ? static_cast<double>(run.steady_samples)
-                                      / run.range_samples
-                                : 0.0;
-    const auto steady_pct = static_cast<int>(
-        std::lround(100.0 * point.steady_fraction));
-    run.points.push_back(point);
-
-    std::string msg = "Friction speed " + std::to_string(run.vel_idx + 1) + "/"
-                      + std::to_string(kFrictionVelFractions.size()) + " done ("
-                      + Motion::FormatRadAsDeg(vel)
-                      + " deg/s):"
-                        "\n  drag:           "
-                      + Motion::FormatNum(point.drag) + " Nm (spread "
-                      + Motion::FormatNum(point.spread) + " Nm over "
-                      + std::to_string(point.n_bins)
-                      + " bins)"
-                        "\n  steady samples: "
-                      + std::to_string(steady_pct)
-                      + "% of samples in the sampled range"
-                        "\n  holding torque: "
-                      + Motion::FormatNum(grav_sum / n) + " Nm (mean)";
-    if (model_ready) {
-        msg += "\n  model error:    " + Motion::FormatNum(model_err_sum / n)
-               + " Nm (mean)";
-    }
-    logger_->Debug(msg);
-
-    return true;
-}
-
-/**
- * @brief Fits the friction line through all speeds and applies it.
- *
- * @note Code-specific rule. A negative slope means friction is flat within
- *       noise, so b = 0 and τ_c is the mean drag. A negative τ_c within the
- *       largest bin spread means friction is too small to measure, so τ_c = 0
- *       and b is refit through the origin; otherwise, the calibration fails.
- */
-void Libra2MotionController::FinishFrictionCalibration() {
-    const FrictionRun& run = friction_run_;
-
-    std::vector<double> vels;
-    std::vector<double> drags;
-    for (const auto& p : run.points) {
-        vels.push_back(p.vel);
-        drags.push_back(p.drag);
-    }
-
-    auto fit = FitFrictionLine(vels, drags);
-    if (!fit) {
-        FinishCalibration(false, "friction line fit failed (need two or more "
-                                 "speeds)");
-        return;
-    }
-
-    Motion::FrictionModel& model = *fit;
-    if (model.viscous < 0.0) {
-        logger_->Warn("Fitted b is negative (" + Motion::FormatNum(model.viscous)
-                      + " Nm*s/rad), so friction looks flat; using b = 0");
-
-        model.viscous = 0.0;
-        model.coulomb = 0.0;
-        for (const double& d : drags) {
-            model.coulomb += d;
-        }
-        model.coulomb /= static_cast<double>(drags.size());
-    }
-
-    if (model.coulomb < 0.0) {
-        // Bin spread is the drag noise floor
-        double noise = 0.0;
-        for (const auto& p : run.points) {
-            noise = std::max(noise, p.spread);
-        }
-
-        if (-model.coulomb > noise) {
-            FinishCalibration(false, "fitted tau_c is negative ("
-                                         + Motion::FormatNum(model.coulomb)
-                                         + " Nm), past the bin spread ("
-                                         + Motion::FormatNum(noise)
-                                         + " Nm); check the run");
-            return;  // nonsensical result
-        }
-
-        logger_->Info(
-            "Fitted tau_c is negative (" + Motion::FormatNum(model.coulomb)
-            + " Nm) but within bin spread (" + Motion::FormatNum(noise)
-            + " Nm), so friction is negligible; using tau_c = 0");
-
-        // Refit b through the origin
-        double s_vv = 0.0;
-        double s_vd = 0.0;
-        for (std::size_t i = 0; i < vels.size(); ++i) {
-            s_vv += vels[i] * vels[i];
-            s_vd += vels[i] * drags[i];
-        }
-
-        model.coulomb = 0.0;
-        model.viscous = std::max(0.0, s_vd / s_vv);
-    }
-
-    double sum_sq = 0.0;
-    for (std::size_t i = 0; i < vels.size(); ++i) {
-        const double r = drags[i] - (model.coulomb + (model.viscous * vels[i]));
-        sum_sq += r * r;
-    }
-
-    model.residual_rms = std::sqrt(sum_sq / static_cast<double>(drags.size()));
-
-    // Apply model
-    model.angle_lo = run.angle_lo;
-    model.angle_hi = run.angle_hi;
-    model.volume = run.volume;
-    model.points = run.points;
-
+void Libra2MotionController::FinishFrictionCalibration(
+    const Motion::FrictionModel& model) {
     friction_coulomb_ = model.coulomb;
     friction_viscous_ = model.viscous;
     friction_model_ = model;
 
-    FinishCalibration(true, "Friction calibration succeeded: tau_c="
-                                + Motion::FormatNum(model.coulomb)
-                                + " Nm, b=" + Motion::FormatNum(model.viscous)
-                                + " Nm*s/rad (fit RMS "
-                                + Motion::FormatNum(model.residual_rms)
-                                + " Nm)");
+    if (arm_model_ && cw_model_.IsValid()) {
+        const double cw_mass = Libra2Model::CwMass(model.volume);
+
+        std::string msg = "Arm model error vs. friction sweeps (mean):";
+        for (const auto& point : model.points) {
+            double err_sum = 0.0;
+            for (const auto& bin : point.bins) {
+                err_sum += bin.holding
+                           + ComputeNetGravTorque(bin.angle, cw_mass);
+            }
+            msg += "\n  " + Motion::FormatRadAsDeg(point.vel) + " deg/s: "
+                   + Motion::FormatNum(err_sum
+                                       / static_cast<double>(point.bins.size()))
+                   + " Nm";
+        }
+        logger_->Debug(msg);
+    }
+
+    calibrator_.FinishCalibration(true,
+                                  "Friction calibration succeeded: tau_c="
+                                      + Motion::FormatNum(model.coulomb)
+                                      + " Nm, b="
+                                      + Motion::FormatNum(model.viscous)
+                                      + " Nm*s/rad (fit RMS "
+                                      + Motion::FormatNum(model.residual_rms)
+                                      + " Nm)");
 }
