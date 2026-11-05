@@ -13,10 +13,8 @@
 
 // C++ Standard Library Headers
 #include <cstdint>
-// TODO: check Claude-generated code
 #include <deque>
 #include <optional>
-// TODO: check Claude-generated code
 #include <utility>
 #include <vector>
 
@@ -175,6 +173,8 @@ class Libra2MotionController : public AbstractMotionController {
     bool SetTorqueCompBounds(const double& lower_bound,
                              const double& upper_bound);
     bool SetHandoffBand(const double& band);
+    void SetEtaExtension(const double& extension);
+    [[nodiscard]] double GetEtaExtension() const;
 
     // --- Arm Model ---
 
@@ -306,6 +306,7 @@ class Libra2MotionController : public AbstractMotionController {
         const Motion::ArmModel& saved) const;
     bool CheckStability(const double& arm_hang_torque);
     void CancelCalibrationLocked();
+    [[nodiscard]] double LevelTorqueAtExtension() const;
 
     [[nodiscard]] bool IsMovingLocked() const;
 
@@ -320,13 +321,15 @@ class Libra2MotionController : public AbstractMotionController {
 
     // Arm Model
 
-    double arm_level_torque_{0.0};  // τ_g1,0 (Nm)
+    double arm_level_torque_{0.0};  // τ_g1,0 at min. ETA extension (Nm)
     double arm_hang_torque_{0.0};   // m_arm·h_1·g (Nm)
     bool arm_calibrated_{false};
 
     std::string arm_source_;                       // see `ArmModel`
     Motion::CwModelParams arm_cw_params_;          // reference CW model
     std::vector<Motion::RestSample> arm_samples_;  // source calibration samples
+    // TODO: check Claude-generated code
+    double arm_eta_extension_{0.0};  // ETA extension at calibration (m)
 
     std::optional<Motion::FrictionModel> friction_model_;
 
@@ -351,6 +354,7 @@ class Libra2MotionController : public AbstractMotionController {
     bool trajectory_active_{false};
 
     double handoff_band_{Motion::kDefaultHandoffBand};  // (rad)
+    double eta_extension_{0.0};  // from min. extension (m)
 
     // ATC (Automatic Torque Compensation)
 

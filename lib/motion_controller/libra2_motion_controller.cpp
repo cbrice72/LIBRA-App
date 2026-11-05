@@ -59,6 +59,26 @@ constexpr double kArmInertia =
 constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
 constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
 
+// ETA (Eq. 44; unverified)
+
+// Tubes u_1 (smallest) to u_15
+constexpr std::array<double, 15> kEtaTubeMass = {
+    0.0386, 0.0450, 0.0592, 0.0674, 0.0755, 0.0847, 0.0932, 0.0995,
+    0.1147, 0.1233, 0.1306, 0.1389, 0.1520, 0.1550, 0.1608,
+};  // m_ui (kg)
+constexpr std::array<double, 15> kEtaTubeLength = {
+    0.600, 0.600, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
+    0.640, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
+};                                         // L_ui (m)
+constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
+
+// TODO: input after weighing
+constexpr double kEtaConduitMassPerLength = 0;  // μ_conduit (kg/m)
+constexpr double kEtaConduitMinLength = 0.0;    // L_conduit,min (m)
+
+// TODO: input after measuring
+constexpr double kEtaTipMass = 1.049;  // m_tip (kg)
+
 // Predictive CW Command
 
 // TODO: guess; prevents valve chatter
@@ -459,6 +479,45 @@ namespace Libra2Model {
  */
 double CwMass(const double& volume) {
     return kWaterDensity * volume;
+}
+
+/**
+ * @brief Computes the contribution of ETA extension to the arm's moment,
+ *        Δ(m_arm·r_1) (kg·m).
+ *
+ * @param extension Change in ETA extension (from min.), ΔL (m)
+ *
+ * @note From Eq. 44 (from extended equations in `ARM_EXTENSION_ESTIMATION.md`),
+ *       where ΔL = ΔL_conduit since the conduit is assumed to be fed in from
+ *       the pitch axis:
+ *         Δ(m_arm·r_1) = (tubes u_1-15) + (conduit) + (tip cap, payload)
+ *                      = Σ m_ui·max(0, ΔL - S_(i-1))
+ *                        + μ_conduit·(L_conduit,min·ΔL + ΔL²/2)
+ *                        + m_tip·ΔL
+ *
+ *       Tubes assumed to slide out smallest-first, so tube u_i only moves once
+ *       the tubes inside it have used up their strokes:
+ *         S_(i-1) = Σ_(j<i) (L_uj - L_ov)
+ *
+ * @todo Arm inertia also grows with extension, but isn't modeled yet.
+ */
+double EtaMomentChange(const double& extension) {
+    // Tubes
+    double moment = 0.0;
+    double stroke_before = 0.0;  // S_(i-1)
+    for (std::size_t i = 0; i < kEtaTubeMass.size(); ++i) {
+        moment += kEtaTubeMass.at(i) * std::max(0.0, extension - stroke_before);
+        stroke_before += kEtaTubeLength.at(i) - kEtaTubeOverlap;
+    }
+
+    // Conduit
+    moment += kEtaConduitMassPerLength
+              * ((kEtaConduitMinLength * extension)
+                 + (0.5 * extension * extension));
+
+    // Tip cap, payload
+    moment += kEtaTipMass * extension;
+    return moment;
 }
 
 /**
@@ -1077,9 +1136,45 @@ bool Libra2MotionController::SetHandoffBand(const double& band) {
 }
 
 /**
+ * @brief Sets the ETA's extension.
+ *
+ * @param extension Extension from minimum (m)
+ *
+ * @note Shifts τ_g1,0 for the torque feedforward and predictive CW, and
+ *       converts new calibrations to min. extension (Eq. 44).
+ *
+ * @todo As of 2026/11/05, the ETA's actuator does not have a controller so this
+ *       function must be invoked by the user.
+ *
+ * @see Libra2MotionController::LevelTorqueAtExtension
+ */
+void Libra2MotionController::SetEtaExtension(const double& extension) {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (!(extension >= 0.0) || !std::isfinite(extension)) {
+        logger_->Warn("Ignoring invalid ETA extension: " + Format(extension)
+                      + " m");
+        return;
+    }
+
+    eta_extension_ = extension;
+
+    logger_->Info("ETA extension set to " + Format(extension * 1000.0) + " mm");
+}
+
+/**
+ * @brief Gets the ETA's extension (m).
+ */
+double Libra2MotionController::GetEtaExtension() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return eta_extension_;
+}
+
+/**
  * @brief Directly sets the arm model parameters.
  *
- * @param arm_level_torque Arm gravitational torque at level, τ_g1,0 (Nm)
+ * @param arm_level_torque Arm gravitational torque at level and min. ETA
+ *                         extension, τ_g1,0 (Nm)
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
  *
  * @note No raw samples are kept, so a saved record of it can't be recomputed
@@ -1096,6 +1191,7 @@ void Libra2MotionController::SetArmModel(const double& arm_level_torque,
     arm_source_ = "set";
     arm_cw_params_ = cw_model_.GetParams();
     arm_samples_.clear();
+    arm_eta_extension_ = 0.0;
     logger_->Info("Arm model set: arm_level_torque=" + Format(arm_level_torque)
                   + " Nm, arm_hang_torque=" + Format(arm_hang_torque) + " Nm");
 
@@ -1121,6 +1217,8 @@ bool Libra2MotionController::ClearModel() {
     arm_hang_torque_ = 0.0;
     arm_calibrated_ = false;
     arm_source_.clear();
+    // TODO: check Claude-generated code
+    arm_eta_extension_ = 0.0;
     mode_ = Motion::MotionMode::kTandem;  // safe default
     cw_phase_ = CwPhase::kIdle;
 
@@ -1144,7 +1242,8 @@ bool Libra2MotionController::IsArmCalibrated() const {
 }
 
 /**
- * @brief Gets the arm's gravitational torque at level, τ_g1,0 (Nm).
+ * @brief Gets the arm's gravitational torque at level and min. ETA extension,
+ *        τ_g1,0 (Nm).
  */
 double Libra2MotionController::GetArmLevelTorque() const {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -1171,13 +1270,34 @@ double Libra2MotionController::GetArmHangTorque() const {
  *       isn't running.
  *
  * @see Libra2Model::NetGravTorque
+ *      Libra2MotionController::LevelTorqueAtExtension
  */
 double Libra2MotionController::ComputeNetGravTorque(
     const double& theta, const double& cw_mass) const {
-    return Libra2Model::NetGravTorque(arm_level_torque_, arm_hang_torque_,
+    return Libra2Model::NetGravTorque(LevelTorqueAtExtension(),
+                                      arm_hang_torque_,
                                       cw_model_.Moment(cw_mass),
                                       cw_model_.HangMoment(cw_mass), kGrav,
                                       theta);
+}
+
+/**
+ * @brief Gets τ_g1,0 (Nm) at the current ETA extension.
+ *
+ * @note From Eq. 5 at θ = 0 (i.e., τ_g1,0 = -m_arm·g·r_1) and Eq. 44:
+ *         τ_g1,0 = τ_g1,0,min - g·Δ(m_arm·r_1)
+ *
+ *       Only τ_g1,0 shifts; m_arm·h_1·g stays at its calibrated value, since
+ *       sag isn't modeled.
+ *
+ * @note Mutex lock not required since callers hold it (see
+ *       `ComputeNetGravTorque()`).
+ *
+ * @see Libra2Model::EtaMomentChange
+ */
+double Libra2MotionController::LevelTorqueAtExtension() const {
+    return arm_level_torque_
+           - (kGrav * Libra2Model::EtaMomentChange(eta_extension_));
 }
 
 //------------------------------------------------------------------------------
@@ -1465,6 +1585,8 @@ Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
         arm.hang_torque = arm_hang_torque_;
         arm.cw_model = arm_cw_params_;
         arm.samples = arm_samples_;
+        // TODO: check Claude-generated code
+        arm.eta_extension = arm_eta_extension_;
         record.arm_model = arm;
     }
     record.friction = friction_model_;
@@ -1498,24 +1620,10 @@ bool Libra2MotionController::LoadCalibrationRecord(
     // Apply the arm model
     if (record.arm_model) {
         // Sanity check CW model first
-        const Motion::ArmModel& saved = *record.arm_model;
-        Motion::ArmModel arm = saved;
-
-        if (!IsSameCwModel(saved.cw_model, cw_model_.GetParams())) {
-            if (const auto recomputed = RecomputeArmModel(saved)) {
-                arm = *recomputed;
-                logger_->Info(
-                    "CW model has changed since this calibration was saved; "
-                    "arm model was recomputed from its raw samples (saved: "
-                    "arm_level_torque="
-                    + Format(saved.level_torque) + " Nm, arm_hang_torque="
-                    + Format(saved.hang_torque) + " Nm)");
-            } else {
-                logger_->Warn(
-                    "CW model has changed since this calibration was saved, "
-                    "but its arm model can't be recomputed (no raw samples, or "
-                    "current CW model invalid); using saved values as-is");
-            }
+        const Motion::ArmModel& arm = *record.arm_model;
+        if (!IsSameCwModel(arm.cw_model, cw_model_.GetParams())) {
+            logger_->Warn("CW model has changed since this calibration was "
+                          "saved; using its arm model as-is");
         }
 
         logger_->Info("Arm model loaded: arm_level_torque "
@@ -1531,6 +1639,8 @@ bool Libra2MotionController::LoadCalibrationRecord(
         arm_source_ = arm.source;
         arm_cw_params_ = arm.cw_model;
         arm_samples_ = arm.samples;
+        // TODO: check Claude-generated code
+        arm_eta_extension_ = arm.eta_extension;
 
         CheckStability(arm_hang_torque_);
     }
@@ -1619,19 +1729,20 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
 
 /**
  * @brief Computes the CW mass (kg) that balances the arm at a target angle,
- *        m_cw,bal(θ_tgt), clamped to the CW's capacity.
+ *        m_cw,bal(θ_tgt), clamped to CW capacity.
  *
  * @param theta_tgt Target angle, θ_tgt (rad)
  *
  * @note Returns none if balance is undefined at this angle.
  *
  * @see Libra2Model::BalanceCwMoment CwModel::MassForMoment
+ *      Libra2MotionController::LevelTorqueAtExtension
  */
 std::optional<double> Libra2MotionController::TargetCwMass(
     const double& theta_tgt) const {
-    const auto moment_bal = Libra2Model::BalanceCwMoment(arm_level_torque_,
-                                                         arm_hang_torque_,
-                                                         kGrav, theta_tgt);
+    const auto moment_bal =
+        Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(), arm_hang_torque_,
+                                     kGrav, theta_tgt);
     if (!moment_bal) {
         return std::nullopt;
     }
@@ -1904,6 +2015,7 @@ double Libra2MotionController::ModelFeedforward(const double& theta,
  *
  * @see Libra2Model::CwMass Libra2Model::NetGravTorque
  *      Libra2Model::BalanceCwMoment Libra2Model::TargetNetGravTorque
+ *      Libra2MotionController::LevelTorqueAtExtension
  */
 Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
     const double& theta, const std::optional<double>& theta_tgt) const {
@@ -1919,9 +2031,9 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
 
     // Eqs. 38'-40
     if (theta_tgt) {
-        const auto moment_bal = Libra2Model::BalanceCwMoment(arm_level_torque_,
-                                                             arm_hang_torque_,
-                                                             kGrav, *theta_tgt);
+        const auto moment_bal =
+            Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(),
+                                         arm_hang_torque_, kGrav, *theta_tgt);
         const auto mass_tgt = moment_bal ? cw_model_.MassForMoment(*moment_bal,
                                                                    *theta_tgt)
                                          : std::nullopt;
@@ -2265,6 +2377,11 @@ double Libra2MotionController::SampleToArmTorque(
  *        CW model.
  *
  * @param saved Arm model (one sample = level, two = two-angle)
+ *
+ * @note τ_g1,0 is converted to min. ETA extension (see
+ *       `LevelTorqueAtExtension()`).
+ *
+ * @see Libra2Model::EtaMomentChange
  */
 std::optional<Motion::ArmModel> Libra2MotionController::RecomputeArmModel(
     const Motion::ArmModel& saved) const {
@@ -2285,7 +2402,12 @@ std::optional<Motion::ArmModel> Libra2MotionController::RecomputeArmModel(
         if (!level) {
             return std::nullopt;
         }
-        model.level_torque = *level;
+        // TODO: check Claude-generated code
+        // Convert to min. ETA extension (Eq. 44)
+        model.level_torque = *level
+                             + (kGrav
+                                * Libra2Model::EtaMomentChange(
+                                    saved.eta_extension));
         return model;
     }
 
@@ -2301,7 +2423,12 @@ std::optional<Motion::ArmModel> Libra2MotionController::RecomputeArmModel(
         if (!solved) {
             return std::nullopt;
         }
-        model.level_torque = solved->level_torque;
+        // TODO: check Claude-generated code
+        // Convert to min. ETA extension (Eq. 44)
+        model.level_torque = solved->level_torque
+                             + (kGrav
+                                * Libra2Model::EtaMomentChange(
+                                    saved.eta_extension));
         model.hang_torque = solved->hang_torque;
         return model;
     }
@@ -2434,7 +2561,10 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
  *
  * @note Uses Eq. 34 with the current arm hang torque (from a two-angle or
  *       loaded calibration), since one sample can't separate the two arm
- *       terms.
+ *       terms. τ_g1,0 is converted to min. ETA extension (see
+ *       `LevelTorqueAtExtension()`).
+ *
+ * @see Libra2Model::ArmLevelTorque Libra2Model::EtaMomentChange
  */
 void Libra2MotionController::FinishLevelCalibration(
     const Motion::RestSample& sample) {
@@ -2453,16 +2583,23 @@ void Libra2MotionController::FinishLevelCalibration(
         return;
     }
 
-    arm_level_torque_ = *level;
+    // Convert to min. ETA extension (Eq. 44)
+    arm_level_torque_ = *level
+                        + (kGrav * Libra2Model::EtaMomentChange(eta_extension_));
     arm_calibrated_ = true;
     arm_source_ = "level";
     arm_cw_params_ = cw_model_.GetParams();
     arm_samples_ = {sample};
+    // TODO: check Claude-generated code
+    arm_eta_extension_ = eta_extension_;
 
-    FinishCalibration(true, "Level calibration succeeded: arm_level_torque="
-                                + Format(arm_level_torque_)
-                                + " Nm, arm_hang_torque="
-                                + Format(arm_hang_torque_) + " Nm");
+    // TODO: check Claude-generated code
+    FinishCalibration(true,
+                      "Level calibration succeeded: arm_level_torque="
+                          + Format(arm_level_torque_) + " Nm"
+                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + ", arm_hang_torque=" + Format(arm_hang_torque_)
+                          + " Nm");
 }
 
 /**
@@ -2471,7 +2608,10 @@ void Libra2MotionController::FinishLevelCalibration(
  * @param sample_b Averaged sample at the second angle (`sample_a_` is already
  *                 stored internally)
  *
- * @see Libra2Model::SolveTwoAngle
+ * @note τ_g1,0 is converted to min. ETA extension (see
+ *       `LevelTorqueAtExtension()`).
+ *
+ * @see Libra2Model::SolveTwoAngle Libra2Model::EtaMomentChange
  */
 void Libra2MotionController::FinishTwoAngleCalibration(
     const Motion::RestSample& sample_b) {
@@ -2485,18 +2625,23 @@ void Libra2MotionController::FinishTwoAngleCalibration(
         return;
     }
 
-    arm_level_torque_ = solved->level_torque;
+    // Convert to min. ETA extension (Eq. 44)
+    arm_level_torque_ = solved->level_torque
+                        + (kGrav * Libra2Model::EtaMomentChange(eta_extension_));
     arm_hang_torque_ = solved->hang_torque;
     arm_calibrated_ = true;
     arm_source_ = "two-angle";
     arm_cw_params_ = cw_model_.GetParams();
     arm_samples_ = {sample_a_, sample_b};
+    // TODO: check Claude-generated code
+    arm_eta_extension_ = eta_extension_;
     const bool stable = CheckStability(arm_hang_torque_);
 
     FinishCalibration(true,
                       "Two-angle calibration succeeded: arm_level_torque="
-                          + Format(arm_level_torque_)
-                          + " Nm, arm_hang_torque=" + Format(arm_hang_torque_)
+                          + Format(arm_level_torque_) + " Nm"
+                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + ", arm_hang_torque=" + Format(arm_hang_torque_)
                           + " Nm" + (stable ? "" : " (UNSTABLE; see log)"));
 }
 

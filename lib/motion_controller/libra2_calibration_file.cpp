@@ -186,6 +186,8 @@ QJsonObject ArmModelToJson(const ArmModel& arm) {
     obj["hang_torque_nm"] = arm.hang_torque;
     obj["cw_model"] = CwModelToJson(arm.cw_model);
     obj["samples"] = samples;
+    // TODO: check Claude-generated code
+    obj["eta_extension_m"] = arm.eta_extension;
 
     return obj;
 }
@@ -212,6 +214,9 @@ bool ArmModelFromJson(const QJsonObject& obj, const std::string& context,
                             error)) {
         return false;
     }
+    // TODO: check Claude-generated code
+    // Older files predate ETA extension (taken at min. extension)
+    arm.eta_extension = obj.value("eta_extension_m").toDouble(0.0);
 
     // Raw data
     arm.samples.clear();

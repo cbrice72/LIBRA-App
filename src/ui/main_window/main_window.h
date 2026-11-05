@@ -186,6 +186,7 @@ class MainWindow : public QMainWindow {
 
 #if LIBRA_VERSION == 2
     void on_a_epos_connect_triggered();
+    void on_a_eta_extension_triggered();
 #endif
 
     void on_a_hebi_load_gains_triggered();

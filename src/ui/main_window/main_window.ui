@@ -3711,6 +3711,8 @@
     <addaction name="m_epos"/>
     <addaction name="m_hebi"/>
     <addaction name="m_serial_servo"/>
+    <addaction name="separator"/>
+    <addaction name="a_eta_extension"/>
    </widget>
    <widget class="QMenu" name="m_sensors">
     <property name="title">
@@ -4050,6 +4052,14 @@
    </property>
    <property name="statusTip">
     <string>Clear the arm and friction models</string>
+   </property>
+  </action>
+  <action name="a_eta_extension">
+   <property name="text">
+    <string>ETA extension...</string>
+   </property>
+   <property name="statusTip">
+    <string>Set the ETA's extension from minimum (no actuator reports it yet)</string>
    </property>
   </action>
   <action name="a_motion_model_logging">

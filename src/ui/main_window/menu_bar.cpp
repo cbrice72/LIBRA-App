@@ -617,6 +617,31 @@ void MainWindow::on_a_epos_connect_triggered() {
 
     emit ConnectEpos();
 }
+
+/**
+ * @brief Event handler for "Actuators" menu action "ETA extension...". Allows
+ *        user to manually input current ETA extension since we have no way of
+ *        knowing it (ETA is controlled by manually adjusting its current).
+ *
+ * @todo It's been experimentally verified that a non-zero extension shifts
+ *       τ_g1,0. Eq. 44 attempts to explain this, but is still unverified.
+ *
+ * @see Libra2MotionController::SetEtaExtension
+ */
+void MainWindow::on_a_eta_extension_triggered() {
+    bool ok = false;
+    const double mm =
+        QInputDialog::getDouble(this, "ETA Extension",
+                                "Extension from minimum (mm):",
+                                motion_controller_->GetEtaExtension() * 1000.0,
+                                0.0, kMaxArmExtension, 1, &ok);
+
+    if (ok) {
+        motion_controller_->SetEtaExtension(mm / 1000.0);
+    } else {
+        logger_->Debug("ETA extension setting cancelled by user");
+    }
+}
 #endif
 
 /**

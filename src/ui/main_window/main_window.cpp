@@ -207,6 +207,7 @@ void MainWindow::ConfigureUi() {
 #endif
 #if LIBRA_VERSION != 2
     ui_->m_motion_control->setEnabled(false);
+    ui_->a_eta_extension->setEnabled(false);
 #endif
 
     // Slots
