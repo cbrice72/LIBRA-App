@@ -266,8 +266,8 @@ void CameraManager::ProcessQtFrame(QVideoFrame frame) {
  *        connection.
  */
 void CameraManager::CheckRos2Connectivity() {
-    // TODO: the following line will need to change if I ever implement
-    //       multi-topic selection (e.g., RealSense has RGB, depth, infra, etc.)
+    // NOTE: the following line will need to change if multi-topic selection is
+    //       ever allowed (e.g., RealSense has RGB, depth, infra, etc.)
     auto active_publishers = this->get_publishers_info_by_topic(kCameraRgbTopic);
 
     const auto was_connected = ros2_connected_;    // save previous state

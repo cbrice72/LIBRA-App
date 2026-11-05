@@ -513,8 +513,9 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             // --- MODE 1: TRAJECTORY FOLLOWING ---
 
             // Build next step of trajectory
-            // TODO: This used to pass clock ticks (i.e., nanoseconds), but
-            //       apparently HEBI expects seconds. Need to verify this.
+            // TODO: this used to pass clock ticks (i.e., nanoseconds), but
+            //       apparently HEBI expects seconds. It seems to work either
+            //       way, but need to verify this.
             trajectory_->getState(t_trajectory_s_, &cmd_pos, &cmd_vel, &cmd_acc);
             command_->setPosition(cmd_pos);
             command_->setVelocity(cmd_vel * rate);

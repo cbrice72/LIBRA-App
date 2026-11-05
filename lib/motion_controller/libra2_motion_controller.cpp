@@ -74,30 +74,29 @@ constexpr std::array<double, 15> kEtaTubeLength = {
 };                                         // L_ui (m)
 constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
 
-// TODO: input after weighing
-constexpr double kEtaConduitMassPerLength = 0;  // μ_conduit (kg/m)
-constexpr double kEtaConduitMinLength = 0.0;    // L_conduit,min (m)
+constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
+// TODO: input after measuring
+constexpr double kEtaConduitMinLength = 0.0;  // L_conduit,min (m)
 
 // TODO: input after measuring
 constexpr double kEtaTipMass = 1.049;  // m_tip (kg)
 
 // Predictive CW Command
 
-// TODO: guess; prevents valve chatter
+// TODO: arbitrary; tune via experiments
 constexpr double kCwVolumeTolerance = 0.01;  // "target reached" band (L)
 
 // Model Calibration
 
-// TODO: all of these are guesses; tune via experiments
 constexpr double kReachTolerance = 0.0175;  // "arrived at target", ~1 deg (rad)
 constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
-constexpr double kRestVelTolerance = 0.005;  // "at rest" speed (rad/s)
+constexpr double kRestVelTolerance = 0.005;  // allowed drift in window (rad/s)
 constexpr double kRestVolTolerance = 0.01;   // allowed CW change in window (L)
 constexpr double kRestWindowTime = 3.0;      // averaging window (s)
 
-constexpr double kProgressLogPeriod = 15.0;  // "still running" log period (s)
-constexpr double kMoveTimeout = 180.0;       // per move stage (s)
-constexpr double kSampleTimeout = 60.0;      // per sampling stage (s)
+constexpr double kProgressLogPeriod = 15.0;  // heartbeat message (s)
+constexpr double kMoveTimeout = 180.0;       // (s)
+constexpr double kSamplingTimeout = 60.0;    // (s)
 
 // Velocity averaging window for rest and steady speed checks, arbitrary (s);
 // at rest, raw vel noise is ~0.6 deg/s but its 0.75 s mean stays < 0.2 deg/s
@@ -107,8 +106,12 @@ constexpr double kMinCosForBalance = 1e-3;  // |cosθ| floor, Eq. 34/38'
 // Friction Calibration
 
 // Sweep speeds as fractions of actuator max speed
-constexpr std::array<double, 4> kFrictionSpeedFractions = {1.0 / 6.0, 1.0 / 3.0,
-                                                           2.0 / 3.0, 1.0};
+constexpr std::array<double, 4> kFrictionSpeedFractions = {
+    1.0 / 6.0,
+    1.0 / 3.0,
+    2.0 / 3.0,
+    1.0,
+};
 
 // TODO: all of these are arbitrary; tune via experiments
 constexpr double kFrictionTorqueLimit = 14.0;  // abort if above this |τ| (Nm)
@@ -116,7 +119,7 @@ constexpr double kFrictionLimitTime = 0.5;     // ... for this long (s)
 
 constexpr double kFrictionRampTorque = 4.0;      // inertia torque per ramp (Nm)
 constexpr double kFrictionMinRampDist = 0.0175;  // shortest ramp, ~1 deg (rad)
-constexpr double kFrictionSampleMargin = 0.0175;  // unsampled past ramps (rad)
+constexpr double kFrictionSampleMargin = 0.0175;  // unsampled ends (rad)
 constexpr double kFrictionSpeedTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
 
 constexpr double kFrictionBinWidth = 0.0087;  // angle bin, ~0.5 deg (rad)
@@ -438,10 +441,11 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
  *         I_cw = ρ_water·ΣV_i·r_bag,i² + m_cw·q_P² = m_cw·(C + D·V + q_P²)
  */
 double CwModel::Inertia(const double& mass) const {
-    // TODO: use the following after completing Step 5 of the motion controller
-    //       experiments (2026-10-22); see `PLAN.md`
-    // const double r_P = PivotDist(mass / kWaterDensity);
-    // return mass * (r_P * r_P + q_P_ * q_P_);
+    // TODO: use after completing Step 5 of the motion controller experiments
+    /*
+    const double r_P = PivotDist(mass / kWaterDensity);
+    return mass * (r_P * r_P + q_P_ * q_P_);
+    */
     return mass * (MeanSqDist(mass / kWaterDensity) + (q_P_ * q_P_));
 }
 
@@ -456,11 +460,12 @@ double CwModel::Inertia(const double& mass) const {
  * @see CwModel::Inertia
  */
 double CwModel::InertiaSlope(const double& mass) const {
-    // TODO: use the following after completing Step 5 of the motion controller
-    //       experiments (2026-10-22); see `PLAN.md`
-    // const double volume = mass / kWaterDensity;
-    // const double r_P = PivotDist(volume);
-    // return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
+    // TODO: use after completing Step 5 of the motion controller experiments
+    /*
+    const double volume = mass / kWaterDensity;
+    const double r_P = PivotDist(volume);
+    return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
+    */
     const double volume = mass / kWaterDensity;
     return r2_0_ + (2.0 * dr2_dV_ * volume) + (q_P_ * q_P_);
 }
@@ -1761,7 +1766,8 @@ Motion::CwCommand Libra2MotionController::PredictiveCwCommand(
         return Motion::CwCommand::kIdle;
     }
 
-    // TODO: if valve latency makes the CW overshoot, stop early by latency·V̇
+    // TODO: if valve latency causes CW overshoot, stop early by around
+    //       latency·[V̇] ...
     return (diff > 0.0) ? Motion::CwCommand::kFill : Motion::CwCommand::kDrain;
 }
 
@@ -2430,7 +2436,7 @@ void Libra2MotionController::RunArmCalibration(const double& dt,
                        || status_ == Motion::CalibrationStatus::kArmSamplingA);
     const double target = at_a ? angle_a_ : angle_b_;
 
-    const double timeout = moving_stage ? kMoveTimeout : kSampleTimeout;
+    const double timeout = moving_stage ? kMoveTimeout : kSamplingTimeout;
     if (t_stage_s_ > timeout) {
         FinishCalibration(false, moving_stage
                                      ? "timed out moving to target"
@@ -2523,7 +2529,6 @@ void Libra2MotionController::FinishLevelCalibration(
     arm_source_ = "level";
     arm_cw_params_ = cw_model_.GetParams();
 
-    // TODO: check Claude-generated code
     FinishCalibration(true,
                       "Level calibration succeeded: arm_level_torque="
                           + Format(arm_level_torque_) + " Nm"

@@ -78,10 +78,9 @@ class CwModel {
     std::string error_;
 };
 
-// TODO: check Claude-generated code
 /**
- * @brief Time-weighted moving average of θ̇ over `kVelAvgWindow`, since raw θ̇
- *        is too noisy to compare against small thresholds.
+ * @brief Time-weighted moving average of velocity over `kVelAvgWindow`, since
+ *        raw values are too noisy to compare against small thresholds.
  */
 class VelocityAverager {
   public:
@@ -93,8 +92,6 @@ class VelocityAverager {
     double time_{0.0};                               // Σdt (s)
     double sum_{0.0};                                // Σθ̇·dt (rad)
 };
-
-// TODO: end of Claude-generated code
 
 /**
  * @brief Static-equilibrium measurement for arm model calibration.
@@ -114,7 +111,6 @@ class RestSampler {
                                           const std::optional<double>& volume);
 
   private:
-    // TODO: check Claude-generated code
     void RestartWindow();
 
     VelocityAverager vel_avg_;  // kept across window restarts
@@ -241,7 +237,6 @@ class Libra2MotionController : public AbstractMotionController {
         bool trajectory_seen{false};  // whether the planned sweep has started
         double t_over_limit_s{0.0};   // time over the |τ| limit (s)
 
-        // TODO: check Claude-generated code
         VelocityAverager vel_avg;  // current sweep's θ̇, for the steady check
 
         // Per-bin torque sums/counts for the current speed
@@ -284,7 +279,6 @@ class Libra2MotionController : public AbstractMotionController {
     void RunFrictionCalibration(const double& dt, const bool& trajectory_active,
                                 const double& theta, const double& actual_vel,
                                 const double& actual_torque);
-    // TODO: check Claude-generated code
     void AddFrictionSample(const double& dt, const double& theta,
                            const double& actual_vel,
                            const double& actual_torque, const bool& going_up,
