@@ -21,8 +21,6 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
- * !Counterweight Model
- * !Pure Equations
  * !Rest Sampler
  * !Class Management
  * !Settings & Arm Model
@@ -34,10 +32,8 @@
  * !Friction Calibration Helpers
  */
 
-// Physical Constants
-
-constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L) -- Eq. 28
-constexpr double kGrav = 9.80665;      // g (m/s²)
+using Libra2Model::kGrav;
+using Libra2Model::kWaterDensity;
 
 // Mechanical Constants (heights above the arm/CW centerline)
 
@@ -61,28 +57,6 @@ constexpr double kArmInertia =
 constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
 constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
 
-// ETA (Eq. 44; unverified)
-
-// Tubes u_1 (smallest) to u_15
-constexpr std::array<double, 15> kEtaTubeMass = {
-    0.0386, 0.0450, 0.0592, 0.0674, 0.0755, 0.0847, 0.0932, 0.0995,
-    0.1147, 0.1233, 0.1306, 0.1389, 0.1520, 0.1550, 0.1608,
-};  // m_ui (kg)
-constexpr std::array<double, 15> kEtaTubeLength = {
-    0.600, 0.600, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
-    0.640, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
-};                                         // L_ui (m)
-constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
-
-constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
-// TODO: input after measuring
-constexpr double kEtaConduitMinLength = 0.0;  // L_conduit,min (m)
-
-constexpr double kSensorSuiteMass = 0.2917;  // D456 + SF45/B w/ mounts (kg)
-constexpr double kEtaTipMountMass = 0.0215;  // (kg)
-constexpr double kEtaTipMass = kSensorSuiteMass
-                               + kEtaTipMountMass;  // m_tip (kg)
-
 // Predictive CW Command
 
 // TODO: arbitrary; tune via experiments
@@ -103,7 +77,6 @@ constexpr double kSamplingTimeout = 60.0;    // (s)
 // Velocity averaging window for rest and steady speed checks, arbitrary (s);
 // at rest, raw vel noise is ~0.6 deg/s but its 0.75 s mean stays < 0.2 deg/s
 constexpr double kVelAvgWindow = 0.75;
-constexpr double kMinCosForBalance = 1e-3;  // |cosθ| floor, Eq. 34/38'
 
 // Friction Calibration
 
@@ -228,513 +201,6 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
            && std::abs(a.capacity - b.capacity) <= kCwParamTolerance;
 }
 
-}  // namespace
-
-//------------------------------------------------------------------------------
-// !Counterweight Model
-//------------------------------------------------------------------------------
-
-/**
- * @brief Builds and checks the counterweight (CW) model (pivot distance vs.
- *        volume).
- *
- * @param cw_pivot_dist CW pivot distance at 0 liters, A (m); sign is ignored
- *                      (0 = "not measured yet" and leaves model invalid)
- * @param cw_pivot_slope Change in CW pivot distance per liter, B (m/L)
- * @param cw_mean_sq_dist Bags' mean squared hang distance (along arm, from O)
- *                        at 0 liters, C (m²) (0 = "not measured yet" and leaves
- *                        model invalid)
- * @param cw_mean_sq_dist_slope Change in mean squared hang distance per liter,
- *                              D (m²/L)
- * @param cw_hang_offset CW hang point offset (normal to arm) relative to pitch
- *                       joint O, q_P (m)
- * @param capacity Max. combined CW volume (L)
- *
- * @note Extension of Eq. 14b, where r_P varies linearly with volume:
- *         r_P(V) = A + B·V.
- */
-CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
-                 const double& cw_mean_sq_dist,
-                 const double& cw_mean_sq_dist_slope,
-                 const double& cw_hang_offset, const double& capacity)
-    : capacity_(capacity) {
-    // Validate params
-    if (!std::isfinite(capacity) || capacity <= 0.0) {
-        error_ = "CW capacity must be positive";
-        return;
-    }
-    if (!std::isfinite(cw_pivot_dist) || !std::isfinite(cw_pivot_slope)
-        || !std::isfinite(cw_mean_sq_dist)
-        || !std::isfinite(cw_mean_sq_dist_slope)
-        || !std::isfinite(cw_hang_offset)) {
-        error_ = "One or more of r_P components, mean r^2 components, or q_P "
-                 "is not a number";
-        return;
-    }
-    if (cw_pivot_dist == 0.0) {
-        error_ = "r_P is not set (intercept = 0)";
-        return;
-    }
-    if (cw_mean_sq_dist <= 0.0) {
-        error_ = "mean r^2 is not set (intercept <= 0)";
-        return;
-    }
-
-    // Set model properties
-    r_P_0_ = std::abs(cw_pivot_dist);
-    dr_P_dV_ = cw_pivot_slope;
-    r2_0_ = cw_mean_sq_dist;
-    dr2_dV_ = cw_mean_sq_dist_slope;
-    q_P_ = cw_hang_offset;
-
-    // Validate mechanics
-    if (!(r_P_0_ + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
-        error_ = "r_P line is too steep: the CW moment must increase with "
-                 "volume up to full (need A + 2*B*capacity > 0)";
-        return;
-    }
-    if (!(r2_0_ + (2.0 * dr2_dV_ * capacity_) > 0.0)) {
-        error_ = "mean r^2 line is too steep: the CW inertia must increase "
-                 "with volume up to full (need C + 2*D*capacity > 0)";
-    }
-}
-
-/**
- * @brief Gets the values that define the current model.
- */
-Motion::CwModelParams CwModel::GetParams() const {
-    Motion::CwModelParams params;
-    params.pivot_dist = r_P_0_;
-    params.pivot_slope = dr_P_dV_;
-    params.mean_sq_dist = r2_0_;
-    params.mean_sq_dist_slope = dr2_dV_;
-    params.hang_offset = q_P_;
-    params.capacity = capacity_;
-    return params;
-}
-
-/**
- * @brief Gets the expected mass of a full CW (kg).
- */
-double CwModel::GetCapacityMass() const {
-    return capacity_ * kWaterDensity;
-}
-
-/**
- * @brief Computes the distance (m) along the arm from pitch joint O to CW pivot
- *        P at a given CW volume.
- *
- * @param volume CW volume, V (L)
- *
- * @note Code-specific linear model:
- *         r_P(V) = A + B·V
- */
-double CwModel::PivotDist(const double& volume) const {
-    return r_P_0_ + (dr_P_dV_ * volume);
-}
-
-/**
- * @brief Computes the bags' mean squared hang distance (m²) along the arm from
- *        pitch joint O at a given CW volume.
- *
- * @param volume CW volume, V (L)
- *
- * @note Code-specific linear model, fitted to per-bag weighings from Step 1 of
- *       the motion controller experiments (2026/10/22):
- *         ΣV_i·r_bag,i² / V = C + D·V
- */
-double CwModel::MeanSqDist(const double& volume) const {
-    return r2_0_ + (dr2_dV_ * volume);
-}
-
-/**
- * @brief Computes the CW's gravitational moment along the arm (kg·m).
- *
- * @param mass CW mass, m_cw (kg)
- *
- * @note Code-specific extension of Eqs. 12' and 14b, with Eq. 28 for volume:
- *         m_cw·r_P(V), where V = m_cw / ρ_water
- */
-double CwModel::Moment(const double& mass) const {
-    return mass * PivotDist(mass / kWaterDensity);
-}
-
-/**
- * @brief Computes the CW's gravitational moment normal to arm (kg·m).
- *
- * @param mass CW mass, m_cw (kg)
- *
- * @note Sine-term moment of Eq. 12':
- *         m_cw·q_P
- *
- * @see Libra2Model::CwGravTorque
- */
-double CwModel::HangMoment(const double& mass) const {
-    return mass * q_P_;
-}
-
-/**
- * @brief Computes the CW moment (kg·m) that the balance equation compares at
- *        an angle.
- *
- * @param mass CW mass, m_cw (kg)
- * @param angle Pitch angle, θ (rad)
- *
- * @note Code-specific extension of Eq. 38' for r_P that varies with volume;
- *       dividing CW torque by g·cosθ gives:
- *         m_cw·(r_P(V) + q_P·tanθ)
- */
-double CwModel::EffectiveMoment(const double& mass, const double& angle) const {
-    return Moment(mass) + (HangMoment(mass) * std::tan(angle));
-}
-
-/**
- * @brief Finds the CW mass (kg) that gives a requested moment at an angle
- *        (inverse of `EffectiveMoment()`).
- *
- * @param moment Requested effective moment, M (kg·m)
- * @param angle Pitch angle, θ (rad)
- *
- * @note Result is bound to [0, capacity]. Returns none if the model is invalid
- *       or the effective lever is too short at the given angle (i.e., if moment
- *       no longer rises with mass, the answer is ambiguous).
- *
- * @note Code-specific extension: with A' = A + q_P·tanθ, solves
- *       m_cw·(A' + B·m_cw / ρ_water) = M in a form that stays accurate for
- *       small B:
- *         m_cw = 2·M / (A' + √(A'² + 4·B·M / ρ_water))
- *
- * @see CwModel::EffectiveMoment
- */
-std::optional<double> CwModel::MassForMoment(const double& moment,
-                                             const double& angle) const {
-    if (!IsValid()) {
-        return std::nullopt;
-    }
-
-    // Effective lever must keep the moment rising from empty to full
-    const double a_eff = r_P_0_ + (q_P_ * std::tan(angle));
-    if (!(a_eff > 0.0) || !(a_eff + (2.0 * dr_P_dV_ * capacity_) > 0.0)) {
-        return std::nullopt;
-    }
-
-    // Clamp to [0, capacity]
-    if (!(moment > 0.0)) {
-        return 0.0;
-    }
-
-    const double cap = GetCapacityMass();
-    if (moment >= EffectiveMoment(cap, angle)) {
-        return cap;
-    }
-
-    // Solve for m_cw
-    const double c = dr_P_dV_ / kWaterDensity;
-    const double disc = std::max(0.0, (a_eff * a_eff) + (4.0 * c * moment));
-    return 2.0 * moment / (a_eff + std::sqrt(disc));
-}
-
-/**
- * @brief Computes the CW moment of inertia (kg·m²) about pitch joint O.
- *
- * @param mass CW mass, m_cw (kg)
- *
- * @note Uses `MeanSqDist()` for bags' spread since only total volume is known:
- *         I_cw = ρ_water·ΣV_i·r_bag,i² + m_cw·q_P² = m_cw·(C + D·V + q_P²)
- */
-double CwModel::Inertia(const double& mass) const {
-    // TODO: use after completing Step 5 of the motion controller experiments
-    /*
-    const double r_P = PivotDist(mass / kWaterDensity);
-    return mass * (r_P * r_P + q_P_ * q_P_);
-    */
-    return mass * (MeanSqDist(mass / kWaterDensity) + (q_P_ * q_P_));
-}
-
-/**
- * @brief Computes the change in CW moment of inertia per kg of CW (m²).
- *
- * @param mass CW mass, m_cw (kg)
- *
- * @note Code-specific derivative of `Inertia()` for the inertia rate in Eq. 15:
- *         d(inertia)/dm_cw = C + 2·D·V + q_P²
- *
- * @see CwModel::Inertia
- */
-double CwModel::InertiaSlope(const double& mass) const {
-    // TODO: use after completing Step 5 of the motion controller experiments
-    /*
-    const double volume = mass / kWaterDensity;
-    const double r_P = PivotDist(volume);
-    return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
-    */
-    const double volume = mass / kWaterDensity;
-    return r2_0_ + (2.0 * dr2_dV_ * volume) + (q_P_ * q_P_);
-}
-
-//------------------------------------------------------------------------------
-// !Pure Equations
-//------------------------------------------------------------------------------
-
-/**
- * @brief Stateless equations.
- *
- * @see CwModel
- */
-namespace Libra2Model {
-
-/**
- * @brief Converts CW volume (L) to mass (kg).
- *
- * @param volume CW volume, V (L)
- *
- * @note From Eq. 28:
- *         m_cw = ρ_water·V
- */
-double CwMass(const double& volume) {
-    return kWaterDensity * volume;
-}
-
-/**
- * @brief Computes the contribution of ETA extension to the arm's moment,
- *        Δ(m_arm·r_1) (kg·m).
- *
- * @param extension Change in ETA extension (from min.), ΔL (m)
- *
- * @note From Eq. 44 (from extended equations in `ARM_EXTENSION_ESTIMATION.md`),
- *       where ΔL = ΔL_conduit since the conduit is assumed to be fed in from
- *       the pitch axis:
- *         Δ(m_arm·r_1) = (tubes u_1-15) + (conduit) + (tip cap, payload)
- *                      = Σ m_ui·max(0, ΔL - S_(i-1))
- *                        + μ_conduit·(L_conduit,min·ΔL + ΔL²/2)
- *                        + m_tip·ΔL
- *
- *       Tubes assumed to slide out smallest-first, so tube u_i only moves once
- *       the tubes inside it have used up their strokes:
- *         S_(i-1) = Σ_(j<i) (L_uj - L_ov)
- *
- * @todo Arm inertia also grows with extension, but isn't modeled yet.
- */
-double EtaMomentChange(const double& extension) {
-    // Tubes
-    double moment = 0.0;
-    double stroke_before = 0.0;  // S_(i-1)
-    for (std::size_t i = 0; i < kEtaTubeMass.size(); ++i) {
-        moment += kEtaTubeMass.at(i) * std::max(0.0, extension - stroke_before);
-        stroke_before += kEtaTubeLength.at(i) - kEtaTubeOverlap;
-    }
-
-    // Conduit
-    moment += kEtaConduitMassPerLength
-              * ((kEtaConduitMinLength * extension)
-                 + (0.5 * extension * extension));
-
-    // Tip cap, payload
-    moment += kEtaTipMass * extension;
-    return moment;
-}
-
-/**
- * @brief Computes the CW's gravitational torque (Nm) about pitch joint O.
- *
- * @param cw_moment CW gravitational moment along arm, m_cw·r_P (kg·m)
- * @param cw_hang_moment CW gravitational moment normal to arm, m_cw·q_P (kg·m)
- * @param grav Gravitational acceleration, g (m/s²)
- * @param angle Pitch angle, θ (rad)
- *
- * @note From Eq. 29b':
- *         τ_g2(θ) = m_cw·g·(r_P·cosθ + q_P·sinθ)
- */
-double CwGravTorque(const double& cw_moment, const double& cw_hang_moment,
-                    const double& grav, const double& angle) {
-    return grav
-           * ((cw_moment * std::cos(angle))
-              + (cw_hang_moment * std::sin(angle)));
-}
-
-/**
- * @brief Computes the arm's gravitational torque (Nm), i.e., measured torque
- *        minus the CW's component.
- *
- * @param torque_meas Measured torque about pitch joint, τ_meas(θ) (Nm)
- * @param cw_grav_torque CW gravitational torque, τ_g2(θ) (Nm), from
- *                       `CwGravTorque()`
- *
- * @note From Eq. 29a:
- *         τ_g1(θ) = τ_meas(θ) - τ_g2(θ)
- */
-double ArmGravTorque(const double& torque_meas, const double& cw_grav_torque) {
-    return torque_meas - cw_grav_torque;
-}
-
-/**
- * @brief Computes the arm's gravitational torque (Nm) at level from one
- *        measurement at any angle.
- *
- * @param arm_torque Arm's gravitational torque at `angle`, τ_g1(θ) (Nm)
- * @param angle Pitch angle, θ (rad)
- * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- *
- * @note Returns none if cosθ is too small.
- *
- * @note From Eq. 34 (Eq. 31 when θ = 0):
- *         τ_g1,0 = (τ_g1(θ) - g·m_arm·h_1·sinθ) / cosθ
- */
-std::optional<double> ArmLevelTorque(const double& arm_torque,
-                                     const double& angle,
-                                     const double& arm_hang_torque) {
-    const double c = std::cos(angle);
-    if (std::abs(c) < kMinCosForBalance) {
-        return std::nullopt;
-    }
-    return (arm_torque - (arm_hang_torque * std::sin(angle))) / c;
-}
-
-/**
- * @brief Solves the arm's level and hang torques from a set of two-angle
- *        measurements.
- *
- * @param arm_torque_a Arm's gravitational torque at angle a, τ_g1(θ_a) (Nm)
- * @param angle_a Angle a, θ_a (rad)
- * @param arm_torque_b Arm's gravitational torque at angle b, τ_g1(θ_b) (Nm)
- * @param angle_b Angle b, θ_b (rad)
- *
- * @note Fails if the angles are too close together.
- *
- * @note From Eqs. 35c and 35d:
- *         τ_g1,0 = (τ_g1(θ_a)·sinθ_b - τ_g1(θ_b)·sinθ_a) / sin(θ_b - θ_a)
- *         m_arm·h_1·g = (τ_g1(θ_b)·cosθ_a - τ_g1(θ_a)·cosθ_b)
- *                       / sin(θ_b - θ_a)
- */
-std::optional<Motion::ArmModel> SolveTwoAngle(const double& arm_torque_a,
-                                              const double& angle_a,
-                                              const double& arm_torque_b,
-                                              const double& angle_b) {
-    const double s = std::sin(angle_b - angle_a);
-    if (std::abs(s) < std::sin(0.5 * Motion::kMinAngleSeparation)) {
-        return std::nullopt;
-    }
-
-    Motion::ArmModel model;
-    model.level_torque = ((arm_torque_a * std::sin(angle_b))
-                          - (arm_torque_b * std::sin(angle_a)))
-                         / s;
-    model.hang_torque = ((arm_torque_b * std::cos(angle_a))
-                         - (arm_torque_a * std::cos(angle_b)))
-                        / s;
-    return model;
-}
-
-/**
- * @brief Computes the net gravitational torque (Nm) about pitch joint O.
- *
- * @param arm_level_torque Arm gravitational torque at level, τ_g1,0 (Nm)
- * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- * @param cw_moment CW gravitational moment along arm, m_cw·r_P (kg·m)
- * @param cw_hang_moment CW gravitational moment normal to arm, m_cw·q_P (kg·m)
- * @param grav Gravitational acceleration, g (m/s²)
- * @param angle Pitch angle, θ (rad)
- *
- * @note From Eq. 36':
- *         τ_ext,g(θ) = (τ_g1,0 + m_cw·g·r_P)·cosθ
- *                      + (m_arm·h_1·g + m_cw·g·q_P)·sinθ
- */
-double NetGravTorque(const double& arm_level_torque,
-                     const double& arm_hang_torque, const double& cw_moment,
-                     const double& cw_hang_moment, const double& grav,
-                     const double& angle) {
-    return ((arm_level_torque + (grav * cw_moment)) * std::cos(angle))
-           + ((arm_hang_torque + (grav * cw_hang_moment)) * std::sin(angle));
-}
-
-/**
- * @brief Computes the total sine coefficient of the net gravitational torque
- *        (Nm); the arm is stable at equilibrium only while this is negative.
- *
- * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- * @param cw_hang_moment CW gravitational moment normal to arm, m_cw·q_P (kg·m)
- * @param grav Gravitational acceleration, g (m/s²)
- *
- * @note Numerator g·S of Eq. 26c'; stability per Eq. 27' is S < 0:
- *         τ' = (m_arm·h_1·g + m_cw·g·q_P) / cosθ*
- */
-double StabilityTorque(const double& arm_hang_torque,
-                       const double& cw_hang_moment, const double& grav) {
-    return arm_hang_torque + (grav * cw_hang_moment);
-}
-
-/**
- * @brief Computes the actuator torque feedforward (Nm) that follows commanded
- *        motion while canceling gravity.
- *
- * @param inertia Moment of inertia (kg·m²)
- * @param inertia_rate Rate of change of inertia (kg·m²/s)
- * @param friction_viscous Viscous friction coefficient, b (Nm·s/rad)
- * @param friction_coulomb Coulomb friction torque, τ_c (Nm)
- * @param ref_acc Reference acceleration, θ̈_ref (rad/s²)
- * @param ref_vel Reference velocity, θ̇_ref (rad/s)
- * @param net_grav_torque Measured net gravitational torque, τ_ext,g(θ) (Nm)
- *
- * @note Result is not clamped.
- *
- * @note From Eq. 37:
- *         τ_actuator = I·θ̈_ref + (b + İ)·θ̇_ref + τ_c·sign(θ̇_ref)
- *                      - τ_ext,g(θ)
- */
-double FeedforwardTorque(const double& inertia, const double& inertia_rate,
-                         const double& friction_viscous,
-                         const double& friction_coulomb, const double& ref_acc,
-                         const double& ref_vel, const double& net_grav_torque) {
-    return (inertia * ref_acc) + ((friction_viscous + inertia_rate) * ref_vel)
-           + (friction_coulomb * Sign(ref_vel)) - net_grav_torque;
-}
-
-/**
- * @brief Computes the effective CW moment (kg·m) that balances the arm at a
- *        given angle.
- *
- * @param arm_level_torque Arm gravitational torque at level, τ_g1,0 (Nm)
- * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- * @param grav Gravitational acceleration, g (m/s²)
- * @param angle Angle to balance at, θ (rad)
- *
- * @note Returns none if cosθ is too small.
- *
- * @note Code-specific extension of Eq. 38'. Since r_P varies with CW volume,
- *       `CwModel::MassForMoment()` inverts the effective moment instead of
- *       dividing by a fixed r_P:
- *         m_cw,bal·(r_P + q_P·tanθ) = -(τ_g1,0 + m_arm·h_1·g·tanθ) / g
- */
-std::optional<double> BalanceCwMoment(const double& arm_level_torque,
-                                      const double& arm_hang_torque,
-                                      const double& grav, const double& angle) {
-    if (std::abs(std::cos(angle)) < kMinCosForBalance) {
-        return std::nullopt;
-    }
-    return -(arm_level_torque + (arm_hang_torque * std::tan(angle))) / grav;
-}
-
-/**
- * @brief Predicts the net gravitational torque (Nm) at a target angle with the
- *        current CW state.
- *
- * @param grav Gravitational acceleration, g (m/s²)
- * @param angle_tgt Target angle, θ_tgt (rad)
- * @param cw_moment_eff Current effective CW moment at target (kg·m), from
- *                      `CwModel::EffectiveMoment()`
- * @param cw_moment_bal Effective CW moment balancing arm at target (kg·m),
- *                      from `BalanceCwMoment()`
- *
- * @note Code-specific extension of Eq. 39' for r_P that varies with volume,
- *       with the effective moments of `BalanceCwMoment()`:
- *         τ_ext,g(θ_tgt) = g·cosθ_tgt·(M_eff(m_cw) - M_eff(m_cw,bal))
- */
-double TargetNetGravTorque(const double& grav, const double& angle_tgt,
-                           const double& cw_moment_eff,
-                           const double& cw_moment_bal) {
-    return grav * std::cos(angle_tgt) * (cw_moment_eff - cw_moment_bal);
-}
-
 /**
  * @brief Fits a least-squares line through the friction sweep results (drag vs.
  *        speed).
@@ -793,7 +259,7 @@ std::optional<Motion::FrictionModel> FitFrictionLine(
     return model;
 }
 
-}  // namespace Libra2Model
+}  // namespace
 
 //------------------------------------------------------------------------------
 // !Velocity Averager
@@ -968,8 +434,9 @@ Libra2MotionController::Libra2MotionController(
     const double& torque_comp_upper_bound, const double& torque_comp_slow_rate,
     const bool& debug_mode)
     : AbstractMotionController({Joint::Name::kPitch}, debug_mode),
-      cw_model_(cw_pivot_dist, cw_pivot_slope, cw_mean_sq_dist,
-                cw_mean_sq_dist_slope, cw_hang_offset, cw_capacity),
+      cw_model_(Motion::CwModelParams{cw_pivot_dist, cw_pivot_slope,
+                                      cw_mean_sq_dist, cw_mean_sq_dist_slope,
+                                      cw_hang_offset, cw_capacity}),
       friction_coulomb_(friction_coulomb),
       friction_viscous_(friction_viscous),
       arm_inertia_(arm_inertia),
@@ -1275,16 +742,18 @@ double Libra2MotionController::GetArmHangTorque() const {
  *       lock. External callers should only call it while the motion controller
  *       isn't running.
  *
- * @see Libra2Model::NetGravTorque
- *      Libra2MotionController::LevelTorqueAtExtension
+ * @note From Eq. 36':
+ *         τ_ext,g(θ) = (τ_g1,0 + m_cw·g·r_P)·cosθ
+ *                      + (m_arm·h_1·g + m_cw·g·q_P)·sinθ
+ *
+ * @see Libra2MotionController::LevelTorqueAtExtension
  */
 double Libra2MotionController::ComputeNetGravTorque(
     const double& angle, const double& cw_mass) const {
-    return Libra2Model::NetGravTorque(LevelTorqueAtExtension(),
-                                      arm_hang_torque_,
-                                      cw_model_.Moment(cw_mass),
-                                      cw_model_.HangMoment(cw_mass), kGrav,
-                                      angle);
+    return ((LevelTorqueAtExtension() + (kGrav * cw_model_.Moment(cw_mass)))
+            * std::cos(angle))
+           + ((arm_hang_torque_ + (kGrav * cw_model_.HangMoment(cw_mass)))
+              * std::sin(angle));
 }
 
 /**
@@ -1423,7 +892,7 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
  *       which cancels the gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  *
- * @see kFrictionVelFractions Libra2Model::FitFrictionLine
+ * @see kFrictionVelFractions FitFrictionLine
  */
 bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                                                       const double& angle_b,
@@ -1740,7 +1209,7 @@ std::optional<double> Libra2MotionController::TargetCwMass(
     const double& angle_tgt) const {
     const auto moment_bal =
         Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(), arm_hang_torque_,
-                                     kGrav, angle_tgt);
+                                     angle_tgt);
     if (!moment_bal) {
         return std::nullopt;
     }
@@ -1987,7 +1456,11 @@ Motion::Libra2Command Libra2MotionController::Update(
  * @note Friction and inertia terms always apply, so a move gets the effort to
  *       overcome friction even before the arm model is calibrated.
  *
- * @see Libra2Model::FeedforwardTorque
+ * @note Result is not clamped.
+ *
+ * @note From Eq. 37:
+ *         τ_actuator = I·θ̈_ref + (b + İ)·θ̇_ref + τ_c·sign(θ̇_ref)
+ *                      - τ_ext,g(θ)
  */
 double Libra2MotionController::ModelFeedforward(const double& angle,
                                                 const double& ref_vel,
@@ -1999,9 +1472,8 @@ double Libra2MotionController::ModelFeedforward(const double& angle,
     const double inertia = inertia_ff_en_ ? inertia_ : 0.0;
     const double inertia_rate = inertia_ff_en_ ? inertia_rate_ : 0.0;
 
-    return Libra2Model::FeedforwardTorque(inertia, inertia_rate,
-                                          friction_viscous_, friction_coulomb_,
-                                          ref_acc, ref_vel, torque_ext_g);
+    return (inertia * ref_acc) + ((friction_viscous_ + inertia_rate) * ref_vel)
+           + (friction_coulomb_ * Sign(ref_vel)) - torque_ext_g;
 }
 
 /**
@@ -2013,8 +1485,7 @@ double Libra2MotionController::ModelFeedforward(const double& angle,
  * @note Entries that can't be computed (i.e., no model, CW volume, or target)
  *       are left empty.
  *
- * @see Libra2Model::CwMass Libra2Model::NetGravTorque
- *      Libra2Model::BalanceCwMoment Libra2Model::TargetNetGravTorque
+ * @see Libra2Model::BalanceCwMoment
  *      Libra2MotionController::LevelTorqueAtExtension
  */
 Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
@@ -2033,7 +1504,7 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
     if (angle_tgt) {
         const auto moment_bal =
             Libra2Model::BalanceCwMoment(LevelTorqueAtExtension(),
-                                         arm_hang_torque_, kGrav, *angle_tgt);
+                                         arm_hang_torque_, *angle_tgt);
         const auto mass_tgt = moment_bal ? cw_model_.MassForMoment(*moment_bal,
                                                                    *angle_tgt)
                                          : std::nullopt;
@@ -2041,10 +1512,13 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
             diagnostics.cw_mass_tgt = *mass_tgt;
             if (cw_mass_) {
                 diagnostics.cw_mass_change = *mass_tgt - *cw_mass_;
-                diagnostics.torque_ext_g_tgt = Libra2Model::TargetNetGravTorque(
-                    kGrav, *angle_tgt,
-                    cw_model_.EffectiveMoment(*cw_mass_, *angle_tgt),
-                    *moment_bal);
+                // Code-specific extension of Eq. 39' for r_P that varies with
+                // volume, using effective moments (see `BalanceCwMoment()`):
+                //   τ_ext,g(θ_tgt) = g·cosθ_tgt·(M_eff(m_cw) - M_eff(m_cw,bal))
+                diagnostics.torque_ext_g_tgt =
+                    kGrav * std::cos(*angle_tgt)
+                    * (cw_model_.EffectiveMoment(*cw_mass_, *angle_tgt)
+                       - *moment_bal);
             }
         }
     }
@@ -2356,20 +1830,22 @@ void Libra2MotionController::FinishCalibration(const bool& success,
  * @param sample Averaged measurements
  *
  * @note At rest, measured torque is the opposite of actual actuator torque, per
- *       Eq. 19b. Using Eq. 29a removes the CW torque, and with Eq. 28 for CW
- *       mass:
+ *       Eq. 19b. Using Eq. 29a removes the CW torque (Eq. 29b'), and with
+ *       Eq. 28 for CW mass:
  *         τ_meas(θ) = -τ_actuator
+ *         τ_g2(θ) = m_cw·g·(r_P·cosθ + q_P·sinθ)
  *         τ_g1(θ) = τ_meas(θ) - τ_g2(θ)
  */
 double Libra2MotionController::SampleToArmTorque(
     const Motion::RestSample& sample) const {
     const double cw_mass = Libra2Model::CwMass(sample.volume);
-    const double cw_torque = Libra2Model::CwGravTorque(cw_model_.Moment(cw_mass),
-                                                       cw_model_.HangMoment(
-                                                           cw_mass),
-                                                       kGrav, sample.angle);
+    const double cw_torque = kGrav
+                             * ((cw_model_.Moment(cw_mass)
+                                 * std::cos(sample.angle))
+                                + (cw_model_.HangMoment(cw_mass)
+                                   * std::sin(sample.angle)));
 
-    return Libra2Model::ArmGravTorque(-sample.torque, cw_torque);
+    return -sample.torque - cw_torque;
 }
 
 /**
@@ -2377,17 +1853,20 @@ double Libra2MotionController::SampleToArmTorque(
  *
  * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
  *
- * @note S in Eq. 27' is linear in m_cw, so checking only empty and full covers
- *       every volume.
+ * @note Stable while the numerator g·S of Eq. 26c' is negative (Eq. 27'):
+ *         g·S = m_arm·h_1·g + m_cw·g·q_P
+ *
+ *       S is linear in m_cw, so checking only empty and full covers every
+ *       volume.
  */
 bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
+    const auto stability_torque = [&](const double& cw_mass) {
+        return arm_hang_torque + (kGrav * cw_model_.HangMoment(cw_mass));
+    };
+
     const double cap = cw_model_.GetCapacityMass();
-    const double empty = Libra2Model::StabilityTorque(arm_hang_torque,
-                                                      cw_model_.HangMoment(0.0),
-                                                      kGrav);
-    const double full = Libra2Model::StabilityTorque(arm_hang_torque,
-                                                     cw_model_.HangMoment(cap),
-                                                     kGrav);
+    const double empty = stability_torque(0.0);
+    const double full = stability_torque(cap);
 
     const std::string values = Format(empty) + " Nm empty, " + Format(full)
                                + " Nm full";
@@ -2875,7 +2354,7 @@ void Libra2MotionController::FinishFrictionCalibration() {
         drags.push_back(p.drag);
     }
 
-    auto fit = Libra2Model::FitFrictionLine(vels, drags);
+    auto fit = FitFrictionLine(vels, drags);
     if (!fit) {
         FinishCalibration(false, "friction line fit failed (need two or more "
                                  "speeds)");

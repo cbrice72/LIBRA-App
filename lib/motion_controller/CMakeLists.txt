@@ -28,6 +28,8 @@ elseif(LIBRA_VERSION EQUAL 2)
     list(APPEND MOTION_CONTROLLER_SOURCES
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_motion_controller.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_model.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/libra2_model.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.h
         ${CMAKE_CURRENT_SOURCE_DIR}/libra2_calibration_file.cpp
     )

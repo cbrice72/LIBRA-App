@@ -23,60 +23,8 @@
 
 // Project Headers
 #include "abstract_motion_controller.h"
+#include "libra2_model.h"
 #include "motion_defs.h"
-
-/**
- * @brief Hanging counterweight (CW) model. Its gravitational torque treats the
- *        water bags as one mass at pivot P, and its inertia uses the bags' mean
- *        squared hang distance; both distances (along the arm) shift with water
- *        volume.
- *
- * @note Defines the CW's share of the gravitational torque at the pitch joint
- *       (Eq. 12'), the arm's inertia (Eq. 15), and the CW mass that balances
- *       the arm at a given angle (Eq. 38').
- */
-class CwModel {
-  public:
-    explicit CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
-                     const double& cw_mean_sq_dist,
-                     const double& cw_mean_sq_dist_slope,
-                     const double& cw_hang_offset, const double& capacity);
-
-    [[nodiscard]] bool IsValid() const {
-        return error_.empty();
-    }
-
-    [[nodiscard]] const std::string& GetError() const {
-        return error_;
-    }
-
-    [[nodiscard]] Motion::CwModelParams GetParams() const;
-    [[nodiscard]] double GetCapacityMass() const;
-
-    [[nodiscard]] double Moment(const double& mass) const;
-    [[nodiscard]] double HangMoment(const double& mass) const;
-    [[nodiscard]] double EffectiveMoment(const double& mass,
-                                         const double& angle) const;
-    [[nodiscard]] std::optional<double> MassForMoment(const double& moment,
-                                                      const double& angle) const;
-
-    [[nodiscard]] double Inertia(const double& mass) const;
-    [[nodiscard]] double InertiaSlope(const double& mass) const;
-
-  private:
-    [[nodiscard]] double PivotDist(const double& volume) const;
-    [[nodiscard]] double MeanSqDist(const double& volume) const;
-
-    double r_P_0_{0.0};    // r_P at 0 liters, A (m)
-    double dr_P_dV_{0.0};  // r_P change per liter, B (m/L)
-    double r2_0_{0.0};     // mean r_bag² at 0 liters, C (m²)
-    double dr2_dV_{0.0};   // mean r_bag² change per liter, D (m²/L)
-    double q_P_{0.0};      // hang-point offset normal to arm, from O (m)
-
-    double capacity_;  // CW capacity (L)
-
-    std::string error_;
-};
 
 /**
  * @brief Time-weighted moving average of velocity over `kVelAvgWindow`, since
