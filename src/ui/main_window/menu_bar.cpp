@@ -435,7 +435,7 @@ void MainWindow::on_a_motion_calibrate_cancel_triggered() {
 /**
  * @brief Event handler for "Motion Control" menu action "Save calibration...".
  *        Asks for the setup it was made with, then saves the current arm model
- *        and internal friction (JSON).
+ *        and pitch joint friction (JSON).
  */
 void MainWindow::on_a_motion_calibration_save_triggered() {
     Motion::CalibrationRecord record = motion_controller_->GetCalibrationRecord();

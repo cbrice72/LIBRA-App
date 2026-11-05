@@ -55,7 +55,9 @@ constexpr double kCwHangOffset = kCwBracketHeight
                                  - kPitchJointHeight;  // q_P (m)
 constexpr double kArmInertia =
     47.6;  // I_CAD, from Inertial Properties -> Global -> Izz (kg·m²)
-// TODO: set from experimental data (or run the friction calibration)
+
+// Experimentally, friction was so low it fell within the calculated uncertainty,
+// so both default to zero (any artifacts will barely affect the controller)
 constexpr double kDefaultFrictionCoulomb = 0.0;  // τ_c (Nm)
 constexpr double kDefaultFrictionViscous = 0.0;  // b (Nm·s/rad)
 
@@ -158,11 +160,16 @@ std::string FormatDeg(const double& rad) {
  * @param speed Sweep speed, v (rad/s)
  * @param inertia Arm + CW moment of inertia, I (kg·m²)
  *
- * @note Code-specific equation (not in the notebook scans). HEBI's uses a
- *       minimum-jerk ramp, which from rest to speed v over distance d takes
- *       T = 2·d/v seconds (see `HebiThread::StartSweep()`). With zero accel at
- *       both ends, its position is d·(2τ³ - τ⁴) for τ = t/T, so it peaks at an
- *       accel of 3·d/T² = 0.75·v²/d, giving us d = 0.75·I·v² / τ_ramp.
+ * @note Code-specific equation. HEBI's API uses a minimum-jerk ramp, which from
+ *       rest to speed v over distance d takes T = 2·d/v seconds (see
+ *       `HebiThread::StartSweep()`). With zero acceleration at both ends, its
+ *       position is:
+ *         d·(2τ³ - τ⁴) for τ = t/T,
+ *
+ *       Peaking at an acceleration of:
+ *         3·d/T² = 0.75·v²/d
+ *
+ *       Which gives d = 0.75·I·v² / τ_ramp.
  */
 double RampDist(const double& speed, const double& inertia) {
     return std::max(kFrictionMinRampDist,
@@ -177,8 +184,9 @@ double RampDist(const double& speed, const double& inertia) {
  * @param speed Sweep speed (rad/s)
  * @param ramp_dist Length of each ramp (rad)
  *
- * @note Code-specific equation (not in the notebook scans). Usually, each ramp
- *       is traversed at half speed, giving us: t = (θ_hi - θ_lo + 2·d) / v.
+ * @note Code-specific equation. Usually, each ramp is traversed at half speed,
+ *       which gives:
+ *         t = (θ_hi - θ_lo + 2·d) / v
  */
 double SweepTime(const double& lo, const double& hi, const double& speed,
                  const double& ramp_dist) {
@@ -237,8 +245,7 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  *                       joint O, q_P (m)
  * @param capacity Max. combined CW volume (L)
  *
- * @note This is a code-specific extension of Eq. 14b, where r_P varies linearly
- *       with volume:
+ * @note Extension of Eq. 14b, where r_P varies linearly with volume:
  *         r_P(V) = A + B·V.
  */
 CwModel::CwModel(const double& cw_pivot_dist, const double& cw_pivot_slope,
@@ -587,7 +594,7 @@ std::optional<double> ArmLevelTorque(const double& arm_torque,
  *
  * @note Fails if the angles are too close together.
  *
- * @note From Eq. 35c:
+ * @note From Eqs. 35c and 35d:
  *         τ_g1,0 = (τ_g1(θ_a)·sinθ_b - τ_g1(θ_b)·sinθ_a) / sin(θ_b - θ_a)
  *         m_arm·h_1·g = (τ_g1(θ_b)·cosθ_a - τ_g1(θ_a)·cosθ_b)
  *                       / sin(θ_b - θ_a)
@@ -731,8 +738,9 @@ double TargetNetGravTorque(const double& grav, const double& theta_tgt,
  * @note Returns the fit (intercept τ_c, slope b, and RMS of residuals; other
  *       fields empty), or none with fewer than two distinct speeds.
  *
- * @note Isolates the friction component by averaging the up and down sweeps,
- *       which cancels the gravitational torque:
+ * @note Code-specific equation, based on Eq. 18 at constant speed (θ̈ = 0,
+ *       İ = 0). Isolates the friction component by averaging the up/down
+ *       sweeps, which should cancel gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  */
 std::optional<Motion::FrictionModel> FitFrictionLine(
@@ -2345,7 +2353,8 @@ void Libra2MotionController::FinishCalibration(const bool& success,
  * @note At rest, measured torque is the opposite of actual actuator torque, per
  *       Eq. 19b. Using Eq. 29a removes the CW torque, and with Eq. 28 for CW
  *       mass:
- *         τ_meas(θ) = -τ_actuator τ_g1(θ) = τ_meas(θ) - τ_g2(θ)
+ *         τ_meas(θ) = -τ_actuator
+ *         τ_g1(θ) = τ_meas(θ) - τ_g2(θ)
  */
 double Libra2MotionController::SampleToArmTorque(
     const Motion::RestSample& sample) const {
@@ -2383,7 +2392,9 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
         return true;
     }
 
-    // Linear in m_cw, so a sign change between empty and full has one crossover
+    // NOTE: Code-specific equation. S is linear in m_cw, so a sign change
+    //       between empty and full has one crossover:
+    //         V_cross = m_cap·g·S_empty / (g·S_empty - g·S_full) / ρ_water
     std::string unstable_range_str = "at every CW volume";
     if ((empty < 0.0) != (full < 0.0)) {
         const double crossover = cap * empty / (empty - full) / kWaterDensity;
@@ -2734,10 +2745,9 @@ void Libra2MotionController::AddFrictionSample(
  * @param speed Sweep speed, v (rad/s)
  * @param[out] error Descriptive reason for failure, if any
  *
- * @note Per angle bin, with actual actuator torque (so bin mean = holding
- *       torque, -τ_ext,g):
- *         drag = (τ_up - τ_down) / 2
- *         τ_g(θ) = (τ_up + τ_down) / 2
+ * @note Code-specific equation based on Eqs. 18 and 19a at constant speed.
+ *       Per angle bin, with actual actuator torque (so bin mean = -τ_ext,g):
+ *         drag = (τ_up - τ_down) / 2 τ_g(θ) = (τ_up + τ_down) / 2
  */
 bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
                                                  std::string& error) {
@@ -2757,7 +2767,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
     for (std::size_t i = 0; i < run.up_sum.size(); ++i) {
         if (run.up_count[i] < kFrictionMinBinSamples
             || run.down_count[i] < kFrictionMinBinSamples) {
-            // Not enough samples to compare up/down at this angle
+            // Not enough samples to compare
             continue;
         }
 
@@ -2768,7 +2778,7 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
         const double drag = 0.5 * (up - down);
         const double holding = 0.5 * (up + down);
 
-        // Track how much drag varies across bins
+        // Track how drag varies across bins
         if (point.n_bins == 0) {
             drag_min = drag;
             drag_max = drag;
@@ -2847,11 +2857,10 @@ bool Libra2MotionController::FinishFrictionSpeed(const double& speed,
 /**
  * @brief Fits the friction line through all speeds and applies it.
  *
- * @note Code-specific rule (not in the not in the notebook scans): a negative
- *       slope means friction is flat within noise, so b = 0 and τ_c is the mean
- *       drag. A negative τ_c within the largest bin spread means friction is
- *       too small to measure, so τ_c = 0 and b is refit through the origin;
- *       otherwise, the calibration fails.
+ * @note Code-specific rule. A negative slope means friction is flat within
+ *       noise, so b = 0 and τ_c is the mean drag. A negative τ_c within the
+ *       largest bin spread means friction is too small to measure, so τ_c = 0
+ *       and b is refit through the origin; otherwise, the calibration fails.
  */
 void Libra2MotionController::FinishFrictionCalibration() {
     const FrictionRun& run = friction_run_;

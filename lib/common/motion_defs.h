@@ -265,6 +265,10 @@ struct FrictionPoint {
 /**
  * @brief Pitch joint friction model (Eq. 17): viscous and Coulomb terms fitted
  *        through drag at several sweep speeds.
+ *
+ * @note This is mistakenly called "internal friction" in equations in the
+ *       notebook scans. It's actually joint friction as seen at the actuator
+ *       output (i.e., measured from HEBI effort).
  */
 struct FrictionModel {
     double coulomb{0.0};       // τ_c (Nm)
