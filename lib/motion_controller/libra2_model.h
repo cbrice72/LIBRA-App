@@ -77,9 +77,6 @@ class CwModel {
  */
 namespace Libra2Model {
 
-inline constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L) -- Eq. 28
-inline constexpr double kGrav = 9.80665;      // g (m/s²)
-
 [[nodiscard]] double CwMass(const double& volume);
 [[nodiscard]] double EtaMomentChange(const double& extension);
 

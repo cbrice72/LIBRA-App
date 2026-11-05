@@ -11,8 +11,6 @@
 
 // C++ Standard Library Headers
 #include <cmath>
-#include <iomanip>
-#include <sstream>
 
 // Project Headers
 #include "qt_logger.h"
@@ -82,18 +80,6 @@ bool AbstractMotionController::IsValidInput(
     }
 
     return valid;
-}
-
-/**
- * @brief Prettifies a number for command-line output.
- *
- * @param value Number to format
- */
-std::string AbstractMotionController::Format(const double& value) {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(2);
-    oss << value;
-    return oss.str();
 }
 
 //------------------------------------------------------------------------------

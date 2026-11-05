@@ -69,8 +69,6 @@ class AbstractMotionController {
         const Motion::ActualState& actual,
         const Motion::CommandedState& commanded) const;
 
-    static std::string Format(const double& value);
-
     // --- Data Members ---
 
     std::unique_ptr<Logger> logger_;

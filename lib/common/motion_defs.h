@@ -12,9 +12,12 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <iomanip>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,6 +30,7 @@
 /* --- TABLE OF CONTENTS ---
  * !Shared Constants
  * !Shared Types
+ * !Shared Functions
  * !LIBRA-II Constants
  * !LIBRA-II Types
  * !LIBRA-II Calibration Record
@@ -46,6 +50,9 @@ namespace Motion {
 // `kUndefined` is last in our enums, so it conveniently gives the number of
 // joints in the system
 constexpr std::size_t kNumJoints = Joint::Name::kUndefined;  // array size
+
+constexpr double kGrav = 9.80665;      // g (m/s²)
+constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 
 //------------------------------------------------------------------------------
 // !Shared Types
@@ -94,6 +101,44 @@ struct MotionCommand {
     // Trajectory speed, [0,1] (1 = normal, 0 = paused)
     double playback_rate{1.0};
 };
+
+//------------------------------------------------------------------------------
+// !Shared Functions
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Prettifies a number for command-line output.
+ *
+ * @param value Number to format
+ */
+inline std::string FormatNum(const double& value) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(2) << value;
+    return oss.str();
+}
+
+/**
+ * @brief Prettifies an angle (rad) or angular velocity (rad/s) in degrees for
+ *        command-line output.
+ *
+ * @param rad Value in radians (or rad/s)
+ */
+inline std::string FormatRadAsDeg(const double& rad) {
+    constexpr double kRadToDeg = 180.0 / M_PI;
+
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1) << rad * kRadToDeg;
+    return oss.str();
+}
+
+/**
+ * @brief Gets the sign of a number (−1, 0, or 1).
+ *
+ * @param x Number to check
+ */
+inline double Sign(const double& x) {
+    return (x > 0.0) - (x < 0.0);
+}
 
 #if LIBRA_VERSION == 2
 //------------------------------------------------------------------------------

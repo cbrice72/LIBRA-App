@@ -18,8 +18,6 @@
  * !Equations
  */
 
-using Libra2Model::kWaterDensity;
-
 // ETA (Eq. 44; unverified)
 
 // - Tubes u_1 (smallest) to u_15
@@ -129,7 +127,7 @@ Motion::CwModelParams CwModel::GetParams() const {
  * @brief Gets the expected mass of a full CW (kg).
  */
 double CwModel::GetCapacityMass() const {
-    return capacity_ * kWaterDensity;
+    return capacity_ * Motion::kWaterDensity;
 }
 
 /**
@@ -168,7 +166,7 @@ double CwModel::MeanSqDist(const double& volume) const {
  *         m_cw·r_P(V), where V = m_cw / ρ_water
  */
 double CwModel::Moment(const double& mass) const {
-    return mass * PivotDist(mass / kWaterDensity);
+    return mass * PivotDist(mass / Motion::kWaterDensity);
 }
 
 /**
@@ -241,7 +239,7 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
     }
 
     // Solve for m_cw
-    const double c = dr_P_dV_ / kWaterDensity;
+    const double c = dr_P_dV_ / Motion::kWaterDensity;
     const double disc = std::max(0.0, (a_eff * a_eff) + (4.0 * c * moment));
     return 2.0 * moment / (a_eff + std::sqrt(disc));
 }
@@ -257,10 +255,10 @@ std::optional<double> CwModel::MassForMoment(const double& moment,
 double CwModel::Inertia(const double& mass) const {
     // TODO: use after completing Step 5 of the motion controller experiments
     /*
-    const double r_P = PivotDist(mass / kWaterDensity);
+    const double r_P = PivotDist(mass / Motion::kWaterDensity);
     return mass * (r_P * r_P + q_P_ * q_P_);
     */
-    return mass * (MeanSqDist(mass / kWaterDensity) + (q_P_ * q_P_));
+    return mass * (MeanSqDist(mass / Motion::kWaterDensity) + (q_P_ * q_P_));
 }
 
 /**
@@ -276,11 +274,11 @@ double CwModel::Inertia(const double& mass) const {
 double CwModel::InertiaSlope(const double& mass) const {
     // TODO: use after completing Step 5 of the motion controller experiments
     /*
-    const double volume = mass / kWaterDensity;
+    const double volume = mass / Motion::kWaterDensity;
     const double r_P = PivotDist(volume);
     return r_P * (r_P + 2.0 * dr_P_dV_ * volume) + q_P_ * q_P_;
     */
-    const double volume = mass / kWaterDensity;
+    const double volume = mass / Motion::kWaterDensity;
     return r2_0_ + (2.0 * dr2_dV_ * volume) + (q_P_ * q_P_);
 }
 
@@ -299,7 +297,7 @@ namespace Libra2Model {
  *         m_cw = ρ_water·V
  */
 double CwMass(const double& volume) {
-    return kWaterDensity * volume;
+    return Motion::kWaterDensity * volume;
 }
 
 /**
@@ -428,7 +426,8 @@ std::optional<double> BalanceCwMoment(const double& arm_level_torque,
     if (std::abs(std::cos(angle)) < kMinCosForBalance) {
         return std::nullopt;
     }
-    return -(arm_level_torque + (arm_hang_torque * std::tan(angle))) / kGrav;
+    return -(arm_level_torque + (arm_hang_torque * std::tan(angle)))
+           / Motion::kGrav;
 }
 
 }  // namespace Libra2Model

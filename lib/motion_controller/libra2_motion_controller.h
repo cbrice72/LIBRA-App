@@ -87,14 +87,6 @@ class Libra2MotionController : public AbstractMotionController {
                                     const double& torque_comp_upper_bound,
                                     const double& torque_comp_slow_rate,
                                     const bool& debug_mode = false);
-    explicit Libra2MotionController(
-        const double& cw_pivot_dist, const double& cw_pivot_slope,
-        const double& cw_mean_sq_dist, const double& cw_mean_sq_dist_slope,
-        const double& cw_hang_offset, const double& cw_capacity,
-        const double& friction_coulomb, const double& friction_viscous,
-        const double& arm_inertia, const double& torque_comp_lower_bound,
-        const double& torque_comp_upper_bound,
-        const double& torque_comp_slow_rate, const bool& debug_mode = false);
 
     // --- Control Cycle ---
 
@@ -122,16 +114,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     // --- Arm Model ---
 
-    void SetArmModel(const double& arm_level_torque,
-                     const double& arm_hang_torque);
     bool ClearModel();
 
     [[nodiscard]] bool IsArmCalibrated() const;
-
-    [[nodiscard]] double GetArmLevelTorque() const;
-    [[nodiscard]] double GetArmHangTorque() const;
-    [[nodiscard]] double ComputeNetGravTorque(const double& angle,
-                                              const double& cw_mass) const;
 
     // --- Calibration ---
 
@@ -209,7 +194,10 @@ class Libra2MotionController : public AbstractMotionController {
         const double& cw_mass_tgt, const double& cw_mass) const;
     bool RunCwPrimary(const double& angle, const double& angle_tgt,
                       Motion::Libra2Command& command);
+    void HandOffToActuator();
 
+    [[nodiscard]] double ComputeNetGravTorque(const double& angle,
+                                              const double& cw_mass) const;
     [[nodiscard]] double ModelFeedforward(const double& angle,
                                           const double& ref_vel,
                                           const double& ref_acc,
@@ -261,13 +249,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     // Arm Model
 
-    double arm_level_torque_{0.0};  // τ_g1,0 at min. ETA extension (Nm)
-    double arm_hang_torque_{0.0};   // m_arm·h_1·g (Nm)
-    bool arm_calibrated_{false};
-
-    std::string arm_source_;               // see `ArmModel`
-    Motion::CwModelParams arm_cw_params_;  // reference CW model
-
+    std::optional<Motion::ArmModel> arm_model_;  // none = not calibrated
     std::optional<Motion::FrictionModel> friction_model_;
 
     // CW State (from WaterController)
@@ -278,8 +260,6 @@ class Libra2MotionController : public AbstractMotionController {
 
     // Dynamics (Eq. 15)
 
-    double inertia_{0.0};       // arm + CW (kg·m²)
-    double inertia_rate_{0.0};  // from CW flow (kg·m²/s)
     bool inertia_ff_en_{false};
 
     // Movement Mode & State
