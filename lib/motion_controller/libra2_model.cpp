@@ -177,7 +177,7 @@ double CwModel::Moment(const double& mass) const {
  * @note Sine-term moment of Eq. 12':
  *         m_cw·q_P
  *
- * @see Libra2Model::CwGravTorque
+ * @see CwModel::EffectiveMoment
  */
 double CwModel::HangMoment(const double& mass) const {
     return mass * q_P_;

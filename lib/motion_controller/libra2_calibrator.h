@@ -36,9 +36,9 @@ class VelAverager {
     double Add(const double& dt, const double& vel);
 
   private:
-    std::deque<std::pair<double, double>> history_;  // (dt, θ̇) pairs
+    std::deque<std::pair<double, double>> history_;  // (dt, θ') pairs
     double time_{0.0};                               // Σdt (s)
-    double sum_{0.0};                                // Σθ̇·dt (rad)
+    double sum_{0.0};                                // Σθ'·dt (rad)
 };
 
 /**
@@ -90,7 +90,7 @@ class Libra2Calibrator {
     struct PitchCycle {
         double dt{0.0};      // time since last cycle (s)
         double angle{0.0};   // actual angle, θ (rad)
-        double vel{0.0};     // actual velocity, θ̇ (rad/s)
+        double vel{0.0};     // actual velocity, θ' (rad/s)
         double torque{0.0};  // actual actuator torque, τ_actuator (Nm)
         bool trajectory_active{false};
         std::optional<double> cw_volume;  // V (L), if known
@@ -155,7 +155,7 @@ class Libra2Calibrator {
         bool trajectory_seen{false};  // whether the planned sweep has started
         double t_over_max_s{0.0};     // time over the |τ| limit (s)
 
-        VelAverager vel_avg;  // current sweep's θ̇, for the steady check
+        VelAverager vel_avg;  // current sweep's θ', for the steady check
 
         // Per-bin torque sums/counts for the current speed
         std::vector<double> up_sum;

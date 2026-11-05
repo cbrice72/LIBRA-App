@@ -27,7 +27,7 @@
 
 /**
  * @brief Model-based pitch control for LIBRA-II. Augments the HEBI API's
- *        trajectory planner with feedforward torque that cancels gravity,
+ *        trajectory planner with (1) feedforward torque that cancels gravity,
  *        friction, and inertia (Eq. 37), and (2) predictive counterweight
  *        adjustment based on target angle (Eqs. 38'-40a).
  */
@@ -157,7 +157,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     std::optional<double> cw_volume_;  // V (L)
     std::optional<double> cw_mass_;    // m_cw (kg) -- Eq. 28
-    double cw_flow_{0.0};              // V̇ (L/s)
+    double cw_flow_{0.0};              // V' (L/s)
 
     // Dynamics (Eq. 15)
 

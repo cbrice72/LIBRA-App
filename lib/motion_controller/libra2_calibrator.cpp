@@ -28,8 +28,8 @@
 // Model Calibration
 
 constexpr double kReachTolerance = 0.0175;  // "arrived at target", ~1 deg (rad)
-constexpr double kRestPosTolerance = 0.005;  // allowed drift in window (rad)
-constexpr double kRestVelTolerance = 0.005;  // allowed drift in window (rad/s)
+constexpr double kRestPosTolerance = 0.005;    // allowed drift in window (rad)
+constexpr double kRestVelTolerance = 0.005;    // ... and noise at rest (rad/s)
 constexpr double kRestVolumeTolerance = 0.01;  // allowed CW change in window (L)
 constexpr double kRestWindowTime = 3.0;        // averaging window (s)
 
@@ -58,7 +58,7 @@ constexpr double kMaxFrictionTorqueTime = 0.5;  // ... for this long (s)
 constexpr double kFrictionRampTorque = 4.0;      // inertia torque per ramp (Nm)
 constexpr double kFrictionMinRampDist = 0.0175;  // shortest ramp, ~1 deg (rad)
 constexpr double kFrictionSampleMargin = 0.0175;  // unsampled ends (rad)
-constexpr double kFrictionVelTolerance = 0.1;  // allowed |θ̇ - v| / v (rad/s)
+constexpr double kFrictionVelTolerance = 0.1;     // allowed |θ' - v| / v
 
 constexpr double kFrictionBinWidth = 0.0087;  // angle bin, ~0.5 deg (rad)
 constexpr int kFrictionMinBinSamples = 3;     // per bin and direction
@@ -131,8 +131,8 @@ bool IsFrictionStage(const Motion::CalibrationStatus& status) {
  * @note Returns the fit (intercept τ_c, slope b, and RMS of residuals; other
  *       fields empty), or none with fewer than two distinct speeds.
  *
- * @note Code-specific equation, based on Eq. 18 at constant speed (θ̈ = 0,
- *       İ = 0). Isolates the friction component by averaging the up/down
+ * @note Code-specific equation, based on Eq. 18 at constant speed (θ'' = 0,
+ *       I' = 0). Isolates the friction component by averaging the up/down
  *       sweeps, which should cancel gravitational torque:
  *         (τ_up - τ_down) / 2 = b·v + τ_c
  */
@@ -199,7 +199,7 @@ void VelAverager::Reset() {
  *        last `kVelAvgWindow`.
  *
  * @param dt Time since last cycle (s)
- * @param vel Actual velocity, θ̇ (rad/s)
+ * @param vel Actual velocity, θ' (rad/s)
  */
 double VelAverager::Add(const double& dt, const double& vel) {
     history_.emplace_back(dt, vel);
@@ -246,7 +246,7 @@ void RestSampler::RestartWindow() {
  *
  * @param dt Time since last cycle (s)
  * @param pos Actual angle, θ (rad)
- * @param vel Actual velocity, θ̇ (rad/s)
+ * @param vel Actual velocity, θ' (rad/s)
  * @param torque Actual actuator torque, τ_actuator (Nm)
  * @param trajectory_active Whether a trajectory is running
  * @param volume Latest CW volume (L), if known

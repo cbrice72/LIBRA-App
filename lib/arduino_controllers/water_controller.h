@@ -64,7 +64,7 @@ class WaterController : public GenericSerialDevice {
     struct Tank {
         Water::State state{Water::State::kStopped};  // last sent valve state
         double volume{0.0};                          // V (L)
-        double flow{0.0};                            // last reported V̇ (L/s)
+        double flow{0.0};                            // last reported V' (L/s)
         bool unreported{true};                       // force next report
         double fill_rate{Water::kFillRate};          // (L/s)
         double drain_rate{Water::kDrainRate};        // (L/s)

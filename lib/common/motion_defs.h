@@ -72,7 +72,7 @@ enum class CommandMode : uint8_t {
  */
 struct ActualState {
     std::vector<double> pos;     // θ (rad)
-    std::vector<double> vel;     // θ̇ (rad/s)
+    std::vector<double> vel;     // θ' (rad/s)
     std::vector<double> torque;  // τ_actuator, -τ_meas at rest (Nm)
 };
 
@@ -81,8 +81,8 @@ struct ActualState {
  *        the motion controller doesn't drive.
  */
 struct CommandedState {
-    std::vector<double> vel;  // θ̇_ref (rad/s)
-    std::vector<double> acc;  // θ̈_ref (rad/s²)
+    std::vector<double> vel;  // θ'_ref (rad/s)
+    std::vector<double> acc;  // θ''_ref (rad/s²)
 };
 
 /**

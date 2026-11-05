@@ -192,7 +192,7 @@ bool Libra2MotionController::IsMoving() const {
  * @brief Stores latest CW state (from WaterController).
  *
  * @param volume CW volume, V (L)
- * @param flow Net CW flow rate, V̇ (L/s); positive = filling
+ * @param flow Net CW flow rate, V' (L/s); positive = filling
  */
 void Libra2MotionController::SetCwState(const double& volume,
                                         const double& flow) {
@@ -720,8 +720,15 @@ Motion::CwCommand Libra2MotionController::PredictiveCwCommand(
         return Motion::CwCommand::kIdle;
     }
 
-    // TODO: if valve latency causes CW overshoot, stop early by around
-    //       latency·[V̇] ...
+    // TODO: if valve latency causes CW overshoot, use this instead
+    /*
+    // Valves close late, so this much water still flows after the command (kg)
+    const double overshoot_mass = kValveLatency * std::abs(cw_flow_)
+                                  * Motion::kWaterDensity;
+    if (std::abs(diff) <= overshoot_mass) {
+        return Motion::CwCommand::kIdle;
+    }
+    */
     return (diff > 0.0) ? Motion::CwCommand::kFill : Motion::CwCommand::kDrain;
 }
 
@@ -941,18 +948,19 @@ Motion::Libra2Command Libra2MotionController::Update(
  *        (Eq. 37).
  *
  * @param angle Actual angle, θ (rad)
- * @param ref_vel Reference velocity, θ̇_ref (rad/s)
- * @param ref_acc Reference acceleration, θ̈_ref (rad/s²)
+ * @param ref_vel Reference velocity, θ'_ref (rad/s)
+ * @param ref_acc Reference acceleration, θ''_ref (rad/s²)
  * @param model_ready Whether the arm model and CW mass are known; if not, the
  *                    gravity term is left out (PID loop and CW handle it)
  *
- * @note Friction and inertia terms always apply, so a move gets the effort to
- *       overcome friction even before the arm model is calibrated.
+ * @note Friction (and inertia, if enabled) terms always apply, so a move gets
+ *       the torque required to overcome friction even before the arm model is
+ *       calibrated.
  *
  * @note Result is not clamped.
  *
  * @note From Eq. 37:
- *         τ_actuator = I·θ̈_ref + (b + İ)·θ̇_ref + τ_c·sign(θ̇_ref)
+ *         τ_actuator = I·θ''_ref + (b + I')·θ'_ref + τ_c·sign(θ'_ref)
  *                      - τ_ext,g(θ)
  */
 double Libra2MotionController::ModelFeedforward(const double& angle,
@@ -962,7 +970,7 @@ double Libra2MotionController::ModelFeedforward(const double& angle,
     const double torque_ext_g = model_ready
                                     ? ComputeNetGravTorque(angle, *cw_mass_)
                                     : 0.0;
-    // Eq. 15: inertia and its rate, with the CW's share (ṁ_cw = ρ_water·V̇);
+    // Eq. 15: inertia and its rate, with the CW's share (m'_cw = ρ_water·V');
     // CW terms are code-specific (see `CwModel::Inertia()`/`InertiaSlope()`)
     double inertia = 0.0;
     double inertia_rate = 0.0;
