@@ -1172,8 +1172,18 @@ double Libra2MotionController::SampleToArmTorque(
                                  * std::cos(sample.angle))
                                 + (cw_model_.HangMoment(cw_mass)
                                    * std::sin(sample.angle)));
+    const double arm_torque = -sample.torque - cw_torque;
 
-    return -sample.torque - cw_torque;
+    // Logging a sample's terms could help with troubleshooting where a
+    // calibration error comes from
+    logger_->Debug("Calibration sample: θ="
+                   + Motion::FormatRadAsDeg(sample.angle)
+                   + " deg, τ_actuator=" + Motion::FormatNum(sample.torque)
+                   + " Nm, V=" + Motion::FormatNum(sample.volume)
+                   + " L, τ_g2=" + Motion::FormatNum(cw_torque)
+                   + " Nm, τ_g1=" + Motion::FormatNum(arm_torque) + " Nm");
+
+    return arm_torque;
 }
 
 /**
@@ -1286,11 +1296,13 @@ void Libra2MotionController::FinishLevelCalibration(
  */
 void Libra2MotionController::FinishTwoAngleCalibration(
     const Motion::RestSample& sample_a, const Motion::RestSample& sample_b) {
+    // Separate statements so samples log in order (a, b)
+    const double arm_torque_a = SampleToArmTorque(sample_a);
+    const double arm_torque_b = SampleToArmTorque(sample_b);
+
     // Eq. 35 with measured angles
-    auto arm = Libra2Model::SolveTwoAngle(SampleToArmTorque(sample_a),
-                                          sample_a.angle,
-                                          SampleToArmTorque(sample_b),
-                                          sample_b.angle);
+    auto arm = Libra2Model::SolveTwoAngle(arm_torque_a, sample_a.angle,
+                                          arm_torque_b, sample_b.angle);
     if (!arm) {
         calibrator_.FinishCalibration(false,
                                       "measured angles too close together");
