@@ -3,7 +3,7 @@
   <control_strategy>4</control_strategy>
   <position>
     <kp>400</kp>
-    <ki>20</ki>
+    <ki>10</ki>
     <kd>5</kd>
     <feed_forward>0</feed_forward>
     <dead_zone>0</dead_zone>
