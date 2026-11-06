@@ -277,8 +277,6 @@ void CameraManager::CheckRos2Connectivity() {
         logger_->Warn("Lost connection to publishers on " + kCameraRgbTopic);
     } else if (!was_connected && ros2_connected_) {  // no -> yes
         logger_->Info("Connected to publishers on " + kCameraRgbTopic);
-    } else if (!was_connected && !ros2_connected_) {  // no
-        logger_->Debug("Not detecting publishers on " + kCameraRgbTopic);
     }
 }
 
@@ -397,6 +395,7 @@ void CameraManager::Start() {
         connect(connectivity_timer_, &QTimer::timeout,  // check publishers
                 this, [this]() { CheckRos2Connectivity(); });
         connectivity_timer_->start(kRos2ConnectivityIntervalMs);
+        logger_->Debug("Waiting for publishers on " + kCameraRgbTopic);
 #else
         logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
                        "shouldn't be able to get here!");

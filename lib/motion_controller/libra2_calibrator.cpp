@@ -788,18 +788,12 @@ void Libra2Calibrator::LogCalibrationProgress(const PitchCycle& cycle,
     }
     t_progress_log_s_ = 0.0;
 
-    logger_->Debug(calibration_progress_ + "\n  still running: "
-                   + std::to_string(static_cast<int>(t_stage_s_)) + " of "
-                   + std::to_string(static_cast<int>(timeout))
-                   + " s before timeout"
-                     "\n  angle:         "
-                   + Motion::FormatRadAsDeg(cycle.angle)
-                   + " deg"
-                     "\n  speed:         "
-                   + Motion::FormatRadAsDeg(cycle.vel)
-                   + " deg/s"
-                     "\n  trajectory:    "
-                   + (cycle.trajectory_active ? "running" : "finished"));
+    logger_->Debug(calibration_progress_ + " (still running at "
+                   + std::to_string(static_cast<int>(t_stage_s_)) + "/"
+                   + std::to_string(static_cast<int>(timeout)) + " s; angle="
+                   + Motion::FormatRadAsDeg(cycle.angle) + " deg, speed="
+                   + Motion::FormatRadAsDeg(cycle.vel) + " deg/s, trajectory "
+                   + (cycle.trajectory_active ? "running" : "finished") + ")");
 }
 
 /**
