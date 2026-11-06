@@ -63,7 +63,7 @@ constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
  */
 enum class CommandMode : uint8_t {
     kPositionEnhanced,  // position/velocity command + torque feedforward
-    kTorqueOnly         // torque feedforward only
+    kFree               // no command (all NaN), so actuator output is off
 };
 
 /**

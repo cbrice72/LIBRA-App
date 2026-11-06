@@ -770,7 +770,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
         const auto joint = JointFromActuator(enum_names_[i]);
         arm_free = arm_free
                    || (joint != Joint::Name::kUndefined
-                       && cmd.mode[joint] == Motion::CommandMode::kTorqueOnly);
+                       && cmd.mode[joint] == Motion::CommandMode::kFree);
     }
 
     // Determine base trajectory based on mode
@@ -828,7 +828,7 @@ bool HebiThread::ExecuteMotionController(std::chrono::duration<double> dt,
             continue;
         }
 
-        if (cmd.mode[joint] == Motion::CommandMode::kTorqueOnly) {
+        if (cmd.mode[joint] == Motion::CommandMode::kFree) {
             // CW Primary: free the arm so the CW can move it
             latest_cmd_pos_(i) = kNone;
             latest_cmd_vel_(i) = kNone;

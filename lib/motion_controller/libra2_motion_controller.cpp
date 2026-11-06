@@ -780,7 +780,7 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
     }
 
     // Arm spins freely; CW does the moving
-    command.mode[kPitchIdx] = Motion::CommandMode::kTorqueOnly;
+    command.mode[kPitchIdx] = Motion::CommandMode::kFree;
     command.cw_command = cw;
     command.playback_rate = 1.0;
     movement_en_ = true;
