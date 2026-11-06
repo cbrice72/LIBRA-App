@@ -221,8 +221,8 @@ void Libra2MotionController::EnableTorqueComp(const bool& enabled) {
         movement_en_ = true;  // "manual" mode: movement is always allowed
     }
 
-    logger_->Info("Automatic torque compensation (ATC) "
-                  + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Debug(std::string("Torque-based movement limits and reactive CW ")
+                   + (enabled ? "enabled" : "disabled"));
 }
 
 /**
@@ -766,17 +766,10 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
                                         volume_reached && angle_reached ? "+"
                                                                         : "")
                                     + std::string(angle_reached ? "angle" : "");
-        logger_->Info("CW handing control to actuator (" + reached
-                      + " reached)");
-        logger_->Debug(
-            "CW Primary hand-off (" + reached + " reached):\n  actual angle="
-            + Motion::FormatNum(angle) + " rad, target angle="
-            + Motion::FormatNum(angle_tgt) + " rad, angle error="
-            + Motion::FormatNum(angle - angle_tgt) + " rad\n  actual volume="
-            + Motion::FormatNum(*cw_mass_ / Motion::kWaterDensity)
-            + " L, target volume="
-            + Motion::FormatNum(mass_tgt / Motion::kWaterDensity)
-            + " L, volume error="
+        logger_->Info(
+            "CW handing control to actuator (" + reached
+            + " reached): angle error=" + Motion::FormatNum(angle - angle_tgt)
+            + " rad, volume error="
             + Motion::FormatNum((*cw_mass_ - mass_tgt) / Motion::kWaterDensity)
             + " L");
 
@@ -1207,8 +1200,8 @@ bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
     const std::string values = Motion::FormatNum(empty) + " Nm empty, "
                                + Motion::FormatNum(full) + " Nm full";
     if (std::max(empty, full) < 0.0) {
-        logger_->Info("Arm model is stable at all CW volumes");
-        logger_->Debug("Stability (g*S < 0): " + values);
+        logger_->Info("Arm model is stable at all CW volumes (g*S < 0): "
+                      + values);
         return true;
     }
 

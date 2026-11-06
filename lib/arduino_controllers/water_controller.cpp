@@ -328,8 +328,8 @@ void WaterController::EnableAutoTorqueComp(const bool& enabled) {
     ClearCommand();  // reset the previous command when switching modes
     auto_comp_en_ = enabled;
 
-    logger_->Info("Automatic torque compensation "
-                  + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Debug(std::string("Torque-based fill/drain ")
+                   + (enabled ? "enabled" : "disabled; manual control only"));
 }
 
 /**

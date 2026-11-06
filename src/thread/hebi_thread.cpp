@@ -1568,8 +1568,8 @@ void HebiThread::EnableTorqueControl(const bool& enabled) {
         playback_rate_ = 1.0;  // full speed
     }
 
-    logger_->Info("Automatic torque compensation "
-                  + std::string(enabled ? "enabled" : "disabled"));
+    logger_->Debug(std::string("Torque-based movement limits ")
+                   + (enabled ? "enabled" : "disabled"));
 #endif
 }
 

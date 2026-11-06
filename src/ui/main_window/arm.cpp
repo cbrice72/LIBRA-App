@@ -182,8 +182,8 @@ void MainWindow::on_pb_arm_start_clicked() {
  *      on_pb_water_fill_B_clicked on_pb_water_drain_B_clicked
  */
 void MainWindow::on_pb_atc_enable_toggled(bool checked) {
-    logger_->Debug(std::string(checked ? "Enabling" : "Disabling")
-                   + " automatic torque compensation");
+    logger_->Info(std::string(checked ? "Enabling" : "Disabling")
+                  + " automatic torque compensation (ATC)");
 
     emit EnableAutoTorqueComp(checked);
 

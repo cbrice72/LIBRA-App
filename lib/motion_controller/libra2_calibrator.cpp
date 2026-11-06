@@ -326,9 +326,6 @@ bool Libra2Calibrator::StartLevelCalibration() {
     }
 
     logger_->Info("Starting level calibration");
-    logger_->Debug(
-        "Level calibration: torque will be averaged when system is at rest for "
-        + Motion::FormatNum(kRestWindowTime) + " s");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmSamplingLevel);
 
     return true;
@@ -380,8 +377,6 @@ bool Libra2Calibrator::StartTwoAngleCalibration(const double& angle_a,
     logger_->Info("Starting two-angle calibration: a="
                   + Motion::FormatRadAsDeg(angle_a)
                   + " deg, b=" + Motion::FormatRadAsDeg(angle_b) + " deg");
-    logger_->Debug("Two-angle calibration: (1) move to a, (2) average at "
-                   "rest, (3) move to b, (4) average at rest");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmMovingToA);
 
     return true;
@@ -487,20 +482,11 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
     logger_->Info("Starting friction calibration: " + Motion::FormatRadAsDeg(lo)
                   + " to " + Motion::FormatRadAsDeg(hi) + " deg at " + vels_deg
                   + " deg/s");
-    logger_->Debug(
-        "Friction calibration ("
-        + std::to_string(1 + (2 * kFrictionVelFractions.size()))
-        + " steps):"
-          "\n  sampled:  "
-        + Motion::FormatRadAsDeg(lo + margin) + " to "
-        + Motion::FormatRadAsDeg(hi - margin)
-        + " deg"
-          "\n  steps:    move to start, followed by up/down sweep at each speed"
-          "\n  CW:       stays idle at "
-        + Motion::FormatNum(cw_volume)
-        + " L"
-          "\n  aborts:   above "
-        + Motion::FormatNum(kMaxFrictionTorque) + " Nm");
+    logger_->Debug("Friction calibration samples "
+                   + Motion::FormatRadAsDeg(lo + margin) + " to "
+                   + Motion::FormatRadAsDeg(hi - margin) + " deg, CW idle at "
+                   + Motion::FormatNum(cw_volume) + " L, aborts above "
+                   + Motion::FormatNum(kMaxFrictionTorque) + " Nm");
     BeginCalibrationStage(Motion::CalibrationStatus::kFrictionMovingToStart);
 
     return true;
