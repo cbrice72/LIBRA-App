@@ -926,7 +926,7 @@ Motion::Libra2Command Libra2MotionController::Update(
         command.cw_command = atc.cw_command;  // reactive (LIBRA-I style)
 
         if (calibrating) {
-            // Feedforward off and CW reactive while calibrating
+            // CW reactive while calibrating
             calibrator_.Update(cycle);
         } else {
             // Predictive CW replaces reactive until it reaches its target
@@ -947,11 +947,12 @@ Motion::Libra2Command Libra2MotionController::Update(
             } else if (predictive_cw_mass_ && cw_mass_) {
                 LogPredictiveCwError(atc.cw_command, angle, actual_torque);
             }
-
-            command.ff_torque[kPitchIdx] = ModelFeedforward(angle, ref_vel,
-                                                            ref_acc,
-                                                            model_ready);
         }
+
+        // Also on while calibrating, since toggling it jolts the arm;
+        // calibration samples are unaffected (only total torque is measured)
+        command.ff_torque[kPitchIdx] = ModelFeedforward(angle, ref_vel, ref_acc,
+                                                        model_ready);
     }
 
     // Apply calibration results
