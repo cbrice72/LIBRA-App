@@ -72,7 +72,7 @@ class EposThread : public AbstractActuatorThread
 
     // --- Helper Functions ---
 
-    QString GetStatus();
+    QString GetTelemetry();
 
     // --- Data Members ---
 

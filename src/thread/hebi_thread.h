@@ -119,7 +119,6 @@ class HebiThread : public AbstractActuatorThread
 #elif LIBRA_VERSION == 2
     void MotionModeChanged(const bool& cw_primary);
     void FreeModeChanged(const bool& enabled);
-    void MovementStateChanged(const bool& moving);
 
     void ArmModelChanged(const bool& calibrated);
     void CalibrationProgressChanged(const QString& text, const bool& running);
@@ -158,7 +157,7 @@ class HebiThread : public AbstractActuatorThread
 #endif
 
     void SendFeedback();
-    [[nodiscard]] QString GetStatus() const;
+    [[nodiscard]] QString GetTelemetry() const;
 #ifdef BUILD_WITH_ROS2
     void PublishState();
 #endif
@@ -183,14 +182,14 @@ class HebiThread : public AbstractActuatorThread
 
     bool logging_active_{false};
 
-    // Improve performance of GetStatus() by allocating these vectors here
+    // Improve performance of GetTelemetry() by allocating these vectors here
     // (the `mutable` keyword allows a const function to modify class members)
-    mutable std::vector<double> status_a_vel_;
-    mutable std::vector<double> status_defl_;
-    mutable std::vector<double> status_defl_vel_;
-    mutable std::vector<double> status_volt_;
-    mutable std::vector<double> status_curr_;
-    mutable std::vector<double> status_temp_;
+    mutable std::vector<double> a_vel_;     // actual velocity (deg/s)
+    mutable std::vector<double> defl_;      // deflection (deg)
+    mutable std::vector<double> defl_vel_;  // deflection velocity (deg/s)
+    mutable std::vector<double> volt_;      // voltage (V)
+    mutable std::vector<double> curr_;      // motor current (A)
+    mutable std::vector<double> temp_;      // motor winding temperature (C)
 
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::mutex trajectory_mutex_;
@@ -219,7 +218,6 @@ class HebiThread : public AbstractActuatorThread
     Eigen::VectorXd latest_cmd_vel_;  // rad/s
 
     // Report-only state, so the UI hears about each change once
-    std::atomic<bool> moving_{false};
     std::atomic<bool> calibration_running_{false};
     std::atomic<bool> arm_calibrated_{false};
     std::string last_progress_;  // last calibration step sent to the UI

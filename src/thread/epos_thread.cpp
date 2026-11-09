@@ -156,11 +156,11 @@ EposThread::~EposThread() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Minor status info for the connected actuator, as comma-delimited
+ * @brief Telemetry for the connected actuator, as display-ready text
  *        messages (target/actual position and actual torque are sent
  *        separately as signals).
  */
-QString EposThread::GetStatus() {
+QString EposThread::GetTelemetry() {
     if (handle_ == nullptr) {
         return {QString("Not Connected")};
     }
@@ -257,7 +257,7 @@ void EposThread::run() {
 
     // Initialize thread variables for efficiency
     uint err_code = 0;
-    QString status;
+    QString telemetry;
 
     long t_pos = 0;
     int a_pos = 0;
@@ -268,7 +268,7 @@ void EposThread::run() {
         // (which causes the app to crash), acquire the mutex lock on handle_
         std::unique_lock<std::mutex> lock(handle_mutex_);
         if (handle_ == nullptr) {
-            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            emit ReportTelemetry(GetTelemetry(), type_);  // "Not Connected"
             lock.unlock();
             QThread::msleep(loop_period_ms_);
             continue;
@@ -297,6 +297,22 @@ void EposThread::run() {
 
             last_target_inc_ = target_inc_;  // mark the trajectory as "complete"
         }
+
+        // Report movement start/stop
+        int target_reached = kEposTrue;
+        if (VCS_GetMovementState(handle_, kNodeID, &target_reached, &err_code)
+            == 0) {
+            emit ErrorThrown(
+                "EPOS - Failed to retrieve movement state!\n"
+                + util::GetFormattedEposErrTxt("VCS_GetMovementState", err_code,
+                                               kNodeID));
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(loop_period_ms_);
+            continue;
+        }
+        ReportMovement(move_requested_.exchange(false)
+                       || target_reached == kEposFalse);
 
         // Report important statuses individually
         if (VCS_GetTargetPosition(handle_, kNodeID, &t_pos, &err_code) == 0) {
@@ -328,15 +344,15 @@ void EposThread::run() {
                             Actuator::Feedback::kActualPos);
         // clang-format on
 
-        // Report minor statuses all together
-        status = GetStatus();
-        if (status == QStringLiteral("Error!")) {
+        // Report miscellaneous statuses in one batch
+        telemetry = GetTelemetry();
+        if (telemetry == QStringLiteral("Error!")) {
             lock.unlock();
             Disconnect();
             QThread::msleep(loop_period_ms_);
             continue;
         }
-        emit ReportStatus(status, type_);
+        emit ReportTelemetry(telemetry, type_);
 
         // Release the mutex lock
         lock.unlock();
@@ -518,6 +534,7 @@ void EposThread::Disconnect() {
 
     // Void our class handle (even on error, to avoid a dangling pointer)
     handle_ = nullptr;
+    ReportMovement(false);  // control loop no longer reports
     emit Connected(false);
 
     if (!closed) {
@@ -554,6 +571,7 @@ void EposThread::SetTarget(const std::vector<double>& target_deg) {
 
     // Convert and save
     target_inc_ = target_deg.at(0) * kDegToInc;
+    move_requested_ = true;
 
     logger_->Debug("Set target(s) to " + std::to_string(target_inc_) + " inc");
 }
@@ -570,6 +588,8 @@ void EposThread::Stop() {
     //       popup would delay the stop
     QString err;
     uint err_code = 0;
+
+    move_requested_ = false;
 
     // Reset class target variables to current position
     if (VCS_GetPositionIs(handle_, kNodeID, &target_inc_, &err_code) == 0) {

@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <atomic>
 #include <string>
 #include <unordered_map>
 
@@ -44,6 +45,15 @@ class AbstractActuatorThread : public QThread {
 
     ~AbstractActuatorThread() override = default;
 
+    // --- Getters & Setters ---
+
+    /**
+     * @brief Gets the actuator(s) last reported active state.
+     */
+    [[nodiscard]] bool IsMoving() const {
+        return moving_;
+    }
+
   public slots:
 
     void SetDebugMode(const bool& enabled) {
@@ -66,14 +76,28 @@ class AbstractActuatorThread : public QThread {
 
     void ReportFeedback(const std::unordered_map<Joint::Name, double>& feedbacks,
                         const Actuator::Feedback& feedback_type);
-    void ReportStatus(const QString& status, const Actuator::Type& type);
+    void ReportTelemetry(const QString& telemetry, const Actuator::Type& type);
+    void MovementStateChanged(const bool& moving);
 
     void ErrorThrown(const QString& err);
 
   protected:
     // --- Helper Functions ---
 
-    // (none)
+    /**
+     * @brief Tells listeners when the actuator(s) start or stop moving.
+     *
+     * @param moving Whether a move is running/was requested
+     *
+     * @note This should only be called from `run()` to avoid sending messages
+     *       out of order. Only if `run()` isn't actively reporting anything
+     *       (e.g., after `Disconnect()`) should this be called from outside.
+     */
+    void ReportMovement(const bool& moving) {
+        if (moving_.exchange(moving) != moving) {
+            emit MovementStateChanged(moving);
+        }
+    }
 
     // --- Data Members ---
 
@@ -81,4 +105,7 @@ class AbstractActuatorThread : public QThread {
     bool debug_mode_{false};
 
     const Actuator::Type type_;
+
+    std::atomic<bool> move_requested_{false};
+    std::atomic<bool> moving_{false};  // last reported movement state
 };

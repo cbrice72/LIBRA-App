@@ -87,12 +87,13 @@ class MainWindow : public QMainWindow {
     void HandleActuatorFeedback(
         const std::unordered_map<Joint::Name, double>& feedbacks,
         const Actuator::Feedback& feedback_type);
-    void HandleActuatorStatus(const QString& status, const Actuator::Type& type);
+    void HandleActuatorTelemetry(const QString& telemetry,
+                                 const Actuator::Type& type);
+    void HandleMovementStateChanged();
 
 #if LIBRA_VERSION == 2
     void HandleMotionModeChanged(const bool& cw_primary);
     void HandleFreeModeChanged(const bool& enabled);
-    void HandleMovementStateChanged(const bool& moving);
 
     void HandleArmModelChanged(const bool& calibrated);
     void HandleCalibrationProgress(const QString& text, const bool& running);
@@ -289,9 +290,7 @@ class MainWindow : public QMainWindow {
     std::vector<double> last_command_;  // actuator-space target positions
 
     bool ignore_water_level_{false};
-#if LIBRA_VERSION == 2
-    bool arm_moving_{false};  // trajectory or calibration running
-#endif
+    bool arm_moving_{false};  // any actuator moving
 
     // Device Managers
 

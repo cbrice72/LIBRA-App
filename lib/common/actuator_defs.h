@@ -46,7 +46,7 @@ constexpr int kJointCountEpos = 0;
 /**
  * @brief Actuator implementations.
  *
- * @see AbstractActuatorThread MainWindow::HandleActuatorStatus
+ * @see AbstractActuatorThread MainWindow::HandleActuatorTelemetry
  */
 enum class Type : uint8_t {
     kHebi = 0,  // HEBI
@@ -82,9 +82,9 @@ enum Name : uint8_t {
  * @brief Primary actuator feedback types.
  *
  * @note Secondary feedback should go in each actuator implementation's
- *       `ReportStatus()` override.
+ *       `ReportTelemetry()` signal.
  *
- * @see AbstractActuatorThread::ReportStatus
+ * @see AbstractActuatorThread::ReportTelemetry
  */
 enum class Feedback : uint8_t {
     kCommandPos = 0,

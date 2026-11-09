@@ -232,7 +232,7 @@ void MainWindow::ConfigureUi() {
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
 
-    RemoveUiElement(ui_->l_epos_status);
+    RemoveUiElement(ui_->l_epos_telemetry);
 #endif
 
     // Slots
@@ -653,16 +653,16 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleHebiConnChanged);
     connect(hebi_thread_, &HebiThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
-    connect(hebi_thread_, &HebiThread::ReportStatus,  // get minor statuses
-            this, &MainWindow::HandleActuatorStatus);
+    connect(hebi_thread_, &HebiThread::ReportTelemetry,  // get telemetry
+            this, &MainWindow::HandleActuatorTelemetry);
+    connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
+            this, &MainWindow::HandleMovementStateChanged);
 
 #if LIBRA_VERSION == 2
     connect(hebi_thread_, &HebiThread::MotionModeChanged,  // sync mode toggle
             this, &MainWindow::HandleMotionModeChanged);
     connect(hebi_thread_, &HebiThread::FreeModeChanged,  // sync free toggle
             this, &MainWindow::HandleFreeModeChanged);
-    connect(hebi_thread_, &HebiThread::MovementStateChanged,  // lock mode UI
-            this, &MainWindow::HandleMovementStateChanged);
     connect(hebi_thread_, &HebiThread::ArmModelChanged,  // calibrated
             this, &MainWindow::HandleArmModelChanged);
     connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
@@ -710,8 +710,10 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleEposConnChanged);
     connect(epos_thread_, &EposThread::ReportFeedback,  // get feedback
             this, &MainWindow::HandleActuatorFeedback);
-    connect(epos_thread_, &EposThread::ReportStatus,  // get minor statuses
-            this, &MainWindow::HandleActuatorStatus);
+    connect(epos_thread_, &EposThread::ReportTelemetry,  // get telemetry
+            this, &MainWindow::HandleActuatorTelemetry);
+    connect(epos_thread_, &EposThread::MovementStateChanged,  // moving/idle
+            this, &MainWindow::HandleMovementStateChanged);
 
     // Thread cleanup
     connect(epos_thread_, &EposThread::finished,      // when thread exits,
@@ -992,7 +994,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
             HandleArmModelChanged(motion_controller_->IsArmCalibrated());
         }
         if (ui_->l_motion_state_val->text() == "...") {
-            HandleMovementStateChanged(false);
+            HandleMovementStateChanged();
         }
     }
 #endif
@@ -1063,28 +1065,46 @@ void MainWindow::HandleActuatorFeedback(
 }
 
 /**
- * @brief Prints miscellaneous actuator information at the bottom of the UI.
+ * @brief Shows actuator telemetry at the bottom of the UI.
  *
- * @param status Newline-delimited status info
+ * @param telemetry Newline-delimited misc. status info
  * @param type Actuator type, for updating the matching UI element
  */
-void MainWindow::HandleActuatorStatus(const QString& status,
-                                      const Actuator::Type& type) {
+void MainWindow::HandleActuatorTelemetry(const QString& telemetry,
+                                         const Actuator::Type& type) {
     switch (type) {
         case Actuator::Type::kHebi:
-            ui_->l_hebi_status->setText(status);
+            ui_->l_hebi_telemetry->setText(telemetry);
             break;
 #if LIBRA_VERSION == 2
         case Actuator::Type::kEpos:
-            ui_->l_epos_status->setText(status);
+            ui_->l_epos_telemetry->setText(telemetry);
             break;
 #endif
         default:
             // Shouldn't be able to get here
-            logger_->Error("Received status from unknown actuator type: "
+            logger_->Error("Received telemetry from unknown actuator type: "
                            + TypeEnumToString(type) + " ("
                            + std::to_string(static_cast<int>(type)) + ")");
     }
+}
+
+/**
+ * @brief Tracks whether any actuator is moving and locks controls that
+ *        shouldn't change mid-move.
+ */
+void MainWindow::HandleMovementStateChanged() {
+    arm_moving_ = hebi_thread_->IsMoving();
+#if LIBRA_VERSION == 2
+    arm_moving_ |= epos_thread_->IsMoving();
+
+    // UI widgets
+    ui_->l_motion_state_val->setText(arm_moving_ ? "Moving" : "Idle");
+    ui_->l_motion_state_val->setStyleSheet(
+        QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
+
+    UpdateMotionControls();
+#endif
 }
 
 #if LIBRA_VERSION == 2
@@ -1114,20 +1134,6 @@ void MainWindow::HandleFreeModeChanged(const bool& enabled) {
     ui_->pb_free_mode->setChecked(enabled);
     ui_->pb_free_mode->setStyleSheet(
         enabled ? QString("color: %1;").arg(Color::kRed) : QString());
-
-    UpdateMotionControls();
-}
-
-/**
- * @brief Locks mode switching and calibration starts while the arm moves.
- *
- * @param moving true while a trajectory or calibration is running
- */
-void MainWindow::HandleMovementStateChanged(const bool& moving) {
-    arm_moving_ = moving;
-    ui_->l_motion_state_val->setText(moving ? "Moving" : "Idle");
-    ui_->l_motion_state_val->setStyleSheet(
-        QString("color: %1;").arg(moving ? Color::kOrange : Color::kGreen));
 
     UpdateMotionControls();
 }

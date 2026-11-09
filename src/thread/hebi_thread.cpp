@@ -283,12 +283,12 @@ HebiThread::HebiThread(QObject* parent,
     }
 
     // Resize vectors to match number of actuators
-    status_a_vel_.resize(n_actuators_);
-    status_defl_.resize(n_actuators_);
-    status_defl_vel_.resize(n_actuators_);
-    status_volt_.resize(n_actuators_);
-    status_curr_.resize(n_actuators_);
-    status_temp_.resize(n_actuators_);
+    a_vel_.resize(n_actuators_);
+    defl_.resize(n_actuators_);
+    defl_vel_.resize(n_actuators_);
+    volt_.resize(n_actuators_);
+    curr_.resize(n_actuators_);
+    temp_.resize(n_actuators_);
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
@@ -527,7 +527,13 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
             logger_->Info("Trajectory complete");
         }
     }
+
+    // NOTE: An ATC pause still counts as moving, since the trajectory isn't done
+    const bool moving = move_requested_.exchange(false)
+                        || (trajectory_ != nullptr);
     lock.unlock();
+
+    ReportMovement(moving);
 
     // Send movement command
     return group_->sendCommand(*command_);
@@ -639,11 +645,15 @@ void HebiThread::ReportMotionStatus() {
         emit ArmModelChanged(calibrated);
     }
 
-    const bool moving = calibration_running_ || motion_controller_->IsMoving();
-    if (moving != moving_) {
-        moving_ = moving;
-        emit MovementStateChanged(moving);
+    // Whether the arm is in motion (trajectory, calibration, or CW)
+    bool trajectory_active = false;
+    {
+        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        trajectory_active = (trajectory_ != nullptr);
     }
+
+    ReportMovement(move_requested_.exchange(false) || calibration_running_
+                   || motion_controller_->IsMoving() || trajectory_active);
 }
 
 /**
@@ -999,7 +1009,7 @@ void HebiThread::SendFeedback() {
                         Actuator::Feedback::kActualTorque);
 
     // Report miscellaneous statuses in one batch
-    emit ReportStatus(GetStatus(), type_);
+    emit ReportTelemetry(GetTelemetry(), type_);
 
 #ifdef BUILD_WITH_ROS2
     // Make actuator state info available to other ROS2 nodes
@@ -1008,21 +1018,20 @@ void HebiThread::SendFeedback() {
 }
 
 /**
- * @brief Minor status info for all connected actuators, as comma-delimited
+ * @brief Telemetry for all connected actuators, as display-ready text
  *        messages (target/actual position and actual torque are sent
  *        separately as signals).
  *
  * @note See the HEBI C++ API page for the full list of available feedback:
  *       https://files.hebi.us/docs/cpp/cpp-3.11.1/classhebi_1_1GroupFeedback.html
  */
-QString HebiThread::GetStatus() const {
+QString HebiThread::GetTelemetry() const {
     if (group_ == nullptr) {
         return {"Not Connected"};
     }
 
     std::ostringstream ss;
 
-    // Get references to minor status info vectors (improves readability)
     const auto& vel = feedback_->getVelocity();
     const auto& defl = feedback_->getDeflection();
     const auto& defl_vel = feedback_->getDeflectionVelocity();
@@ -1033,12 +1042,12 @@ QString HebiThread::GetStatus() const {
 
     // Convert data, if necessary
     for (int i = 0; i < n_actuators_; ++i) {
-        status_a_vel_[i] = vel[i] * kRadToDeg;
-        status_defl_[i] = defl[i] * kRadToDeg;
-        status_defl_vel_[i] = defl_vel[i] * kRadToDeg;
-        status_volt_[i] = volt[i];
-        status_curr_[i] = curr[i];
-        status_temp_[i] = temp[i];
+        a_vel_[i] = vel[i] * kRadToDeg;
+        defl_[i] = defl[i] * kRadToDeg;
+        defl_vel_[i] = defl_vel[i] * kRadToDeg;
+        volt_[i] = volt[i];
+        curr_[i] = curr[i];
+        temp_[i] = temp[i];
     }
 
     // Format header row
@@ -1049,12 +1058,12 @@ QString HebiThread::GetStatus() const {
     ss << "\n";
 
     // Format information rows
-    AppendRow(ss, "Actual Velocity", status_a_vel_, "deg/s");
-    AppendRow(ss, "Deflection", status_defl_, "deg");
-    AppendRow(ss, "Deflection Velocity", status_defl_vel_, "deg/s");
-    AppendRow(ss, "Voltage", status_volt_, "V");
-    AppendRow(ss, "Current", status_curr_, "A");
-    AppendRow(ss, "Temperature", status_temp_, "C");
+    AppendRow(ss, "Actual Velocity", a_vel_, "deg/s");
+    AppendRow(ss, "Deflection", defl_, "deg");
+    AppendRow(ss, "Deflection Velocity", defl_vel_, "deg/s");
+    AppendRow(ss, "Voltage", volt_, "V");
+    AppendRow(ss, "Current", curr_, "A");
+    AppendRow(ss, "Temperature", temp_, "C");
 
     return QString::fromStdString(ss.str());
 }
@@ -1152,7 +1161,7 @@ void HebiThread::run() {
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
         if (group_ == nullptr) {
-            emit ReportStatus(GetStatus(), type_);  // "Not Connected"
+            emit ReportTelemetry(GetTelemetry(), type_);  // "Not Connected"
             // Keep the first `dt` after `Connect()` small
             last_loop_time = std::chrono::steady_clock::now();
             QThread::msleep(loop_period_ms_);
@@ -1321,6 +1330,8 @@ void HebiThread::Disconnect() {
         group_.reset();
         command_->clear();
 
+        ReportMovement(false);  // control loop inactive
+
         logger_->Info("Disconnected from actuator(s)");
         emit Connected(false);
     }
@@ -1382,6 +1393,8 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
     motion_controller_->SetTarget(target_joint);
 #endif
+
+    move_requested_ = true;
 }
 
 /**
@@ -1393,6 +1406,7 @@ void HebiThread::Stop() {
     }
 
     // End trajectory following; the arm holds its last commanded pose
+    move_requested_ = false;
     {
         const std::lock_guard<std::mutex> lock(trajectory_mutex_);
         trajectory_.reset();

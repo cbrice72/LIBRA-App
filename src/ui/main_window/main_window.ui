@@ -72,7 +72,7 @@
             <number>4</number>
            </property>
            <item>
-            <widget class="QLabel" name="l_epos_status">
+            <widget class="QLabel" name="l_epos_telemetry">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
                <horstretch>0</horstretch>
@@ -99,7 +99,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLabel" name="l_hebi_status">
+            <widget class="QLabel" name="l_hebi_telemetry">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
                <horstretch>0</horstretch>
