@@ -140,6 +140,20 @@ MainWindow::MainWindow(QWidget* parent)
     ui_->l_motion_status_val->setText(kIdleText);
 #endif
 
+    // Apply startup defaults (set in the .ui)
+    ui_->dw_telemetry->setVisible(ui_->a_show_telemetry->isChecked());
+    ui_->l_water_ignore_level->setVisible(
+        ui_->a_reactive_cw_ignore_water_level->isChecked());
+
+#if LIBRA_VERSION == 1
+    manip_controller_->EnablePitchCorrection(
+        ui_->a_manip_enable_auto_correction->isChecked());
+#elif LIBRA_VERSION == 2
+    motion_controller_->EnableInertiaFeedforward(
+        ui_->a_motion_inertia_ff->isChecked());
+    emit EnableModelLogging(ui_->a_motion_model_logging->isChecked());
+#endif
+
     // Component auto-connect
     auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
                                        "Automatically connect all components?",
@@ -368,7 +382,6 @@ void MainWindow::ConfigureUi() {
 
     ui_->l_water_ignore_level->setStyleSheet(
         QString("color: %1;").arg(Color::kRed));
-    ui_->l_water_ignore_level->hide();  // shown if "Ignore water level" checked
 
     // ========== Motion Control ==========
 
