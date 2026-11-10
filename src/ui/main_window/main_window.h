@@ -165,6 +165,11 @@ class MainWindow : public QMainWindow {
     void on_a_atc_update_bounds_triggered();
     void on_a_atc_ignore_water_level_triggered(bool checked);
 
+    // Trajectory Menu
+
+    void on_a_trajectory_load_triggered();
+    void on_a_trajectory_save_triggered();
+
     // Motion Control Menu
 
 #if LIBRA_VERSION == 2
@@ -304,10 +309,11 @@ class MainWindow : public QMainWindow {
 
     // Targets as joint angles, indexed by `Joint::Name` (deg)
     std::vector<double> current_target_;   // most recently sent
-    std::vector<double> previous_target_;  // sent before it (for RETURN)
+    std::vector<double> previous_target_;  // second most recently sent
 
     // Poses to record or play back, as joint angles indexed by `Joint::Name` (deg)
     std::vector<std::vector<double>> trajectory_;
+    QString trajectory_file_;
 
     Motion::MotionMode motion_mode_{Motion::MotionMode::kManual};
     bool ignore_water_level_{false};

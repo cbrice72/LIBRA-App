@@ -13,6 +13,7 @@
 #include <string>
 
 // Other Library Headers
+#include <QFileInfo>    // Qt::Core
 #include <QMessageBox>  // Qt::Widgets
 
 // Project Headers
@@ -28,13 +29,24 @@
 //------------------------------------------------------------------------------
 
 /**
- * @brief Updates UI elements related to the recorded trajectory.
+ * @brief Updates UI elements related to the loaded (or active) trajectory.
  */
 void MainWindow::UpdateTrajectoryControls() {
-    ui_->l_trajectory_name->setText("Recording");
-    ui_->l_trajectory_step->setText(QString::number(trajectory_.size()) + "/-");
+    const QString n_poses = QString::number(trajectory_.size());
+    if (trajectory_file_.isEmpty()) {
+        // Unsaved recording
+        ui_->l_trajectory_name->setText("Recording");
+        ui_->l_trajectory_step->setText(n_poses + "/-");  // total unknown
+    } else {
+        // From file
+        ui_->l_trajectory_name->setText(
+            QFileInfo(trajectory_file_).completeBaseName());
+        ui_->l_trajectory_step->setText(
+            "-/" + n_poses);  // step unknown (not started yet)
+    }
 
     ui_->pb_trajectory_clear->setEnabled(!trajectory_.empty());
+    ui_->a_trajectory_save->setEnabled(!trajectory_.empty());
 }
 
 //------------------------------------------------------------------------------
@@ -42,12 +54,16 @@ void MainWindow::UpdateTrajectoryControls() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Adds the latest user-specified actuator target to the recording.
+ * @brief Adds the current target pose to the trajectory.
+ *
+ * @note A trajectory from file becomes an unsaved recording (i.e., no longer
+ *       matches the file).
  */
 void MainWindow::on_pb_trajectory_add_clicked() {
     trajectory_.push_back(current_target_);
+    trajectory_file_.clear();
     logger_->Info("Added pose " + std::to_string(trajectory_.size())
-                  + " to the recording");
+                  + " to recording");
 
     UpdateTrajectoryControls();
 }
@@ -56,19 +72,22 @@ void MainWindow::on_pb_trajectory_add_clicked() {
  * @brief Clears the trajectory (asks user for confirmation).
  */
 void MainWindow::on_pb_trajectory_clear_clicked() {
-    const auto reply = QMessageBox::question(
-        this, "Clear Trajectory",
-        QString("Clear all %1 poses? Unsaved poses will be lost.")
-            .arg(trajectory_.size()),
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    const QString question = trajectory_file_.isEmpty()
+                                 ? "Clear unsaved recording (%1 poses)?"
+                                 : "Clear loaded trajectory (%1 poses)?";
+    const auto reply = QMessageBox::question(this, "Clear Trajectory",
+                                             question.arg(trajectory_.size()),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
     if (reply != QMessageBox::Yes) {
         logger_->Debug("Trajectory clear cancelled by user");
         return;
     }
 
-    logger_->Info("Cleared " + std::to_string(trajectory_.size())
-                  + " poses from the trajectory");
+    logger_->Info("Cleared trajectory (" + std::to_string(trajectory_.size())
+                  + " poses)");
     trajectory_.clear();
+    trajectory_file_.clear();
 
     UpdateTrajectoryControls();
 }

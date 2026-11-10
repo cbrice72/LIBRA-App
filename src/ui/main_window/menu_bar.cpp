@@ -11,7 +11,10 @@
 // C++ Standard Library Headers
 #include <array>
 #include <cmath>
+#include <optional>
 #include <stdexcept>
+#include <unordered_map>
+#include <vector>
 
 // Other Library Headers
 #include <QDateTime>         // Qt::Core
@@ -19,14 +22,17 @@
 #include <QDialogButtonBox>  // Qt::Widgets
 #include <QDir>              // Qt::Core
 #include <QDoubleSpinBox>    // Qt::Widgets
+#include <QFile>             // Qt::Core
 #include <QFileDialog>       // Qt::Widgets
 #include <QFormLayout>       // Qt::Widgets
 #include <QInputDialog>      // Qt::Widgets
 #include <QLabel>            // Qt::Widgets
 #include <QLineEdit>         // Qt::Widgets
+#include <QMessageBox>       // Qt::Widgets
 #include <QSerialPort>       // Qt::SerialPort
 #include <QSerialPortInfo>   // Qt::SerialPort
 #include <QSignalBlocker>    // Qt::Core
+#include <QTextStream>       // Qt::Core
 #include <QVBoxLayout>       // Qt::Widgets
 
 // Project Headers
@@ -44,12 +50,18 @@
  * !Local Helpers
  * !Preferences
  * !Automation
+ * !Trajectory
  * !Motion Control
  * !Actuators
  * !Sensors
  * !Water
  * !Quick Actions
  */
+
+// Trajectory Files
+
+constexpr const char* kTrajectoryDir = "./bin/shared/trajectories";
+constexpr int kTrajectoryDecimals = 1;  // saved angle precision, i.e., "0.1"
 
 #if LIBRA_VERSION == 2
 // Motion Control Dialogs
@@ -205,6 +217,79 @@ QDoubleSpinBox* MakeAngleSpinBox(QWidget* parent, const double& value,
 }
 #endif
 
+/**
+ * @brief Reads trajectory poses from a CSV file.
+ *
+ * @param in Open CSV file
+ * @param spin_boxes Target spin boxes (joint limits inferred from ranges)
+ * @param logger Logger for invalid lines
+ *
+ * @note Only used in `on_a_trajectory_load_triggered()`; separate function for
+ *       readability.
+ */
+std::optional<std::vector<std::vector<double>>> ReadTrajectoryCsv(
+    QTextStream& in,
+    const std::unordered_map<Joint::Name, QDoubleSpinBox*>& spin_boxes,
+    Logger& logger) {
+    std::vector<std::vector<double>> poses;
+    bool valid = true;
+    bool header_checked = false;
+
+    for (int line_no = 1; !in.atEnd(); ++line_no) {
+        const QString line = in.readLine().trimmed();
+        if (line.isEmpty() || line.startsWith('#')) {
+            continue;
+        }
+        const QStringList fields = line.split(',');
+
+        // Header is denoted by non-numeric first line
+        bool is_number = false;
+        if (!header_checked) {
+            header_checked = true;
+            fields.first().trimmed().toDouble(&is_number);
+            if (!is_number) {
+                continue;
+            }
+        }
+
+        const std::string where = "Line " + std::to_string(line_no) + ": ";
+        if (static_cast<std::size_t>(fields.size()) != Motion::kNumJoints) {
+            logger.Warn(where + "expected " + std::to_string(Motion::kNumJoints)
+                        + " values, found " + std::to_string(fields.size()));
+            valid = false;
+            continue;
+        }
+
+        // Parse each joint angle and check against limits
+        std::vector<double> pose(Motion::kNumJoints);
+        for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
+            const auto joint = static_cast<Joint::Name>(i);
+            const QString field = fields[static_cast<qsizetype>(i)].trimmed();
+            const double deg = field.toDouble(&is_number);
+            const QDoubleSpinBox* spin_box = spin_boxes.at(joint);
+
+            if (!is_number) {
+                logger.Warn(where + "\"" + field.toStdString()
+                            + "\" not a number");
+                valid = false;
+            } else if (deg < spin_box->minimum() || deg > spin_box->maximum()) {
+                logger.Warn(where + Joint::NameEnumToString(joint) + " = "
+                            + Motion::FormatNum(deg) + " deg outside limits ["
+                            + Motion::FormatNum(spin_box->minimum()) + ", "
+                            + Motion::FormatNum(spin_box->maximum()) + "]");
+                valid = false;
+            }
+            pose[i] = deg;
+        }
+        poses.push_back(pose);
+    }
+
+    if (!valid) {
+        return std::nullopt;
+    }
+    return poses;
+}
+
 }  // namespace
 
 //------------------------------------------------------------------------------
@@ -284,6 +369,137 @@ void MainWindow::on_a_atc_ignore_water_level_triggered(bool checked) {
 
     ignore_water_level_ = checked;
     ui_->l_water_ignore_level->setVisible(checked);
+}
+
+//------------------------------------------------------------------------------
+// !Trajectory
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Event handler for "Trajectory" menu action "Load trajectory...".
+ *        Replaces the current trajectory (if any) with poses from a CSV file.
+ *
+ * @note Expects one pose per line, as joint angles in `Joint::Name` order
+ *       (deg). Lines starting with '#' are comments, and a non-numeric first
+ *       line is the header.
+ */
+void MainWindow::on_a_trajectory_load_triggered() {
+    if (trajectory_file_.isEmpty() && !trajectory_.empty()) {
+        const auto reply =
+            QMessageBox::question(this, "Load Trajectory",
+                                  QString(
+                                      "Replace unsaved recording (%1 poses)?")
+                                      .arg(trajectory_.size()),
+                                  QMessageBox::Yes | QMessageBox::No,
+                                  QMessageBox::No);
+        if (reply != QMessageBox::Yes) {
+            logger_->Debug("Trajectory load cancelled by user");
+            return;
+        }
+    }
+
+    // Prompt user to select a file
+    QDir().mkpath(kTrajectoryDir);
+    const QString file_path =
+        QFileDialog::getOpenFileName(this, "Load Trajectory", kTrajectoryDir,
+                                     "Trajectory (*.csv)");
+    if (file_path.isEmpty()) {
+        logger_->Debug("Trajectory load cancelled by user");
+        return;
+    }
+
+    QFile file(file_path);
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        HandleCriticalError("Trajectory - Couldn't open: " + file_path);
+        return;
+    }
+    QTextStream in(&file);
+    auto poses = ReadTrajectoryCsv(in, target_spin_box_map_, *logger_);
+    if (!poses) {
+        HandleCriticalError("Trajectory - Invalid lines in " + file_path
+                            + "; see log for details");
+        return;
+    }
+    if (poses->empty()) {
+        HandleCriticalError("Trajectory - No poses in " + file_path);
+        return;
+    }
+
+    trajectory_ = std::move(*poses);
+    trajectory_file_ = file_path;
+    logger_->Info("Loaded trajectory (" + std::to_string(trajectory_.size())
+                  + " poses) from: " + file_path.toStdString());
+
+    UpdateTrajectoryControls();
+}
+
+/**
+ * @brief Event handler for "Trajectory" menu action "Save trajectory...".
+ *        Saves current trajectory's poses to a CSV file.
+ *
+ * @note Starts in the user's home folder (or at the trajectory's own file),
+ *       since files saved in the build directory are lost on rebuild.
+ */
+void MainWindow::on_a_trajectory_save_triggered() {
+    // Prompt user to choose where to save
+    const QString default_path = trajectory_file_.isEmpty()
+                                     ? QDir::home().filePath(
+                                         "trajectory_"
+                                         + QDateTime::currentDateTime().toString(
+                                             "yyyy-MM-dd_HH-mm-ss")
+                                         + ".csv")
+                                     : trajectory_file_;
+    QString file_path = QFileDialog::getSaveFileName(this, "Save Trajectory",
+                                                     default_path,
+                                                     "Trajectory (*.csv)");
+    if (file_path.isEmpty()) {
+        logger_->Debug("Trajectory save cancelled by user");
+        return;
+    }
+    if (!file_path.endsWith(".csv", Qt::CaseInsensitive)) {
+        file_path += ".csv";
+    }
+
+    QFile file(file_path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        HandleCriticalError("Trajectory - Couldn't open for writing: "
+                            + file_path);
+        return;
+    }
+
+    // Header: joint names in `Joint::Name` order, with units
+    QTextStream out(&file);
+    out << "# LIBRA-" << LIBRA_VERSION
+        << " trajectory: one pose per line, joint angles (deg)\n";
+    QStringList header;
+    for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
+        const auto joint = static_cast<Joint::Name>(i);
+        header << QString::fromStdString(Joint::NameEnumToString(joint)).toLower()
+                      + "_deg";
+    }
+    out << header.join(',') << '\n';
+
+    // Lines: joint angles in `Joint::Name` order, with specified precision
+    for (const auto& pose : trajectory_) {
+        QStringList fields;
+        for (const double& deg : pose) {
+            fields << QString::number(deg, 'f', kTrajectoryDecimals);
+        }
+        out << fields.join(',') << '\n';
+    }
+
+    // Write and update UI
+    out.flush();
+    if (out.status() != QTextStream::Ok) {
+        HandleCriticalError("Trajectory - Failed to write: " + file_path);
+        return;
+    }
+
+    trajectory_file_ = file_path;
+    logger_->Info("Saved trajectory (" + std::to_string(trajectory_.size())
+                  + " poses) to: " + file_path.toStdString());
+
+    UpdateTrajectoryControls();
 }
 
 //------------------------------------------------------------------------------

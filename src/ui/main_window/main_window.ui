@@ -3733,6 +3733,13 @@
     </widget>
     <addaction name="m_atc_preferences"/>
    </widget>
+   <widget class="QMenu" name="m_trajectory">
+    <property name="title">
+     <string>Trajectory</string>
+    </property>
+    <addaction name="a_trajectory_load"/>
+    <addaction name="a_trajectory_save"/>
+   </widget>
    <widget class="QMenu" name="m_motion_control">
     <property name="title">
      <string>Motion Control</string>
@@ -3826,6 +3833,7 @@
    </widget>
    <addaction name="m_preferences"/>
    <addaction name="m_automation"/>
+   <addaction name="m_trajectory"/>
    <addaction name="m_motion_control"/>
    <addaction name="m_actuators"/>
    <addaction name="m_sensors"/>
@@ -4125,6 +4133,25 @@
    </property>
    <property name="statusTip">
     <string>Load an arm model and friction from a saved file</string>
+   </property>
+  </action>
+  <action name="a_trajectory_load">
+   <property name="text">
+    <string>Load trajectory...</string>
+   </property>
+   <property name="statusTip">
+    <string>Load a new trajectory with poses from a CSV file</string>
+   </property>
+  </action>
+  <action name="a_trajectory_save">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Save trajectory...</string>
+   </property>
+   <property name="statusTip">
+    <string>Save recorded poses to a CSV file</string>
    </property>
   </action>
   <action name="a_motion_calibration_clear">
