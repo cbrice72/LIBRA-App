@@ -50,6 +50,10 @@ constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
 
 constexpr int kVolumeTrackPeriodMs = 1000 / 30;  // ms (30 Hz)
 
+// LIBRA-II's inflow solenoid valve sometimes doesn't open when commanded; no
+// measured inflow this long after a fill command means it's stuck (arbitrary)
+constexpr qint64 kInflowTimeoutMs = 1000;  // ms
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -107,7 +111,14 @@ WaterController::WaterController(QObject* parent, const bool& debug_mode)
  * @brief Sends the current command to the WaterArduino.
  */
 void WaterController::OnUpdate() {
-    qint64 bytes_written = serial_port_->write(water_cmd_);
+    // Stuck inflow valve: close it for one update, so the next one reopens it
+    QByteArray command = water_cmd_;
+    if (InflowStalled()) {
+        command[0] = static_cast<char>(static_cast<uint8_t>(command[0])
+                                       & ~(kAIn | kBIn));
+    }
+
+    qint64 bytes_written = serial_port_->write(command);
     if (bytes_written == -1) {
         throw std::runtime_error("Failed to write to port");
     }
@@ -243,6 +254,35 @@ void WaterController::MapTorqueToCommand(const double& torque_dir) {
 
     logger_->Debug("Set command to " + BytesToStr(water_cmd_)
                    + " (A_IN | B_IN | A_OUT | B_OUT)");
+}
+
+/**
+ * @brief Checks whether the inflow valve seems stuck shut: a fill command with
+ *        no measured inflow for `kInflowTimeoutMs`. Restarts the wait each time
+ *        it returns true.
+ *
+ * @note Needs FlowArduino; without flow readings, never reports a stall.
+ */
+bool WaterController::InflowStalled() {
+    const bool filling = (static_cast<uint8_t>(water_cmd_[0]) & (kAIn | kBIn))
+                         != 0;
+    if (!filling || !flow_measured_ || tanks_[0].fill_rate > 0.0) {
+        inflow_clock_.invalidate();
+        return false;
+    }
+
+    if (!inflow_clock_.isValid()) {
+        inflow_clock_.start();
+        return false;
+    }
+    if (inflow_clock_.elapsed() < kInflowTimeoutMs) {
+        return false;
+    }
+
+    logger_->Warn("No inflow " + std::to_string(kInflowTimeoutMs)
+                  + " ms after fill command; toggling inflow valve");
+    inflow_clock_.restart();
+    return true;
 }
 
 /**
@@ -430,6 +470,8 @@ void WaterController::UpdateFlowRate(const Water::Side& side,
                       + Water::SideEnumToString(side));
         return;
     }
+
+    flow_measured_ = (flow != -1.0);
 
     Tank& tank = tanks_[index];
     tank.fill_rate = 0;   // default: Water::kFillRate;

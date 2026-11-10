@@ -75,6 +75,7 @@ class WaterController : public GenericSerialDevice {
     void ClearCommand(const Water::Side& side = Water::Side::kAll);
     void ModifyCommand(uint8_t new_bits);
     void MapTorqueToCommand(const double& torque_dir);
+    [[nodiscard]] bool InflowStalled();
 
     void SendStatus(const Water::Side& side);
     void TrackVolume();
@@ -83,6 +84,9 @@ class WaterController : public GenericSerialDevice {
 
     bool reactive_cw_en_{false};
     QByteArray water_cmd_;  // only 4 bits used
+
+    bool flow_measured_{false};   // FlowArduino reporting (not error)
+    QElapsedTimer inflow_clock_;  // since fill command without inflow
 
     std::array<Tank, Water::kSideCount> tanks_;
     QTimer* volume_timer_{nullptr};
