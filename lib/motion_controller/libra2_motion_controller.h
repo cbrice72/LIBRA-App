@@ -114,6 +114,8 @@ class Libra2MotionController : public AbstractMotionController {
     bool RunCwPrimary(const double& angle, const double& angle_tgt,
                       Motion::Libra2Command& command);
     void HandOffToActuator();
+    void LogMoveStart(const Motion::MotionMode& mode, const double& angle,
+                      const double& angle_tgt) const;
     void LogPredictiveCwError(const std::optional<Motion::CwCommand>& reactive,
                               const double& angle, const double& torque);
 
@@ -172,6 +174,7 @@ class Libra2MotionController : public AbstractMotionController {
     std::optional<double>
         predictive_cw_mass_;  // m_cw,bal(θ_tgt) when predictive CW finished (kg)
     bool reactive_cw_used_{false};  // reactive CW moved since hand-off
+    std::optional<Motion::CwCommand> last_reactive_cw_;  // for change logs
     bool trajectory_active_{false};
 
     double handoff_band_{Motion::kDefaultHandoffBand};  // (rad)

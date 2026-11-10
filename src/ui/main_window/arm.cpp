@@ -69,12 +69,12 @@ void MainWindow::SendJointTargets(const std::vector<double>& targets) {
         command_ss << std::fixed << std::setprecision(2)
                    << "Sending movement command (deg): ";
 
-        for (int i = 0; i < Actuator::kUndefined; ++i) {
-            const auto actuator = static_cast<Actuator::Name>(i);
-            command_ss << Actuator::NameEnumToString(actuator) << "="
-                       << actuator_targets[actuator];
+        for (int i = 0; i < Joint::Name::kUndefined; ++i) {
+            const auto joint = static_cast<Joint::Name>(i);
+            command_ss << Joint::NameEnumToString(joint) << "="
+                       << targets[joint];
 
-            if (i < Actuator::kUndefined - 1) {
+            if (i < Joint::Name::kUndefined - 1) {
                 command_ss << ", ";
             }
         }

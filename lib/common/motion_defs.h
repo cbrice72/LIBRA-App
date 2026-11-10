@@ -210,6 +210,24 @@ constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
 enum class CwCommand : uint8_t { kIdle, kFill, kDrain };
 
 /**
+ * @brief Converts a fluid system command to its corresponding string name.
+ *
+ * @param command Command to convert
+ */
+inline std::string CwCommandEnumToString(const CwCommand& command) {
+    switch (command) {
+        case CwCommand::kIdle:
+            return "idle";
+        case CwCommand::kFill:
+            return "fill";
+        case CwCommand::kDrain:
+            return "drain";
+        default:
+            return "undefined";
+    }
+}
+
+/**
  * @brief Checks whether a motion mode requires the motion controller to
  *        plan/adjust a trajectory.
  *

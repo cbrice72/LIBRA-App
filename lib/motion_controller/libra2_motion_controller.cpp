@@ -763,6 +763,49 @@ void Libra2MotionController::HandOffToActuator() {
 }
 
 /**
+ * @brief Logs a new move: mode, angles, and the predictive counterweight (CW)
+ *        mass, including whether the CW can balance the target at all.
+ *
+ * @param mode Motion mode handling the move
+ * @param angle Actual angle, θ (rad)
+ * @param angle_tgt Target angle, θ_tgt (rad)
+ *
+ * @note Mutex lock not required since callers hold it.
+ */
+void Libra2MotionController::LogMoveStart(const Motion::MotionMode& mode,
+                                          const double& angle,
+                                          const double& angle_tgt) const {
+    std::string msg = Motion::MotionModeEnumToString(mode) + ": "
+                      + Motion::FormatRadAsDeg(angle) + " -> "
+                      + Motion::FormatRadAsDeg(angle_tgt) + " deg";
+
+    const bool model_ready = arm_model_ && cw_model_.IsValid() && cw_mass_;
+    const auto cw_mass_tgt = model_ready ? TargetCwMass(angle_tgt)
+                                         : std::nullopt;
+    if (!cw_mass_tgt) {
+        logger_->Info(msg
+                      + "; no predictive CW (model, CW volume, or "
+                        "balancing mass unavailable)");
+        return;
+    }
+
+    msg += "; predictive CW " + Motion::FormatNum(*cw_mass_) + " -> "
+           + Motion::FormatNum(*cw_mass_tgt) + " kg";
+
+    // Clamped targets can't be balanced; the actuator holds what's left
+    const bool empty = (*cw_mass_tgt <= 0.0);
+    const bool full = (*cw_mass_tgt >= cw_model_.GetCapacityMass());
+    if (empty || full) {
+        msg += std::string(" (clamped to ") + (empty ? "empty" : "capacity")
+               + "; actuator expected to hold "
+               + Motion::FormatNum(
+                   -ComputeNetGravTorque(angle_tgt, *cw_mass_tgt))
+               + " Nm at target)";
+    }
+    logger_->Info(msg);
+}
+
+/**
  * @brief Logs the error between the predictive counterweight (CW) estimate of
  *        the balancing mass and the mass the reactive CW actually settled at,
  *        once the system is at rest.
@@ -863,6 +906,9 @@ Motion::Libra2Command Libra2MotionController::Update(
     const bool cw_primary = (mode == Motion::MotionMode::kCwPrimary);
     if (new_target_) {
         new_target_ = false;
+        if (target) {
+            LogMoveStart(mode, angle, *target);
+        }
         if (cw_primary) {
             // Let CW lead
             cw_phase_ = CwPhase::kCwMoving;
@@ -938,6 +984,9 @@ Motion::Libra2Command Libra2MotionController::Update(
                             cw_assist_done_ = true;
                             predictive_cw_mass_ = *cw_mass_tgt;
                             reactive_cw_used_ = false;
+                            logger_->Info("Predictive CW reached "
+                                          + Motion::FormatNum(*cw_mass_)
+                                          + " kg; reactive CW on");
                         } else {
                             command.cw_command = cw;
                         }
@@ -945,6 +994,18 @@ Motion::Libra2Command Libra2MotionController::Update(
                 }
             } else {
                 command.cw_command = reactive_cw.cw_command;
+                if (reactive_cw.cw_command
+                    && reactive_cw.cw_command != last_reactive_cw_) {
+                    last_reactive_cw_ = reactive_cw.cw_command;
+                    logger_->Debug(
+                        "Reactive CW: "
+                        + Motion::CwCommandEnumToString(*reactive_cw.cw_command)
+                        + " (torque=" + Motion::FormatNum(actual_torque)
+                        + " Nm, m_cw="
+                        + (cw_mass_ ? Motion::FormatNum(*cw_mass_) + " kg"
+                                    : std::string("unknown"))
+                        + ")");
+                }
                 if (predictive_cw_mass_ && cw_mass_) {
                     LogPredictiveCwError(reactive_cw.cw_command, angle,
                                          actual_torque);
@@ -1102,6 +1163,7 @@ void Libra2MotionController::OnTargetChanged() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
+    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
     pending_move_.reset();
 
@@ -1116,6 +1178,7 @@ void Libra2MotionController::OnStop() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
+    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
 
     pending_move_.reset();
@@ -1131,6 +1194,7 @@ void Libra2MotionController::OnReset() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
+    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
 
     pending_move_.reset();
