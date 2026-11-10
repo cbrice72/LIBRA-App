@@ -222,6 +222,7 @@ class HebiThread : public AbstractActuatorThread
 
 #if LIBRA_VERSION == 2
     std::atomic<bool> pitch_released_{false};  // whether actuator spins freely
+    std::vector<hebi::Command::ControlStrategy> strategies_before_release_;
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> calibration_running_{false};

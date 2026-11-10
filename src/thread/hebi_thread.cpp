@@ -21,8 +21,9 @@
 #include <thread>
 
 // Other Library Headers
-#include "log_file.hpp"  // HEBI
-#include "lookup.hpp"    // HEBI
+#include "group_info.hpp"  // HEBI
+#include "log_file.hpp"    // HEBI
+#include "lookup.hpp"      // HEBI
 #include <QDir>          // Qt::Core
 
 // Project Headers
@@ -1581,6 +1582,11 @@ void HebiThread::SetReactiveCwBounds(const double& lower_bound,
  * @brief Releases or takes control of the pitch joint.
  *
  * @param enabled Whether to stop commanding the actuator
+ *
+ * @note Sets the control strategy to "Off" instead of just sending nothing:
+ *       HEBI's safety controllers (e.g., velocity limit) still act on an
+ *       uncommanded actuator, resisting back-driving. The previous strategy is
+ *       restored when taking control again.
  */
 void HebiThread::EnablePitchRelease(const bool& enabled) {
     if (enabled && group_ == nullptr) {
@@ -1590,13 +1596,53 @@ void HebiThread::EnablePitchRelease(const bool& enabled) {
     }
 
     if (enabled && !pitch_released_) {
+        // Save current strategies to restore later (same order in both enums)
+        hebi::GroupInfo info(group_->size());
+        const bool info_received = group_->requestInfo(info, kTimeout);
+        strategies_before_release_.clear();
+        for (size_t i = 0; info_received && i < group_->size(); ++i) {
+            const auto& strategy =
+                info[i].settings().actuator().controlStrategy();
+            if (!strategy) {
+                break;
+            }
+            strategies_before_release_.push_back(
+                static_cast<hebi::Command::ControlStrategy>(strategy.get()));
+        }
+        if (strategies_before_release_.size() != group_->size()) {
+            emit ErrorThrown("HEBI - Can't release pitch; actuator didn't "
+                             "report its control strategy!");
+            emit PitchReleaseChanged(false);
+            return;
+        }
+
         Stop();
         motion_controller_->Reset();
-        pitch_released_ = true;
-        logger_->Info("Pitch released (actuator off in "
-                      + std::to_string(group_->getCommandLifetimeMs()) + " ms)");
+        pitch_released_ = true;  // control loop stops sending commands
+
+        hebi::GroupCommand off_cmd(group_->size());
+        for (size_t i = 0; i < group_->size(); ++i) {
+            off_cmd[i].settings().actuator().controlStrategy().set(
+                hebi::Command::ControlStrategy::Off);
+        }
+        if (!group_->sendCommandWithAcknowledgement(off_cmd, kTimeout)) {
+            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
+                             "control strategy change (Off)!");
+        }
+        logger_->Info("Pitch released (control strategy Off)");
+
     } else if (!enabled && pitch_released_) {
-        pitch_released_ = false;
+        hebi::GroupCommand restore_cmd(group_->size());
+        for (size_t i = 0; i < strategies_before_release_.size(); ++i) {
+            restore_cmd[i].settings().actuator().controlStrategy().set(
+                strategies_before_release_[i]);
+        }
+        if (!group_->sendCommandWithAcknowledgement(restore_cmd, kTimeout)) {
+            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
+                             "control strategy change (restore)!");
+        }
+
+        pitch_released_ = false;  // control loop holds current pose again
         logger_->Info("Pitch controlled (holding current pose)");
     }
 
