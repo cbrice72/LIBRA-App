@@ -17,6 +17,7 @@ set(UI_SOURCE
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/main_window.ui
     ${CMAKE_CURRENT_SOURCE_DIR}/menu_bar.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/trajectory.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/water.cpp
 )
 

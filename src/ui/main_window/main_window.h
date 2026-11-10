@@ -223,7 +223,13 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
     // (NOTE: pb_arm_stop_clicked() is handled via signals)
+    void on_pb_arm_return_clicked();
     void on_cb_motion_mode_activated(int index);
+
+    // Trajectory (trajectory.cpp)
+
+    void on_pb_trajectory_add_clicked();
+    void on_pb_trajectory_clear_clicked();
 
     // Water (water.cpp)
 
@@ -275,6 +281,14 @@ class MainWindow : public QMainWindow {
     void UpdateMotionControls();
 #endif
 
+    // --- Helper Functions (arm.cpp) ---
+
+    void SendJointTargets(const std::vector<double>& targets);
+
+    // --- Helper Functions (trajectory.cpp) ---
+
+    void UpdateTrajectoryControls();
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_{nullptr};
@@ -288,7 +302,12 @@ class MainWindow : public QMainWindow {
     std::unordered_map<Joint::Name, QDoubleSpinBox*> target_spin_box_map_;
     bool populate_targets_{false};  // set on actuator connect
 
-    std::vector<double> last_command_;  // actuator-space target positions
+    // Targets as joint angles, indexed by `Joint::Name` (deg)
+    std::vector<double> current_target_;   // most recently sent
+    std::vector<double> previous_target_;  // sent before it (for RETURN)
+
+    // Poses to record or play back, as joint angles indexed by `Joint::Name` (deg)
+    std::vector<std::vector<double>> trajectory_;
 
     Motion::MotionMode motion_mode_{Motion::MotionMode::kManual};
     bool ignore_water_level_{false};

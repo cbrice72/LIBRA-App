@@ -9,7 +9,9 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <algorithm>
+#include <cmath>
+#include <limits>
 
 // Other Library Headers
 #include <QMessageBox>                  // Qt::Widgets
@@ -117,7 +119,9 @@ MainWindow::MainWindow(QWidget* parent)
     util::IsWslEnvironment();  // only warns, no action needed
 
     // Member initialization
-    last_command_.resize(Actuator::kUndefined);
+    current_target_.assign(Motion::kNumJoints,
+                           std::numeric_limits<double>::quiet_NaN());
+    previous_target_ = current_target_;
 
     // GUI configuration
     ConfigureUi();
@@ -331,6 +335,17 @@ void MainWindow::ConfigureUi() {
             new QRegularExpressionValidator(regex, this);
         ui_->le_quick_input->setValidator(validator);
     }
+
+    // ========== Trajectory ==========
+
+    // Unneeded widgets
+    //   (none)
+
+    // Slots
+    //   (none)
+
+    // Settings
+    UpdateTrajectoryControls();
 
     // ========== Water ==========
 
@@ -744,6 +759,7 @@ void MainWindow::InitializeThreads() {
  */
 void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
 #if LIBRA_VERSION == 2
+    // Motion controller (refuses its modes without calibration)
     const bool controller_mode = Motion::UsesMotionController(mode);
     if (controller_mode != Motion::UsesMotionController(motion_mode_)) {
         motion_controller_->Reset();
@@ -763,10 +779,15 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
         logger_->Info("Motion mode: " + Motion::MotionModeEnumToString(mode));
     }
     motion_mode_ = mode;
-    emit CommandMotionMode(mode);
 
+    // Components
     const bool atc_en = (mode != Motion::MotionMode::kManual);
+    emit CommandMotionMode(mode);
     emit EnableAutoTorqueComp(atc_en);
+
+    // UI widgets
+    ui_->cb_motion_mode->setCurrentIndex(
+        ui_->cb_motion_mode->findData(static_cast<int>(mode)));
     if (atc_en) {
         // ATC takes the CW over from the fill/drain buttons
         ui_->pb_water_fill_A->setChecked(false);
@@ -776,9 +797,6 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
         ui_->pb_water_drain_B->setChecked(false);
 #endif
     }
-
-    ui_->cb_motion_mode->setCurrentIndex(
-        ui_->cb_motion_mode->findData(static_cast<int>(mode)));
 }
 
 /**
@@ -794,11 +812,24 @@ void MainWindow::UpdateActuatorControls() {
     any_connected = hebi_connected || epos_connected;
 #endif
 
+    // Evaluate which targets are known for every joint (NaN until connected)
+    auto is_known = [](const std::vector<double>& target) {
+        return std::all_of(target.begin(), target.end(), [](const double& deg) {
+            return std::isfinite(deg);
+        });
+    };
+    const bool can_return = is_known(previous_target_)
+                            && (previous_target_ != current_target_);
+
     // Update UI
     ui_->pb_arm_start->setEnabled(any_connected);
     ui_->le_quick_input->setEnabled(any_connected);
     ui_->pb_quick_input->setEnabled(any_connected);
     ui_->pb_arm_stop->setEnabled(any_connected);
+    ui_->pb_arm_return->setEnabled(any_connected && !arm_moving_ && can_return);
+
+    ui_->pb_trajectory_add->setEnabled(any_connected
+                                       && is_known(current_target_));
 }
 
 /**
@@ -839,6 +870,7 @@ void MainWindow::UpdateModeControls() {
  *       or free mode. Free mode itself can be toggled whenever HEBI is connected.
  */
 void MainWindow::UpdateMotionControls() {
+    // Evaluate connection/activity statuses of all components
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
@@ -859,7 +891,6 @@ void MainWindow::UpdateMotionControls() {
                                                  && !free_mode);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
 
-    // Other
     ui_->a_motion_calibration_save->setEnabled(!arm_moving_);
     ui_->a_motion_calibration_load->setEnabled(!arm_moving_);
     ui_->a_motion_calibration_clear->setEnabled(!arm_moving_);
@@ -908,6 +939,12 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
+    // ATC needs the CW
+    if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
+        logger_->Warn("CW disconnected; stopping automatic CW control");
+        SetMotionMode(Motion::MotionMode::kManual);
+    }
+
     // Menu bar
     ui_->a_water_cw_connect->setEnabled(!connected);
     ui_->a_water_cw_disconnect->setEnabled(connected);
@@ -921,12 +958,6 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->pb_water_fill_B->setEnabled(connected);
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
-
-    // ATC needs the CW
-    if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
-        logger_->Warn("CW disconnected; stopping automatic CW control");
-        SetMotionMode(Motion::MotionMode::kManual);
-    }
 
     UpdateModeControls();
 }
@@ -1070,6 +1101,11 @@ void MainWindow::HandleFlowStatus(const double& flow) {
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
+    if (connected) {
+        populate_targets_ = true;
+    }
+
     // Menu bar
     ui_->a_hebi_connect->setEnabled(!connected);
     ui_->a_hebi_disconnect->setEnabled(connected);
@@ -1084,9 +1120,6 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     UpdateActuatorControls();
     UpdateModeControls();
-    if (connected) {
-        populate_targets_ = true;
-    }
 
 #if LIBRA_VERSION == 2
     // HebiThread only reports motion states on change, so fill in the motion
@@ -1107,6 +1140,11 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
+    if (connected) {
+        populate_targets_ = true;
+    }
+
     // Menu bar
     ui_->a_epos_connect->setEnabled(!connected);
     ui_->a_epos_usedefaults->setEnabled(!connected);
@@ -1114,9 +1152,6 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
 
     // UI widgets
     UpdateActuatorControls();
-    if (connected) {
-        populate_targets_ = true;
-    }
 }
 #endif
 
@@ -1155,14 +1190,19 @@ void MainWindow::HandleActuatorFeedback(
                 + std::to_string(static_cast<int>(feedback_type)) + ")");
         }
 
-        // Initialize target spin boxes to actual position after a connect
+        // Initialize targets to actual position after a connect
         if (initialize) {
             const auto spin_box = target_spin_box_map_.find(joint);
             if (spin_box != target_spin_box_map_.end()) {
                 spin_box->second->setValue(val);
             }
+            current_target_[joint] = previous_target_[joint] = val;
             populate_targets_ = false;
         }
+    }
+
+    if (initialize) {
+        UpdateActuatorControls();  // targets may now be known
     }
 }
 
@@ -1206,6 +1246,7 @@ void MainWindow::HandleMovementStateChanged() {
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
 #endif
 
+    UpdateActuatorControls();
     UpdateModeControls();
 }
 
@@ -1231,6 +1272,17 @@ void MainWindow::HandleFreeModeChanged(const bool& enabled) {
  * @param level Calibration level
  */
 void MainWindow::HandleCalibrationChanged(const Motion::Calibration& level) {
+    // Calibration was cleared or replaced
+    if (Motion::UsesMotionController(motion_mode_)
+        && level != Motion::Calibration::kFull) {
+        logger_->Warn(Motion::MotionModeEnumToString(motion_mode_)
+                      + " mode needs both arm AND friction calibrations (now: "
+                      + Motion::CalibrationEnumToString(level)
+                      + "); stopping automatic control");
+        SetMotionMode(Motion::MotionMode::kManual);
+    }
+
+    // UI widgets
     const char* color = Color::kYellow;  // partial: Tandem/CW Primary disabled
     if (level == Motion::Calibration::kNone) {
         color = Color::kRed;
@@ -1242,16 +1294,6 @@ void MainWindow::HandleCalibrationChanged(const Motion::Calibration& level) {
         QString::fromStdString(Motion::CalibrationEnumToString(level)));
     ui_->l_motion_calibrated_val->setStyleSheet(
         QString("color: %1;").arg(color));
-
-    // Calibration was cleared or replaced
-    if (Motion::UsesMotionController(motion_mode_)
-        && level != Motion::Calibration::kFull) {
-        logger_->Warn(Motion::MotionModeEnumToString(motion_mode_)
-                      + " mode needs both arm AND friction calibrations (now: "
-                      + Motion::CalibrationEnumToString(level)
-                      + "); stopping automatic control");
-        SetMotionMode(Motion::MotionMode::kManual);
-    }
 }
 
 /**

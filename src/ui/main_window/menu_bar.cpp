@@ -248,34 +248,28 @@ void MainWindow::on_a_reset_window_size_triggered() {
  *        bounds...". Opens a dialog to configure torque compensation bounds.
  */
 void MainWindow::on_a_atc_update_bounds_triggered() {
-    if (hebi_thread_ == nullptr) {
-        logger_->Warn("Can't edit torque bounds; HEBI thread not available");
-        return;
-    }
-
     // Prompt user to input new bounds
     TorqueCompDialog dialog(this, kTorqueCompLowerBound, kTorqueCompUpperBound);
-
-    if (dialog.exec() == QDialog::Accepted) {
-        const double lower_bound = dialog.GetLowerBound();
-        const double upper_bound = dialog.GetUpperBound();
-        const std::string bounds_str = "lower=" + Motion::FormatNum(lower_bound)
-                                       + " Nm, upper="
-                                       + Motion::FormatNum(upper_bound) + " Nm";
-
-        if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
-            logger_->Warn("Ignoring invalid torque compensation bounds: "
-                          + bounds_str);
-            return;
-        }
-
-        // Send the new bounds to whoever needs them
-        emit UpdateTorqueCompBounds(lower_bound, upper_bound);
-        logger_->Info("Torque compensation bounds: " + bounds_str);
-    } else {
+    if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("Torque bound setting cancelled by user");
         return;
     }
+
+    const double lower_bound = dialog.GetLowerBound();
+    const double upper_bound = dialog.GetUpperBound();
+    const std::string bounds_str = "lower=" + Motion::FormatNum(lower_bound)
+                                   + " Nm, upper="
+                                   + Motion::FormatNum(upper_bound) + " Nm";
+
+    if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
+        logger_->Warn("Ignoring invalid torque compensation bounds: "
+                      + bounds_str);
+        return;
+    }
+
+    // Send the new bounds to whoever needs them
+    emit UpdateTorqueCompBounds(lower_bound, upper_bound);
+    logger_->Info("Torque compensation bounds: " + bounds_str);
 }
 
 /**
@@ -307,11 +301,12 @@ void MainWindow::on_a_motion_handoff_band_triggered() {
         this, "Hand-off Band",
         "Actuator takes over within (deg of the target):",
         Motion::kDefaultHandoffBand * kRadToDeg, 0.01, 90.0, 2, &ok);
-    if (ok) {
-        emit UpdateHebiHandoffBand(deg);
-    } else {
+    if (!ok) {
         logger_->Debug("Hand-off band setting cancelled by user");
+        return;
     }
+
+    emit UpdateHebiHandoffBand(deg);
 }
 
 /**

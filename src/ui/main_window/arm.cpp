@@ -10,6 +10,7 @@
 
 // C++ Standard Library Headers
 #include <sstream>
+#include <utility>
 
 // Other Library Headers
 #include <QMessageBox>  // Qt::Widgets
@@ -19,6 +20,7 @@
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
+ * !Class Helpers
  * !Buttons
  */
 
@@ -27,47 +29,6 @@
 //------------------------------------------------------------------------------
 
 namespace {
-
-/**
- * @brief Converts the UI's joint-space commands to actuator-space targets,
- *        ordered by `Actuator::Name`.
- *
- * @param ui Pointer to main UI object
- *
- * @see Actuator::Name
- */
-std::vector<double> GetActuatorTargets(const Ui::MainWindow* ui) {
-    std::vector<double> targets(Actuator::kUndefined, 0.0);
-
-    // Lambdas for converting joint-space UI values to actuator-space command values
-    auto convert_and_set_simple = [&](Actuator::Name name, double val) {
-        targets[name] = Actuator::JointToActuatorSimple(name, val);
-    };
-
-#if LIBRA_VERSION == 1
-    auto convert_and_set_diff = [&](Actuator::Name name, double roll,
-                                    double pitch) {
-        targets[name] = Actuator::JointToActuatorDifferential(name, roll, pitch);
-    };
-#endif
-
-    // Convert and save values based on Actuator::Name enum order
-#if LIBRA_VERSION == 1
-    const double roll = ui->sb_arm_roll->value();
-    const double pitch = ui->sb_arm_pitch->value();
-
-    convert_and_set_diff(Actuator::kMA, roll, pitch);
-    convert_and_set_diff(Actuator::kMB, roll, pitch);
-    convert_and_set_simple(Actuator::kJ1, ui->sb_arm_j1->value());
-    convert_and_set_simple(Actuator::kJ2, ui->sb_arm_j2->value());
-    convert_and_set_simple(Actuator::kJ3, ui->sb_arm_j3->value());
-#elif LIBRA_VERSION == 2
-    convert_and_set_simple(Actuator::kYaw, ui->sb_arm_yaw->value());
-    convert_and_set_simple(Actuator::kPitch, ui->sb_arm_pitch->value());
-#endif
-
-    return targets;
-}
 
 /**
  * @brief Target position spin boxes in joint-space (`Joint::Name`) order,
@@ -89,6 +50,78 @@ std::vector<QDoubleSpinBox*> GetOrderedSpinBoxes(const Ui::MainWindow* ui) {
 }
 
 }  // namespace
+
+//------------------------------------------------------------------------------
+// !Class Helpers
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Moves the arm to the given joint angles.
+ *
+ * @param targets Joint angles, indexed by `Joint::Name` (deg)
+ */
+void MainWindow::SendJointTargets(const std::vector<double>& targets) {
+    std::vector<double> actuator_targets(Actuator::kUndefined, 0.0);
+
+    // Lambdas to improve readability of conversions (joint -> actuator)
+    auto convert_and_set_simple = [&](Actuator::Name name, double val) {
+        actuator_targets[name] = Actuator::JointToActuatorSimple(name, val);
+    };
+#if LIBRA_VERSION == 1
+    auto convert_and_set_diff = [&](Actuator::Name name, double roll,
+                                    double pitch) {
+        actuator_targets[name] = Actuator::JointToActuatorDifferential(name,
+                                                                       roll,
+                                                                       pitch);
+    };
+#endif
+
+    // Convert joint angles to actuator command angles
+#if LIBRA_VERSION == 1
+    const double roll = targets[Joint::Name::kRoll];
+    const double pitch = targets[Joint::Name::kPitch];
+
+    convert_and_set_diff(Actuator::kMA, roll, pitch);
+    convert_and_set_diff(Actuator::kMB, roll, pitch);
+    convert_and_set_simple(Actuator::kJ1, targets[Joint::Name::kJ1]);
+    convert_and_set_simple(Actuator::kJ2, targets[Joint::Name::kJ2]);
+    convert_and_set_simple(Actuator::kJ3, targets[Joint::Name::kJ3]);
+#elif LIBRA_VERSION == 2
+    convert_and_set_simple(Actuator::kYaw, targets[Joint::Name::kYaw]);
+    convert_and_set_simple(Actuator::kPitch, targets[Joint::Name::kPitch]);
+#endif
+
+    if (debug_mode_) {
+        std::stringstream command_ss;
+        command_ss << std::fixed << std::setprecision(2)
+                   << "Sending movement command (deg): ";
+
+        for (int i = 0; i < Actuator::kUndefined; ++i) {
+            const auto actuator = static_cast<Actuator::Name>(i);
+            command_ss << Actuator::NameEnumToString(actuator) << "="
+                       << actuator_targets[actuator];
+
+            if (i < Actuator::kUndefined - 1) {
+                command_ss << ", ";
+            }
+        }
+
+        logger_->Debug(command_ss.str());
+    }
+
+    // Send command(s)
+#if LIBRA_VERSION == 1
+    emit CommandHebi(actuator_targets);
+#elif LIBRA_VERSION == 2
+    emit CommandEpos({actuator_targets[Actuator::kYaw]});
+    emit CommandHebi({actuator_targets[Actuator::kPitch]});
+#endif
+
+    previous_target_ = std::exchange(current_target_, targets);
+
+    // UI widgets
+    UpdateActuatorControls();
+}
 
 //------------------------------------------------------------------------------
 // !Buttons
@@ -130,44 +163,30 @@ void MainWindow::on_pb_quick_input_clicked() {
 }
 
 /**
- * @brief Sends movement command signal(s) to all actuators.
- *
- * @note To improve ease of use, LIBRA-I arm actuator angles (J1, J2, J3) in the
- *       UI are shown relative to a forward-facing perspective directly behind
- *       the robot, where "0" is directly forward, and counterclockwise movement
- *       is considered "+" (positive).
+ * @brief Sends the target spin boxes' values to all actuators.
  */
 void MainWindow::on_pb_arm_start_clicked() {
-    // Get command vector from UI values
-    const auto targets = GetActuatorTargets(ui_);
-
-    if (debug_mode_) {
-        std::stringstream command_ss;
-        command_ss << std::fixed << std::setprecision(2)
-                   << "Sending movement command (deg): ";
-
-        for (int i = 0; i < Actuator::kUndefined; ++i) {
-            const auto actuator = static_cast<Actuator::Name>(i);
-            command_ss << Actuator::NameEnumToString(actuator) << "="
-                       << targets[actuator];
-
-            if (i < Actuator::kUndefined - 1) {
-                command_ss << ", ";
-            }
-        }
-
-        logger_->Debug(command_ss.str());
+    std::vector<double> targets(Motion::kNumJoints, 0.0);
+    for (const auto& [joint, spin_box] : target_spin_box_map_) {
+        targets[joint] = spin_box->value();
     }
 
-    // Send command(s)
-#if LIBRA_VERSION == 1
-    emit CommandHebi(targets);
-#elif LIBRA_VERSION == 2
-    emit CommandEpos({targets[Actuator::kYaw]});
-    emit CommandHebi({targets[Actuator::kPitch]});
-#endif
+    SendJointTargets(targets);
+}
 
-    last_command_ = targets;
+/**
+ * @brief Moves all actuators back to the previous target.
+ *
+ * @note Only goes back one target; button stays disabled until a new target is
+ *       sent (so an accidental multi-click can't move the arm further).
+ */
+void MainWindow::on_pb_arm_return_clicked() {
+    logger_->Info("Returning to the previous target");
+
+    SendJointTargets(previous_target_);
+    previous_target_ = current_target_;
+
+    UpdateActuatorControls();
 }
 
 /**

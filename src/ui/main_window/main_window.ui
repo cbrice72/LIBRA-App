@@ -1610,6 +1610,49 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QPushButton" name="pb_arm_return">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="sizePolicy">
+                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                     <horstretch>0</horstretch>
+                     <verstretch>0</verstretch>
+                    </sizepolicy>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>90</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>90</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <bold>true</bold>
+                    </font>
+                   </property>
+                   <property name="statusTip">
+                    <string>Move back to the previous pose</string>
+                   </property>
+                   <property name="styleSheet">
+                    <string notr="true">QPushButton {color: rgb(0, 114, 178);}
+      QPushButton:disabled {color: rgb(160, 190, 210);}</string>
+                   </property>
+                   <property name="text">
+                    <string> RETURN</string>
+                   </property>
+                   <property name="icon">
+                    <iconset theme="QIcon::ThemeIcon::EditUndo"/>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <widget class="QLabel" name="static_l_motion_mode">
                    <property name="statusTip">
                     <string>Arm movement strategy</string>
@@ -2183,6 +2226,113 @@
                   </spacer>
                  </item>
                 </layout>
+               </item>
+              </layout>
+             </widget>
+            </item>
+            <item>
+             <widget class="QGroupBox" name="gb_trajectory">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="title">
+               <string>TRAJECTORY</string>
+              </property>
+              <layout class="QGridLayout" name="gl_trajectory">
+               <property name="leftMargin">
+                <number>4</number>
+               </property>
+               <property name="topMargin">
+                <number>4</number>
+               </property>
+               <property name="rightMargin">
+                <number>4</number>
+               </property>
+               <property name="bottomMargin">
+                <number>4</number>
+               </property>
+               <property name="horizontalSpacing">
+                <number>12</number>
+               </property>
+               <item row="0" column="0">
+                <widget class="QLabel" name="l_trajectory_name">
+                 <property name="statusTip">
+                  <string>Trajectory file name</string>
+                 </property>
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="1">
+                <widget class="QLabel" name="l_trajectory_step">
+                 <property name="statusTip">
+                  <string>Current step / total steps</string>
+                 </property>
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="0" column="2">
+                <spacer name="h_spacer_trajectory">
+                 <property name="orientation">
+                  <enum>Qt::Orientation::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>0</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item row="1" column="0">
+                <widget class="QPushButton" name="pb_trajectory_add">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>110</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="statusTip">
+                  <string>Save the previously commanded pose to the trajectory</string>
+                 </property>
+                 <property name="text">
+                  <string> ADD POSE</string>
+                 </property>
+                 <property name="icon">
+                  <iconset theme="QIcon::ThemeIcon::ListAdd"/>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="1">
+                <widget class="QPushButton" name="pb_trajectory_clear">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>110</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="statusTip">
+                  <string>Clear the trajectory</string>
+                 </property>
+                 <property name="text">
+                  <string> CLEAR</string>
+                 </property>
+                 <property name="icon">
+                  <iconset theme="QIcon::ThemeIcon::EditClear"/>
+                 </property>
+                </widget>
                </item>
               </layout>
              </widget>
@@ -4045,7 +4195,10 @@
   <tabstop>pb_quick_input</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
+  <tabstop>pb_arm_return</tabstop>
   <tabstop>cb_motion_mode</tabstop>
+  <tabstop>pb_trajectory_add</tabstop>
+  <tabstop>pb_trajectory_clear</tabstop>
   <tabstop>pb_camera_refresh</tabstop>
   <tabstop>cb_camera_name</tabstop>
   <tabstop>pb_camera_capture</tabstop>
