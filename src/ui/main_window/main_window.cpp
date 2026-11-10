@@ -15,6 +15,7 @@
 
 // Other Library Headers
 #include <QMessageBox>     // Qt::Widgets
+#include <QPalette>        // Qt::Gui
 #include <QSignalBlocker>  // Qt::Core
 
 // Project Headers
@@ -104,18 +105,18 @@ void RemoveUiElement(T*& element) {
  *
  * @param mode Motion mode
  */
-const char* MotionModeColor(const Motion::MotionMode& mode) {
+QColor MotionModeColor(const Motion::MotionMode& mode) {
     switch (mode) {
         case Motion::MotionMode::kFeedbackOnly:
-            return Color::kOrange;  // CW only reacts
+            return Color::ToQColor(Color::kOrange);  // CW only reacts
 #if LIBRA_VERSION == 2
         case Motion::MotionMode::kTandem:
-            return Color::kGreen;  // CW predicts + reacts
+            return Color::ToQColor(Color::kGreen);  // CW predicts + reacts
         case Motion::MotionMode::kCwPrimary:
-            return Color::kBlue;  // CW is main mover
+            return Color::ToQColor(Color::kBlue);  // CW is main mover
 #endif
         default:
-            return Color::kRed;  // Manual: no automatic CW
+            return Color::ToQColor(Color::kRed);  // Manual: no automatic CW
     }
 }
 
@@ -350,9 +351,7 @@ void MainWindow::ConfigureUi() {
                                          static_cast<int>(mode));
             const int index = ui_->cb_motion_mode->count() - 1;
             ui_->cb_motion_mode->setItemData(index, tip, Qt::ToolTipRole);
-            ui_->cb_motion_mode->setItemData(index,
-                                             Color::ToQColor(
-                                                 MotionModeColor(mode)),
+            ui_->cb_motion_mode->setItemData(index, MotionModeColor(mode),
                                              Qt::ForegroundRole);
         };
 
@@ -817,8 +816,9 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
     // UI widgets
     ui_->cb_motion_mode->setCurrentIndex(
         ui_->cb_motion_mode->findData(static_cast<int>(mode)));
-    ui_->cb_motion_mode->setStyleSheet(
-        QString("QComboBox { color: %1; }").arg(MotionModeColor(mode)));
+    QPalette palette = ui_->cb_motion_mode->palette();
+    palette.setColor(QPalette::ButtonText, MotionModeColor(mode));
+    ui_->cb_motion_mode->setPalette(palette);
     if (reactive_cw_en) {
         // Reactive CW takes over from the fill/drain buttons
         ui_->pb_water_fill_A->setChecked(false);
