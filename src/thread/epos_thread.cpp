@@ -165,10 +165,6 @@ QString EposThread::GetTelemetry() {
         return {QString("Not Connected")};
     }
 
-    std::stringstream ss;
-    ss << std::fixed << std::setprecision(2);  // 0.01
-    ss << std::right;                          // right-align numbers
-
     // Get device state and convert to string
     uint err_code = 0;
     uint16_t state = 0;
@@ -179,7 +175,7 @@ QString EposThread::GetTelemetry() {
         return QStringLiteral("Error!");
     }
 
-    std::string state_str;
+    std::string state_str = "unknown";
     if (state == 0) {  // ST_DISABLED
         state_str = "disabled";
     } else if (state == 1) {  // ST_ENABLED
@@ -212,11 +208,15 @@ QString EposThread::GetTelemetry() {
     const double vel = a_vel * kRpmToDegs;  // to deg/s
     const double curr = a_curr / 1000.0;    // to A
 
-    // Create stringstream entry
-    // - std::setw(7) for values to account for [sign][#,3][.][#,2]
-    ss << "[" << kNodeID << "] - " << state_str << "\n"
-       << "  Actual Velocity: " << std::setw(7) << vel << " deg/s\n"
-       << "  Current:         " << std::setw(7) << curr << " A\n";
+    // Format telemetry
+    std::ostringstream ss;
+    AddTelemetryTextRow(ss, "Actuator Name",
+                        {"[" + Actuator::NameEnumToString(Actuator::Name::kYaw)
+                         + "]"});
+
+    AddTelemetryTextRow(ss, "State", {state_str});
+    AddTelemetryRow(ss, "Actual Velocity", {vel}, "deg/s");
+    AddTelemetryRow(ss, "Current", {curr}, "A");
 
     return QString::fromStdString(ss.str());
 }

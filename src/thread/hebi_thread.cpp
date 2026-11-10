@@ -67,41 +67,11 @@ constexpr double kMaxSweepVel = 0.1047;  // for friction sweep, rad/s (~6 deg/s)
 constexpr double kDiagnosticsPeriod = 3.0;  // s
 #endif
 
-// Status Message Formatting
-
-constexpr int kLabelWidth = 20;  // longest label = 19 char, +1 for visuals
-constexpr int kValueWidth = 6;  // format is [sign][#,2][.][#,2], +1 for visuals
-
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
 
 namespace {
-
-/**
- * @brief Formats actuator values and appends them to an existing stream.
- *
- * @param ss Reference to an output stream
- * @param label Row title
- * @param values Values for every actuator
- * @param unit Value units, if applicable
- */
-void AppendRow(std::ostringstream& ss, const std::string& label,
-               const std::vector<double>& values,
-               const std::string& unit = "") {
-    ss << std::left << std::setw(kLabelWidth) << label;  // left-aligned
-
-    for (double val : values) {
-        ss << std::right << std::setw(kValueWidth) << std::fixed
-           << std::setprecision(1) << val;  // 0.1, right-aligned
-    }
-
-    if (!unit.empty()) {
-        ss << " " << unit;
-    }
-
-    ss << "\n";
-}
 
 /**
  * @brief Formats value to fixed-precision string.
@@ -1060,8 +1030,6 @@ QString HebiThread::GetTelemetry() const {
         return {"Not Connected"};
     }
 
-    std::ostringstream ss;
-
     const auto& vel = feedback_->getVelocity();
     const auto& defl = feedback_->getDeflection();
     const auto& defl_vel = feedback_->getDeflectionVelocity();
@@ -1080,20 +1048,20 @@ QString HebiThread::GetTelemetry() const {
         temp_[i] = temp[i];
     }
 
-    // Format header row
-    ss << std::left << std::setw(kLabelWidth) << "Actuator Name";
-    for (int i = 0; i < n_actuators_; ++i) {
-        ss << std::right << std::setw(kValueWidth) << "[" + names_[i] + "]";
+    // Format telemetry
+    std::ostringstream ss;
+    std::vector<std::string> header;
+    for (const auto& name : names_) {
+        header.push_back("[" + name + "]");
     }
-    ss << "\n";
+    AddTelemetryTextRow(ss, "Actuator Name", header);
 
-    // Format information rows
-    AppendRow(ss, "Actual Velocity", a_vel_, "deg/s");
-    AppendRow(ss, "Deflection", defl_, "deg");
-    AppendRow(ss, "Deflection Velocity", defl_vel_, "deg/s");
-    AppendRow(ss, "Voltage", volt_, "V");
-    AppendRow(ss, "Current", curr_, "A");
-    AppendRow(ss, "Temperature", temp_, "C");
+    AddTelemetryRow(ss, "Actual Velocity", a_vel_, "deg/s");
+    AddTelemetryRow(ss, "Deflection", defl_, "deg");
+    AddTelemetryRow(ss, "Deflection Velocity", defl_vel_, "deg/s");
+    AddTelemetryRow(ss, "Voltage", volt_, "V");
+    AddTelemetryRow(ss, "Current", curr_, "A");
+    AddTelemetryRow(ss, "Temperature", temp_, "C");
 
     return QString::fromStdString(ss.str());
 }
