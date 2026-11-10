@@ -94,7 +94,7 @@ class HebiThread : public AbstractActuatorThread
     void SetTorqueCompBounds(const double& lower, const double& upper);
 
 #if LIBRA_VERSION == 2
-    void EnableFreeMode(const bool& enabled);
+    void EnablePitchRelease(const bool& enabled);
     void EnableInertiaFeedforward(const bool& enabled);
     void SetHandoffBand(const double& deg);
 
@@ -117,7 +117,7 @@ class HebiThread : public AbstractActuatorThread
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
-    void FreeModeChanged(const bool& enabled);
+    void PitchReleaseChanged(const bool& released);
 
     void CalibrationChanged(const Motion::Calibration& level);
     void CalibrationProgressChanged(const QString& text, const bool& running);
@@ -216,7 +216,7 @@ class HebiThread : public AbstractActuatorThread
 
 #if LIBRA_VERSION == 2
     std::shared_ptr<Libra2MotionController> motion_controller_;
-    std::atomic<bool> free_mode_{false};
+    std::atomic<bool> pitch_released_{false};  // whether actuator spins freely
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> calibration_running_{false};

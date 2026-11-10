@@ -444,7 +444,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
 
 #if LIBRA_VERSION == 2
     // Pitch control released (send nothing)
-    if (free_mode_) {
+    if (pitch_released_) {
         latest_cmd_pos_.setConstant(kNone);
         latest_cmd_vel_.setZero();
         emit ReportArmTorque(std::nullopt);
@@ -989,8 +989,8 @@ bool HebiThread::CanCalibrate() {
         emit ErrorThrown("HEBI - Can't calibrate; not connected!");
         return false;
     }
-    if (free_mode_) {
-        emit ErrorThrown("HEBI - Can't calibrate in free mode!");
+    if (pitch_released_) {
+        emit ErrorThrown("HEBI - Can't calibrate while pitch is released!");
         return false;
     }
 
@@ -1346,8 +1346,8 @@ void HebiThread::Disconnect() {
         // Reset motion state
         motion_controller_->Reset();
         ReportCalibrationStatus();
-        free_mode_ = false;
-        emit FreeModeChanged(false);
+        pitch_released_ = false;
+        emit PitchReleaseChanged(false);
 #endif
 
         // Destructing hebi::Group automatically cleans it up
@@ -1388,9 +1388,9 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     }
 
 #if LIBRA_VERSION == 2
-    if (free_mode_) {
+    if (pitch_released_) {
         // A "move" may still command the EPOS yaw joint, so don't error
-        logger_->Warn("Ignoring target while in free mode");
+        logger_->Warn("Ignoring target while pitch is released");
         return;
     }
 #endif
@@ -1618,30 +1618,29 @@ void HebiThread::SetTorqueCompBounds(const double& lower_bound,
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Turns free mode on or off. While on, nothing is sent to the actuator,
- *        allowing it to rotate freely.
+ * @brief Releases or takes control of the pitch joint.
  *
  * @param enabled Whether to stop commanding the actuator
  */
-void HebiThread::EnableFreeMode(const bool& enabled) {
+void HebiThread::EnablePitchRelease(const bool& enabled) {
     if (enabled && group_ == nullptr) {
-        emit ErrorThrown("HEBI - Can't enter free mode; not connected!");
-        emit FreeModeChanged(false);
+        emit ErrorThrown("HEBI - Can't release pitch; not connected!");
+        emit PitchReleaseChanged(false);
         return;
     }
 
-    if (enabled && !free_mode_) {
+    if (enabled && !pitch_released_) {
         Stop();
         motion_controller_->Reset();
-        free_mode_ = true;
-        logger_->Info("Free mode ON: actuator will release in "
-                      + std::to_string(group_->getCommandLifetimeMs()) + " ms");
-    } else if (!enabled && free_mode_) {
-        free_mode_ = false;
-        logger_->Info("Free mode OFF: holding current pose");
+        pitch_released_ = true;
+        logger_->Info("Pitch released (actuator off in "
+                      + std::to_string(group_->getCommandLifetimeMs()) + " ms)");
+    } else if (!enabled && pitch_released_) {
+        pitch_released_ = false;
+        logger_->Info("Pitch controlled (holding current pose)");
     }
 
-    emit FreeModeChanged(free_mode_);
+    emit PitchReleaseChanged(pitch_released_);
 }
 
 /**

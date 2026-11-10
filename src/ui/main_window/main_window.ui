@@ -2136,94 +2136,67 @@
                 </widget>
                </item>
                <item row="14" column="0" colspan="4">
-                <layout class="QHBoxLayout" name="hl_arm_bulk_input">
+                <layout class="QHBoxLayout" name="hl_arm_state">
                  <item>
-                  <spacer name="h_spacer_8">
+                  <widget class="QLabel" name="static_l_arm_state">
+                   <property name="statusTip">
+                    <string>Whether any actuator is moving</string>
+                   </property>
+                   <property name="text">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;State:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="l_arm_state_val">
+                   <property name="statusTip">
+                    <string>Whether any actuator is moving</string>
+                   </property>
+                   <property name="text">
+                    <string>...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="h_spacer_arm_state">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
                    <property name="sizeHint" stdset="0">
                     <size>
-                     <width>40</width>
+                     <width>0</width>
                      <height>20</height>
                     </size>
                    </property>
                   </spacer>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="le_quick_input">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
+                  <widget class="QPushButton" name="pb_release_pitch">
                    <property name="enabled">
                     <bool>false</bool>
                    </property>
                    <property name="minimumSize">
                     <size>
-                     <width>250</width>
-                     <height>25</height>
+                     <width>130</width>
+                     <height>30</height>
                     </size>
                    </property>
                    <property name="maximumSize">
                     <size>
-                     <width>250</width>
-                     <height>25</height>
+                     <width>130</width>
+                     <height>30</height>
                     </size>
                    </property>
                    <property name="statusTip">
-                    <string>Quickly replace actuator targets with a comma-delimited string of values</string>
+                    <string>Lets the pitch actuator spin freely</string>
                    </property>
                    <property name="text">
-                    <string/>
+                    <string>RELEASE PITCH</string>
+                   </property>
+                   <property name="checkable">
+                    <bool>true</bool>
                    </property>
                   </widget>
-                 </item>
-                 <item>
-                  <widget class="QPushButton" name="pb_quick_input">
-                   <property name="sizePolicy">
-                    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                     <horstretch>0</horstretch>
-                     <verstretch>0</verstretch>
-                    </sizepolicy>
-                   </property>
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>100</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>100</width>
-                     <height>25</height>
-                    </size>
-                   </property>
-                   <property name="statusTip">
-                    <string>Replace actuator targets with these values</string>
-                   </property>
-                   <property name="text">
-                    <string>QUICK INPUT</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="h_spacer_9">
-                   <property name="orientation">
-                    <enum>Qt::Orientation::Horizontal</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>40</width>
-                     <height>20</height>
-                    </size>
-                   </property>
-                  </spacer>
                  </item>
                 </layout>
                </item>
@@ -2442,7 +2415,7 @@
                </sizepolicy>
               </property>
               <property name="title">
-               <string>MOTION</string>
+               <string>MOTION CONTROLLER</string>
               </property>
               <layout class="QGridLayout" name="gl_motion_control">
                <property name="leftMargin">
@@ -2460,59 +2433,24 @@
                <property name="horizontalSpacing">
                 <number>12</number>
                </property>
-               <item row="0" column="3">
+               <item row="0" column="0">
                 <widget class="QLabel" name="static_l_motion_calibrated">
                  <property name="statusTip">
-                  <string>Whether the arm model has been calibrated this session</string>
+                  <string>Currently calibrated/loaded motion controller models</string>
                  </property>
                  <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Calibrated:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Calibration:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                 </widget>
                </item>
-               <item row="0" column="4">
+               <item row="0" column="1">
                 <widget class="QLabel" name="l_motion_calibrated_val">
-                 <property name="statusTip">
-                  <string>Whether the arm model has been calibrated this session</string>
-                 </property>
                  <property name="text">
                   <string>...</string>
                  </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-                 </property>
                 </widget>
                </item>
-               <item row="0" column="5">
-                <widget class="QLabel" name="static_l_motion_state">
-                 <property name="statusTip">
-                  <string>Whether a trajectory or calibration is running</string>
-                 </property>
-                 <property name="text">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;State:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="6">
-                <widget class="QLabel" name="l_motion_state_val">
-                 <property name="statusTip">
-                  <string>Whether a trajectory or calibration is running</string>
-                 </property>
-                 <property name="text">
-                  <string>...</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item row="0" column="7">
+               <item row="0" column="2">
                 <spacer name="h_spacer_motion_control">
                  <property name="orientation">
                   <enum>Qt::Orientation::Horizontal</enum>
@@ -2525,30 +2463,25 @@
                  </property>
                 </spacer>
                </item>
-               <item row="1" column="0">
-                <widget class="QPushButton" name="pb_free_mode">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>130</width>
-                   <height>30</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>130</width>
-                   <height>30</height>
-                  </size>
-                 </property>
+               <item row="1" column="0" colspan="3">
+                <widget class="QLabel" name="static_l_motion_status">
                  <property name="statusTip">
-                  <string>Stops commanding the pitch actuator so the joint moves freely (simulates a power failure)</string>
+                  <string>Calibration progress (or how the last one ended)</string>
                  </property>
                  <property name="text">
-                  <string> FREE MODE</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Status:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
-                 <property name="checkable">
+                </widget>
+               </item>
+               <item row="2" column="0" colspan="3">
+                <widget class="QLabel" name="l_motion_status_val">
+                 <property name="statusTip">
+                  <string>Calibration progress (or how the last one ended)</string>
+                 </property>
+                 <property name="text">
+                  <string>...</string>
+                 </property>
+                 <property name="wordWrap">
                   <bool>true</bool>
                  </property>
                 </widget>
@@ -4314,11 +4247,10 @@
   <tabstop>sb_arm_j1</tabstop>
   <tabstop>sb_arm_j2</tabstop>
   <tabstop>sb_arm_j3</tabstop>
-  <tabstop>le_quick_input</tabstop>
-  <tabstop>pb_quick_input</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
   <tabstop>pb_arm_return</tabstop>
+  <tabstop>pb_release_pitch</tabstop>
   <tabstop>cb_motion_mode</tabstop>
   <tabstop>pb_trajectory_add</tabstop>
   <tabstop>pb_trajectory_clear</tabstop>

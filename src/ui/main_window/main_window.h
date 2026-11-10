@@ -95,7 +95,7 @@ class MainWindow : public QMainWindow {
     void HandleMovementStateChanged();
 
 #if LIBRA_VERSION == 2
-    void HandleFreeModeChanged(const bool& enabled);
+    void HandlePitchReleaseChanged(const bool& released);
 
     void HandleCalibrationChanged(const Motion::Calibration& level);
     void HandleCalibrationProgress(const QString& text, const bool& running);
@@ -133,7 +133,7 @@ class MainWindow : public QMainWindow {
     void LoadHebiSafety(const QString& file_path);
 
 #if LIBRA_VERSION == 2
-    void EnableFreeMode(const bool& enabled);
+    void EnablePitchRelease(const bool& enabled);
 
     void EnableInertiaFeedforward(const bool& enabled);
     void UpdateHebiHandoffBand(const double& deg);
@@ -226,12 +226,13 @@ class MainWindow : public QMainWindow {
 
     // Arm (arm.cpp)
 
-    void on_pb_quick_input_clicked();
-
     void on_pb_arm_start_clicked();
     void on_pb_arm_stop_clicked();
     void on_pb_arm_return_clicked();
     void on_cb_motion_mode_activated(int index);
+#if LIBRA_VERSION == 2
+    void on_pb_release_pitch_toggled(bool checked);
+#endif
 
     // Trajectory (trajectory.cpp)
 
@@ -246,12 +247,6 @@ class MainWindow : public QMainWindow {
 #if LIBRA_VERSION == 1
     void on_pb_water_fill_B_clicked(bool checked);
     void on_pb_water_drain_B_clicked(bool checked);
-#endif
-
-    // Motion Control (motion_control.cpp)
-
-#if LIBRA_VERSION == 2
-    void on_pb_free_mode_toggled(bool checked);
 #endif
 
     // Manipulator (manipulator.cpp)

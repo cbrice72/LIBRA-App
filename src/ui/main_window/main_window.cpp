@@ -14,9 +14,8 @@
 #include <limits>
 
 // Other Library Headers
-#include <QMessageBox>                  // Qt::Widgets
-#include <QRegularExpressionValidator>  // Qt::Gui
-#include <QSignalBlocker>               // Qt::Core
+#include <QMessageBox>     // Qt::Widgets
+#include <QSignalBlocker>  // Qt::Core
 
 // Project Headers
 #include "colors.h"
@@ -34,6 +33,8 @@
 
 constexpr int kPrecision = 1;     // i.e., "0.1"
 constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
+
+constexpr const char* kIdleText = "Idle";  // state/status with nothing running
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -131,6 +132,13 @@ MainWindow::MainWindow(QWidget* parent)
     InitializeThreads();
 
     SetMotionMode(motion_mode_);  // initialize UI based on default mode
+
+    // Threads only report changes, so initialize with starting states
+    HandleMovementStateChanged();
+#if LIBRA_VERSION == 2
+    HandleCalibrationChanged(motion_controller_->GetCalibration());
+    ui_->l_motion_status_val->setText(kIdleText);
+#endif
 
     // Component auto-connect
     auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
@@ -238,6 +246,7 @@ void MainWindow::ConfigureUi() {
 #elif LIBRA_VERSION != 2
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
+    RemoveUiElement(ui_->pb_release_pitch);
 
     RemoveUiElement(ui_->l_epos_telemetry);
 #endif
@@ -323,18 +332,6 @@ void MainWindow::ConfigureUi() {
                  "CW alone moves the pitch joint; actuator only takes over "
                  "near the target (needs arm and friction calibrations)");
 #endif
-    }
-
-    // Set up validation for the "Quick Input" Line Edit
-    {
-        // Explanation of the regex:
-        // - "^-?": optional minus sign
-        // - "\d{1,3}": 1–3 digit number
-        // - "(,-?\d{1,3}){0,4}": up to 4 more integers, each preceded by a comma
-        QRegularExpression regex("(^-?\\d{1,3}(,-?\\d{1,3}){0,4}$)");
-        QRegularExpressionValidator* validator =
-            new QRegularExpressionValidator(regex, this);
-        ui_->le_quick_input->setValidator(validator);
     }
 
     // ========== Trajectory ==========
@@ -652,8 +649,8 @@ void MainWindow::InitializeThreads() {
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
 
 #if LIBRA_VERSION == 2
-    connect(this, &MainWindow::EnableFreeMode,  // stop commanding pitch joint
-            hebi_thread_, &HebiThread::EnableFreeMode);
+    connect(this, &MainWindow::EnablePitchRelease,  // stop commanding pitch
+            hebi_thread_, &HebiThread::EnablePitchRelease);
     connect(this, &MainWindow::EnableInertiaFeedforward,  // use inertia terms
             hebi_thread_, &HebiThread::EnableInertiaFeedforward);
     connect(this, &MainWindow::UpdateHebiHandoffBand,  // update hand-off band
@@ -685,8 +682,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleMovementStateChanged);
 
 #if LIBRA_VERSION == 2
-    connect(hebi_thread_, &HebiThread::FreeModeChanged,  // sync free toggle
-            this, &MainWindow::HandleFreeModeChanged);
+    connect(hebi_thread_, &HebiThread::PitchReleaseChanged,  // sync toggle
+            this, &MainWindow::HandlePitchReleaseChanged);
     connect(hebi_thread_, &HebiThread::CalibrationChanged,  // calibrated
             this, &MainWindow::HandleCalibrationChanged);
     connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
@@ -828,11 +825,12 @@ void MainWindow::UpdateActuatorControls() {
 
     // Update UI
     ui_->pb_arm_start->setEnabled(any_connected && !trajectory_playing_);
-    ui_->le_quick_input->setEnabled(any_connected);
-    ui_->pb_quick_input->setEnabled(any_connected);
     ui_->pb_arm_stop->setEnabled(any_connected);
     ui_->pb_arm_return->setEnabled(any_connected && !arm_moving_
                                    && !trajectory_playing_ && can_return);
+#if LIBRA_VERSION == 2
+    ui_->pb_release_pitch->setEnabled(hebi_connected);
+#endif
 
     ui_->pb_trajectory_add->setEnabled(any_connected && !trajectory_playing_
                                        && is_known(current_target_));
@@ -857,7 +855,7 @@ void MainWindow::UpdateModeControls() {
 
     bool mode_locked = arm_moving_ || trajectory_playing_;
 #if LIBRA_VERSION == 2
-    mode_locked |= ui_->pb_free_mode->isChecked();
+    mode_locked |= ui_->pb_release_pitch->isChecked();
 #endif
 
     // Update UI
@@ -875,30 +873,27 @@ void MainWindow::UpdateModeControls() {
  * @brief Enables motion control widgets/actions based on connection statuses
  *        and whether the arm is moving (incl. playing a trajectory).
  *
- * @note Mode switching and calibration must be locked while the arm is in motion
- *       or free mode. Free mode itself can be toggled whenever HEBI is connected.
+ * @note Mode switching and calibration must be locked while the arm is in
+ *       motion or the pitch actuator is released.
  */
 void MainWindow::UpdateMotionControls() {
     // Evaluate connection/activity statuses of all components
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
-    bool free_mode = ui_->pb_free_mode->isChecked();
+    bool pitch_released = ui_->pb_release_pitch->isChecked();
     bool busy = arm_moving_ || trajectory_playing_;
-
-    // Group box
-    ui_->pb_free_mode->setEnabled(hebi_connected);
 
     // Menu bar
     ui_->a_motion_handoff_band->setEnabled(both_connected && !busy);
     ui_->a_motion_inertia_ff->setEnabled(!busy);
 
     ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !busy
-                                              && !free_mode);
+                                              && !pitch_released);
     ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !busy
-                                                  && !free_mode);
+                                                  && !pitch_released);
     ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !busy
-                                                 && !free_mode);
+                                                 && !pitch_released);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
 
     ui_->a_motion_calibration_save->setEnabled(!busy);
@@ -1135,19 +1130,6 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     UpdateActuatorControls();
     UpdateModeControls();
-
-#if LIBRA_VERSION == 2
-    // HebiThread only reports motion states on change, so fill in the motion
-    // controller's defaults
-    if (connected) {
-        if (ui_->l_motion_calibrated_val->text() == "...") {
-            HandleCalibrationChanged(motion_controller_->GetCalibration());
-        }
-        if (ui_->l_motion_state_val->text() == "...") {
-            HandleMovementStateChanged();
-        }
-    }
-#endif
 }
 
 #if LIBRA_VERSION == 2
@@ -1268,11 +1250,9 @@ void MainWindow::HandleMovementStateChanged() {
     }
 
     // UI widgets
-#if LIBRA_VERSION == 2
-    ui_->l_motion_state_val->setText(arm_moving_ ? "Moving" : "Idle");
-    ui_->l_motion_state_val->setStyleSheet(
+    ui_->l_arm_state_val->setText(arm_moving_ ? "Moving" : kIdleText);
+    ui_->l_arm_state_val->setStyleSheet(
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
-#endif
 
     UpdateActuatorControls();
     UpdateModeControls();
@@ -1280,21 +1260,21 @@ void MainWindow::HandleMovementStateChanged() {
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Shows whether the pitch joint is in free mode (not commanded).
+ * @brief Shows whether the pitch joint is released (not commanded).
  *
- * @param enabled true while no commands are sent to the pitch actuator
+ * @param released true while no commands are sent to the pitch actuator
  */
-void MainWindow::HandleFreeModeChanged(const bool& enabled) {
-    if (enabled && trajectory_playing_) {
+void MainWindow::HandlePitchReleaseChanged(const bool& released) {
+    if (released && trajectory_playing_) {
         logger_->Info("Pitch released; pausing trajectory");
         SetTrajectoryPlaying(false);
     }
 
-    const QSignalBlocker blocker(ui_->pb_free_mode);  // don't re-emit
-
-    ui_->pb_free_mode->setChecked(enabled);
-    ui_->pb_free_mode->setStyleSheet(
-        enabled ? QString("color: %1;").arg(Color::kRed) : QString());
+    // UI widgets
+    const QSignalBlocker blocker(ui_->pb_release_pitch);  // don't re-emit
+    ui_->pb_release_pitch->setChecked(released);
+    ui_->pb_release_pitch->setStyleSheet(
+        released ? QString("color: %1;").arg(Color::kRed) : QString());
 
     UpdateModeControls();
 }
@@ -1316,32 +1296,52 @@ void MainWindow::HandleCalibrationChanged(const Motion::Calibration& level) {
     }
 
     // UI widgets
-    const char* color = Color::kYellow;  // partial: Tandem/CW Primary disabled
-    if (level == Motion::Calibration::kNone) {
-        color = Color::kRed;
-    } else if (level == Motion::Calibration::kFull) {
-        color = Color::kGreen;
+    const char* color = Color::kYellow;
+    QString tip;  // what each level leaves disabled
+    switch (level) {
+        case Motion::Calibration::kNone:
+            color = Color::kRed;
+            tip = "No arm or friction model -- Tandem, CW Primary disabled";
+            break;
+        case Motion::Calibration::kFrictionOnly:
+            tip = "No arm model -- Tandem, CW Primary disabled";
+            break;
+        case Motion::Calibration::kArmOnly:
+            tip = "No friction model -- Tandem, CW Primary disabled";
+            break;
+        default:
+            color = Color::kGreen;
+            tip = "All motion modes available";
     }
 
     ui_->l_motion_calibrated_val->setText(
         QString::fromStdString(Motion::CalibrationEnumToString(level)));
     ui_->l_motion_calibrated_val->setStyleSheet(
         QString("color: %1;").arg(color));
+    ui_->l_motion_calibrated_val->setStatusTip(tip);
 }
 
 /**
- * @brief Shows an in-progress calibration's status in the status bar. If a
- *        calibration recently finished, instead shows its outcome for up to
- *        `kOutcomeTimeout` seconds.
+ * @brief Shows an in-progress calibration's current step. If a calibration
+ *        just ended, instead shows its outcome for `kOutcomeTimeout`.
  *
  * @param text Current calibration step, or how it ended
  * @param running Whether the calibration is still running
  */
 void MainWindow::HandleCalibrationProgress(const QString& text,
                                            const bool& running) {
-    constexpr int kOutcomeTimeout = 15000;  // ms
+    constexpr int kOutcomeTimeout = 10000;  // ms
 
-    statusBar()->showMessage(text, running ? 0 : kOutcomeTimeout);
+    ui_->l_motion_status_val->setText(text);
+    if (!running) {
+        // Back to idle, unless a newer status replaced the outcome
+        QTimer::singleShot(kOutcomeTimeout, this, [this, text]() {
+            // Guard against "Idle" replacing a newer status
+            if (ui_->l_motion_status_val->text() == text) {
+                ui_->l_motion_status_val->setText(kIdleText);
+            }
+        });
+    }
 }
 #endif
 
