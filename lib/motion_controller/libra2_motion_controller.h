@@ -37,6 +37,7 @@ class Libra2MotionController : public AbstractMotionController {
                                     const double& reactive_cw_lower_bound,
                                     const double& reactive_cw_upper_bound,
                                     const double& reactive_cw_slow_rate,
+                                    const double& reactive_cw_off_margin,
                                     const bool& debug_mode = false);
 
     // --- Control Cycle ---
@@ -183,11 +184,13 @@ class Libra2MotionController : public AbstractMotionController {
     // Reactive CW (torque feedback)
 
     bool reactive_cw_en_{false};
+    bool torque_high_{false};  // latched until below the off bound
     bool movement_en_{true};
 
-    double reactive_cw_lower_bound_;      // "soft" limit (Nm)
-    double reactive_cw_upper_bound_;      // "hard" limit (Nm)
-    const double reactive_cw_slow_rate_;  // movement rate between limits
+    double reactive_cw_lower_bound_;  // "soft" limit (Nm)
+    double reactive_cw_upper_bound_;  // "hard" limit (Nm)
+    double reactive_cw_off_margin_;  // "turn-off" margin below lower bound (Nm)
+    double reactive_cw_slow_rate_;   // movement rate between limits
 
     // Calibration
 

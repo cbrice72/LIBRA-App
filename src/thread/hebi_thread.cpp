@@ -24,7 +24,7 @@
 #include "group_info.hpp"  // HEBI
 #include "log_file.hpp"    // HEBI
 #include "lookup.hpp"      // HEBI
-#include <QDir>          // Qt::Core
+#include <QDir>            // Qt::Core
 
 // Project Headers
 #ifdef BUILD_WITH_ROS2
@@ -485,6 +485,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
  */
 double HebiThread::UpdateTrajectoryRate() {
     if (motion_mode_ == Motion::MotionMode::kManual) {
+        torque_high_ = false;
         return 1.0;
     }
 
@@ -524,6 +525,12 @@ double HebiThread::UpdateTrajectoryRate() {
     // Apply 3-tier hysteresis logic
     // TODO: Ideally we should be predicting how a trajectory will affect the
     //       central joint's feedback torque, maybe with ROS2 or something.
+    // NOTE: Once on, stays on a bit below the lower bound (avoids valve chatter)
+    const double off_bound = torque_high_ ? reactive_cw_lower_bound_
+                                                - kReactiveCwOffMargin
+                                          : reactive_cw_lower_bound_;
+    torque_high_ = (arm_torque_r >= off_bound);
+
     if (arm_torque_r > reactive_cw_upper_bound_) {
         // If arm torque is too high, disable movement before reporting the
         // torque direction to WaterController for CW balancing
@@ -537,7 +544,7 @@ double HebiThread::UpdateTrajectoryRate() {
             emit ReportArmTorque(arm_torque_theta);
         }
 
-    } else if (arm_torque_r >= reactive_cw_lower_bound_) {
+    } else if (arm_torque_r >= off_bound) {
         // While significant arm torque remains, keep reporting its direction
         // to WaterController
         emit ReportArmTorque(arm_torque_theta);
@@ -553,8 +560,7 @@ double HebiThread::UpdateTrajectoryRate() {
             movement_en_ = true;
 
             logger_->Info("Movement re-enabled (" + FormatDouble(arm_torque_r)
-                          + " Nm < " + FormatDouble(reactive_cw_lower_bound_)
-                          + " Nm)");
+                          + " Nm < " + FormatDouble(off_bound) + " Nm)");
         }
     }
 

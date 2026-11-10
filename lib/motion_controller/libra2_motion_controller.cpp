@@ -94,12 +94,14 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  * @param reactive_cw_lower_bound Reactive CW "soft" limit (Nm)
  * @param reactive_cw_upper_bound Reactive CW "hard" limit (Nm)
  * @param reactive_cw_slow_rate Trajectory rate between reactive CW limits
+ * @param reactive_cw_off_margin How far below the lower bound reactive CW
+ *                               turns off again (Nm)
  * @param debug_mode Whether to output verbose debug text
  */
 Libra2MotionController::Libra2MotionController(
     const double& cw_capacity, const double& reactive_cw_lower_bound,
     const double& reactive_cw_upper_bound, const double& reactive_cw_slow_rate,
-    const bool& debug_mode)
+    const double& reactive_cw_off_margin, const bool& debug_mode)
     : AbstractMotionController({Joint::Name::kPitch}, debug_mode),
       cw_model_(Motion::CwModelParams{
           kCwPivotDist,
@@ -115,6 +117,7 @@ Libra2MotionController::Libra2MotionController(
       reactive_cw_lower_bound_(reactive_cw_lower_bound),
       reactive_cw_upper_bound_(reactive_cw_upper_bound),
       reactive_cw_slow_rate_(reactive_cw_slow_rate),
+      reactive_cw_off_margin_(reactive_cw_off_margin),
       calibrator_(*logger_) {
     if (!cw_model_.IsValid()) {
         logger_->Warn("CW model invalid: " + cw_model_.GetError()
@@ -594,9 +597,15 @@ Libra2MotionController::ReactiveCwResult Libra2MotionController::UpdateReactiveC
 
     if (!reactive_cw_en_) {
         movement_en_ = true;
+        torque_high_ = false;
         return result;  // default: full speed, no CW command
     }
 
+    // Once on, stays on until it's an arbitrary value below the lower bound
+    // (to avoid valve chatter)
+    const double off_bound = torque_high_ ? reactive_cw_lower_bound_
+                                                - reactive_cw_off_margin_
+                                          : reactive_cw_lower_bound_;
     bool in_slow_band = false;
 
     if (torque_magnitude > reactive_cw_upper_bound_) {
@@ -612,7 +621,7 @@ Libra2MotionController::ReactiveCwResult Libra2MotionController::UpdateReactiveC
             result.cw_command = direction;
         }
 
-    } else if (torque_magnitude >= reactive_cw_lower_bound_) {
+    } else if (torque_magnitude >= off_bound) {
         // Soft limit: keep reporting direction, slow trajectory (unless braking)
         result.cw_command = direction;
         in_slow_band = !braking;
@@ -625,10 +634,10 @@ Libra2MotionController::ReactiveCwResult Libra2MotionController::UpdateReactiveC
 
             logger_->Info("Movement re-enabled ("
                           + Motion::FormatNum(torque_magnitude) + " Nm < "
-                          + Motion::FormatNum(reactive_cw_lower_bound_)
-                          + " Nm)");
+                          + Motion::FormatNum(off_bound) + " Nm)");
         }
     }
+    torque_high_ = (torque_magnitude >= off_bound);
 
     if (!movement_en_) {
         result.trajectory_rate = 0.0;
@@ -1201,6 +1210,7 @@ void Libra2MotionController::OnReset() {
     new_target_ = false;
     trajectory_active_ = false;
     movement_en_ = true;
+    torque_high_ = false;
 
     state_warned_ = false;
 }

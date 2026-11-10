@@ -607,6 +607,7 @@ void MainWindow::InitializeThreads() {
                                                  kReactiveCwLowerBound,
                                                  kReactiveCwUpperBound,
                                                  kReactiveCwSlowRate,
+                                                 kReactiveCwOffMargin,
                                                  debug_mode_);
 
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode

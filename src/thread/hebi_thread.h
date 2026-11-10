@@ -43,6 +43,7 @@ using msgJointState = sensor_msgs::msg::JointState;
 // Reactive counterweight constants
 constexpr double kReactiveCwLowerBound = 3.0;  // Nm
 constexpr double kReactiveCwUpperBound = 6.0;  // Nm
+constexpr double kReactiveCwOffMargin = 0.5;   // Nm
 constexpr double kReactiveCwSlowRate = 0.5;    // velocity rate between bounds
 
 /**
@@ -218,6 +219,7 @@ class HebiThread : public AbstractActuatorThread
     double reactive_cw_lower_bound_{kReactiveCwLowerBound};  // Nm
     double reactive_cw_upper_bound_{kReactiveCwUpperBound};  // Nm
     bool movement_en_{true};       // false = trajectory paused
+    bool torque_high_{false};      // latched until below the off bound
     double trajectory_rate_{1.0};  // 0.5 in the lower torque band
 
 #if LIBRA_VERSION == 2
