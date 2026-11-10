@@ -765,6 +765,7 @@ void Libra2MotionController::HandOffToActuator() {
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = true;
     reactive_cw_used_ = false;
+    torque_high_ = false;  // see `Update()`
 
     if (target_pos_) {
         pending_move_ = (*target_pos_)[kPitchIdx];
@@ -986,11 +987,14 @@ Motion::Libra2Command Libra2MotionController::Update(
                                       "target mass unavailable; reactive CW "
                                       "takes over");
                         cw_assist_done_ = true;
+                        torque_high_ = false;
                     } else {
                         const Motion::CwCommand cw =
                             PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
                         if (cw == Motion::CwCommand::kIdle) {
+                            // Reactive CW starts fresh at lower bound
                             cw_assist_done_ = true;
+                            torque_high_ = false;
                             predictive_cw_mass_ = *cw_mass_tgt;
                             reactive_cw_used_ = false;
                             logger_->Info("Predictive CW reached "
