@@ -127,55 +127,6 @@ Libra2MotionController::Libra2MotionController(
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sets the motion planning mode.
- *
- * @param mode Mode to use from next target onward
- *
- * @note A mode change may be refused. For example: both Tandem and CW Primary
- *       modes require a full model (arm + friction calibrated, CW modeled).
- */
-bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    // Validate mode change
-    const std::string name = Motion::MotionModeEnumToString(mode);
-    if (!Motion::UsesMotionController(mode)) {
-        logger_->Warn(name
-                      + " mode doesn't use the motion controller; staying "
-                        "in the current mode");
-        return false;
-    }
-    if (!(arm_model_ && friction_model_ && cw_model_.IsValid())) {
-        logger_->Warn(name
-                      + " mode needs calibrated arm and friction models "
-                        "and a valid CW model; staying in the current "
-                        "mode");
-        return false;
-    }
-    if (mode == Motion::MotionMode::kCwPrimary && IsMovingLocked()) {
-        logger_->Warn("Can't switch to CW Primary while the arm is moving; "
-                      "staying in the current mode");
-        return false;
-    }
-
-    // Ensure safe transition
-    if (cw_phase_ == CwPhase::kCwMoving) {
-        logger_->Warn("Left CW Primary while the CW was moving the arm; "
-                      "handing off to the actuator");
-        HandOffToActuator();
-
-    } else if (!IsMovingLocked()) {
-        // Keep active CW state until the next target
-        cw_phase_ = CwPhase::kIdle;
-        cw_assist_done_ = false;
-    }
-
-    mode_ = mode;
-    logger_->Debug("Motion controller mode: " + name);
-    return true;
-}
-
-/**
  * @brief Stores latest CW state (from WaterController).
  *
  * @param volume CW volume, V (L)
@@ -323,7 +274,6 @@ bool Libra2MotionController::ClearModel() {
     }
 
     arm_model_.reset();
-    mode_ = Motion::MotionMode::kTandem;  // safe default
     cw_phase_ = CwPhase::kIdle;
 
     // Reset to defaults
@@ -347,14 +297,17 @@ bool Libra2MotionController::IsArmCalibrated() const {
 
 /**
  * @brief Gets the current calibration level.
+ *
+ * @note An arm model only counts with a valid CW model.
  */
 Motion::Calibration Libra2MotionController::GetCalibration() const {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    if (arm_model_ && friction_model_) {
+    const bool arm_ok = arm_model_ && cw_model_.IsValid();
+    if (arm_ok && friction_model_) {
         return Motion::Calibration::kFull;
     }
-    if (arm_model_) {
+    if (arm_ok) {
         return Motion::Calibration::kArmOnly;
     }
     if (friction_model_) {
@@ -848,18 +801,23 @@ void Libra2MotionController::LogPredictiveCwError(
 /**
  * @brief Runs one control cycle: decides what the actuator and CW do.
  *
- * @param dt Time since last cycle (s)
  * @param actual Actual joint values
  * @param commanded Commanded joint values from previous cycle
+ * @param dt Time since last cycle (s)
  * @param trajectory_active Whether a trajectory is running
+ * @param mode Requested motion logic
+ *
+ * @note Modes other than CW Primary and Tandem only use the motion controller
+ *       to calibrate.
  *
  * @note If anything CW Primary needs is lost while the arm is free (model, CW
  *       volume, target, or reactive CW control), the actuator takes over
  *       immediately.
  */
 Motion::Libra2Command Libra2MotionController::Update(
-    const double& dt, const Motion::ActualState& actual,
-    const Motion::CommandedState& commanded, const bool& trajectory_active) {
+    const Motion::ActualState& actual, const Motion::CommandedState& commanded,
+    const double& dt, const bool& trajectory_active,
+    const Motion::MotionMode& mode) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (!IsValidInput(actual, commanded)) {
@@ -897,12 +855,31 @@ Motion::Libra2Command Libra2MotionController::Update(
         target = (*target_pos_)[kPitchIdx];
     }
 
+    // Determine how a new target is handled
+    const bool cw_primary = (mode == Motion::MotionMode::kCwPrimary);
+    if (new_target_) {
+        new_target_ = false;
+        if (cw_primary) {
+            // Let CW lead
+            cw_phase_ = CwPhase::kCwMoving;
+        } else if (target) {
+            // Move actuator
+            pending_move_ = *target;
+        }
+    }
+
+    // Left CW Primary while the CW was moving the arm
+    if (!cw_primary && cw_phase_ == CwPhase::kCwMoving) {
+        logger_->Warn("Left CW Primary while CW was moving the arm; handing "
+                      "off to actuator");
+        HandOffToActuator();
+    }
+
     // Determine movement and CW commands
     Motion::Libra2Command command(Motion::kNumJoints);
     bool arm_free = false;
 
-    if (mode_ == Motion::MotionMode::kCwPrimary
-        && cw_phase_ == CwPhase::kCwMoving) {
+    if (cw_primary && cw_phase_ == CwPhase::kCwMoving) {
         // (A) CW Primary: arm spins freely while CW moves it
         if (!model_ready || !target || calibrating || !reactive_cw_en_) {
             logger_->Warn(
@@ -1097,25 +1074,21 @@ Motion::Libra2Diagnostics Libra2MotionController::ComputeDiagnostics(
 //------------------------------------------------------------------------------
 
 /**
- * @brief Handles a new target, cancelling any calibration before requesting the
- *        move.
+ * @brief Handles a new target: cancels any calibration and CW assistance, and
+ *        marks the target as new.
  *
- * @note HebiThread starts every LIBRA-II trajectory from `move_to`, so the
- *       choice of how to reach a target is made here only.
+ * @note How to reach it depends on the motion mode, so the next `Update()`
+ *       decides (HebiThread starts every LIBRA-II trajectory from `move_to`).
  */
 void Libra2MotionController::OnTargetChanged() {
     calibrator_.CancelCalibration();
 
-    // Mode change applies from the next target
+    cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
     predictive_cw_mass_.reset();
-    if (mode_ == Motion::MotionMode::kCwPrimary) {
-        cw_phase_ = CwPhase::kCwMoving;
-        pending_move_.reset();  // eventual hand-off requests the move
-    } else {
-        cw_phase_ = CwPhase::kIdle;
-        pending_move_ = (*target_pos_)[kPitchIdx];
-    }
+    pending_move_.reset();
+
+    new_target_ = true;
 }
 
 /**
@@ -1129,6 +1102,7 @@ void Libra2MotionController::OnStop() {
     predictive_cw_mass_.reset();
 
     pending_move_.reset();
+    new_target_ = false;
 }
 
 /**
@@ -1143,6 +1117,7 @@ void Libra2MotionController::OnReset() {
     predictive_cw_mass_.reset();
 
     pending_move_.reset();
+    new_target_ = false;
     trajectory_active_ = false;
     movement_en_ = true;
 
@@ -1151,13 +1126,15 @@ void Libra2MotionController::OnReset() {
 
 /**
  * @brief Checks whether the arm is moving or about to move: trajectory, CW-led
- *        move, queued move, or calibration (`mutex_` must already be held).
+ *        move, new or queued move, or calibration (`mutex_` must already be
+ *        held).
  *
  * @note Trajectory state is as of the last `Update()`.
  */
 bool Libra2MotionController::IsMovingLocked() const {
-    return trajectory_active_ || (cw_phase_ == CwPhase::kCwMoving)
-           || pending_move_.has_value() || calibrator_.IsRunning();
+    return trajectory_active_ || new_target_
+           || (cw_phase_ == CwPhase::kCwMoving) || pending_move_.has_value()
+           || calibrator_.IsRunning();
 }
 
 //------------------------------------------------------------------------------

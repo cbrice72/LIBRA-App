@@ -746,34 +746,26 @@ void MainWindow::InitializeThreads() {
 
 /**
  * @brief Applies a motion mode: configures the motion controller (LIBRA-II),
- *        HebiThread, and reactive counterweight (CW) to match, and shows it in
- *        the list.
+ *        HebiThread, and reactive counterweight (CW) to match, and updates the
+ * UI.
  *
  * @param mode Mode to apply
  *
- * @note Requirements (CW connection, calibration) are checked where the user
- *       picks a mode (see `on_cb_motion_mode_activated()`); automatic switches
- *       only go to Manual, which has none.
+ * @note Requirements (CW connection, calibration) are checked when the user
+ *       picks a mode (see `on_cb_motion_mode_activated()`).
  *
- * @note LIBRA-II: entering or leaving a motion controller mode resets the
- *       controller's runtime state (incl. any CW-led move), since it isn't
- *       updated in the other modes.
+ * @note Entering or exiting a mode driven by a motion controller resets the
+ *       controller to avoid a stale state.
  */
 void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
 #if LIBRA_VERSION == 2
-    // Motion controller (refuses its modes without calibration)
-    const bool controller_mode = Motion::UsesMotionController(mode);
-    if (controller_mode != Motion::UsesMotionController(motion_mode_)) {
+    // Reset when entering or exiting a motion controller mode
+    if (Motion::UsesMotionController(mode)
+        != Motion::UsesMotionController(motion_mode_)) {
         motion_controller_->Reset();
     }
-    if (controller_mode && !motion_controller_->SetMotionMode(mode)) {
-        // Refused (motion controller logs why); keep showing the current mode
-        ui_->cb_motion_mode->setCurrentIndex(
-            ui_->cb_motion_mode->findData(static_cast<int>(motion_mode_)));
-        return;
-    }
 
-    // Also applies while calibrating, which always uses the motion controller
+    // Calibrations use the motion controller in every mode
     motion_controller_->EnableReactiveCw(mode != Motion::MotionMode::kManual);
 #endif
 

@@ -752,9 +752,10 @@ std::optional<Motion::MotionCommand> HebiThread::RunMotionController(
     }
 
     // Run the motion controller and get updated command
-    Motion::Libra2Command cmd = motion_controller_->Update(dt_s, actual,
-                                                           commanded,
-                                                           trajectory_active);
+    Motion::Libra2Command cmd = motion_controller_->Update(actual, commanded,
+                                                           dt_s,
+                                                           trajectory_active,
+                                                           motion_mode_);
     if (cmd.mode.size() != Motion::kNumJoints
         || cmd.ff_torque.size() != Motion::kNumJoints) {
         return std::nullopt;

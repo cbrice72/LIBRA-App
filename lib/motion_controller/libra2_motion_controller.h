@@ -41,14 +41,13 @@ class Libra2MotionController : public AbstractMotionController {
 
     // --- Control Cycle ---
 
-    Motion::Libra2Command Update(const double& dt,
-                                 const Motion::ActualState& actual,
+    Motion::Libra2Command Update(const Motion::ActualState& actual,
                                  const Motion::CommandedState& commanded,
-                                 const bool& trajectory_active);
+                                 const double& dt,
+                                 const bool& trajectory_active,
+                                 const Motion::MotionMode& mode);
 
     // --- Settings ---
-
-    bool SetMotionMode(const Motion::MotionMode& mode);
 
     void SetCwState(const double& volume, const double& flow);
 
@@ -163,9 +162,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     bool inertia_ff_en_{false};
 
-    // Movement Mode & State
+    // Movement State
 
-    Motion::MotionMode mode_{Motion::MotionMode::kTandem};
+    bool new_target_{false};  // set since the last `Update()`
     CwPhase cw_phase_{CwPhase::kIdle};
 
     bool cw_assist_done_{false};  // predictive CW done or normal hand-off
