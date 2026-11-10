@@ -8,13 +8,15 @@
 #pragma once
 
 // C++ Standard Library Headers
-//   (none)
+#include <cstdio>
 
 // Other Library Headers
+#include <QColor>   // Qt::Gui
 #include <QString>  // Qt::Core
 
 /* --- TABLE OF CONTENTS ---
  * !Constants
+ * !Helper Functions
  */
 
 /**
@@ -37,5 +39,23 @@ inline constexpr const char* kYellow = "rgb(240, 228, 66)";
 inline constexpr const char* kBlue = "rgb(0, 114, 178)";
 inline constexpr const char* kRed = "rgb(213, 94, 0)";
 inline constexpr const char* kMagenta = "rgb(204, 121, 167)";
+
+//------------------------------------------------------------------------------
+// !Helper Functions
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Converts a palette color to a QColor, for APIs that don't take
+ *        style sheets (e.g., item colors).
+ *
+ * @param rgb Palette color, as "rgb(r, g, b)"
+ */
+inline QColor ToQColor(const char* rgb) {
+    int r = 0;
+    int g = 0;
+    int b = 0;
+    std::sscanf(rgb, "rgb(%d, %d, %d)", &r, &g, &b);
+    return QColor(r, g, b);
+}
 
 }  // namespace Color

@@ -98,6 +98,27 @@ void RemoveUiElement(T*& element) {
     element = nullptr;
 }
 
+/**
+ * @brief Gets a motion mode's text color, based on how much of the CW control
+ *        it automates.
+ *
+ * @param mode Motion mode
+ */
+const char* MotionModeColor(const Motion::MotionMode& mode) {
+    switch (mode) {
+        case Motion::MotionMode::kFeedbackOnly:
+            return Color::kOrange;  // CW only reacts
+#if LIBRA_VERSION == 2
+        case Motion::MotionMode::kTandem:
+            return Color::kGreen;  // CW predicts + reacts
+        case Motion::MotionMode::kCwPrimary:
+            return Color::kBlue;  // CW is main mover
+#endif
+        default:
+            return Color::kRed;  // Manual: no automatic CW
+    }
+}
+
 }  // namespace
 
 //------------------------------------------------------------------------------
@@ -327,8 +348,12 @@ void MainWindow::ConfigureUi() {
                                              Motion::MotionModeEnumToString(
                                                  mode)),
                                          static_cast<int>(mode));
-            ui_->cb_motion_mode->setItemData(ui_->cb_motion_mode->count() - 1,
-                                             tip, Qt::ToolTipRole);
+            const int index = ui_->cb_motion_mode->count() - 1;
+            ui_->cb_motion_mode->setItemData(index, tip, Qt::ToolTipRole);
+            ui_->cb_motion_mode->setItemData(index,
+                                             Color::ToQColor(
+                                                 MotionModeColor(mode)),
+                                             Qt::ForegroundRole);
         };
 
         add_mode(Motion::MotionMode::kManual,
@@ -792,6 +817,8 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
     // UI widgets
     ui_->cb_motion_mode->setCurrentIndex(
         ui_->cb_motion_mode->findData(static_cast<int>(mode)));
+    ui_->cb_motion_mode->setStyleSheet(
+        QString("QComboBox { color: %1; }").arg(MotionModeColor(mode)));
     if (reactive_cw_en) {
         // Reactive CW takes over from the fill/drain buttons
         ui_->pb_water_fill_A->setChecked(false);
