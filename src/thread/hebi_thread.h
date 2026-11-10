@@ -95,8 +95,6 @@ class HebiThread : public AbstractActuatorThread
 
 #if LIBRA_VERSION == 2
     void EnablePitchRelease(const bool& enabled);
-    void EnableInertiaFeedforward(const bool& enabled);
-    void SetHandoffBand(const double& deg);
 
     // --- Calibration ---
 

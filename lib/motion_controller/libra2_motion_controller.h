@@ -56,6 +56,7 @@ class Libra2MotionController : public AbstractMotionController {
     bool SetReactiveCwBounds(const double& lower_bound,
                              const double& upper_bound);
     bool SetHandoffBand(const double& band);
+    [[nodiscard]] double GetHandoffBand() const;
     void SetEtaExtension(const double& extension);
     [[nodiscard]] double GetEtaExtension() const;
 

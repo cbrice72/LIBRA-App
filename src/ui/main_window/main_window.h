@@ -135,9 +135,6 @@ class MainWindow : public QMainWindow {
 #if LIBRA_VERSION == 2
     void EnablePitchRelease(const bool& enabled);
 
-    void EnableInertiaFeedforward(const bool& enabled);
-    void UpdateHebiHandoffBand(const double& deg);
-
     void StartHebiLevelCal();
     void StartHebiTwoAngleCal(const double& deg_a, const double& deg_b);
     void StartHebiFrictionCal(const double& deg_a, const double& deg_b);

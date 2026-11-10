@@ -651,10 +651,6 @@ void MainWindow::InitializeThreads() {
 #if LIBRA_VERSION == 2
     connect(this, &MainWindow::EnablePitchRelease,  // stop commanding pitch
             hebi_thread_, &HebiThread::EnablePitchRelease);
-    connect(this, &MainWindow::EnableInertiaFeedforward,  // use inertia terms
-            hebi_thread_, &HebiThread::EnableInertiaFeedforward);
-    connect(this, &MainWindow::UpdateHebiHandoffBand,  // update hand-off band
-            hebi_thread_, &HebiThread::SetHandoffBand);
 
     connect(this, &MainWindow::StartHebiLevelCal,  // calibrate: level
             hebi_thread_, &HebiThread::StartLevelCalibration);

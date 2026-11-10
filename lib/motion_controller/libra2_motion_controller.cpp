@@ -223,6 +223,14 @@ bool Libra2MotionController::SetHandoffBand(const double& band) {
 }
 
 /**
+ * @brief Gets the CW Primary mode's hand-off band (rad).
+ */
+double Libra2MotionController::GetHandoffBand() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return handoff_band_;
+}
+
+/**
  * @brief Sets the ETA's extension.
  *
  * @param extension Extension from minimum (m)

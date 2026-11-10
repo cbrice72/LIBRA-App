@@ -512,20 +512,20 @@ void MainWindow::on_a_trajectory_save_triggered() {
 #if LIBRA_VERSION == 2
 /**
  * @brief Event handler for "Motion Control" menu action "Hand-off band...".
- *        Asks for a new hand-off band and sends it to the HEBI thread.
+ *        Asks for a new hand-off band and sends it to the motion controller.
  */
 void MainWindow::on_a_motion_handoff_band_triggered() {
     bool ok = false;
     const double deg = QInputDialog::getDouble(
         this, "Hand-off Band",
         "Actuator takes over within (deg of the target):",
-        Motion::kDefaultHandoffBand * kRadToDeg, 0.01, 90.0, 2, &ok);
+        motion_controller_->GetHandoffBand() * kRadToDeg, 0.01, 90.0, 2, &ok);
     if (!ok) {
         logger_->Debug("Hand-off band setting cancelled by user");
         return;
     }
 
-    emit UpdateHebiHandoffBand(deg);
+    motion_controller_->SetHandoffBand(deg / kRadToDeg);
 }
 
 /**
@@ -535,7 +535,7 @@ void MainWindow::on_a_motion_handoff_band_triggered() {
  * @param checked Whether to include inertia in the feedforward calculation
  */
 void MainWindow::on_a_motion_inertia_ff_toggled(bool checked) {
-    emit EnableInertiaFeedforward(checked);
+    motion_controller_->EnableInertiaFeedforward(checked);
 }
 
 /**

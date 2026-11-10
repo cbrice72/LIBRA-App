@@ -1593,28 +1593,6 @@ void HebiThread::EnablePitchRelease(const bool& enabled) {
     emit PitchReleaseChanged(pitch_released_);
 }
 
-/**
- * @brief Turns the inertia terms of the torque feedforward on or off.
- *
- * @param enabled Whether to include the inertia terms
- */
-void HebiThread::EnableInertiaFeedforward(const bool& enabled) {
-    motion_controller_->EnableInertiaFeedforward(enabled);  // logs by itself
-}
-
-/**
- * @brief Sets the CW Primary hand-off band.
- *
- * @param deg Band around target angle (deg, joint space)
- */
-void HebiThread::SetHandoffBand(const double& deg) {
-    // Motion controller logs success
-    if (!motion_controller_->SetHandoffBand(deg * kDegToRad)) {
-        emit ErrorThrown("HEBI - Invalid hand-off band: " + QString::number(deg)
-                         + " deg");
-    }
-}
-
 //------------------------------------------------------------------------------
 // !Calibration (slots)
 //------------------------------------------------------------------------------
