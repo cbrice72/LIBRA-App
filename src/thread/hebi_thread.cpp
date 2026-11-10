@@ -36,6 +36,7 @@
  * !Local Helpers
  * !Class Management
  * !Class Helpers
+ * !Getters & Setters
  * !Thread Overrides
  * !Actuator Commands (slots)
  * !Control Algorithm Settings (slots)
@@ -1115,6 +1116,18 @@ void HebiThread::PublishState() {
 #endif
 
 //------------------------------------------------------------------------------
+// !Getters & Setters
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Gets the reactive counterweight torque bounds in use (Nm), as
+ *        {lower, upper}.
+ */
+std::pair<double, double> HebiThread::GetReactiveCwBounds() const {
+    return {reactive_cw_lower_bound_, reactive_cw_upper_bound_};
+}
+
+//------------------------------------------------------------------------------
 // !Thread Overrides
 //------------------------------------------------------------------------------
 
@@ -1555,11 +1568,8 @@ void HebiThread::SetMotionMode(const Motion::MotionMode& mode) {
 void HebiThread::SetReactiveCwBounds(const double& lower_bound,
                                      const double& upper_bound) {
 #if LIBRA_VERSION == 2
-    // Motion controller checks and logs them
     // TODO: bounds should be set in one place and referenced when needed
-    if (!motion_controller_->SetReactiveCwBounds(lower_bound, upper_bound)) {
-        return;
-    }
+    motion_controller_->SetReactiveCwBounds(lower_bound, upper_bound);
 #endif
 
     reactive_cw_lower_bound_ = lower_bound;

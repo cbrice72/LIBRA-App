@@ -53,7 +53,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     void EnableReactiveCw(const bool& enabled);
     void EnableInertiaFeedforward(const bool& enabled);
-    bool SetReactiveCwBounds(const double& lower_bound,
+    void SetReactiveCwBounds(const double& lower_bound,
                              const double& upper_bound);
     bool SetHandoffBand(const double& band);
     [[nodiscard]] double GetHandoffBand() const;

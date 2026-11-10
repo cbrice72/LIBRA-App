@@ -335,7 +335,8 @@ void MainWindow::on_a_reset_window_size_triggered() {
  */
 void MainWindow::on_a_reactive_cw_bounds_triggered() {
     // Prompt user to input new bounds
-    ReactiveCwDialog dialog(this, kReactiveCwLowerBound, kReactiveCwUpperBound);
+    const auto [lower, upper] = hebi_thread_->GetReactiveCwBounds();
+    ReactiveCwDialog dialog(this, lower, upper);
     if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("Torque bound setting cancelled by user");
         return;

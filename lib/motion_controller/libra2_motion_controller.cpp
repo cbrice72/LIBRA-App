@@ -180,25 +180,18 @@ void Libra2MotionController::EnableInertiaFeedforward(const bool& enabled) {
  *
  * @param lower_bound Soft limit (Nm); movement slows at or above it
  * @param upper_bound Hard limit (Nm); movement pauses above it
+ *
+ * @note The caller validates the bounds.
  */
-bool Libra2MotionController::SetReactiveCwBounds(const double& lower_bound,
+void Libra2MotionController::SetReactiveCwBounds(const double& lower_bound,
                                                  const double& upper_bound) {
     std::lock_guard<std::mutex> lock(mutex_);
-
-    if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
-        logger_->Warn("Ignoring invalid reactive CW bounds: lower="
-                      + Motion::FormatNum(lower_bound)
-                      + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
-        return false;
-    }
 
     reactive_cw_lower_bound_ = lower_bound;
     reactive_cw_upper_bound_ = upper_bound;
     logger_->Debug("Reactive CW bounds updated: lower="
                    + Motion::FormatNum(lower_bound)
                    + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
-
-    return true;
 }
 
 /**

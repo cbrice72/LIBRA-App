@@ -14,6 +14,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Other Library Headers
@@ -73,6 +74,10 @@ class HebiThread : public AbstractActuatorThread
         std::vector<std::string> families, std::vector<std::string> names,
         const bool& debug_mode = false);
     ~HebiThread() override;
+
+    // --- Getters & Setters ---
+
+    [[nodiscard]] std::pair<double, double> GetReactiveCwBounds() const;
 
   public slots:
     // --- Actuator Commands ---
