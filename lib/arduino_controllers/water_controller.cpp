@@ -52,7 +52,7 @@ constexpr int kVolumeTrackPeriodMs = 1000 / 30;  // ms (30 Hz)
 
 // LIBRA-II's inflow solenoid valve sometimes doesn't open when commanded; no
 // measured inflow this long after a fill command means it's stuck (arbitrary)
-constexpr qint64 kInflowTimeoutMs = 1000;  // ms
+constexpr qint64 kInflowTimeoutMs = 800;  // ms (stay above FlowArduino's period)
 
 //------------------------------------------------------------------------------
 // !Local Helpers
