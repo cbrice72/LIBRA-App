@@ -74,23 +74,23 @@ target_link_libraries(
     PUBLIC Qt${QT_VERSION_MAJOR}::SerialPort
 )
 
-# ========================= TORQUE COMP DIALOG =========================
+# ========================= REACTIVE COUNTERWEIGHT DIALOG =========================
 
 # Create and configure the module
 qt_add_library(
-    torque_comp_dialog
+    reactive_cw_dialog
     STATIC
     # UI Resources (icons, etc.)
     ${RESOURCE_DIR}/resources.qrc
     # Dialog
-    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/torque_comp_dialog.ui
+    ${CMAKE_CURRENT_SOURCE_DIR}/reactive_cw_dialog.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/reactive_cw_dialog.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/reactive_cw_dialog.ui
 )
 
 # Ensure this module packages the necessary headers
 target_include_directories(
-    torque_comp_dialog
+    reactive_cw_dialog
     # Project
     PUBLIC ${RESOURCE_DIR}
     # Make this directory available to consumers
@@ -99,7 +99,7 @@ target_include_directories(
 
 # Tell the linker which libraries to link against
 target_link_libraries(
-    torque_comp_dialog
+    reactive_cw_dialog
     # Qt
     PUBLIC Qt${QT_VERSION_MAJOR}::Widgets
 )

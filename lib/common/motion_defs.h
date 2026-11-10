@@ -60,14 +60,16 @@ constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 
 /**
  * @brief How the arm reaches its targets, i.e., what type of automation assists
- *        the trajectory: none, ATC (torque feedback), or a motion controller.
+ *        the trajectory: none, reactive counterweight (torque feedback only),
+ *        or a motion controller.
  *
- * @note ATC (automatic torque compensation) commands the CW from measured arm
- *       torque, pausing or slowing the trajectory while it rebalances.
+ * @note "Reactive Counterweight" adjusts counterweight fill level based on
+ *       measured arm torque, pausing or slowing the trajectory while it
+ *       rebalances.
  */
 enum class MotionMode : uint8_t {
     kManual,        // trajectory only; user adjusts CW via fill/drain buttons
-    kFeedbackOnly,  // trajectory throttled by ATC
+    kFeedbackOnly,  // trajectory throttled by reactive counterweight
 #if LIBRA_VERSION == 2
     kTandem,    // trajectory executed while CW adjusts to estimated target mass
     kCwPrimary  // CW moves arm; actuator takes over near target

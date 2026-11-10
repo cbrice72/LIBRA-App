@@ -490,8 +490,8 @@ void MainWindow::InitializeDeviceManagers() {
     connect(ui_->a_water_cw_disconnect, &QAction::triggered,  // disconnect
             water_controller_, &WaterController::Disconnect);
 
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // automatic compensation
-            water_controller_, &WaterController::EnableAutoTorqueComp);
+    connect(this, &MainWindow::EnableReactiveCw,  // automatic compensation
+            water_controller_, &WaterController::EnableReactiveCw);
     connect(this, &MainWindow::CommandWater,  // force specific command
             water_controller_, &WaterController::ForceCommand);
 
@@ -591,9 +591,9 @@ void MainWindow::InitializeThreads() {
     // NOTE: passed to and managed by hebi_thread_
     motion_controller_ =
         std::make_shared<Libra2MotionController>(Water::kTotalCapacity,
-                                                 kTorqueCompLowerBound,
-                                                 kTorqueCompUpperBound,
-                                                 kTorqueCompSlowRate,
+                                                 kReactiveCwLowerBound,
+                                                 kReactiveCwUpperBound,
+                                                 kReactiveCwSlowRate,
                                                  debug_mode_);
 
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
@@ -645,8 +645,8 @@ void MainWindow::InitializeThreads() {
 
     connect(this, &MainWindow::CommandMotionMode,  // set motion mode
             hebi_thread_, &HebiThread::SetMotionMode);
-    connect(this, &MainWindow::UpdateTorqueCompBounds,  // update limits
-            hebi_thread_, &HebiThread::SetTorqueCompBounds);
+    connect(this, &MainWindow::UpdateReactiveCwBounds,  // update limits
+            hebi_thread_, &HebiThread::SetReactiveCwBounds);
 
 #if LIBRA_VERSION == 2
     connect(this, &MainWindow::EnablePitchRelease,  // stop commanding pitch
@@ -746,7 +746,8 @@ void MainWindow::InitializeThreads() {
 
 /**
  * @brief Applies a motion mode: configures the motion controller (LIBRA-II),
- *        HebiThread, and the CW's ATC to match, and shows it in the list.
+ *        HebiThread, and reactive counterweight (CW) to match, and shows it in
+ *        the list.
  *
  * @param mode Mode to apply
  *
@@ -773,7 +774,7 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
     }
 
     // Also applies while calibrating, which always uses the motion controller
-    motion_controller_->EnableTorqueComp(mode != Motion::MotionMode::kManual);
+    motion_controller_->EnableReactiveCw(mode != Motion::MotionMode::kManual);
 #endif
 
     if (mode != motion_mode_) {
@@ -782,15 +783,15 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
     motion_mode_ = mode;
 
     // Components
-    const bool atc_en = (mode != Motion::MotionMode::kManual);
+    const bool reactive_cw_en = (mode != Motion::MotionMode::kManual);
     emit CommandMotionMode(mode);
-    emit EnableAutoTorqueComp(atc_en);
+    emit EnableReactiveCw(reactive_cw_en);
 
     // UI widgets
     ui_->cb_motion_mode->setCurrentIndex(
         ui_->cb_motion_mode->findData(static_cast<int>(mode)));
-    if (atc_en) {
-        // ATC takes the CW over from the fill/drain buttons
+    if (reactive_cw_en) {
+        // Reactive CW takes over from the fill/drain buttons
         ui_->pb_water_fill_A->setChecked(false);
         ui_->pb_water_drain_A->setChecked(false);
 #if LIBRA_VERSION == 1
@@ -840,8 +841,8 @@ void MainWindow::UpdateActuatorControls() {
 }
 
 /**
- * @brief Updates movement mode and ATC controls according to connection
- *        statuses of relevant components and arm motion status.
+ * @brief Updates movement mode and reactive counterweight controls according
+ *        to connection statuses of relevant components and arm motion status.
  *
  * @note Requirements of individual modes are checked when one is picked (see
  *       `on_cb_motion_mode_activated()`).
@@ -860,8 +861,8 @@ void MainWindow::UpdateModeControls() {
 
     // Update UI
     ui_->cb_motion_mode->setEnabled(hebi_connected && !mode_locked);
-    ui_->a_atc_update_bounds->setEnabled(both_connected);
-    ui_->a_atc_ignore_water_level->setEnabled(both_connected);
+    ui_->a_reactive_cw_bounds->setEnabled(both_connected);
+    ui_->a_reactive_cw_ignore_water_level->setEnabled(both_connected);
 
 #if LIBRA_VERSION == 2
     UpdateMotionControls();
@@ -944,7 +945,6 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
-    // ATC needs the CW
     if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
         logger_->Warn("CW disconnected; stopping automatic CW control");
         SetMotionMode(Motion::MotionMode::kManual);

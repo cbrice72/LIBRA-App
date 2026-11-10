@@ -3189,7 +3189,7 @@
                  <item row="2" column="0" colspan="3">
                   <widget class="QLabel" name="l_water_ignore_level">
                    <property name="statusTip">
-                    <string>ATC won't auto-stop when a CW is estimated full/empty</string>
+                    <string>Reactive CW won't stop when a CW is estimated full/empty</string>
                    </property>
                    <property name="text">
                     <string>Ignoring water level</string>
@@ -3663,20 +3663,21 @@
     </property>
     <addaction name="a_debug_mode"/>
     <addaction name="separator"/>
+    <addaction name="a_show_telemetry"/>
     <addaction name="a_reset_window_size"/>
    </widget>
    <widget class="QMenu" name="m_automation">
     <property name="title">
      <string>Automation</string>
     </property>
-    <widget class="QMenu" name="m_atc_preferences">
+    <widget class="QMenu" name="m_reactive_cw">
      <property name="title">
-      <string>ATC</string>
+      <string>Reactive CW</string>
      </property>
-     <addaction name="a_atc_update_bounds"/>
-     <addaction name="a_atc_ignore_water_level"/>
+     <addaction name="a_reactive_cw_bounds"/>
+     <addaction name="a_reactive_cw_ignore_water_level"/>
     </widget>
-    <addaction name="m_atc_preferences"/>
+    <addaction name="m_reactive_cw"/>
    </widget>
    <widget class="QMenu" name="m_trajectory">
     <property name="title">
@@ -4054,15 +4055,15 @@
     <string>Cannot be toggled when a connection is active</string>
    </property>
   </action>
-  <action name="a_atc_update_bounds">
+  <action name="a_reactive_cw_bounds">
    <property name="enabled">
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Torque compensation bounds...</string>
+    <string>Torque bounds...</string>
    </property>
   </action>
-  <action name="a_atc_ignore_water_level">
+  <action name="a_reactive_cw_ignore_water_level">
    <property name="checkable">
     <bool>true</bool>
    </property>

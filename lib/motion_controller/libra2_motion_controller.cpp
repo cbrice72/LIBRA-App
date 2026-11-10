@@ -91,14 +91,14 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  * @brief Standard constructor.
  *
  * @param cw_capacity CW capacity (L)
- * @param torque_comp_lower_bound ATC "soft" limit (Nm)
- * @param torque_comp_upper_bound ATC "hard" limit (Nm)
- * @param torque_comp_slow_rate Trajectory rate between ATC limits
+ * @param reactive_cw_lower_bound Reactive CW "soft" limit (Nm)
+ * @param reactive_cw_upper_bound Reactive CW "hard" limit (Nm)
+ * @param reactive_cw_slow_rate Trajectory rate between reactive CW limits
  * @param debug_mode Whether to output verbose debug text
  */
 Libra2MotionController::Libra2MotionController(
-    const double& cw_capacity, const double& torque_comp_lower_bound,
-    const double& torque_comp_upper_bound, const double& torque_comp_slow_rate,
+    const double& cw_capacity, const double& reactive_cw_lower_bound,
+    const double& reactive_cw_upper_bound, const double& reactive_cw_slow_rate,
     const bool& debug_mode)
     : AbstractMotionController({Joint::Name::kPitch}, debug_mode),
       cw_model_(Motion::CwModelParams{
@@ -112,9 +112,9 @@ Libra2MotionController::Libra2MotionController(
       friction_coulomb_(kDefaultFrictionCoulomb),
       friction_viscous_(kDefaultFrictionViscous),
       arm_inertia_(kArmInertia),
-      torque_comp_lower_bound_(torque_comp_lower_bound),
-      torque_comp_upper_bound_(torque_comp_upper_bound),
-      torque_comp_slow_rate_(torque_comp_slow_rate),
+      reactive_cw_lower_bound_(reactive_cw_lower_bound),
+      reactive_cw_upper_bound_(reactive_cw_upper_bound),
+      reactive_cw_slow_rate_(reactive_cw_slow_rate),
       calibrator_(*logger_) {
     if (!cw_model_.IsValid()) {
         logger_->Warn("CW model invalid: " + cw_model_.GetError()
@@ -196,15 +196,15 @@ void Libra2MotionController::SetCwState(const double& volume,
 }
 
 /**
- * @brief Enables or disables automatic torque compensation (ATC).
+ * @brief Enables or disables reactive counterweight (CW).
  *
- * @param enabled Whether to enable ATC
+ * @param enabled Whether to enable reactive CW
  */
-void Libra2MotionController::EnableTorqueComp(const bool& enabled) {
+void Libra2MotionController::EnableReactiveCw(const bool& enabled) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    atc_en_ = enabled;
-    if (!atc_en_) {
+    reactive_cw_en_ = enabled;
+    if (!reactive_cw_en_) {
         movement_en_ = true;  // "manual" mode: movement is always allowed
     }
 
@@ -225,25 +225,25 @@ void Libra2MotionController::EnableInertiaFeedforward(const bool& enabled) {
 }
 
 /**
- * @brief Sets the ATC's soft and hard torque limits.
+ * @brief Sets the reactive counterweight's soft and hard torque limits.
  *
  * @param lower_bound Soft limit (Nm); movement slows at or above it
  * @param upper_bound Hard limit (Nm); movement pauses above it
  */
-bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
+bool Libra2MotionController::SetReactiveCwBounds(const double& lower_bound,
                                                  const double& upper_bound) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
-        logger_->Warn("Ignoring invalid torque compensation bounds: lower="
+        logger_->Warn("Ignoring invalid reactive CW bounds: lower="
                       + Motion::FormatNum(lower_bound)
                       + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
         return false;
     }
 
-    torque_comp_lower_bound_ = lower_bound;
-    torque_comp_upper_bound_ = upper_bound;
-    logger_->Debug("Torque compensation bounds updated: lower="
+    reactive_cw_lower_bound_ = lower_bound;
+    reactive_cw_upper_bound_ = upper_bound;
+    logger_->Debug("Reactive CW bounds updated: lower="
                    + Motion::FormatNum(lower_bound)
                    + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
 
@@ -620,8 +620,8 @@ bool Libra2MotionController::LoadCalibrationRecord(
 //------------------------------------------------------------------------------
 
 /**
- * @brief Applies three-step hysteresis to throttle the trajectory based on
- *        sensed torque (like LIBRA-I's motion control).
+ * @brief Applies three-step hysteresis to throttle trajectory-following speed
+ *        based on sensed torque, using the counterweight (CW).
  *
  * @param torque_magnitude Absolute value of torque feedback (Nm)
  * @param direction CW adjustment direction, opposite to torque
@@ -633,32 +633,32 @@ bool Libra2MotionController::LoadCalibrationRecord(
  *
  * @see HebiThread::UpdateTrajectoryRate
  */
-Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
+Libra2MotionController::ReactiveCwResult Libra2MotionController::UpdateReactiveCw(
     const double& torque_magnitude, const Motion::CwCommand& direction,
     const bool& braking) {
-    AtcResult result;
+    ReactiveCwResult result;
 
-    if (!atc_en_) {
+    if (!reactive_cw_en_) {
         movement_en_ = true;
         return result;  // default: full speed, no CW command
     }
 
     bool in_slow_band = false;
 
-    if (torque_magnitude > torque_comp_upper_bound_) {
+    if (torque_magnitude > reactive_cw_upper_bound_) {
         // Hard limit: stop movement, then report direction (same as LIBRA-I)
         if (movement_en_) {
             movement_en_ = false;
 
             logger_->Info("Movement disabled due to high torque ("
                           + Motion::FormatNum(torque_magnitude) + " Nm > "
-                          + Motion::FormatNum(torque_comp_upper_bound_)
+                          + Motion::FormatNum(reactive_cw_upper_bound_)
                           + " Nm)");
         } else {
             result.cw_command = direction;
         }
 
-    } else if (torque_magnitude >= torque_comp_lower_bound_) {
+    } else if (torque_magnitude >= reactive_cw_lower_bound_) {
         // Soft limit: keep reporting direction, slow trajectory (unless braking)
         result.cw_command = direction;
         in_slow_band = !braking;
@@ -671,7 +671,7 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
 
             logger_->Info("Movement re-enabled ("
                           + Motion::FormatNum(torque_magnitude) + " Nm < "
-                          + Motion::FormatNum(torque_comp_lower_bound_)
+                          + Motion::FormatNum(reactive_cw_lower_bound_)
                           + " Nm)");
         }
     }
@@ -679,7 +679,7 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
     if (!movement_en_) {
         result.trajectory_rate = 0.0;
     } else {
-        result.trajectory_rate = in_slow_band ? torque_comp_slow_rate_ : 1.0;
+        result.trajectory_rate = in_slow_band ? reactive_cw_slow_rate_ : 1.0;
     }
 
     return result;
@@ -809,16 +809,16 @@ void Libra2MotionController::HandOffToActuator() {
 }
 
 /**
- * @brief Logs the error between the predictive CW's estimated balancing mass
- *        and the actual mass the reactive CW settled at, once the arm and water
- *        are at rest.
+ * @brief Logs the error between the predictive counterweight (CW) estimate of
+ *        the balancing mass and the mass the reactive CW actually settled at,
+ *        once the system is at rest.
  *
- * @param reactive Reactive CW command from ATC this cycle
+ * @param reactive Reactive CW command this cycle
  * @param angle Actual angle, θ (rad)
  * @param torque Actual actuator torque (Nm)
  *
  * @note Only logs if reactive CW moved after predictive CW finished; otherwise
- *       the predicted mass held the torque below ATC's lower bound.
+ *       the predicted mass held the torque below reactive CW's lower bound.
  */
 void Libra2MotionController::LogPredictiveCwError(
     const std::optional<Motion::CwCommand>& reactive, const double& angle,
@@ -828,7 +828,7 @@ void Libra2MotionController::LogPredictiveCwError(
         return;
     }
 
-    // Settled: torque below ATC's lower bound, arm and water stopped
+    // Settled: torque below reactive CW's lower bound, arm and water stopped
     if (!reactive_cw_used_ || reactive != Motion::CwCommand::kIdle
         || trajectory_active_ || cw_flow_ != 0.0) {
         return;
@@ -854,7 +854,8 @@ void Libra2MotionController::LogPredictiveCwError(
  * @param trajectory_active Whether a trajectory is running
  *
  * @note If anything CW Primary needs is lost while the arm is free (model, CW
- *       volume, target, or ATC), the actuator takes over immediately.
+ *       volume, target, or reactive CW control), the actuator takes over
+ *       immediately.
  */
 Motion::Libra2Command Libra2MotionController::Update(
     const double& dt, const Motion::ActualState& actual,
@@ -903,9 +904,10 @@ Motion::Libra2Command Libra2MotionController::Update(
     if (mode_ == Motion::MotionMode::kCwPrimary
         && cw_phase_ == CwPhase::kCwMoving) {
         // (A) CW Primary: arm spins freely while CW moves it
-        if (!model_ready || !target || calibrating || !atc_en_) {
-            logger_->Warn("CW Primary: model, CW volume, target, or ATC "
-                          "unavailable; handing control to the actuator");
+        if (!model_ready || !target || calibrating || !reactive_cw_en_) {
+            logger_->Warn(
+                "CW Primary: model, CW volume, target, or reactive CW "
+                "unavailable; handing control to the actuator");
             HandOffToActuator();
         } else {
             arm_free = RunCwPrimary(angle, *target, command);
@@ -919,24 +921,24 @@ Motion::Libra2Command Libra2MotionController::Update(
         calibrator_.Update(cycle);
 
     } else if (!arm_free) {
-        // (B) Tandem/Holding: ATC throttle applies,
+        // (B) Tandem/Holding: reactive CW throttle applies,
         const Motion::CwCommand direction = (actual_torque > 0.0)
                                                 ? Motion::CwCommand::kFill
                                                 : Motion::CwCommand::kDrain;
         const bool braking = target
                              && (actual_torque * (*target - angle) < 0.0);
-        const AtcResult atc = UpdateTorqueComp(std::abs(actual_torque),
-                                               direction, braking);
+        const ReactiveCwResult reactive_cw =
+            UpdateReactiveCw(std::abs(actual_torque), direction, braking);
 
-        command.trajectory_rate = atc.trajectory_rate;
-        command.cw_command = atc.cw_command;  // reactive (LIBRA-I style)
+        command.trajectory_rate = reactive_cw.trajectory_rate;
+        command.cw_command = reactive_cw.cw_command;  // reactive (LIBRA-I style)
 
         if (calibrating) {
             // CW reactive while calibrating
             calibrator_.Update(cycle);
         } else {
             // Predictive CW replaces reactive until it reaches its target
-            // mass; reactive then handles any torque left above ATC bounds
+            // mass; reactive then handles any torque left above its bounds
             if (model_ready && target && !cw_assist_done_) {
                 const auto cw_mass_tgt = TargetCwMass(*target);
                 if (cw_mass_tgt) {
@@ -951,7 +953,8 @@ Motion::Libra2Command Libra2MotionController::Update(
                     }
                 }
             } else if (predictive_cw_mass_ && cw_mass_) {
-                LogPredictiveCwError(atc.cw_command, angle, actual_torque);
+                LogPredictiveCwError(reactive_cw.cw_command, angle,
+                                     actual_torque);
             }
         }
 

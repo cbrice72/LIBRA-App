@@ -1,6 +1,6 @@
 /******************************************************************************
- * @file   torque_comp_dialog.h
- * @brief  Torque compensation settings dialog box; header file.
+ * @file   reactive_cw_dialog.h
+ * @brief  Reactive counterweight settings dialog box; header file.
  *
  * @author Christian Brice
  ******************************************************************************/
@@ -17,22 +17,22 @@
 //   (none)
 
 namespace Ui {  // NOLINT: Qt-generated
-class TorqueCompDialog;
+class ReactiveCwDialog;
 }  // namespace Ui
 
 /**
- * @brief A dialog for configuring torque compensation bounds for HEBI actuators.
+ * @brief A dialog for configuring reactive counterweight torque bounds.
  */
-class TorqueCompDialog : public QDialog {
+class ReactiveCwDialog : public QDialog {
     // NOLINTBEGIN: required by Qt
     Q_OBJECT
     // NOLINTEND
 
   public:
-    explicit TorqueCompDialog(QWidget* parent = nullptr,
+    explicit ReactiveCwDialog(QWidget* parent = nullptr,
                               const double& lower_bound = 2.5,
                               const double& upper_bound = 5.0);
-    ~TorqueCompDialog() override;
+    ~ReactiveCwDialog() override;
 
     double GetLowerBound() const;
     double GetUpperBound() const;
@@ -44,5 +44,5 @@ class TorqueCompDialog : public QDialog {
     // NOLINTEND
     // --- Data Members ---
 
-    Ui::TorqueCompDialog* ui_{nullptr};
+    Ui::ReactiveCwDialog* ui_{nullptr};
 };

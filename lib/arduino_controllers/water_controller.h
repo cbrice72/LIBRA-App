@@ -36,7 +36,7 @@ class WaterController : public GenericSerialDevice {
   public slots:
     // --- Arduino Commands ---
 
-    void EnableAutoTorqueComp(const bool& enabled);
+    void EnableReactiveCw(const bool& enabled);
     void UpdateTorqueFeedback(const std::optional<double>& torque_dir);
 
     void ForceCommand(const Water::Side& side, const Water::State& state);
@@ -81,7 +81,7 @@ class WaterController : public GenericSerialDevice {
 
     // --- Data Members ---
 
-    bool auto_comp_en_{false};
+    bool reactive_cw_en_{false};
     QByteArray water_cmd_;  // only 4 bits used
 
     std::array<Tank, Water::kSideCount> tanks_;

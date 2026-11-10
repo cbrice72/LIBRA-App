@@ -171,7 +171,7 @@ void WaterController::ModifyCommand(uint8_t new_bits) {
  * @see HebiThread::run
  */
 void WaterController::MapTorqueToCommand(const double& torque_dir) {
-    if (!auto_comp_en_) {
+    if (!reactive_cw_en_) {
         // Only allow manual control (see ForceCommand)
         return;
     }
@@ -314,19 +314,20 @@ void WaterController::TrackVolume() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sets the state of the fluid system's automatic torque compensation (ATC).
+ * @brief Enables or disables reactive counterweight (fill/drain based on arm
+ *        torque).
  *
  * @param enabled Whether to enable auto-compensation
  *
  * @see MapTorqueToCommand
  */
-void WaterController::EnableAutoTorqueComp(const bool& enabled) {
-    if (auto_comp_en_ == enabled) {
+void WaterController::EnableReactiveCw(const bool& enabled) {
+    if (reactive_cw_en_ == enabled) {
         return;  // no change, so do nothing
     }
 
     ClearCommand();  // reset the previous command when switching modes
-    auto_comp_en_ = enabled;
+    reactive_cw_en_ = enabled;
 
     logger_->Debug(std::string("Torque-based fill/drain ")
                    + (enabled ? "enabled" : "disabled; manual control only"));
@@ -340,7 +341,7 @@ void WaterController::EnableAutoTorqueComp(const bool& enabled) {
  */
 void WaterController::UpdateTorqueFeedback(
     const std::optional<double>& torque_dir) {
-    if (!auto_comp_en_) {
+    if (!reactive_cw_en_) {
         return;  // don't interfere with manual control
     }
 
@@ -364,8 +365,8 @@ void WaterController::ForceCommand(const Water::Side& side,
         return;
     }
 
-    // Force-disable automatic torque compensation
-    EnableAutoTorqueComp(false);
+    // Force-disable reactive counterweight
+    EnableReactiveCw(false);
 
     // Modify or clear corresponding command bits
     if (state == Water::State::kStopped) {

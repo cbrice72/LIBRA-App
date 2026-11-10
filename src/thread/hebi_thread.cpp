@@ -477,7 +477,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
  * @note Manual mode always gets full speed.
  *
  * @note LIBRA-II only uses this outside motion controller modes, since the
- *       motion controller has its own torque control.
+ *       motion controller has its own reactive counterweight.
  *
  * @note Only used in `ExecuteMovement()`; separate function for readability.
  */
@@ -513,7 +513,7 @@ double HebiThread::UpdateTrajectoryRate() {
                                      eff[Actuator::Name::kPitch]);
     const double arm_torque_r = std::abs(arm_pitch_torque);
 
-    // NOTE: Same fill/drain logic as the motion controller's torque control
+    // NOTE: Same fill/drain logic as the motion controller's reactive CW
     const double arm_torque_theta = *CwCommandToReport(
         (arm_pitch_torque > 0.0) ? Motion::CwCommand::kFill
                                  : Motion::CwCommand::kDrain);
@@ -522,7 +522,7 @@ double HebiThread::UpdateTrajectoryRate() {
     // Apply 3-tier hysteresis logic
     // TODO: Ideally we should be predicting how a trajectory will affect the
     //       central joint's feedback torque, maybe with ROS2 or something.
-    if (arm_torque_r > torque_comp_upper_bound_) {
+    if (arm_torque_r > reactive_cw_upper_bound_) {
         // If arm torque is too high, disable movement before reporting the
         // torque direction to WaterController for CW balancing
         if (movement_en_) {
@@ -530,17 +530,17 @@ double HebiThread::UpdateTrajectoryRate() {
 
             logger_->Info("Movement disabled due to high torque ("
                           + FormatDouble(arm_torque_r) + " Nm > "
-                          + FormatDouble(torque_comp_upper_bound_) + " Nm)");
+                          + FormatDouble(reactive_cw_upper_bound_) + " Nm)");
         } else {  // movement is disabled
             emit ReportArmTorque(arm_torque_theta);
         }
 
-    } else if (arm_torque_r >= torque_comp_lower_bound_) {
+    } else if (arm_torque_r >= reactive_cw_lower_bound_) {
         // While significant arm torque remains, keep reporting its direction
         // to WaterController
         emit ReportArmTorque(arm_torque_theta);
         trajectory_rate_ =
-            kTorqueCompSlowRate;  // avoids sudden stop if upper bound is hit
+            kReactiveCwSlowRate;  // avoids sudden stop if upper bound is hit
 
     } else {
         // Once arm torque reaches an acceptable level, disable fluid system
@@ -551,7 +551,7 @@ double HebiThread::UpdateTrajectoryRate() {
             movement_en_ = true;
 
             logger_->Info("Movement re-enabled (" + FormatDouble(arm_torque_r)
-                          + " Nm < " + FormatDouble(torque_comp_lower_bound_)
+                          + " Nm < " + FormatDouble(reactive_cw_lower_bound_)
                           + " Nm)");
         }
     }
@@ -1537,7 +1537,7 @@ void HebiThread::StopHebiLog() {
  */
 void HebiThread::SetMotionMode(const Motion::MotionMode& mode) {
     if (mode == Motion::MotionMode::kManual) {
-        // Without ATC, movement is always allowed
+        // Without reactive CW, movement is always allowed
         movement_en_ = true;
         trajectory_rate_ = 1.0;  // full speed
     }
@@ -1546,23 +1546,23 @@ void HebiThread::SetMotionMode(const Motion::MotionMode& mode) {
 }
 
 /**
- * @brief Sets the bounds for the central joint's torque control.
+ * @brief Sets the central joint's reactive counterweight torque bounds.
  *
  * @param lower_bound Lower torque bound (Nm)
  * @param upper_bound Upper torque bound (Nm)
  */
-void HebiThread::SetTorqueCompBounds(const double& lower_bound,
+void HebiThread::SetReactiveCwBounds(const double& lower_bound,
                                      const double& upper_bound) {
 #if LIBRA_VERSION == 2
     // Motion controller checks and logs them
     // TODO: bounds should be set in one place and referenced when needed
-    if (!motion_controller_->SetTorqueCompBounds(lower_bound, upper_bound)) {
+    if (!motion_controller_->SetReactiveCwBounds(lower_bound, upper_bound)) {
         return;
     }
 #endif
 
-    torque_comp_lower_bound_ = lower_bound;
-    torque_comp_upper_bound_ = upper_bound;
+    reactive_cw_lower_bound_ = lower_bound;
+    reactive_cw_upper_bound_ = upper_bound;
 }
 
 #if LIBRA_VERSION == 2

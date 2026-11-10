@@ -51,7 +51,7 @@ endif()
 
 set(LIBRA_THREADS actuator_thread)
 
-set(LIBRA_DIALOGS open_serial_dialog torque_comp_dialog)
+set(LIBRA_DIALOGS open_serial_dialog reactive_cw_dialog)
 if(LIBRA_VERSION EQUAL 2)
     list(APPEND LIBRA_DIALOGS open_epos_dialog)
 endif()

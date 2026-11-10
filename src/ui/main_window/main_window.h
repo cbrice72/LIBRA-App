@@ -107,8 +107,8 @@ class MainWindow : public QMainWindow {
     void EnableDebugMode(const bool& enabled);
 
     void CommandMotionMode(const Motion::MotionMode& mode);
-    void EnableAutoTorqueComp(const bool& enabled);
-    void UpdateTorqueCompBounds(const double& lower_bound,
+    void EnableReactiveCw(const bool& enabled);
+    void UpdateReactiveCwBounds(const double& lower_bound,
                                 const double& upper_bound);
 
     // --- Arduino Commands ---
@@ -164,8 +164,8 @@ class MainWindow : public QMainWindow {
 
     // Automation Menu
 
-    void on_a_atc_update_bounds_triggered();
-    void on_a_atc_ignore_water_level_triggered(bool checked);
+    void on_a_reactive_cw_bounds_triggered();
+    void on_a_reactive_cw_ignore_water_level_triggered(bool checked);
 
     // Trajectory Menu
 

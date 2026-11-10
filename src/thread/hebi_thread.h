@@ -39,10 +39,10 @@
 using msgJointState = sensor_msgs::msg::JointState;
 #endif
 
-// Torque compensation constants
-constexpr double kTorqueCompLowerBound = 3.0;  // Nm
-constexpr double kTorqueCompUpperBound = 6.0;  // Nm
-constexpr double kTorqueCompSlowRate = 0.5;    // velocity rate between bounds
+// Reactive counterweight constants
+constexpr double kReactiveCwLowerBound = 3.0;  // Nm
+constexpr double kReactiveCwUpperBound = 6.0;  // Nm
+constexpr double kReactiveCwSlowRate = 0.5;    // velocity rate between bounds
 
 /**
  * @brief Control class for HEBI actuators.
@@ -91,7 +91,7 @@ class HebiThread : public AbstractActuatorThread
     // --- Control Algorithm Settings ---
 
     void SetMotionMode(const Motion::MotionMode& mode);
-    void SetTorqueCompBounds(const double& lower, const double& upper);
+    void SetReactiveCwBounds(const double& lower, const double& upper);
 
 #if LIBRA_VERSION == 2
     void EnablePitchRelease(const bool& enabled);
@@ -211,9 +211,9 @@ class HebiThread : public AbstractActuatorThread
     // Owned by MainWindow (see `SetMotionMode()`)
     std::atomic<Motion::MotionMode> motion_mode_{Motion::MotionMode::kManual};
 
-    // Used by ATC (see `UpdateTrajectoryRate()`)
-    double torque_comp_lower_bound_{kTorqueCompLowerBound};  // Nm
-    double torque_comp_upper_bound_{kTorqueCompUpperBound};  // Nm
+    // Used by reactive counterweight (see `UpdateTrajectoryRate()`)
+    double reactive_cw_lower_bound_{kReactiveCwLowerBound};  // Nm
+    double reactive_cw_upper_bound_{kReactiveCwUpperBound};  // Nm
     bool movement_en_{true};       // false = trajectory paused
     double trajectory_rate_{1.0};  // 0.5 in the lower torque band
 

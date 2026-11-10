@@ -34,9 +34,9 @@
 class Libra2MotionController : public AbstractMotionController {
   public:
     explicit Libra2MotionController(const double& cw_capacity,
-                                    const double& torque_comp_lower_bound,
-                                    const double& torque_comp_upper_bound,
-                                    const double& torque_comp_slow_rate,
+                                    const double& reactive_cw_lower_bound,
+                                    const double& reactive_cw_upper_bound,
+                                    const double& reactive_cw_slow_rate,
                                     const bool& debug_mode = false);
 
     // --- Control Cycle ---
@@ -52,9 +52,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     void SetCwState(const double& volume, const double& flow);
 
-    void EnableTorqueComp(const bool& enabled);
+    void EnableReactiveCw(const bool& enabled);
     void EnableInertiaFeedforward(const bool& enabled);
-    bool SetTorqueCompBounds(const double& lower_bound,
+    bool SetReactiveCwBounds(const double& lower_bound,
                              const double& upper_bound);
     bool SetHandoffBand(const double& band);
     void SetEtaExtension(const double& extension);
@@ -97,16 +97,16 @@ class Libra2MotionController : public AbstractMotionController {
      */
     enum class CwPhase : uint8_t { kIdle, kCwMoving };
 
-    struct AtcResult {
+    struct ReactiveCwResult {
         double trajectory_rate{1.0};
         std::optional<Motion::CwCommand> cw_command;
     };
 
     // --- Helper Functions ---
 
-    AtcResult UpdateTorqueComp(const double& torque_magnitude,
-                               const Motion::CwCommand& direction,
-                               const bool& braking);
+    ReactiveCwResult UpdateReactiveCw(const double& torque_magnitude,
+                                      const Motion::CwCommand& direction,
+                                      const bool& braking);
     [[nodiscard]] std::optional<double> TargetCwMass(
         const double& angle_tgt) const;
     [[nodiscard]] Motion::CwCommand PredictiveCwCommand(
@@ -177,14 +177,14 @@ class Libra2MotionController : public AbstractMotionController {
     double handoff_band_{Motion::kDefaultHandoffBand};  // (rad)
     double eta_extension_{0.0};  // from min. extension (m)
 
-    // ATC (Automatic Torque Compensation)
+    // Reactive CW (torque feedback)
 
-    bool atc_en_{false};
+    bool reactive_cw_en_{false};
     bool movement_en_{true};
 
-    double torque_comp_lower_bound_;      // "soft" limit (Nm)
-    double torque_comp_upper_bound_;      // "hard" limit (Nm)
-    const double torque_comp_slow_rate_;  // movement rate between limits
+    double reactive_cw_lower_bound_;      // "soft" limit (Nm)
+    double reactive_cw_upper_bound_;      // "hard" limit (Nm)
+    const double reactive_cw_slow_rate_;  // movement rate between limits
 
     // Calibration
 
