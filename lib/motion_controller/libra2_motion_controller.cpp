@@ -814,6 +814,9 @@ void Libra2MotionController::LogPredictiveCwError(
  * @note If anything CW Primary needs is lost while the arm is free (model, CW
  *       volume, target, or reactive CW control), the actuator takes over
  *       immediately.
+ *
+ * @note Reactive CW only runs once predictive CW reaches its target mass (or
+ *       CW Primary hands off), never during calibrations or before a target.
  */
 Motion::Libra2Command Libra2MotionController::Update(
     const Motion::ActualState& actual, const Motion::CommandedState& commanded,
@@ -899,40 +902,53 @@ Motion::Libra2Command Libra2MotionController::Update(
         calibrator_.Update(cycle);
 
     } else if (!arm_free) {
-        // (B) Tandem/Holding: reactive CW throttle applies,
-        const Motion::CwCommand direction = (actual_torque > 0.0)
-                                                ? Motion::CwCommand::kFill
-                                                : Motion::CwCommand::kDrain;
-        const bool braking = target
-                             && (actual_torque * (*target - angle) < 0.0);
-        const ReactiveCwResult reactive_cw =
-            UpdateReactiveCw(std::abs(actual_torque), direction, braking);
-
-        command.trajectory_rate = reactive_cw.trajectory_rate;
-        command.cw_command = reactive_cw.cw_command;  // reactive (LIBRA-I style)
-
         if (calibrating) {
-            // CW reactive while calibrating
+            // Arm calibration: CW idle so samples share one volume, and no
+            // torque throttle so moves to high-torque angles don't stall
+            command.trajectory_rate = 1.0;
+            command.cw_command = Motion::CwCommand::kIdle;
             calibrator_.Update(cycle);
         } else {
-            // Predictive CW replaces reactive until it reaches its target
-            // mass; reactive then handles any torque left above its bounds
-            if (model_ready && target && !cw_assist_done_) {
-                const auto cw_mass_tgt = TargetCwMass(*target);
-                if (cw_mass_tgt) {
-                    const Motion::CwCommand cw =
-                        PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
-                    if (cw == Motion::CwCommand::kIdle) {
+            // (B) Tandem/Holding: torque throttle always applies
+            const Motion::CwCommand direction = (actual_torque > 0.0)
+                                                    ? Motion::CwCommand::kFill
+                                                    : Motion::CwCommand::kDrain;
+            const bool braking = target
+                                 && (actual_torque * (*target - angle) < 0.0);
+            const ReactiveCwResult reactive_cw =
+                UpdateReactiveCw(std::abs(actual_torque), direction, braking);
+            command.trajectory_rate = reactive_cw.trajectory_rate;
+
+            // Reactive CW only corrects the model's error, so it waits until
+            // predictive CW reaches its target mass (or CW Primary hands off)
+            if (!cw_assist_done_) {
+                command.cw_command = Motion::CwCommand::kIdle;
+                if (target) {
+                    const auto cw_mass_tgt = model_ready ? TargetCwMass(*target)
+                                                         : std::nullopt;
+                    if (!cw_mass_tgt) {
+                        logger_->Warn("Predictive CW: model, CW volume, or "
+                                      "target mass unavailable; reactive CW "
+                                      "takes over");
                         cw_assist_done_ = true;
-                        predictive_cw_mass_ = *cw_mass_tgt;
-                        reactive_cw_used_ = false;
                     } else {
-                        command.cw_command = cw;
+                        const Motion::CwCommand cw =
+                            PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
+                        if (cw == Motion::CwCommand::kIdle) {
+                            cw_assist_done_ = true;
+                            predictive_cw_mass_ = *cw_mass_tgt;
+                            reactive_cw_used_ = false;
+                        } else {
+                            command.cw_command = cw;
+                        }
                     }
                 }
-            } else if (predictive_cw_mass_ && cw_mass_) {
-                LogPredictiveCwError(reactive_cw.cw_command, angle,
-                                     actual_torque);
+            } else {
+                command.cw_command = reactive_cw.cw_command;
+                if (predictive_cw_mass_ && cw_mass_) {
+                    LogPredictiveCwError(reactive_cw.cw_command, angle,
+                                         actual_torque);
+                }
             }
         }
 

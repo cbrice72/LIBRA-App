@@ -168,7 +168,7 @@ class Libra2MotionController : public AbstractMotionController {
     bool new_target_{false};  // set since the last `Update()`
     CwPhase cw_phase_{CwPhase::kIdle};
 
-    bool cw_assist_done_{false};  // predictive CW done or normal hand-off
+    bool cw_assist_done_{false};  // predictive CW done; reactive CW allowed
     std::optional<double>
         predictive_cw_mass_;  // m_cw,bal(θ_tgt) when predictive CW finished (kg)
     bool reactive_cw_used_{false};  // reactive CW moved since hand-off
