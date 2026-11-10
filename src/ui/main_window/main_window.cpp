@@ -1023,7 +1023,8 @@ void MainWindow::HandleWaterTankLimit(const Water::Side& side,
     const std::string limit = "Tank " + Water::SideEnumToString(side)
                               + " estimated " + (full ? "full" : "empty");
 
-    if (!ignore_water_level_ && motion_mode_ != Motion::MotionMode::kManual) {
+    if (!ui_->a_reactive_cw_ignore_water_level->isChecked()
+        && motion_mode_ != Motion::MotionMode::kManual) {
         logger_->Warn(limit + "; stopping automatic CW control");
         SetMotionMode(Motion::MotionMode::kManual);
     }

@@ -344,10 +344,6 @@ class MainWindow : public QMainWindow {
     bool trajectory_playing_{false};
     QTimer* step_delay_timer_{nullptr};  // settle time after each step
 
-    // Water
-
-    bool ignore_water_level_{false};
-
     // Device Managers
 
     WaterController* water_controller_{nullptr};  // water Arduino control

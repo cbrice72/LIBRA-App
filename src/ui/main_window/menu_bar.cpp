@@ -368,7 +368,6 @@ void MainWindow::on_a_reactive_cw_ignore_water_level_triggered(bool checked) {
     logger_->Info(std::string(checked ? "Disabling" : "Enabling")
                   + " reactive CW stop on tank limit reached");
 
-    ignore_water_level_ = checked;
     ui_->l_water_ignore_level->setVisible(checked);
 }
 
