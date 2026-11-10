@@ -3,10 +3,10 @@
   <control_strategy>4</control_strategy>
   <position>
     <kp>400</kp>
-    <ki>10</ki>
+    <ki>5</ki>
     <kd>5</kd>
     <feed_forward>0</feed_forward>
-    <dead_zone>0</dead_zone>
+    <dead_zone>0.002</dead_zone>
     <i_clamp>8</i_clamp>
     <punch>0</punch>
     <min_target>-80</min_target>
