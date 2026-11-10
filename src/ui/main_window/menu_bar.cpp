@@ -427,6 +427,8 @@ void MainWindow::on_a_trajectory_load_triggered() {
 
     trajectory_ = std::move(*poses);
     trajectory_file_ = file_path;
+    trajectory_step_.reset();
+
     logger_->Info("Loaded trajectory (" + std::to_string(trajectory_.size())
                   + " poses) from: " + file_path.toStdString());
 

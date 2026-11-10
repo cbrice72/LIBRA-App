@@ -10,12 +10,14 @@
 // C++ Standard Library Headers
 #include <fstream>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 
 // Other Library Headers
 #include <QDoubleSpinBox>  // Qt::Widgets
 #include <QLabel>          // Qt::Widgets
 #include <QMainWindow>     // Qt::Widgets
+#include <QTimer>          // Qt::Core
 
 // Project Headers
 // - Actuators
@@ -227,7 +229,7 @@ class MainWindow : public QMainWindow {
     void on_pb_quick_input_clicked();
 
     void on_pb_arm_start_clicked();
-    // (NOTE: pb_arm_stop_clicked() is handled via signals)
+    void on_pb_arm_stop_clicked();
     void on_pb_arm_return_clicked();
     void on_cb_motion_mode_activated(int index);
 
@@ -235,6 +237,7 @@ class MainWindow : public QMainWindow {
 
     void on_pb_trajectory_add_clicked();
     void on_pb_trajectory_clear_clicked();
+    void on_pb_trajectory_play_clicked();
 
     // Water (water.cpp)
 
@@ -294,6 +297,11 @@ class MainWindow : public QMainWindow {
 
     void UpdateTrajectoryControls();
 
+    void SetTrajectoryPlaying(const bool& playing);
+    void PlayNextTrajectoryStep();
+    bool ConfirmTrajectoryStep();
+    [[nodiscard]] QString GetTrajectoryStepText() const;
+
     // --- Data Members ---
 
     Ui::MainWindow* ui_{nullptr};
@@ -305,19 +313,48 @@ class MainWindow : public QMainWindow {
 
     FeedbackElementMapOfMaps feedback_element_map_;
     std::unordered_map<Joint::Name, QDoubleSpinBox*> target_spin_box_map_;
+
+    // Arm
+
+    Motion::MotionMode motion_mode_{Motion::MotionMode::kManual};
+    bool arm_moving_{false};        // any actuator moving
     bool populate_targets_{false};  // set on actuator connect
 
     // Targets as joint angles, indexed by `Joint::Name` (deg)
     std::vector<double> current_target_;   // most recently sent
     std::vector<double> previous_target_;  // second most recently sent
 
-    // Poses to record or play back, as joint angles indexed by `Joint::Name` (deg)
-    std::vector<std::vector<double>> trajectory_;
+    struct ArmLimits {
+        double pitch_min{-180.0};
+        double pitch_max{180.0};
+#if LIBRA_VERSION == 1
+        double roll_min{-180.0};
+        double roll_max{180.0};
+        double j1_min{-180.0};
+        double j1_max{180.0};
+        double j2_min{-180.0};
+        double j2_max{180.0};
+        double j3_min{-180.0};
+        double j3_max{180.0};
+#elif LIBRA_VERSION == 2
+        double yaw_min{-180.0};
+        double yaw_max{180.0};
+#endif
+    } original_limits_;
+
+    // Trajectory
+
+    std::vector<std::vector<double>>
+        trajectory_;  // poses in `Joint::Name` order (deg)
     QString trajectory_file_;
 
-    Motion::MotionMode motion_mode_{Motion::MotionMode::kManual};
+    std::optional<std::size_t> trajectory_step_;  // none = not started
+    bool trajectory_playing_{false};
+    QTimer* step_delay_timer_{nullptr};  // settle time after each step
+
+    // Water
+
     bool ignore_water_level_{false};
-    bool arm_moving_{false};  // any actuator moving
 
     // Device Managers
 
@@ -339,24 +376,4 @@ class MainWindow : public QMainWindow {
 
     std::shared_ptr<Libra2MotionController> motion_controller_;  // pitch joint
 #endif
-
-    // Misc.
-
-    struct ArmLimits {
-        double pitch_min{-180.0};
-        double pitch_max{180.0};
-#if LIBRA_VERSION == 1
-        double roll_min{-180.0};
-        double roll_max{180.0};
-        double j1_min{-180.0};
-        double j1_max{180.0};
-        double j2_min{-180.0};
-        double j2_max{180.0};
-        double j3_min{-180.0};
-        double j3_max{180.0};
-#elif LIBRA_VERSION == 2
-        double yaw_min{-180.0};
-        double yaw_max{180.0};
-#endif
-    } original_limits_;
 };

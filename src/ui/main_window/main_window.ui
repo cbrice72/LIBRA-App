@@ -2277,7 +2277,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="0" column="2">
+               <item row="1" column="6">
                 <spacer name="h_spacer_trajectory">
                  <property name="orientation">
                   <enum>Qt::Orientation::Horizontal</enum>
@@ -2331,6 +2331,102 @@
                  </property>
                  <property name="icon">
                   <iconset theme="QIcon::ThemeIcon::EditClear"/>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="2">
+                <widget class="QPushButton" name="pb_trajectory_play">
+                 <property name="enabled">
+                  <bool>false</bool>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>90</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>90</width>
+                   <height>30</height>
+                  </size>
+                 </property>
+                 <property name="font">
+                  <font>
+                   <bold>true</bold>
+                  </font>
+                 </property>
+                 <property name="statusTip">
+                  <string>Play or pause the current trajectory</string>
+                 </property>
+                 <property name="text">
+                  <string> PLAY</string>
+                 </property>
+                 <property name="icon">
+                  <iconset theme="QIcon::ThemeIcon::MediaPlaybackStart"/>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="3">
+                <widget class="QPushButton" name="pb_trajectory_reverse">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>20</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                 <property name="statusTip">
+                  <string>Reverse the current trajectory</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+                 </property>
+                 <property name="checkable">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="4">
+                <widget class="QCheckBox" name="chk_trajectory_loop">
+                 <property name="statusTip">
+                  <string>After the last step, start over from the first (in the current direction)</string>
+                 </property>
+                 <property name="text">
+                  <string>Loop</string>
+                 </property>
+                </widget>
+               </item>
+               <item row="1" column="5">
+                <widget class="QCheckBox" name="chk_trajectory_confirm">
+                 <property name="statusTip">
+                  <string>Ask before every step (the first move always asks)</string>
+                 </property>
+                 <property name="text">
+                  <string>Confirm steps</string>
+                 </property>
+                 <property name="checked">
+                  <bool>true</bool>
                  </property>
                 </widget>
                </item>
@@ -4226,6 +4322,10 @@
   <tabstop>cb_motion_mode</tabstop>
   <tabstop>pb_trajectory_add</tabstop>
   <tabstop>pb_trajectory_clear</tabstop>
+  <tabstop>pb_trajectory_play</tabstop>
+  <tabstop>pb_trajectory_reverse</tabstop>
+  <tabstop>chk_trajectory_loop</tabstop>
+  <tabstop>chk_trajectory_confirm</tabstop>
   <tabstop>pb_camera_refresh</tabstop>
   <tabstop>cb_camera_name</tabstop>
   <tabstop>pb_camera_capture</tabstop>

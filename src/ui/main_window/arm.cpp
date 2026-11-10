@@ -175,6 +175,22 @@ void MainWindow::on_pb_arm_start_clicked() {
 }
 
 /**
+ * @brief Pauses trajectory playback, if active.
+ *
+ * @note The actuators themselves are stopped via signals (see
+ *       `InitializeThreads()`).
+ */
+void MainWindow::on_pb_arm_stop_clicked() {
+    if (!trajectory_playing_) {
+        return;
+    }
+
+    logger_->Info("Trajectory paused at step "
+                  + GetTrajectoryStepText().toStdString());
+    SetTrajectoryPlaying(false);
+}
+
+/**
  * @brief Moves all actuators back to the previous target.
  *
  * @note Only goes back one target; button stays disabled until a new target is

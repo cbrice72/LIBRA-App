@@ -32,7 +32,8 @@
  * !Uncategorized
  */
 
-constexpr int kPrecision = 1;  // i.e., "0.1"
+constexpr int kPrecision = 1;     // i.e., "0.1"
+constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -342,7 +343,10 @@ void MainWindow::ConfigureUi() {
     //   (none)
 
     // Slots
-    //   (none)
+    step_delay_timer_ = new QTimer(this);
+    step_delay_timer_->setSingleShot(true);
+    connect(step_delay_timer_, &QTimer::timeout,  // arm settled at step
+            this, &MainWindow::PlayNextTrajectoryStep);
 
     // Settings
     UpdateTrajectoryControls();
@@ -800,7 +804,8 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
 }
 
 /**
- * @brief Updates UI according to connection status of all actuator types.
+ * @brief Updates UI according to connection status of all actuator types,
+ *        arm motion, and trajectory playback.
  */
 void MainWindow::UpdateActuatorControls() {
     // Evaluate connection statuses of all actuators
@@ -822,14 +827,18 @@ void MainWindow::UpdateActuatorControls() {
                             && (previous_target_ != current_target_);
 
     // Update UI
-    ui_->pb_arm_start->setEnabled(any_connected);
+    ui_->pb_arm_start->setEnabled(any_connected && !trajectory_playing_);
     ui_->le_quick_input->setEnabled(any_connected);
     ui_->pb_quick_input->setEnabled(any_connected);
     ui_->pb_arm_stop->setEnabled(any_connected);
-    ui_->pb_arm_return->setEnabled(any_connected && !arm_moving_ && can_return);
+    ui_->pb_arm_return->setEnabled(any_connected && !arm_moving_
+                                   && !trajectory_playing_ && can_return);
 
-    ui_->pb_trajectory_add->setEnabled(any_connected
+    ui_->pb_trajectory_add->setEnabled(any_connected && !trajectory_playing_
                                        && is_known(current_target_));
+    ui_->pb_trajectory_play->setEnabled(
+        any_connected && !trajectory_.empty()
+        && (trajectory_playing_ || !arm_moving_));  // PAUSE always allowed
 }
 
 /**
@@ -846,7 +855,7 @@ void MainWindow::UpdateModeControls() {
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
 
-    bool mode_locked = arm_moving_;
+    bool mode_locked = arm_moving_ || trajectory_playing_;
 #if LIBRA_VERSION == 2
     mode_locked |= ui_->pb_free_mode->isChecked();
 #endif
@@ -864,7 +873,7 @@ void MainWindow::UpdateModeControls() {
 #if LIBRA_VERSION == 2
 /**
  * @brief Enables motion control widgets/actions based on connection statuses
- *        and whether the arm is moving.
+ *        and whether the arm is moving (incl. playing a trajectory).
  *
  * @note Mode switching and calibration must be locked while the arm is in motion
  *       or free mode. Free mode itself can be toggled whenever HEBI is connected.
@@ -875,25 +884,26 @@ void MainWindow::UpdateMotionControls() {
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
     bool free_mode = ui_->pb_free_mode->isChecked();
+    bool busy = arm_moving_ || trajectory_playing_;
 
     // Group box
     ui_->pb_free_mode->setEnabled(hebi_connected);
 
     // Menu bar
-    ui_->a_motion_handoff_band->setEnabled(both_connected && !arm_moving_);
-    ui_->a_motion_inertia_ff->setEnabled(!arm_moving_);
+    ui_->a_motion_handoff_band->setEnabled(both_connected && !busy);
+    ui_->a_motion_inertia_ff->setEnabled(!busy);
 
-    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !arm_moving_
+    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !busy
                                               && !free_mode);
-    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !arm_moving_
+    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !busy
                                                   && !free_mode);
-    ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !arm_moving_
+    ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !busy
                                                  && !free_mode);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
 
-    ui_->a_motion_calibration_save->setEnabled(!arm_moving_);
-    ui_->a_motion_calibration_load->setEnabled(!arm_moving_);
-    ui_->a_motion_calibration_clear->setEnabled(!arm_moving_);
+    ui_->a_motion_calibration_save->setEnabled(!busy);
+    ui_->a_motion_calibration_load->setEnabled(!busy);
+    ui_->a_motion_calibration_clear->setEnabled(!busy);
 }
 #endif
 
@@ -1106,6 +1116,11 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
         populate_targets_ = true;
     }
 
+    if (!connected && trajectory_playing_) {
+        logger_->Warn("HEBI disconnected; pausing trajectory");
+        SetTrajectoryPlaying(false);
+    }
+
     // Menu bar
     ui_->a_hebi_connect->setEnabled(!connected);
     ui_->a_hebi_disconnect->setEnabled(connected);
@@ -1143,6 +1158,11 @@ void MainWindow::HandleEposConnChanged(const bool& connected) {
     // Targets are set from the next actual position
     if (connected) {
         populate_targets_ = true;
+    }
+
+    if (!connected && trajectory_playing_) {
+        logger_->Warn("EPOS disconnected; pausing trajectory");
+        SetTrajectoryPlaying(false);
     }
 
     // Menu bar
@@ -1236,11 +1256,19 @@ void MainWindow::HandleActuatorTelemetry(const QString& telemetry,
  *        shouldn't change mid-move.
  */
 void MainWindow::HandleMovementStateChanged() {
+    const bool was_moving = arm_moving_;
     arm_moving_ = hebi_thread_->IsMoving();
 #if LIBRA_VERSION == 2
     arm_moving_ |= epos_thread_->IsMoving();
+#endif
+
+    // Trajectory step reached; let the arm settle before the next one
+    if (trajectory_playing_ && was_moving && !arm_moving_) {
+        step_delay_timer_->start(kStepDelay);
+    }
 
     // UI widgets
+#if LIBRA_VERSION == 2
     ui_->l_motion_state_val->setText(arm_moving_ ? "Moving" : "Idle");
     ui_->l_motion_state_val->setStyleSheet(
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
@@ -1257,6 +1285,11 @@ void MainWindow::HandleMovementStateChanged() {
  * @param enabled true while no commands are sent to the pitch actuator
  */
 void MainWindow::HandleFreeModeChanged(const bool& enabled) {
+    if (enabled && trajectory_playing_) {
+        logger_->Info("Pitch released; pausing trajectory");
+        SetTrajectoryPlaying(false);
+    }
+
     const QSignalBlocker blocker(ui_->pb_free_mode);  // don't re-emit
 
     ui_->pb_free_mode->setChecked(enabled);
