@@ -3969,6 +3969,20 @@
     <string>Enable debug mode</string>
    </property>
   </action>
+  <action name="a_show_telemetry">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show actuator telemetry</string>
+   </property>
+   <property name="statusTip">
+    <string>Show or hide the actuator telemetry panel</string>
+   </property>
+  </action>
   <action name="a_reset_window_size">
    <property name="text">
     <string>Reset window size</string>
@@ -4270,5 +4284,18 @@
   <include location="../res/resources.qrc"/>
   <include location="../res/resources.qrc"/>
  </resources>
- <connections/>
+ <connections>
+  <connection>
+   <sender>a_show_telemetry</sender>
+   <signal>toggled(bool)</signal>
+   <receiver>dw_telemetry</receiver>
+   <slot>setVisible(bool)</slot>
+  </connection>
+  <connection>
+   <sender>dw_telemetry</sender>
+   <signal>visibilityChanged(bool)</signal>
+   <receiver>a_show_telemetry</receiver>
+   <slot>setChecked(bool)</slot>
+  </connection>
+ </connections>
 </ui>
