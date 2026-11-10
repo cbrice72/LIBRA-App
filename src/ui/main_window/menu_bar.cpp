@@ -259,9 +259,19 @@ void MainWindow::on_a_atc_update_bounds_triggered() {
     if (dialog.exec() == QDialog::Accepted) {
         const double lower_bound = dialog.GetLowerBound();
         const double upper_bound = dialog.GetUpperBound();
+        const std::string bounds_str = "lower=" + Motion::FormatNum(lower_bound)
+                                       + " Nm, upper="
+                                       + Motion::FormatNum(upper_bound) + " Nm";
 
-        // Send the new bounds to the HebiThread
-        emit UpdateHebiTorqueCompBounds(lower_bound, upper_bound);
+        if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
+            logger_->Warn("Ignoring invalid torque compensation bounds: "
+                          + bounds_str);
+            return;
+        }
+
+        // Send the new bounds to whoever needs them
+        emit UpdateTorqueCompBounds(lower_bound, upper_bound);
+        logger_->Info("Torque compensation bounds: " + bounds_str);
     } else {
         logger_->Debug("Torque bound setting cancelled by user");
         return;
@@ -535,7 +545,7 @@ void MainWindow::on_a_motion_calibration_load_triggered() {
         + record.timestamp + ", extension " + extension.toStdString()
         + (record.note.empty() ? "" : ", note: " + record.note) + ")");
 
-    HandleArmModelChanged(motion_controller_->IsArmCalibrated());
+    HandleCalibrationChanged(motion_controller_->GetCalibration());
 }
 
 /**
@@ -558,7 +568,7 @@ void MainWindow::on_a_motion_calibration_clear_triggered() {
         return;
     }
 
-    HandleArmModelChanged(motion_controller_->IsArmCalibrated());
+    HandleCalibrationChanged(motion_controller_->GetCalibration());
 }
 
 /**

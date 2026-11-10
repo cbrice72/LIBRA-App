@@ -67,6 +67,7 @@ class MainWindow : public QMainWindow {
     void HandleWaterConnChanged(const bool& connected);
     void HandleWaterStatus(const Water::Side& side, const Water::State& state);
     void HandleWaterVolume(const Water::Side& side, const double& volume);
+    void HandleWaterTankLimit(const Water::Side& side, const bool& full);
 
     void HandleFlowConnChanged(const bool& connected);
     void HandleFlowStatus(const double& flow);
@@ -92,10 +93,9 @@ class MainWindow : public QMainWindow {
     void HandleMovementStateChanged();
 
 #if LIBRA_VERSION == 2
-    void HandleMotionModeChanged(const bool& cw_primary);
     void HandleFreeModeChanged(const bool& enabled);
 
-    void HandleArmModelChanged(const bool& calibrated);
+    void HandleCalibrationChanged(const Motion::Calibration& level);
     void HandleCalibrationProgress(const QString& text, const bool& running);
 #endif
 
@@ -104,7 +104,10 @@ class MainWindow : public QMainWindow {
 
     void EnableDebugMode(const bool& enabled);
 
+    void CommandMotionMode(const Motion::MotionMode& mode);
     void EnableAutoTorqueComp(const bool& enabled);
+    void UpdateTorqueCompBounds(const double& lower_bound,
+                                const double& upper_bound);
 
     // --- Arduino Commands ---
 
@@ -126,11 +129,8 @@ class MainWindow : public QMainWindow {
     void CommandHebi(const std::vector<double>& deg);
     void LoadHebiGains(const QString& file_path);
     void LoadHebiSafety(const QString& file_path);
-    void UpdateHebiTorqueCompBounds(const double& lower_bound,
-                                    const double& upper_bound);
 
 #if LIBRA_VERSION == 2
-    void EnableCwPrimary(const bool& enabled);
     void EnableFreeMode(const bool& enabled);
 
     void EnableInertiaFeedforward(const bool& enabled);
@@ -223,7 +223,7 @@ class MainWindow : public QMainWindow {
 
     void on_pb_arm_start_clicked();
     // (NOTE: pb_arm_stop_clicked() is handled via signals)
-    void on_pb_atc_enable_toggled(bool checked);
+    void on_cb_motion_mode_activated(int index);
 
     // Water (water.cpp)
 
@@ -237,7 +237,6 @@ class MainWindow : public QMainWindow {
     // Motion Control (motion_control.cpp)
 
 #if LIBRA_VERSION == 2
-    void on_pb_cw_primary_toggled(bool checked);
     void on_pb_free_mode_toggled(bool checked);
 #endif
 
@@ -268,8 +267,10 @@ class MainWindow : public QMainWindow {
     void InitializeDeviceManagers();
     void InitializeThreads();
 
+    void SetMotionMode(const Motion::MotionMode& mode);
+
     void UpdateActuatorControls();
-    void UpdateATCControls();
+    void UpdateModeControls();
 #if LIBRA_VERSION == 2
     void UpdateMotionControls();
 #endif
@@ -289,6 +290,7 @@ class MainWindow : public QMainWindow {
 
     std::vector<double> last_command_;  // actuator-space target positions
 
+    Motion::MotionMode motion_mode_{Motion::MotionMode::kManual};
     bool ignore_water_level_{false};
     bool arm_moving_{false};  // any actuator moving
 

@@ -125,6 +125,8 @@ MainWindow::MainWindow(QWidget* parent)
     InitializeDeviceManagers();
     InitializeThreads();
 
+    SetMotionMode(motion_mode_);  // initialize UI based on default mode
+
     // Component auto-connect
     auto reply = QMessageBox::question(nullptr, "LIBRA App Startup",
                                        "Automatically connect all components?",
@@ -288,6 +290,35 @@ void MainWindow::ConfigureUi() {
     original_limits_.yaw_min = ui_->sb_arm_yaw->minimum();
     original_limits_.yaw_max = ui_->sb_arm_yaw->maximum();
 #endif
+
+    // Motion modes + descriptions
+    {
+        auto add_mode = [this](const Motion::MotionMode& mode,
+                               const QString& tip) {
+            ui_->cb_motion_mode->addItem(QString::fromStdString(
+                                             Motion::MotionModeEnumToString(
+                                                 mode)),
+                                         static_cast<int>(mode));
+            ui_->cb_motion_mode->setItemData(ui_->cb_motion_mode->count() - 1,
+                                             tip, Qt::ToolTipRole);
+        };
+
+        add_mode(Motion::MotionMode::kManual,
+                 "Actuators just follow a trajectory; CW must be manually "
+                 "adjusted via fill/drain buttons");
+        add_mode(Motion::MotionMode::kFeedbackOnly,
+                 "Actuator trajectory slowed or paused while CW is "
+                 "automatically balanced based on measured torque");
+#if LIBRA_VERSION == 2
+        add_mode(Motion::MotionMode::kTandem,
+                 "Actuator trajectory also includes torque feedforward; "
+                 "CW automatically adjusted based on expected torque at target "
+                 "pose (needs arm and friction calibrations)");
+        add_mode(Motion::MotionMode::kCwPrimary,
+                 "CW alone moves the pitch joint; actuator only takes over "
+                 "near the target (needs arm and friction calibrations)");
+#endif
+    }
 
     // Set up validation for the "Quick Input" Line Edit
     {
@@ -458,30 +489,8 @@ void MainWindow::InitializeDeviceManagers() {
             this, &MainWindow::HandleWaterStatus);
     connect(water_controller_, &WaterController::ReportVolume,  // get volume
             this, &MainWindow::HandleWaterVolume);
-    connect(water_controller_, &WaterController::TankLimitReached,  // stop ATC
-            this, [this](const Water::Side& side, const bool& full) {
-                const std::string limit = "Tank "
-                                          + Water::SideEnumToString(side)
-                                          + " estimated "
-                                          + (full ? "full" : "empty");
-
-                if (!ignore_water_level_ && ui_->pb_atc_enable->isChecked()) {
-                    ui_->pb_atc_enable->setChecked(false);
-                    logger_->Info(limit + "; ATC disabled");
-                }
-
-                // Soft guard against overfilling (can cause leaks/failure)
-                QPushButton* pb_fill = ui_->pb_water_fill_A;
-#if LIBRA_VERSION == 1
-                if (side == Water::Side::kB) {
-                    pb_fill = ui_->pb_water_fill_B;
-                }
-#endif
-                if (full && pb_fill->isChecked()) {
-                    pb_fill->click();  // uncheck (stops filling)
-                    logger_->Info(limit + "; manual fill stopped");
-                }
-            });
+    connect(water_controller_, &WaterController::TankLimitReached,  // stop CW
+            this, &MainWindow::HandleWaterTankLimit);
 
     // ========== Flow Controller ==========
 
@@ -618,14 +627,12 @@ void MainWindow::InitializeThreads() {
     connect(ui_->a_hebi_log_stop, &QAction::triggered,  // stop current hebilog
             hebi_thread_, &HebiThread::StopHebiLog);
 
-    connect(this, &MainWindow::EnableAutoTorqueComp,  // auto-balancing
-            hebi_thread_, &HebiThread::EnableTorqueControl);
-    connect(this, &MainWindow::UpdateHebiTorqueCompBounds,  // update limits
+    connect(this, &MainWindow::CommandMotionMode,  // set motion mode
+            hebi_thread_, &HebiThread::SetMotionMode);
+    connect(this, &MainWindow::UpdateTorqueCompBounds,  // update limits
             hebi_thread_, &HebiThread::SetTorqueCompBounds);
 
 #if LIBRA_VERSION == 2
-    connect(this, &MainWindow::EnableCwPrimary,  // pick main pitch joint mover
-            hebi_thread_, &HebiThread::EnableCwPrimaryMode);
     connect(this, &MainWindow::EnableFreeMode,  // stop commanding pitch joint
             hebi_thread_, &HebiThread::EnableFreeMode);
     connect(this, &MainWindow::EnableInertiaFeedforward,  // use inertia terms
@@ -659,12 +666,10 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleMovementStateChanged);
 
 #if LIBRA_VERSION == 2
-    connect(hebi_thread_, &HebiThread::MotionModeChanged,  // sync mode toggle
-            this, &MainWindow::HandleMotionModeChanged);
     connect(hebi_thread_, &HebiThread::FreeModeChanged,  // sync free toggle
             this, &MainWindow::HandleFreeModeChanged);
-    connect(hebi_thread_, &HebiThread::ArmModelChanged,  // calibrated
-            this, &MainWindow::HandleArmModelChanged);
+    connect(hebi_thread_, &HebiThread::CalibrationChanged,  // calibrated
+            this, &MainWindow::HandleCalibrationChanged);
     connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
             this, &MainWindow::HandleCalibrationProgress);
 #endif
@@ -724,6 +729,59 @@ void MainWindow::InitializeThreads() {
 }
 
 /**
+ * @brief Applies a motion mode: configures the motion controller (LIBRA-II),
+ *        HebiThread, and the CW's ATC to match, and shows it in the list.
+ *
+ * @param mode Mode to apply
+ *
+ * @note Requirements (CW connection, calibration) are checked where the user
+ *       picks a mode (see `on_cb_motion_mode_activated()`); automatic switches
+ *       only go to Manual, which has none.
+ *
+ * @note LIBRA-II: entering or leaving a motion controller mode resets the
+ *       controller's runtime state (incl. any CW-led move), since it isn't
+ *       updated in the other modes.
+ */
+void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
+#if LIBRA_VERSION == 2
+    const bool controller_mode = Motion::UsesMotionController(mode);
+    if (controller_mode != Motion::UsesMotionController(motion_mode_)) {
+        motion_controller_->Reset();
+    }
+    if (controller_mode && !motion_controller_->SetMotionMode(mode)) {
+        // Refused (motion controller logs why); keep showing the current mode
+        ui_->cb_motion_mode->setCurrentIndex(
+            ui_->cb_motion_mode->findData(static_cast<int>(motion_mode_)));
+        return;
+    }
+
+    // Also applies while calibrating, which always uses the motion controller
+    motion_controller_->EnableTorqueComp(mode != Motion::MotionMode::kManual);
+#endif
+
+    if (mode != motion_mode_) {
+        logger_->Info("Motion mode: " + Motion::MotionModeEnumToString(mode));
+    }
+    motion_mode_ = mode;
+    emit CommandMotionMode(mode);
+
+    const bool atc_en = (mode != Motion::MotionMode::kManual);
+    emit EnableAutoTorqueComp(atc_en);
+    if (atc_en) {
+        // ATC takes the CW over from the fill/drain buttons
+        ui_->pb_water_fill_A->setChecked(false);
+        ui_->pb_water_drain_A->setChecked(false);
+#if LIBRA_VERSION == 1
+        ui_->pb_water_fill_B->setChecked(false);
+        ui_->pb_water_drain_B->setChecked(false);
+#endif
+    }
+
+    ui_->cb_motion_mode->setCurrentIndex(
+        ui_->cb_motion_mode->findData(static_cast<int>(mode)));
+}
+
+/**
  * @brief Updates UI according to connection status of all actuator types.
  */
 void MainWindow::UpdateActuatorControls() {
@@ -744,18 +802,26 @@ void MainWindow::UpdateActuatorControls() {
 }
 
 /**
- * @brief Updates UI according to connection status of components used by
- *        automatic torque compensation (ATC).
+ * @brief Updates movement mode and ATC controls according to connection
+ *        statuses of relevant components and arm motion status.
+ *
+ * @note Requirements of individual modes are checked when one is picked (see
+ *       `on_cb_motion_mode_activated()`).
  */
-void MainWindow::UpdateATCControls() {
-    // Evaluate connection statuses of all components
+void MainWindow::UpdateModeControls() {
+    // Evaluate connection/activity statuses of all components
     // (NOTE: "Pitch" joint in both LIBRA-I/-II is governed by HEBI actuator(s))
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
 
+    bool mode_locked = arm_moving_;
+#if LIBRA_VERSION == 2
+    mode_locked |= ui_->pb_free_mode->isChecked();
+#endif
+
     // Update UI
-    ui_->pb_atc_enable->setEnabled(both_connected);
+    ui_->cb_motion_mode->setEnabled(hebi_connected && !mode_locked);
     ui_->a_atc_update_bounds->setEnabled(both_connected);
     ui_->a_atc_ignore_water_level->setEnabled(both_connected);
 
@@ -779,7 +845,6 @@ void MainWindow::UpdateMotionControls() {
     bool free_mode = ui_->pb_free_mode->isChecked();
 
     // Group box
-    ui_->pb_cw_primary->setEnabled(both_connected && !arm_moving_ && !free_mode);
     ui_->pb_free_mode->setEnabled(hebi_connected);
 
     // Menu bar
@@ -857,7 +922,13 @@ void MainWindow::HandleWaterConnChanged(const bool& connected) {
     ui_->pb_water_drain_B->setEnabled(connected);
 #endif
 
-    UpdateATCControls();
+    // ATC needs the CW
+    if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
+        logger_->Warn("CW disconnected; stopping automatic CW control");
+        SetMotionMode(Motion::MotionMode::kManual);
+    }
+
+    UpdateModeControls();
 }
 
 /**
@@ -909,6 +980,40 @@ void MainWindow::HandleWaterVolume(const Water::Side& side,
             logger_->Error("Received volume for unknown fluid system side: "
                            + Water::SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
+    }
+}
+
+/**
+ * @brief Stops CW automation and any manual fill when a CW's estimated volume
+ *        reaches a limit.
+ *
+ * @param side Fluid system side
+ * @param full true = estimated full, false = estimated empty
+ *
+ * @note "Ignore water level" (in the Automation menu) keeps the automation
+ *       running, for when the estimate is known to be off. The manual fill
+ *       guard always applies, since overfilling can cause leaks or failure.
+ */
+void MainWindow::HandleWaterTankLimit(const Water::Side& side,
+                                      const bool& full) {
+    const std::string limit = "Tank " + Water::SideEnumToString(side)
+                              + " estimated " + (full ? "full" : "empty");
+
+    if (!ignore_water_level_ && motion_mode_ != Motion::MotionMode::kManual) {
+        logger_->Warn(limit + "; stopping automatic CW control");
+        SetMotionMode(Motion::MotionMode::kManual);
+    }
+
+    // Soft guard against overfilling
+    QPushButton* pb_fill = ui_->pb_water_fill_A;
+#if LIBRA_VERSION == 1
+    if (side == Water::Side::kB) {
+        pb_fill = ui_->pb_water_fill_B;
+    }
+#endif
+    if (full && pb_fill->isChecked()) {
+        pb_fill->click();  // uncheck (stops filling)
+        logger_->Info(limit + "; manual fill stopped");
     }
 }
 
@@ -978,7 +1083,7 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
 
     // UI widgets
     UpdateActuatorControls();
-    UpdateATCControls();
+    UpdateModeControls();
     if (connected) {
         populate_targets_ = true;
     }
@@ -987,11 +1092,8 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // HebiThread only reports motion states on change, so fill in the motion
     // controller's defaults
     if (connected) {
-        if (ui_->l_motion_mode_val->text() == "...") {
-            HandleMotionModeChanged(false);
-        }
         if (ui_->l_motion_calibrated_val->text() == "...") {
-            HandleArmModelChanged(motion_controller_->IsArmCalibrated());
+            HandleCalibrationChanged(motion_controller_->GetCalibration());
         }
         if (ui_->l_motion_state_val->text() == "...") {
             HandleMovementStateChanged();
@@ -1102,27 +1204,12 @@ void MainWindow::HandleMovementStateChanged() {
     ui_->l_motion_state_val->setText(arm_moving_ ? "Moving" : "Idle");
     ui_->l_motion_state_val->setStyleSheet(
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
-
-    UpdateMotionControls();
 #endif
+
+    UpdateModeControls();
 }
 
 #if LIBRA_VERSION == 2
-/**
- * @brief Shows the motion mode currently in effect.
- *
- * @param cw_primary true if CW moves the arm and actuator takes over near
- *                   target, false if CW and actuator move the arm together.
- *
- * @note Motion controller refuses CW Primary until the arm is calibrated.
- */
-void MainWindow::HandleMotionModeChanged(const bool& cw_primary) {
-    const QSignalBlocker blocker(ui_->pb_cw_primary);  // don't re-emit
-    ui_->pb_cw_primary->setChecked(cw_primary);
-
-    ui_->l_motion_mode_val->setText(cw_primary ? "CW Primary" : "Tandem");
-}
-
 /**
  * @brief Shows whether the pitch joint is in free mode (not commanded).
  *
@@ -1135,19 +1222,36 @@ void MainWindow::HandleFreeModeChanged(const bool& enabled) {
     ui_->pb_free_mode->setStyleSheet(
         enabled ? QString("color: %1;").arg(Color::kRed) : QString());
 
-    UpdateMotionControls();
+    UpdateModeControls();
 }
 
 /**
- * @brief Shows whether the motion controller has an arm model (calibrated or
- *        loaded).
+ * @brief Shows which of the motion controller's models are calibrated.
  *
- * @param calibrated Whether an arm model is available
+ * @param level Calibration level
  */
-void MainWindow::HandleArmModelChanged(const bool& calibrated) {
-    ui_->l_motion_calibrated_val->setText(calibrated ? "Yes" : "No");
+void MainWindow::HandleCalibrationChanged(const Motion::Calibration& level) {
+    const char* color = Color::kYellow;  // partial: Tandem/CW Primary disabled
+    if (level == Motion::Calibration::kNone) {
+        color = Color::kRed;
+    } else if (level == Motion::Calibration::kFull) {
+        color = Color::kGreen;
+    }
+
+    ui_->l_motion_calibrated_val->setText(
+        QString::fromStdString(Motion::CalibrationEnumToString(level)));
     ui_->l_motion_calibrated_val->setStyleSheet(
-        QString("color: %1;").arg(calibrated ? Color::kGreen : Color::kOrange));
+        QString("color: %1;").arg(color));
+
+    // Calibration was cleared or replaced
+    if (Motion::UsesMotionController(motion_mode_)
+        && level != Motion::Calibration::kFull) {
+        logger_->Warn(Motion::MotionModeEnumToString(motion_mode_)
+                      + " mode needs both arm AND friction calibrations (now: "
+                      + Motion::CalibrationEnumToString(level)
+                      + "); stopping automatic control");
+        SetMotionMode(Motion::MotionMode::kManual);
+    }
 }
 
 /**

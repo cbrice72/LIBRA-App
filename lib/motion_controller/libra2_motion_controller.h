@@ -49,9 +49,6 @@ class Libra2MotionController : public AbstractMotionController {
     // --- Settings ---
 
     bool SetMotionMode(const Motion::MotionMode& mode);
-    [[nodiscard]] Motion::MotionMode GetMotionMode() const;
-
-    [[nodiscard]] bool IsMoving() const;
 
     void SetCwState(const double& volume, const double& flow);
 
@@ -68,6 +65,7 @@ class Libra2MotionController : public AbstractMotionController {
     bool ClearModel();
 
     [[nodiscard]] bool IsArmCalibrated() const;
+    [[nodiscard]] Motion::Calibration GetCalibration() const;
 
     // --- Calibration ---
 
@@ -100,7 +98,7 @@ class Libra2MotionController : public AbstractMotionController {
     enum class CwPhase : uint8_t { kIdle, kCwMoving };
 
     struct AtcResult {
-        double playback_rate{1.0};
+        double trajectory_rate{1.0};
         std::optional<Motion::CwCommand> cw_command;
     };
 

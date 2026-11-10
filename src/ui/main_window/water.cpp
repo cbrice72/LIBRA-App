@@ -26,8 +26,8 @@
 //------------------------------------------------------------------------------
 
 /**
- * @brief Toggles force-filling of counterweight #1. Implicitly disables
- *        automatic torque compensation.
+ * @brief Toggles force-filling of counterweight #1. Assumed to be triggered by
+ *        user interaction; switches to Manual mode.
  *
  * @param checked Whether to force-fill the counterweight
  *
@@ -35,7 +35,7 @@
  *       apply to both sides of the fluid system (so it doesn't matter which
  *       physical ports the solenoid valves are connected to).
  *
- * @see on_pb_atc_enable_toggled
+ * @see on_cb_motion_mode_activated
  */
 void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
 #if LIBRA_VERSION == 1
@@ -46,7 +46,7 @@ void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
 
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_atc_enable->setChecked(false);
+        SetMotionMode(Motion::MotionMode::kManual);
         ui_->pb_water_drain_A->setChecked(false);
 
         // Send signal
@@ -58,8 +58,8 @@ void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
 }
 
 /**
- * @brief Toggles force-draining of counterweight #1. Implicitly disables
- *        automatic torque compensation.
+ * @brief Toggles force-draining of counterweight #1. Assumed to be triggered by
+ *        user interaction; switches to Manual mode.
  *
  * @param checked Whether to force-drain the counterweight
  *
@@ -67,7 +67,7 @@ void MainWindow::on_pb_water_fill_A_clicked(bool checked) {
  *       apply to both sides of the fluid system (so it doesn't matter which
  *       physical ports the solenoid valves are connected to).
  *
- * @see on_pb_atc_enable_toggled
+ * @see on_cb_motion_mode_activated
  */
 void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
 #if LIBRA_VERSION == 1
@@ -78,7 +78,7 @@ void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
 
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_atc_enable->setChecked(false);
+        SetMotionMode(Motion::MotionMode::kManual);
         ui_->pb_water_fill_A->setChecked(false);
 
         // Send signal
@@ -91,17 +91,17 @@ void MainWindow::on_pb_water_drain_A_clicked(bool checked) {
 
 #if LIBRA_VERSION == 1
 /**
- * @brief Toggles force-filling of counterweight #2. Implicitly disables
- *        automatic torque compensation.
+ * @brief Toggles force-filling of counterweight #2. Assumed to be triggered by
+ *        user interaction; switches to Manual mode.
  *
  * @param checked Whether to force-fill the counterweight
  *
- * @see on_pb_atc_enable_toggled
+ * @see on_cb_motion_mode_activated
  */
 void MainWindow::on_pb_water_fill_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_atc_enable->setChecked(false);
+        SetMotionMode(Motion::MotionMode::kManual);
         ui_->pb_water_drain_B->setChecked(false);
 
         // Send signal
@@ -113,17 +113,17 @@ void MainWindow::on_pb_water_fill_B_clicked(bool checked) {
 }
 
 /**
- * @brief Toggles force-draining of counterweight #2. Implicitly disables
- *        automatic torque compensation.
+ * @brief Toggles force-draining of counterweight #2. Assumed to be triggered by
+ *        user interaction; switches to Manual mode.
  *
  * @param checked Whether to force-drain the counterweight
  *
- * @see on_pb_atc_enable_toggled
+ * @see on_cb_motion_mode_activated
  */
 void MainWindow::on_pb_water_drain_B_clicked(bool checked) {
     if (checked) {
         // Cancel any conflicting widget states
-        ui_->pb_atc_enable->setChecked(false);
+        SetMotionMode(Motion::MotionMode::kManual);
         ui_->pb_water_fill_B->setChecked(false);
 
         // Send signal

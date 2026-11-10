@@ -59,7 +59,23 @@ constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 //------------------------------------------------------------------------------
 
 /**
- * @brief Movement mode for a given joint.
+ * @brief How the arm reaches its targets, i.e., what type of automation assists
+ *        the trajectory: none, ATC (torque feedback), or a motion controller.
+ *
+ * @note ATC (automatic torque compensation) commands the CW from measured arm
+ *       torque, pausing or slowing the trajectory while it rebalances.
+ */
+enum class MotionMode : uint8_t {
+    kManual,        // trajectory only; user adjusts CW via fill/drain buttons
+    kFeedbackOnly,  // trajectory throttled by ATC
+#if LIBRA_VERSION == 2
+    kTandem,    // trajectory executed while CW adjusts to estimated target mass
+    kCwPrimary  // CW moves arm; actuator takes over near target
+#endif
+};
+
+/**
+ * @brief Motion controller-specific movement mode for a given joint.
  */
 enum class CommandMode : uint8_t {
     kPositionEnhanced,  // position/velocity command + torque feedforward
@@ -98,8 +114,11 @@ struct MotionCommand {
     std::vector<CommandMode> mode;
     std::vector<std::optional<double>> ff_torque;  // effort ff (Nm)
 
-    // Trajectory speed, [0,1] (1 = normal, 0 = paused)
-    double playback_rate{1.0};
+    // Trajectory speed, [0.0, 1.0] (1.0 = normal, 0.0 = paused)
+    double trajectory_rate{1.0};
+
+    // Still moving the arm without a trajectory (e.g., CW-led or calibrating)
+    bool moving{false};
 };
 
 //------------------------------------------------------------------------------
@@ -140,6 +159,28 @@ inline double Sign(const double& x) {
     return (x > 0.0) - (x < 0.0);
 }
 
+/**
+ * @brief Converts a motion mode to its corresponding string name.
+ *
+ * @param mode Mode to convert
+ */
+inline std::string MotionModeEnumToString(const MotionMode& mode) {
+    switch (mode) {
+        case MotionMode::kManual:
+            return "Manual";
+        case MotionMode::kFeedbackOnly:
+            return "Feedback Only";
+#if LIBRA_VERSION == 2
+        case MotionMode::kTandem:
+            return "Tandem";
+        case MotionMode::kCwPrimary:
+            return "CW Primary";
+#endif
+        default:
+            return "Undefined";
+    }
+}
+
 #if LIBRA_VERSION == 2
 //------------------------------------------------------------------------------
 // !LIBRA-II Constants
@@ -167,13 +208,44 @@ constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
 enum class CwCommand : uint8_t { kIdle, kFill, kDrain };
 
 /**
- * @brief How the actuators and counterweight (CW) should work together to
- *        achieve the desired motion.
+ * @brief Checks whether a motion mode requires the motion controller to
+ *        plan/adjust a trajectory.
+ *
+ * @param mode Mode to check
  */
-enum class MotionMode : uint8_t {
-    kTandem,    // actuator follows trajectory while CW trims toward target mass
-    kCwPrimary  // CW moves free arm; actuator takes over near target
+inline bool UsesMotionController(const MotionMode& mode) {
+    return mode == MotionMode::kTandem || mode == MotionMode::kCwPrimary;
+}
+
+/**
+ * @brief Which of the motion controller's models are calibrated.
+ */
+enum class Calibration : uint8_t {
+    kNone,
+    kFrictionOnly,  // no arm model
+    kArmOnly,       // no friction model
+    kFull           // arm and friction models
 };
+
+/**
+ * @brief Converts a calibration level to its corresponding string name.
+ *
+ * @param level Level to convert
+ */
+inline std::string CalibrationEnumToString(const Calibration& level) {
+    switch (level) {
+        case Calibration::kNone:
+            return "None";
+        case Calibration::kFrictionOnly:
+            return "Friction only";
+        case Calibration::kArmOnly:
+            return "Arm only";
+        case Calibration::kFull:
+            return "Arm + friction";
+        default:
+            return "Undefined";
+    }
+}
 
 /**
  * @brief State of the arm or friction calibration.

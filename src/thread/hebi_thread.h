@@ -30,6 +30,7 @@
 
 // Project Headers
 #include "abstract_actuator_thread.h"
+#include "motion_defs.h"
 #if LIBRA_VERSION == 2
 # include "libra2_motion_controller.h"
 #endif
@@ -89,11 +90,10 @@ class HebiThread : public AbstractActuatorThread
 
     // --- Control Algorithm Settings ---
 
-    void EnableTorqueControl(const bool& enabled);
+    void SetMotionMode(const Motion::MotionMode& mode);
     void SetTorqueCompBounds(const double& lower, const double& upper);
 
 #if LIBRA_VERSION == 2
-    void EnableCwPrimaryMode(const bool& enabled);
     void EnableFreeMode(const bool& enabled);
     void EnableInertiaFeedforward(const bool& enabled);
     void SetHandoffBand(const double& deg);
@@ -117,10 +117,9 @@ class HebiThread : public AbstractActuatorThread
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
-    void MotionModeChanged(const bool& cw_primary);
     void FreeModeChanged(const bool& enabled);
 
-    void ArmModelChanged(const bool& calibrated);
+    void CalibrationChanged(const Motion::Calibration& level);
     void CalibrationProgressChanged(const QString& text, const bool& running);
 #endif
 
@@ -134,27 +133,27 @@ class HebiThread : public AbstractActuatorThread
         const std::shared_ptr<hebi::GroupFeedback>& feedback,
         const Actuator::Feedback& feedback_type);
 
-    void StartTrajectory(const Eigen::VectorXd& start_pos,
-                         const Eigen::VectorXd& target_pos);
-    void SetMaxVel(const hebi::GroupCommand& safety_cmd,
-                   const std::string& source);
-#if LIBRA_VERSION == 1
-    void CheckTorqueControl();
     bool ExecuteMovement(std::chrono::duration<double> dt,
                          Eigen::VectorXd& cmd_pos, Eigen::VectorXd& cmd_vel,
                          Eigen::VectorXd& cmd_acc, Eigen::VectorXd& cmd_trq);
-#elif LIBRA_VERSION == 2
-    void ReportMotionStatus();
-    bool ExecuteMotionController(std::chrono::duration<double> dt,
-                                 Eigen::VectorXd& cmd_pos,
-                                 Eigen::VectorXd& cmd_vel,
-                                 Eigen::VectorXd& cmd_acc,
-                                 Eigen::VectorXd& cmd_trq);
+    double UpdateTrajectoryRate();
+    void StartTrajectory(const Eigen::VectorXd& start_pos,
+                         const Eigen::VectorXd& target_pos);
+    [[nodiscard]] Eigen::VectorXd HeldPosition() const;
+    bool FollowTrajectory(const double& dt_s, Eigen::VectorXd& cmd_pos,
+                          Eigen::VectorXd& cmd_vel, Eigen::VectorXd& cmd_acc,
+                          const double& trajectory_rate);
+#if LIBRA_VERSION == 2
+    std::optional<Motion::MotionCommand> RunMotionController(
+        const double& dt_s, Eigen::VectorXd& cmd_vel, Eigen::VectorXd& cmd_acc);
+    void StartSweep(const Motion::SweepRequest& sweep);
+    void ReportCalibrationStatus();
 
     bool CanCalibrate();
-    [[nodiscard]] Eigen::VectorXd HeldPosition() const;
-    void StartSweep(const Motion::SweepRequest& sweep);
 #endif
+
+    void SetMaxVel(const hebi::GroupCommand& safety_cmd,
+                   const std::string& source);
 
     void SendFeedback();
     [[nodiscard]] QString GetTelemetry() const;
@@ -194,32 +193,35 @@ class HebiThread : public AbstractActuatorThread
     std::shared_ptr<hebi::trajectory::Trajectory> trajectory_;
     std::mutex trajectory_mutex_;
 
-    double t_trajectory_s_{0.0};  // s, advances by dt * playback_rate_ / cycle
+    double t_trajectory_s_{0.0};  // s, incr. by dt * trajectory_rate_ / cycle
 
     std::atomic<double> max_vel_;  // peak trajectory speed (rad/s)
 
-#if LIBRA_VERSION == 1
-    // Enables logic that uses torque feedback hysteresis to control trajectory
-    // movement state (see `movement_en_`)
-    bool torque_control_en_{false};
-    double torque_comp_lower_bound_{kTorqueCompLowerBound};  // Nm
-    double torque_comp_upper_bound_{kTorqueCompUpperBound};  // Nm
-
-    // Enables trajectory-based movement
-    bool movement_en_{true};
-
-    double playback_rate_{1.0};  // 0.5 in the soft torque band
-#elif LIBRA_VERSION == 2
-    std::shared_ptr<Libra2MotionController> motion_controller_;
-    std::atomic<bool> free_mode_{false};
+    // From `SetTarget()`, started by the control loop (in LIBRA-II: only used
+    // by modes without the motion controller; guarded by `trajectory_mutex_`)
+    std::optional<Eigen::VectorXd> pending_target_pos_;  // rad
 
     // Latest position/velocity command (actuator space)
     Eigen::VectorXd latest_cmd_pos_;  // rad
     Eigen::VectorXd latest_cmd_vel_;  // rad/s
 
+    // Owned by MainWindow (see `SetMotionMode()`)
+    std::atomic<Motion::MotionMode> motion_mode_{Motion::MotionMode::kManual};
+
+    // Used by ATC (see `UpdateTrajectoryRate()`)
+    double torque_comp_lower_bound_{kTorqueCompLowerBound};  // Nm
+    double torque_comp_upper_bound_{kTorqueCompUpperBound};  // Nm
+    bool movement_en_{true};       // false = trajectory paused
+    double trajectory_rate_{1.0};  // 0.5 in the lower torque band
+
+#if LIBRA_VERSION == 2
+    std::shared_ptr<Libra2MotionController> motion_controller_;
+    std::atomic<bool> free_mode_{false};
+
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> calibration_running_{false};
-    std::atomic<bool> arm_calibrated_{false};
+    std::atomic<Motion::Calibration> calibration_level_{
+        Motion::Calibration::kNone};
     std::string last_progress_;  // last calibration step sent to the UI
 
     std::atomic<bool> diag_log_en_{false};  // periodic model log

@@ -27,29 +27,6 @@
 //------------------------------------------------------------------------------
 
 /**
- * @brief Switches between CW Primary and Tandem (CW-Actuator) motion modes.
- *
- * @param checked true = CW Primary
- *
- * @note Motion controller refuses CW Primary until the arm is calibrated, in
- *       which case `HandleMotionModeChanged()` sets the button back.
- */
-void MainWindow::on_pb_cw_primary_toggled(bool checked) {
-    if (checked && !ui_->pb_atc_enable->isChecked()) {
-        logger_->Warn(
-            "CW Primary requires automatic torque compensation (ATC); "
-            "refusing mode change");
-
-        const QSignalBlocker blocker(ui_->pb_cw_primary);  // don't re-emit
-        ui_->pb_cw_primary->setChecked(false);
-
-        return;
-    }
-
-    emit EnableCwPrimary(checked);
-}
-
-/**
  * @brief Toggles whether LIBRA-II's pitch joint is allowed to spin freely.
  *        Useful for simulating loss of power (while retaining control) or
  *        manually moving the arm.

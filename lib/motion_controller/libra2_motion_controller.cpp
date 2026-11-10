@@ -93,7 +93,7 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
  * @param cw_capacity CW capacity (L)
  * @param torque_comp_lower_bound ATC "soft" limit (Nm)
  * @param torque_comp_upper_bound ATC "hard" limit (Nm)
- * @param torque_comp_slow_rate Trajectory playback rate between ATC limits
+ * @param torque_comp_slow_rate Trajectory rate between ATC limits
  * @param debug_mode Whether to output verbose debug text
  */
 Libra2MotionController::Libra2MotionController(
@@ -131,18 +131,25 @@ Libra2MotionController::Libra2MotionController(
  *
  * @param mode Mode to use from next target onward
  *
- * @note A mode change may be refused (e.g., CW Primary needs valid/non-zero arm
- *       and CW models, and no move in progress). Switching to Tandem is always
- *       accepted.
+ * @note A mode change may be refused. For example: both Tandem and CW Primary
+ *       modes require a full model (arm + friction calibrated, CW modeled).
  */
 bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     // Validate mode change
-    if (mode == Motion::MotionMode::kCwPrimary
-        && !(arm_model_ && cw_model_.IsValid())) {
-        logger_->Warn("CW Primary mode needs a calibrated arm model and a "
-                      "valid CW model; staying in the current mode");
+    const std::string name = Motion::MotionModeEnumToString(mode);
+    if (!Motion::UsesMotionController(mode)) {
+        logger_->Warn(name
+                      + " mode doesn't use the motion controller; staying "
+                        "in the current mode");
+        return false;
+    }
+    if (!(arm_model_ && friction_model_ && cw_model_.IsValid())) {
+        logger_->Warn(name
+                      + " mode needs calibrated arm and friction models "
+                        "and a valid CW model; staying in the current "
+                        "mode");
         return false;
     }
     if (mode == Motion::MotionMode::kCwPrimary && IsMovingLocked()) {
@@ -164,28 +171,8 @@ bool Libra2MotionController::SetMotionMode(const Motion::MotionMode& mode) {
     }
 
     mode_ = mode;
-    logger_->Info(
-        std::string("Motion mode: ")
-        + (mode == Motion::MotionMode::kTandem ? "Tandem" : "CW Primary"));
+    logger_->Debug("Motion controller mode: " + name);
     return true;
-}
-
-/**
- * @brief Gets the active motion mode.
- */
-Motion::MotionMode Libra2MotionController::GetMotionMode() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return mode_;
-}
-
-/**
- * @brief Checks whether the arm is currently moving or about to move.
- *
- * @note Trajectory state is as of the last `Update()`.
- */
-bool Libra2MotionController::IsMoving() const {
-    std::lock_guard<std::mutex> lock(mutex_);
-    return IsMovingLocked();
 }
 
 /**
@@ -256,9 +243,9 @@ bool Libra2MotionController::SetTorqueCompBounds(const double& lower_bound,
 
     torque_comp_lower_bound_ = lower_bound;
     torque_comp_upper_bound_ = upper_bound;
-    logger_->Info("Torque compensation bounds updated: lower="
-                  + Motion::FormatNum(lower_bound)
-                  + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
+    logger_->Debug("Torque compensation bounds updated: lower="
+                   + Motion::FormatNum(lower_bound)
+                   + " Nm, upper=" + Motion::FormatNum(upper_bound) + " Nm");
 
     return true;
 }
@@ -356,6 +343,24 @@ bool Libra2MotionController::ClearModel() {
 bool Libra2MotionController::IsArmCalibrated() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return arm_model_.has_value();
+}
+
+/**
+ * @brief Gets the current calibration level.
+ */
+Motion::Calibration Libra2MotionController::GetCalibration() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+
+    if (arm_model_ && friction_model_) {
+        return Motion::Calibration::kFull;
+    }
+    if (arm_model_) {
+        return Motion::Calibration::kArmOnly;
+    }
+    if (friction_model_) {
+        return Motion::Calibration::kFrictionOnly;
+    }
+    return Motion::Calibration::kNone;
 }
 
 /**
@@ -626,7 +631,7 @@ bool Libra2MotionController::LoadCalibrationRecord(
  *       While it brakes, slowing would raise the torque, so the soft limit
  *       keeps full speed and only the CW reacts. The hard limit always stops.
  *
- * @see HebiThread::CheckTorqueControl
+ * @see HebiThread::UpdateTrajectoryRate
  */
 Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
     const double& torque_magnitude, const Motion::CwCommand& direction,
@@ -672,9 +677,9 @@ Libra2MotionController::AtcResult Libra2MotionController::UpdateTorqueComp(
     }
 
     if (!movement_en_) {
-        result.playback_rate = 0.0;
+        result.trajectory_rate = 0.0;
     } else {
-        result.playback_rate = in_slow_band ? torque_comp_slow_rate_ : 1.0;
+        result.trajectory_rate = in_slow_band ? torque_comp_slow_rate_ : 1.0;
     }
 
     return result;
@@ -781,8 +786,9 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
 
     // Arm spins freely; CW does the moving
     command.mode[kPitchIdx] = Motion::CommandMode::kFree;
+    command.stop_trajectory = trajectory_active_;
     command.cw_command = cw;
-    command.playback_rate = 1.0;
+    command.trajectory_rate = 1.0;
     movement_en_ = true;
 
     return true;
@@ -908,7 +914,7 @@ Motion::Libra2Command Libra2MotionController::Update(
 
     if (!arm_free && calibrator_.IsFrictionRunning()) {
         // Friction sweep: no throttle or CW command necessary
-        command.playback_rate = 1.0;
+        command.trajectory_rate = 1.0;
         command.cw_command = Motion::CwCommand::kIdle;
         calibrator_.Update(cycle);
 
@@ -922,7 +928,7 @@ Motion::Libra2Command Libra2MotionController::Update(
         const AtcResult atc = UpdateTorqueComp(std::abs(actual_torque),
                                                direction, braking);
 
-        command.playback_rate = atc.playback_rate;
+        command.trajectory_rate = atc.trajectory_rate;
         command.cw_command = atc.cw_command;  // reactive (LIBRA-I style)
 
         if (calibrating) {
@@ -984,6 +990,7 @@ Motion::Libra2Command Libra2MotionController::Update(
     command.sweep = calibration.sweep;
 
     command.diagnostics = ComputeDiagnostics(angle, target);
+    command.moving = IsMovingLocked();
 
     return command;
 }
@@ -1140,8 +1147,10 @@ void Libra2MotionController::OnReset() {
 }
 
 /**
- * @brief Checks whether the arm is moving, like `IsMoving()` (`mutex_` must
- *        already be held).
+ * @brief Checks whether the arm is moving or about to move: trajectory, CW-led
+ *        move, queued move, or calibration (`mutex_` must already be held).
+ *
+ * @note Trajectory state is as of the last `Update()`.
  */
 bool Libra2MotionController::IsMovingLocked() const {
     return trajectory_active_ || (cw_phase_ == CwPhase::kCwMoving)
