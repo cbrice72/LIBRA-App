@@ -212,6 +212,28 @@ void WaterController::MapTorqueToCommand(const double& torque_dir) {
     }
 #endif
 
+    // Never drain an estimated-empty CW (pulls air into the outflow) or fill
+    // a full one; if the estimate is off, override the volume instead
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+#if LIBRA_VERSION == 1
+        const uint8_t in = (i == 0) ? kAIn : kBIn;
+        const uint8_t out = (i == 0) ? kAOut : kBOut;
+#elif LIBRA_VERSION == 2
+        const uint8_t in = kAIn | kBIn;  // one CW, both sides' bits
+        const uint8_t out = kAOut | kBOut;
+#endif
+        if (tanks_[i].volume <= 0.0) {
+            command &= static_cast<uint8_t>(~out);
+        }
+        if (tanks_[i].volume >= Water::kSideCapacity) {
+            command &= static_cast<uint8_t>(~in);
+        }
+    }
+    if (command == 0) {
+        ClearCommand();
+        return;
+    }
+
     // If command is unchanged, do nothing
     if (command == (static_cast<uint8_t>(water_cmd_[0]) & kWaterCmdMask)) {
         return;
