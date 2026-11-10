@@ -210,19 +210,16 @@ HebiThread::HebiThread(QObject* parent,
                        std::vector<std::string> families,
                        std::vector<std::string> names, const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kHebi),
+#ifdef BUILD_WITH_ROS2
+      rclcpp::Node("hebi_node"),
+#endif
+#if LIBRA_VERSION == 2
+      motion_controller_(std::move(motion_controller)),
+#endif
       families_(std::move(families)),
       names_(std::move(names)),
-      group_(nullptr),
       n_actuators_(names_.size()),
       loop_period_ms_(10)  // 100 Hz
-#if LIBRA_VERSION == 2
-      ,
-      motion_controller_(std::move(motion_controller))
-#endif
-#ifdef BUILD_WITH_ROS2
-      ,
-      rclcpp::Node("hebi_node")
-#endif
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
@@ -246,14 +243,8 @@ HebiThread::HebiThread(QObject* parent,
     for (std::size_t i = 0; i < n_actuators_; ++i) {
         enum_names_[i] = Actuator::StringToNameEnum(names_[i]);
 
-        // Every actuator must drive a known joint
-#if LIBRA_VERSION == 1
-        const bool differential = (enum_names_[i] == Actuator::Name::kMA)
-                                  || (enum_names_[i] == Actuator::Name::kMB);
-#else
-        const bool differential = false;
-#endif
-        if (!differential
+        // Every actuator must map to a known joint
+        if (!Actuator::IsDifferential(enum_names_[i])
             && JointFromActuator(enum_names_[i]) == Joint::Name::kUndefined) {
             logger_->Error("Actuator " + names_[i]
                            + " has no matching joint; its feedback and "
@@ -281,24 +272,14 @@ HebiThread::HebiThread(QObject* parent,
     //       way to get it into the ROS2 message.
     hebi_names.push_back("Static-Manip");
 # endif
-    state_msg_.name = hebi_names;
-    target_msg_.name = hebi_names;
 
-# if LIBRA_VERSION == 1
-    state_msg_.position.resize(n_actuators_ + 1);  // +1 for static joint
-    state_msg_.velocity.resize(n_actuators_ + 1);
-    state_msg_.effort.resize(n_actuators_ + 1);
-    target_msg_.position.resize(n_actuators_ + 1);
-    target_msg_.velocity.resize(n_actuators_ + 1);
-    target_msg_.effort.resize(n_actuators_ + 1);
-# else
-    state_msg_.position.resize(n_actuators_);
-    state_msg_.velocity.resize(n_actuators_);
-    state_msg_.effort.resize(n_actuators_);
-    target_msg_.position.resize(n_actuators_);
-    target_msg_.velocity.resize(n_actuators_);
-    target_msg_.effort.resize(n_actuators_);
-# endif
+    // One entry per joint name
+    for (auto* msg : {&state_msg_, &target_msg_}) {
+        msg->name = hebi_names;
+        msg->position.resize(hebi_names.size());
+        msg->velocity.resize(hebi_names.size());
+        msg->effort.resize(hebi_names.size());
+    }
 #endif
 }
 

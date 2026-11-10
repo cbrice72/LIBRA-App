@@ -116,16 +116,15 @@ EposThread::EposThread(QObject* parent, std::string device_name,
                        std::string port_name, const uint& baud_rate,
                        const bool& debug_mode)
     : AbstractActuatorThread(parent, debug_mode, Actuator::Type::kEpos),
+#ifdef BUILD_WITH_ROS2
+      rclcpp::Node("epos_node"),
+#endif
       device_name_(std::move(device_name)),
       protocol_name_(std::move(protocol_name)),
       interface_name_(std::move(interface_name)),
       port_name_(std::move(port_name)),
       baud_rate_(baud_rate),
       loop_period_ms_(10)  // 100 Hz
-#ifdef BUILD_WITH_ROS2
-      ,
-      rclcpp::Node("epos_node")
-#endif
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2

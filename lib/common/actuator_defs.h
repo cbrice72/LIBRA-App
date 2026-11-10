@@ -287,4 +287,18 @@ inline std::vector<std::string> GetHebiDefault() {
     return names;
 }
 
+/**
+ * @brief Checks whether an actuator is half of LIBRA-I's 2-DoF (roll/pitch)
+ *        differential joint.
+ *
+ * @param name Actuator to check
+ */
+inline bool IsDifferential(const Name& name) {
+#if LIBRA_VERSION == 1
+    return name == Name::kMA || name == Name::kMB;
+#else
+    return false;
+#endif
+}
+
 }  // namespace Actuator

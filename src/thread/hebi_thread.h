@@ -163,13 +163,16 @@ class HebiThread : public AbstractActuatorThread
 
     // --- Data Members ---
 
+#if LIBRA_VERSION == 2
+    std::shared_ptr<Libra2MotionController> motion_controller_;
+#endif
     std::vector<std::string> families_;
     std::vector<std::string> names_;
     std::vector<Actuator::Name> enum_names_;
     const int n_actuators_;
     const unsigned long loop_period_ms_;
 
-    std::shared_ptr<hebi::Group> group_;
+    std::shared_ptr<hebi::Group> group_{nullptr};
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
 
@@ -215,7 +218,6 @@ class HebiThread : public AbstractActuatorThread
     double trajectory_rate_{1.0};  // 0.5 in the lower torque band
 
 #if LIBRA_VERSION == 2
-    std::shared_ptr<Libra2MotionController> motion_controller_;
     std::atomic<bool> pitch_released_{false};  // whether actuator spins freely
 
     // Report-only state, so the UI hears about each change once
