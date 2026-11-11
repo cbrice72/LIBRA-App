@@ -1331,12 +1331,12 @@ void HebiThread::Connect() {
     }
 
     // Load safety parameters
-    if (!command_->readSafetyParameters(
-            "./bin/shared/hebi/safety_conservative.xml")) {
+    const std::string safety_path = "./bin/shared/hebi/safety_conservative.xml";
+    if (!command_->readSafetyParameters(safety_path)) {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
-    SetMaxVel(*command_, "./bin/shared/hebi/safety.xml");
+    SetMaxVel(*command_, safety_path);
 
     // Load gains
     if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
