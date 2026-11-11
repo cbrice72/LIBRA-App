@@ -1317,6 +1317,11 @@ void MainWindow::HandlePitchReleaseChanged(const bool& released) {
         SetTrajectoryPlaying(false);
     }
 
+    // Menu bar
+    const bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
+    ui_->a_hebi_load_gains->setEnabled(hebi_connected && !released);
+    ui_->a_hebi_load_safety->setEnabled(hebi_connected && !released);
+
     // UI widgets
     const QSignalBlocker blocker(ui_->pb_release_pitch);  // don't re-emit
     ui_->pb_release_pitch->setChecked(released);
