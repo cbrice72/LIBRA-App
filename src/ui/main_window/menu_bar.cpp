@@ -676,13 +676,15 @@ void MainWindow::on_a_motion_calibration_save_triggered() {
         "A calibration only works for the setup it was made with, so note "
         "the arm extension and anything else that changes the arm (e.g., "
         "payload).");
+
     auto* sb_extension = new QDoubleSpinBox(&dialog);
     sb_extension->setRange(0.0, kMaxArmExtension);
     sb_extension->setDecimals(1);
     sb_extension->setSuffix(" mm");
+    form->addRow("Arm extension (from minimum):", sb_extension);
+
     auto* le_note = new QLineEdit(&dialog);
     le_note->setPlaceholderText("optional");
-    form->addRow("Arm extension (from minimum):", sb_extension);
     form->addRow("Note:", le_note);
 
     if (dialog.exec() != QDialog::Accepted) {

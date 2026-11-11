@@ -768,8 +768,9 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
 void Libra2MotionController::HandOffToActuator() {
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = true;
-    reactive_cw_used_ = false;
+
     torque_high_ = false;  // see `Update()`
+    reactive_cw_used_ = false;
 
     if (target_pos_) {
         pending_move_ = (*target_pos_)[kPitchIdx];
@@ -1002,11 +1003,13 @@ Motion::Libra2Command Libra2MotionController::Update(
                         const bool passed_balance = !IsMovingLocked()
                                                     && (cw != direction);
                         if (reached || passed_balance) {
-                            // Reactive CW starts fresh at lower bound
                             cw_assist_done_ = true;
-                            torque_high_ = false;
                             predictive_cw_mass_ = *cw_mass_tgt;
+
+                            // Reactive CW starts fresh at lower bound
+                            torque_high_ = false;
                             reactive_cw_used_ = false;
+
                             logger_->Info(
                                 std::string(reached
                                                 ? "Predictive CW reached "
@@ -1193,10 +1196,10 @@ void Libra2MotionController::OnTargetChanged() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
-    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
-    pending_move_.reset();
+    last_reactive_cw_.reset();
 
+    pending_move_.reset();
     new_target_ = true;
 }
 
@@ -1208,8 +1211,8 @@ void Libra2MotionController::OnStop() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
-    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
+    last_reactive_cw_.reset();
 
     pending_move_.reset();
     new_target_ = false;
@@ -1224,14 +1227,15 @@ void Libra2MotionController::OnReset() {
 
     cw_phase_ = CwPhase::kIdle;
     cw_assist_done_ = false;
-    last_reactive_cw_.reset();
     predictive_cw_mass_.reset();
+
+    movement_en_ = true;
+    torque_high_ = false;
+    last_reactive_cw_.reset();
 
     pending_move_.reset();
     new_target_ = false;
     trajectory_active_ = false;
-    movement_en_ = true;
-    torque_high_ = false;
 
     state_warned_ = false;
 }

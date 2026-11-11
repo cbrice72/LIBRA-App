@@ -534,6 +534,7 @@ void Libra2Calibrator::FinishCalibration(const bool& success,
 
     output_.move_to.reset();
     output_.sweep.reset();
+
     sampler_.Reset();
     calibration_progress_.clear();
 

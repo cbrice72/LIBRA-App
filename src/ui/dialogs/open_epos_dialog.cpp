@@ -116,15 +116,19 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
     params_.protocol_name.clear();
     ui_->cb_protocol_name->clear();
     ui_->cb_protocol_name->setEnabled(false);
+
     params_.interface_name.clear();
     ui_->cb_interface_name->clear();
     ui_->cb_interface_name->setEnabled(false);
+
     params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
+
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+
     params_.is_set = false;
     ui_->pb_confirm->setEnabled(false);
 
@@ -192,12 +196,15 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
     params_.interface_name.clear();
     ui_->cb_interface_name->clear();
     ui_->cb_interface_name->setEnabled(false);
+
     params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
+
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+
     params_.is_set = false;
     ui_->pb_confirm->setEnabled(false);
 
@@ -266,9 +273,11 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
     params_.port_name.clear();
     ui_->cb_port_name->clear();
     ui_->cb_port_name->setEnabled(false);
+
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+
     params_.is_set = false;
     ui_->pb_confirm->setEnabled(false);
 
@@ -337,6 +346,7 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
     params_.baud_rate = 0;
     ui_->cb_baud_rate->clear();
     ui_->cb_baud_rate->setEnabled(false);
+
     params_.is_set = false;
     ui_->pb_confirm->setEnabled(false);
 

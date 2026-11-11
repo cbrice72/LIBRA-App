@@ -711,6 +711,7 @@ bool HebiThread::FollowTrajectory(const double& dt_s, Eigen::VectorXd& cmd_pos,
                           &cmd_acc);
     cmd_vel.setZero();
     cmd_acc.setZero();
+
     latest_cmd_pos_ = cmd_pos;
     latest_cmd_vel_.setZero();
     trajectory_.reset();
