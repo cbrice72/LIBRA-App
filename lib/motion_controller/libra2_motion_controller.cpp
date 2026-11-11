@@ -540,7 +540,7 @@ bool Libra2MotionController::LoadCalibrationRecord(
     // Apply the arm model
     if (record.arm_model) {
         // Sanity check CW model first
-        const Motion::ArmModel& arm = *record.arm_model;
+        const auto& arm = *record.arm_model;
         if (!IsSameCwModel(arm.cw_model, cw_model_.GetParams())) {
             logger_->Warn("CW model has changed since this calibration was "
                           "saved; using its arm model as-is");
@@ -727,7 +727,7 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
         return false;
     }
     const double mass_tgt = *cw_mass_tgt;
-    const Motion::CwCommand cw = PredictiveCwCommand(mass_tgt, *cw_mass_);
+    const auto cw = PredictiveCwCommand(mass_tgt, *cw_mass_);
 
     const bool volume_reached = (cw == Motion::CwCommand::kIdle);
     const bool angle_reached = std::abs(angle - angle_tgt) <= handoff_band_;
@@ -735,10 +735,9 @@ bool Libra2MotionController::RunCwPrimary(const double& angle,
     if (volume_reached || angle_reached) {
         // Log hand-off and set up for actuator takeover
         const std::string reached = std::string(volume_reached ? "volume" : "")
-                                    + std::string(
-                                        volume_reached && angle_reached ? "+"
-                                                                        : "")
-                                    + std::string(angle_reached ? "angle" : "");
+                                    + (volume_reached && angle_reached ? "+"
+                                                                       : "")
+                                    + (angle_reached ? "angle" : "");
         logger_->Info(
             "CW handing control to actuator (" + reached
             + " reached): angle error=" + Motion::FormatNum(angle - angle_tgt)
@@ -970,9 +969,9 @@ Motion::Libra2Command Libra2MotionController::Update(
             calibrator_.Update(cycle);
         } else {
             // [MODE] Tandem/Holding: throttle torque
-            const Motion::CwCommand direction = (actual_torque > 0.0)
-                                                    ? Motion::CwCommand::kFill
-                                                    : Motion::CwCommand::kDrain;
+            const auto direction = (actual_torque > 0.0)
+                                       ? Motion::CwCommand::kFill
+                                       : Motion::CwCommand::kDrain;
             const bool braking = target
                                  && (actual_torque * (*target - angle) < 0.0);
             const ReactiveCwResult reactive_cw =
@@ -993,8 +992,8 @@ Motion::Libra2Command Libra2MotionController::Update(
                         cw_assist_done_ = true;
                         torque_high_ = false;
                     } else {
-                        const Motion::CwCommand cw =
-                            PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
+                        const auto cw = PredictiveCwCommand(*cw_mass_tgt,
+                                                            *cw_mass_);
                         const bool reached = (cw == Motion::CwCommand::kIdle);
 
                         // If torque keeps increasing after reaching the target,
@@ -1051,7 +1050,7 @@ Motion::Libra2Command Libra2MotionController::Update(
     }
 
     // Apply calibration results
-    const Libra2Calibrator::Output calibration = calibrator_.TakeOutput();
+    const auto calibration = calibrator_.TakeOutput();
     if (calibration.level_sample) {
         FinishLevelCalibration(*calibration.level_sample);
     }

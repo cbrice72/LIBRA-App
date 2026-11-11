@@ -119,8 +119,7 @@ void WaterController::OnUpdate() {
                                        & ~(kAIn | kBIn));
     }
 
-    qint64 bytes_written = serial_port_->write(command);
-    if (bytes_written == -1) {
+    if (serial_port_->write(command) == -1) {
         throw std::runtime_error("Failed to write to port");
     }
 
@@ -297,7 +296,7 @@ void WaterController::SendStatus(const Water::Side& side) {
 
     if (serial_port_->isOpen() && !water_cmd_.isEmpty()) {
         // Parse command to get corresponding state
-        uint8_t command = static_cast<uint8_t>(water_cmd_[0]);
+        auto command = static_cast<uint8_t>(water_cmd_[0]);
         switch (side) {
             case Water::Side::kA:
                 if ((command & kAIn) != 0) {
@@ -340,7 +339,7 @@ void WaterController::TrackVolume() {
     const double dt = volume_clock_.restart() / 1000.0;  // ms -> s
 
     for (std::size_t i = 0; i < Water::kSideCount; ++i) {
-        Tank& tank = tanks_[i];
+        auto& tank = tanks_[i];
         const auto side = static_cast<Water::Side>(i);
 
         double flow = 0.0;
@@ -474,7 +473,7 @@ void WaterController::UpdateFlowRate(const Water::Side& side,
 
     flow_measured_ = (flow != -1.0);
 
-    Tank& tank = tanks_[index];
+    auto& tank = tanks_[index];
     tank.fill_rate = 0;   // default: Water::kFillRate;
     tank.drain_rate = 0;  // default: Water::kDrainRate;
 

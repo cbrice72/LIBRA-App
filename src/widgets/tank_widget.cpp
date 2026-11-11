@@ -125,7 +125,7 @@ void TankWidget::paintEvent(QPaintEvent*) {
 
     // Draw volume (middle of tank)
     painter.setPen(Qt::black);
-    QFont font = painter.font();
+    auto font = painter.font();
     font.setPixelSize(16);
     painter.setFont(font);
 

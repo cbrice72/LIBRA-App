@@ -832,7 +832,7 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
     // UI widgets
     ui_->cb_motion_mode->setCurrentIndex(
         ui_->cb_motion_mode->findData(static_cast<int>(mode)));
-    QPalette palette = ui_->cb_motion_mode->palette();
+    auto palette = ui_->cb_motion_mode->palette();
     palette.setColor(QPalette::ButtonText, MotionModeColor(mode));
     ui_->cb_motion_mode->setPalette(palette);
     if (reactive_cw_en) {
@@ -927,19 +927,19 @@ void MainWindow::UpdateMotionControls() {
     bool hebi_connected = ui_->a_hebi_disconnect->isEnabled();
     bool water_connected = ui_->a_water_cw_disconnect->isEnabled();
     bool both_connected = hebi_connected && water_connected;
+
     bool pitch_released = ui_->pb_release_pitch->isChecked();
     bool busy = arm_moving_ || trajectory_playing_;
+
+    bool can_calibrate = hebi_connected && !busy && !pitch_released;
 
     // Menu bar
     ui_->a_motion_handoff_band->setEnabled(both_connected && !busy);
     ui_->a_motion_inertia_ff->setEnabled(!busy);
 
-    ui_->a_motion_calibrate_level->setEnabled(hebi_connected && !busy
-                                              && !pitch_released);
-    ui_->a_motion_calibrate_two_angle->setEnabled(hebi_connected && !busy
-                                                  && !pitch_released);
-    ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !busy
-                                                 && !pitch_released);
+    ui_->a_motion_calibrate_level->setEnabled(can_calibrate);
+    ui_->a_motion_calibrate_two_angle->setEnabled(can_calibrate);
+    ui_->a_motion_calibrate_friction->setEnabled(can_calibrate);
     ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected
                                                && calibration_running_);
 
@@ -1221,10 +1221,7 @@ void MainWindow::HandleActuatorFeedback(
     const bool initialize = populate_targets_
                             && (feedback_type == Actuator::Feedback::kActualPos);
 
-    for (const auto& feedback : feedbacks) {
-        const auto& joint = feedback.first;
-        const auto& val = feedback.second;
-
+    for (const auto& [joint, val] : feedbacks) {
         // Index into matching label using map-of-maps initialized in constructor
         try {
             feedback_element_map_.at(joint)

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <numeric>
 
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
@@ -632,7 +633,7 @@ void Libra2Calibrator::BeginCalibrationStage(
     t_stage_s_ = 0.0;
     sampler_.Reset();
 
-    FrictionRun& fr = friction_run_;
+    auto& fr = friction_run_;
     switch (status) {
         case Motion::CalibrationStatus::kArmMovingToA:
             output_.move_to = angle_a_;
@@ -692,7 +693,7 @@ void Libra2Calibrator::BeginCalibrationStage(
  * @note Returns empty string if no calibration is running.
  */
 std::string Libra2Calibrator::DescribeCalibrationStage() const {
-    const FrictionRun& fr = friction_run_;
+    const auto& fr = friction_run_;
     const auto n_vels = static_cast<int>(kFrictionVelFractions.size());
     const std::string at_rest = "averaging torque once system at rest for "
                                 + Motion::FormatNum(kRestWindowTime) + " s";
@@ -882,7 +883,7 @@ void Libra2Calibrator::RunArmCalibration(const PitchCycle& cycle) {
  *       changes.
  */
 void Libra2Calibrator::RunFrictionCalibration(const PitchCycle& cycle) {
-    FrictionRun& run = friction_run_;
+    auto& run = friction_run_;
     t_stage_s_ += cycle.dt;
 
     // Brief spikes shouldn't count against the limit
@@ -986,7 +987,7 @@ void Libra2Calibrator::RunFrictionCalibration(const PitchCycle& cycle) {
 void Libra2Calibrator::AddFrictionSample(const PitchCycle& cycle,
                                          const bool& going_up,
                                          const double& vel) {
-    FrictionRun& run = friction_run_;
+    auto& run = friction_run_;
 
     // Skip window edges, where ramps add inertia and CW may swing
     const double lo = run.angle_lo + run.margin;
@@ -1036,7 +1037,7 @@ void Libra2Calibrator::AddFrictionSample(const PitchCycle& cycle,
  */
 std::optional<std::string> Libra2Calibrator::FinishFrictionVel(
     const double& vel) {
-    FrictionRun& run = friction_run_;
+    auto& run = friction_run_;
 
     const double lo = run.angle_lo + run.margin;
 
@@ -1131,7 +1132,7 @@ std::optional<std::string> Libra2Calibrator::FinishFrictionVel(
  *       and b is refit through the origin; otherwise, the calibration fails.
  */
 void Libra2Calibrator::FinishFrictionCalibration() {
-    const FrictionRun& run = friction_run_;
+    const auto& run = friction_run_;
 
     std::vector<double> vels;
     std::vector<double> drags;
@@ -1153,11 +1154,8 @@ void Libra2Calibrator::FinishFrictionCalibration() {
                       + " Nm*s/rad), so friction looks flat; using b = 0");
 
         model.viscous = 0.0;
-        model.coulomb = 0.0;
-        for (const double& d : drags) {
-            model.coulomb += d;
-        }
-        model.coulomb /= static_cast<double>(drags.size());
+        model.coulomb = std::accumulate(drags.begin(), drags.end(), 0.0)
+                        / static_cast<double>(drags.size());
     }
 
     if (model.coulomb < 0.0) {

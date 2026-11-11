@@ -48,8 +48,7 @@ void FlowController::OnUpdate() {
     // Read all lines (in case loops misalign); keep only most recent
     QString str_data;
     while (serial_port_->canReadLine()) {
-        const QString line = QString::fromUtf8(serial_port_->readLine())
-                                 .trimmed();
+        const auto line = QString::fromUtf8(serial_port_->readLine()).trimmed();
         if (line.isEmpty() || line.startsWith('?')) {
             continue;  // skip blanks and device-ID query replies
         }

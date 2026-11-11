@@ -930,7 +930,7 @@ void HebiThread::ReportCalibrationStatus() {
         calibration_running_ = false;
         last_progress_.clear();
 
-        const QString message = QString::fromStdString(
+        const auto message = QString::fromStdString(
             motion_controller_->GetCalibrationMessage());
         emit CalibrationProgressChanged(message, false);
 
@@ -1180,21 +1180,13 @@ void HebiThread::PublishState() {
     for (int i = 0; i < n_actuators_; ++i) {
         const auto joint = static_cast<Joint::Name>(i);
 
-        const double actual_pos = actual_pos_map.at(joint);
-        const double actual_vel = actual_vel_map.at(joint);
-        const double actual_eff = actual_eff_map.at(joint);
+        state_msg_.position[i] = actual_pos_map.at(joint) * kDegToRad;
+        state_msg_.velocity[i] = actual_vel_map.at(joint) * kDegToRad;
+        state_msg_.effort[i] = actual_eff_map.at(joint);
 
-        state_msg_.position[i] = actual_pos * kDegToRad;
-        state_msg_.velocity[i] = actual_vel * kDegToRad;
-        state_msg_.effort[i] = actual_eff;
-
-        const double command_pos = command_pos_map.at(joint);
-        const double command_vel = command_vel_map.at(joint);
-        const double command_eff = command_eff_map.at(joint);
-
-        target_msg_.position[i] = command_pos * kDegToRad;
-        target_msg_.velocity[i] = command_vel * kDegToRad;
-        target_msg_.effort[i] = command_eff;
+        target_msg_.position[i] = command_pos_map.at(joint) * kDegToRad;
+        target_msg_.velocity[i] = command_vel_map.at(joint) * kDegToRad;
+        target_msg_.effort[i] = command_eff_map.at(joint);
     }
 
 # if LIBRA_VERSION == 1
@@ -1372,11 +1364,11 @@ void HebiThread::Connect() {
 #if LIBRA_VERSION == 2
     motion_controller_->Reset();
     for (const auto& joint : motion_controller_->GetJoints()) {
-        bool driven = false;
-        for (int i = 0; i < n_actuators_; ++i) {
-            driven = driven || (JointFromActuator(enum_names_[i]) == joint);
-        }
-
+        const bool driven = std::any_of(enum_names_.begin(), enum_names_.end(),
+                                        [&](const Actuator::Name& name) {
+                                            return JointFromActuator(name)
+                                                   == joint;
+                                        });
         if (!driven) {
             emit ErrorThrown(
                 "HEBI - No connected actuator drives the "

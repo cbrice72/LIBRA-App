@@ -266,11 +266,11 @@ FrictionModel FrictionFromJson(const QJsonObject& obj,
     }
 
     // Raw data
-    const QJsonArray points = obj.value("points").toArray();
+    const auto points = obj.value("points").toArray();
     for (int i = 0; i < points.size(); ++i) {
         const std::string point_context = context + "points["
                                           + std::to_string(i) + "].";
-        const QJsonObject p = points.at(i).toObject();
+        const auto p = points.at(i).toObject();
 
         FrictionPoint point;
         point.vel = ReadNumber(p, "speed_rad_s", point_context);
@@ -281,11 +281,11 @@ FrictionModel FrictionFromJson(const QJsonObject& obj,
         // Optional
         point.steady_fraction = p.value("steady_fraction").toDouble(0.0);
 
-        const QJsonArray bins = p.value("bins").toArray();
+        const auto bins = p.value("bins").toArray();
         for (int j = 0; j < bins.size(); ++j) {
             const std::string bin_context = point_context + "bins["
                                             + std::to_string(j) + "].";
-            const QJsonObject b = bins.at(j).toObject();
+            const auto b = bins.at(j).toObject();
 
             FrictionBin bin;
             bin.angle = ReadNumber(b, "angle_rad", bin_context);
@@ -341,7 +341,7 @@ void SaveCalibrationJson(const CalibrationRecord& record,
                            : QJsonValue(QJsonValue::Null);
 
     // Write to file
-    const QString path = QString::fromStdString(file_path);
+    const auto path = QString::fromStdString(file_path);
     const QString dir = QFileInfo(path).absolutePath();
     if (!QDir().mkpath(dir)) {
         throw std::runtime_error("can't create folder " + dir.toStdString());
@@ -374,8 +374,7 @@ CalibrationRecord LoadCalibrationJson(const std::string& file_path) {
     }
 
     QJsonParseError parse_error;
-    const QJsonDocument doc = QJsonDocument::fromJson(file.readAll(),
-                                                      &parse_error);
+    const auto doc = QJsonDocument::fromJson(file.readAll(), &parse_error);
     if (doc.isNull() || !doc.isObject()) {
         throw std::runtime_error(
             "not valid JSON (" + parse_error.errorString().toStdString() + ")");

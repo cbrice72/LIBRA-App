@@ -400,9 +400,7 @@ void EposThread::Connect() {
                                  kEposTrue, &valid_rate, &end_of_sel, &err_code)
         > 0) {
         // Skip the while loop below if we get it on the first try
-        if (baud_rate_ == valid_rate) {
-            baud_is_valid = true;
-        }
+        baud_is_valid = (baud_rate_ == valid_rate);
 
         valid_str << std::to_string(valid_rate) << " ";
 
@@ -423,9 +421,7 @@ void EposThread::Connect() {
             valid_str << std::to_string(valid_rate) << " ";
 
             // Check last controller-provided rate
-            if (baud_rate_ == valid_rate) {
-                baud_is_valid = true;
-            }
+            baud_is_valid = (baud_rate_ == valid_rate);
         }
     }
 

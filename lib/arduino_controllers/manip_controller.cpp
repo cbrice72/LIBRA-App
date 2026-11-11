@@ -81,10 +81,10 @@ void ManipController::OnUpdate() {
     }
 
     // Prepare and send command: "<PITCH> <PAN> <TILT>\n"
-    QString servo_cmd = QString::asprintf("%.1f %.1f %.1f\n",
-                                          current_pos_.at(kPitch),
-                                          current_pos_.at(kPan),
-                                          current_pos_.at(kTilt));
+    auto servo_cmd = QString::asprintf("%.1f %.1f %.1f\n",
+                                       current_pos_.at(kPitch),
+                                       current_pos_.at(kPan),
+                                       current_pos_.at(kTilt));
 
     if (serial_port_->write(servo_cmd.toUtf8()) == -1) {
         throw std::runtime_error("Failed to write to port");

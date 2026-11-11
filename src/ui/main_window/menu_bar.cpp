@@ -663,7 +663,7 @@ void MainWindow::on_a_motion_calibrate_cancel_triggered() {
  *        and pitch joint friction (JSON).
  */
 void MainWindow::on_a_motion_calibration_save_triggered() {
-    Motion::CalibrationRecord record = motion_controller_->GetCalibrationRecord();
+    auto record = motion_controller_->GetCalibrationRecord();
     if (!record.arm_model && !record.friction) {
         HandleCriticalError("Calibration - Nothing to save; run or load a "
                             "calibration first!");

@@ -33,7 +33,7 @@
  * @brief Updates UI elements related to the loaded (or active) trajectory.
  */
 void MainWindow::UpdateTrajectoryControls() {
-    const QString n_poses = QString::number(trajectory_.size());
+    const auto n_poses = QString::number(trajectory_.size());
     if (trajectory_.empty()) {
         // Nothing recorded or loaded
         ui_->l_trajectory_name->setText("...");
