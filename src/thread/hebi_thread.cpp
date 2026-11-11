@@ -60,6 +60,13 @@ constexpr double kNone = std::numeric_limits<double>::quiet_NaN();  // no comman
 constexpr bool kAllowFreeJoints = (LIBRA_VERSION == 2);
 
 #if LIBRA_VERSION == 2
+// Velocity limit while control is off (see `SetControlOff()`): far above any
+// speed the arm reaches when free (max. 0.2 rad/s in the 2026-11-11 Hebilog),
+// so the velocity safety controller never trips and brakes it
+constexpr float kFreeVelLimit = 1.0;  // rad/s
+#endif
+
+#if LIBRA_VERSION == 2
 constexpr double kMaxSweepVel = 0.1047;  // for friction sweep, rad/s (~6 deg/s)
 #endif
 
@@ -398,6 +405,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
 #if LIBRA_VERSION == 2
     // Pitch control released (send nothing)
     if (pitch_released_) {
+        SetControlOff(true);
         latest_cmd_pos_.setConstant(kNone);
         latest_cmd_vel_.setZero();
         emit ReportArmTorque(std::nullopt);
@@ -435,6 +443,13 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
     // Determine motion command and any required assistance
     const bool following = FollowTrajectory(dt_s, cmd_pos, cmd_vel, cmd_acc,
                                             assist->trajectory_rate);
+
+#if LIBRA_VERSION == 2
+    // CW Primary's free arm needs the actuator fully off, like a released pitch
+    // (restored before the position hold below is sent)
+    SetControlOff(assist->mode[Joint::Name::kPitch]
+                  == Motion::CommandMode::kFree);
+#endif
 
     for (int i = 0; i < n_actuators_; ++i) {
         const auto joint = JointFromActuator(enum_names_[i]);
@@ -956,6 +971,82 @@ bool HebiThread::CanCalibrate() {
 
     return true;
 }
+
+/**
+ * @brief Turns the actuators' control strategy off and loosens their velocity
+ *        limit (back-drivable), or restores the strategy and limit they had
+ *        before. Does nothing if already so.
+ *
+ * @param off Whether to turn the control strategy off
+ *
+ * @note "Off" instead of just sending nothing, which still holds position.
+ *       The velocity limit is loosened because its safety controller acts in
+ *       every strategy: tripped by back-driving, it brakes the arm, and after
+ *       holds its last output, keeping the arm where it was left.
+ *
+ * @note Only used by the control loop (released pitch, CW Primary's free arm).
+ */
+void HebiThread::SetControlOff(const bool& off) {
+    if (off != settings_before_off_.empty()) {
+        return;  // already in the requested state
+    }
+
+    hebi::GroupCommand cmd(group_->size());
+    if (off) {
+        // Save current settings to restore later (same order in both enums)
+        hebi::GroupInfo info(group_->size());
+        if (!group_->requestInfo(info, kTimeout)) {
+            emit ErrorThrown(
+                "HEBI - Can't turn control off; no actuator info!");
+            return;
+        }
+        std::vector<SettingsBeforeOff> settings;
+        for (size_t i = 0; i < group_->size(); ++i) {
+            const auto& actuator = info[i].settings().actuator();
+            if (!actuator.controlStrategy() || !actuator.velocityLimitMin()
+                || !actuator.velocityLimitMax()) {
+                emit ErrorThrown("HEBI - Can't turn control off; actuator "
+                                 "didn't report its control strategy or "
+                                 "velocity limit!");
+                return;
+            }
+            settings.push_back({static_cast<hebi::Command::ControlStrategy>(
+                                    actuator.controlStrategy().get()),
+                                actuator.velocityLimitMin().get(),
+                                actuator.velocityLimitMax().get()});
+            auto& cmd_actuator = cmd[i].settings().actuator();
+            cmd_actuator.controlStrategy().set(
+                hebi::Command::ControlStrategy::Off);
+            cmd_actuator.velocityLimitMin().set(-kFreeVelLimit);
+            cmd_actuator.velocityLimitMax().set(kFreeVelLimit);
+        }
+        if (!group_->sendCommandWithAcknowledgement(cmd, kTimeout)) {
+            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
+                             "control strategy change (Off)!");
+            return;
+        }
+        settings_before_off_ = std::move(settings);
+    } else {
+        for (size_t i = 0; i < group_->size(); ++i) {
+            const auto& before = settings_before_off_[i];
+            auto& cmd_actuator = cmd[i].settings().actuator();
+            cmd_actuator.controlStrategy().set(before.strategy);
+            cmd_actuator.velocityLimitMin().set(before.vel_limit_min);
+            cmd_actuator.velocityLimitMax().set(before.vel_limit_max);
+        }
+        if (!group_->sendCommandWithAcknowledgement(cmd, kTimeout)) {
+            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
+                             "control strategy change (restore)!");
+            return;  // retried next cycle
+        }
+        settings_before_off_.clear();
+    }
+
+    logger_->Debug(std::string("Control strategy ")
+                   + (off ? "off and velocity limit loosened (actuator "
+                            "back-drivable)"
+                          : "and velocity limit restored"));
+}
 #endif  // LIBRA_VERSION == 2
 
 /**
@@ -1313,10 +1404,11 @@ void HebiThread::Disconnect() {
         emit ReportArmTorque(std::nullopt);
 
 #if LIBRA_VERSION == 2
-        // Reset motion state
+        // Reset motion state (reconnecting reloads the control strategy)
         motion_controller_->Reset();
         ReportCalibrationStatus();
         pitch_released_ = false;
+        settings_before_off_.clear();
         emit PitchReleaseChanged(false);
 #endif
 
@@ -1589,10 +1681,8 @@ void HebiThread::SetReactiveCwBounds(const double& lower_bound,
  *
  * @param enabled Whether to stop commanding the actuator
  *
- * @note Sets the control strategy to "Off" instead of just sending nothing:
- *       HEBI's safety controllers (e.g., velocity limit) still act on an
- *       uncommanded actuator, resisting back-driving. The previous strategy is
- *       restored when taking control again.
+ * @note The control loop turns the control strategy off and back on (see
+ *       `SetControlOff()`).
  */
 void HebiThread::EnablePitchRelease(const bool& enabled) {
     if (enabled && group_ == nullptr) {
@@ -1602,52 +1692,11 @@ void HebiThread::EnablePitchRelease(const bool& enabled) {
     }
 
     if (enabled && !pitch_released_) {
-        // Save current strategies to restore later (same order in both enums)
-        hebi::GroupInfo info(group_->size());
-        const bool info_received = group_->requestInfo(info, kTimeout);
-        strategies_before_release_.clear();
-        for (size_t i = 0; info_received && i < group_->size(); ++i) {
-            const auto& strategy =
-                info[i].settings().actuator().controlStrategy();
-            if (!strategy) {
-                break;
-            }
-            strategies_before_release_.push_back(
-                static_cast<hebi::Command::ControlStrategy>(strategy.get()));
-        }
-        if (strategies_before_release_.size() != group_->size()) {
-            emit ErrorThrown("HEBI - Can't release pitch; actuator didn't "
-                             "report its control strategy!");
-            emit PitchReleaseChanged(false);
-            return;
-        }
-
         Stop();
         motion_controller_->Reset();
         pitch_released_ = true;  // control loop stops sending commands
-
-        hebi::GroupCommand off_cmd(group_->size());
-        for (size_t i = 0; i < group_->size(); ++i) {
-            off_cmd[i].settings().actuator().controlStrategy().set(
-                hebi::Command::ControlStrategy::Off);
-        }
-        if (!group_->sendCommandWithAcknowledgement(off_cmd, kTimeout)) {
-            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
-                             "control strategy change (Off)!");
-        }
-        logger_->Info("Pitch released (control strategy Off)");
-
+        logger_->Info("Pitch released");
     } else if (!enabled && pitch_released_) {
-        hebi::GroupCommand restore_cmd(group_->size());
-        for (size_t i = 0; i < strategies_before_release_.size(); ++i) {
-            restore_cmd[i].settings().actuator().controlStrategy().set(
-                strategies_before_release_[i]);
-        }
-        if (!group_->sendCommandWithAcknowledgement(restore_cmd, kTimeout)) {
-            emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
-                             "control strategy change (restore)!");
-        }
-
         pitch_released_ = false;  // control loop holds current pose again
         logger_->Info("Pitch controlled (holding current pose)");
     }

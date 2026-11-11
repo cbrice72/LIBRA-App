@@ -152,6 +152,7 @@ class HebiThread : public AbstractActuatorThread
         const double& dt_s, Eigen::VectorXd& cmd_vel, Eigen::VectorXd& cmd_acc);
     void StartSweep(const Motion::SweepRequest& sweep);
     void ReportCalibrationStatus();
+    void SetControlOff(const bool& off);
 
     bool CanCalibrate();
 #endif
@@ -224,7 +225,15 @@ class HebiThread : public AbstractActuatorThread
 
 #if LIBRA_VERSION == 2
     std::atomic<bool> pitch_released_{false};  // whether actuator spins freely
-    std::vector<hebi::Command::ControlStrategy> strategies_before_release_;
+
+    // Settings `SetControlOff()` changes, restored when control comes back
+    struct SettingsBeforeOff {
+        hebi::Command::ControlStrategy strategy;
+        float vel_limit_min;  // rad/s
+        float vel_limit_max;  // rad/s
+    };
+
+    std::vector<SettingsBeforeOff> settings_before_off_;
 
     // Report-only state, so the UI hears about each change once
     std::atomic<bool> calibration_running_{false};
