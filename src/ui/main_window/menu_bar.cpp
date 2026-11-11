@@ -1105,9 +1105,8 @@ void MainWindow::on_a_water_set_mass_triggered() {
     QDialog dialog(this);
     QFormLayout* form =
         SetUpFormDialog(dialog, "Set CW Mass",
-                        QString(
-                            "Enter the water mass in each CW (water density "
-                            "assumed 1 kg/L).\nCapacity: %1 kg each.")
+                        QString("Enter each CW's water mass (assume density = "
+                                "1 kg/L).\nCapacity: %1 kg each.")
                             .arg(Water::kSideCapacity, 0, 'f', 1));
 
     std::array<QDoubleSpinBox*, Water::kSideCount> spin_boxes{};
