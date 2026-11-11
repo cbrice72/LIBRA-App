@@ -990,24 +990,24 @@ Motion::Libra2Command Libra2MotionController::Update(
                     } else {
                         const Motion::CwCommand cw =
                             PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
+                        const bool reached = (cw == Motion::CwCommand::kIdle);
 
                         // If torque keeps increasing after reaching the target,
                         // the CW may be overshooting due to model error.
                         // Prematurely stop and allow reactive CW to take over.
-                        const bool passed_balance =
-                            !trajectory_active_ && cw != direction
-                            && cw != Motion::CwCommand::kIdle;
-                        if (cw == Motion::CwCommand::kIdle || passed_balance) {
+                        const bool passed_balance = !IsMovingLocked()
+                                                    && (cw != direction);
+                        if (reached || passed_balance) {
                             // Reactive CW starts fresh at lower bound
                             cw_assist_done_ = true;
                             torque_high_ = false;
                             predictive_cw_mass_ = *cw_mass_tgt;
                             reactive_cw_used_ = false;
                             logger_->Info(
-                                std::string(passed_balance
-                                                ? "Predictive CW stopped past "
-                                                  "balance at "
-                                                : "Predictive CW reached ")
+                                std::string(reached
+                                                ? "Predictive CW reached "
+                                                : "Predictive CW stopped past "
+                                                  "balance at ")
                                 + Motion::FormatNum(*cw_mass_) + " kg (target "
                                 + Motion::FormatNum(*cw_mass_tgt)
                                 + " kg, torque="
