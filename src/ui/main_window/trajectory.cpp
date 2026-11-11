@@ -34,7 +34,11 @@
  */
 void MainWindow::UpdateTrajectoryControls() {
     const QString n_poses = QString::number(trajectory_.size());
-    if (trajectory_file_.isEmpty()) {
+    if (trajectory_.empty()) {
+        // Nothing recorded or loaded
+        ui_->l_trajectory_name->setText("...");
+        ui_->l_trajectory_step->setText("...");
+    } else if (trajectory_file_.isEmpty()) {
         // Unsaved recording
         ui_->l_trajectory_name->setText("Recording");
         ui_->l_trajectory_step->setText(n_poses + "/-");  // total unknown

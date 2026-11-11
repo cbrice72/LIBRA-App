@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1047</width>
-    <height>729</height>
+    <width>1136</width>
+    <height>891</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -40,6 +40,14 @@
        <bool>true</bool>
       </property>
       <widget class="QWidget" name="sa_central_contents">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>0</y>
+         <width>1136</width>
+         <height>797</height>
+        </rect>
+       </property>
        <layout class="QGridLayout" name="gl_central_widget">
         <item row="0" column="0">
          <layout class="QGridLayout" name="gl_main" columnstretch="1,1">
@@ -1427,13 +1435,42 @@
                   <enum>QLayout::SizeConstraint::SetDefaultConstraint</enum>
                  </property>
                  <item>
-                  <spacer name="h_spacer_arm_control_l">
+                  <widget class="QLabel" name="static_l_motion_mode">
+                   <property name="statusTip">
+                    <string>Arm movement strategy</string>
+                   </property>
+                   <property name="text">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Mode:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="cb_motion_mode">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>130</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="statusTip">
+                    <string>Arm movement strategy</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="h_spacer_arm_control_mode">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Policy::Fixed</enum>
+                   </property>
                    <property name="sizeHint" stdset="0">
                     <size>
-                     <width>0</width>
+                     <width>12</width>
                      <height>20</height>
                     </size>
                    </property>
@@ -1565,35 +1602,6 @@
                    </property>
                    <property name="icon">
                     <iconset theme="QIcon::ThemeIcon::EditUndo"/>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QLabel" name="static_l_motion_mode">
-                   <property name="statusTip">
-                    <string>Arm movement strategy</string>
-                   </property>
-                   <property name="text">
-                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Mode:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                   </property>
-                   <property name="alignment">
-                    <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QComboBox" name="cb_motion_mode">
-                   <property name="enabled">
-                    <bool>false</bool>
-                   </property>
-                   <property name="minimumSize">
-                    <size>
-                     <width>130</width>
-                     <height>30</height>
-                    </size>
-                   </property>
-                   <property name="statusTip">
-                    <string>Arm movement strategy</string>
                    </property>
                   </widget>
                  </item>
@@ -2166,7 +2174,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="6">
+               <item row="1" column="4">
                 <spacer name="h_spacer_trajectory">
                  <property name="orientation">
                   <enum>Qt::Orientation::Horizontal</enum>
@@ -2179,7 +2187,7 @@
                  </property>
                 </spacer>
                </item>
-               <item row="1" column="0">
+               <item row="1" column="2">
                 <widget class="QPushButton" name="pb_trajectory_add">
                  <property name="enabled">
                   <bool>false</bool>
@@ -2201,7 +2209,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="1">
+               <item row="1" column="3">
                 <widget class="QPushButton" name="pb_trajectory_clear">
                  <property name="enabled">
                   <bool>false</bool>
@@ -2223,7 +2231,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="2">
+               <item row="1" column="0">
                 <widget class="QPushButton" name="pb_trajectory_play">
                  <property name="enabled">
                   <bool>false</bool>
@@ -2262,7 +2270,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="1" column="3">
+               <item row="1" column="1">
                 <widget class="QPushButton" name="pb_trajectory_reverse">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
@@ -2272,14 +2280,14 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>20</width>
-                   <height>20</height>
+                   <width>30</width>
+                   <height>30</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>20</width>
-                   <height>20</height>
+                   <width>30</width>
+                   <height>30</height>
                   </size>
                  </property>
                  <property name="statusTip">
@@ -2289,35 +2297,52 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset theme="QIcon::ThemeIcon::MediaSeekBackward"/>
+                  <iconset theme="QIcon::ThemeIcon::ObjectRotateLeft"/>
                  </property>
                  <property name="checkable">
                   <bool>true</bool>
                  </property>
                 </widget>
                </item>
-               <item row="1" column="4">
-                <widget class="QCheckBox" name="chk_trajectory_loop">
-                 <property name="statusTip">
-                  <string>After the last step, start over from the first (in the current direction)</string>
-                 </property>
-                 <property name="text">
-                  <string>Loop</string>
-                 </property>
-                </widget>
-               </item>
-               <item row="1" column="5">
-                <widget class="QCheckBox" name="chk_trajectory_confirm">
-                 <property name="statusTip">
-                  <string>Ask before every step (the first move always asks)</string>
-                 </property>
-                 <property name="text">
-                  <string>Confirm steps</string>
-                 </property>
-                 <property name="checked">
-                  <bool>true</bool>
-                 </property>
-                </widget>
+               <item row="2" column="0" colspan="5">
+                <layout class="QHBoxLayout" name="hl_trajectory_options">
+                 <item>
+                  <widget class="QCheckBox" name="chk_trajectory_loop">
+                   <property name="statusTip">
+                    <string>After the last step, start over from the first (in the current direction)</string>
+                   </property>
+                   <property name="text">
+                    <string>Loop</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QCheckBox" name="chk_trajectory_confirm">
+                   <property name="statusTip">
+                    <string>Ask before every step (the first move always asks)</string>
+                   </property>
+                   <property name="text">
+                    <string>Confirm steps</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <spacer name="h_spacer_trajectory_options">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                </layout>
                </item>
               </layout>
              </widget>
@@ -2379,7 +2404,7 @@
                  </property>
                 </spacer>
                </item>
-               <item row="1" column="0" colspan="3">
+               <item row="1" column="0">
                 <widget class="QLabel" name="static_l_motion_status">
                  <property name="statusTip">
                   <string>Calibration progress (or how the last one ended)</string>
@@ -2389,7 +2414,7 @@
                  </property>
                 </widget>
                </item>
-               <item row="2" column="0" colspan="3">
+               <item row="1" column="1" colspan="2">
                 <widget class="QLabel" name="l_motion_status_val">
                  <property name="statusTip">
                   <string>Calibration progress (or how the last one ended)</string>
@@ -2512,16 +2537,16 @@
                      <verstretch>0</verstretch>
                     </sizepolicy>
                    </property>
-                   <property name="maximumSize">
-                    <size>
-                     <width>200</width>
-                     <height>16777215</height>
-                    </size>
-                   </property>
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
                      <height>0</height>
+                    </size>
+                   </property>
+                   <property name="maximumSize">
+                    <size>
+                     <width>200</width>
+                     <height>16777215</height>
                     </size>
                    </property>
                    <property name="statusTip">
@@ -3636,8 +3661,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1047</width>
-     <height>19</height>
+     <width>1136</width>
+     <height>23</height>
     </rect>
    </property>
    <widget class="QMenu" name="m_water">
@@ -3663,21 +3688,7 @@
     </property>
     <addaction name="a_debug_mode"/>
     <addaction name="separator"/>
-    <addaction name="a_show_telemetry"/>
     <addaction name="a_reset_window_size"/>
-   </widget>
-   <widget class="QMenu" name="m_automation">
-    <property name="title">
-     <string>Automation</string>
-    </property>
-    <widget class="QMenu" name="m_reactive_cw">
-     <property name="title">
-      <string>Reactive CW</string>
-     </property>
-     <addaction name="a_reactive_cw_bounds"/>
-     <addaction name="a_reactive_cw_ignore_water_level"/>
-    </widget>
-    <addaction name="m_reactive_cw"/>
    </widget>
    <widget class="QMenu" name="m_trajectory">
     <property name="title">
@@ -3690,17 +3701,26 @@
     <property name="title">
      <string>Motion Control</string>
     </property>
+    <widget class="QMenu" name="m_reactive_cw">
+     <property name="title">
+      <string>Reactive CW</string>
+     </property>
+     <addaction name="a_reactive_cw_bounds"/>
+     <addaction name="a_reactive_cw_ignore_water_level"/>
+    </widget>
+    <addaction name="m_reactive_cw"/>
     <addaction name="a_motion_handoff_band"/>
     <addaction name="a_motion_inertia_ff"/>
+    <addaction name="separator"/>
+    <addaction name="a_motion_calibration_load"/>
+    <addaction name="a_motion_calibration_save"/>
+    <addaction name="a_motion_calibration_clear"/>
     <addaction name="separator"/>
     <addaction name="a_motion_calibrate_two_angle"/>
     <addaction name="a_motion_calibrate_level"/>
     <addaction name="a_motion_calibrate_friction"/>
     <addaction name="a_motion_calibrate_cancel"/>
     <addaction name="separator"/>
-    <addaction name="a_motion_calibration_save"/>
-    <addaction name="a_motion_calibration_load"/>
-    <addaction name="a_motion_calibration_clear"/>
     <addaction name="a_motion_model_logging"/>
    </widget>
    <widget class="QMenu" name="m_actuators">
@@ -3747,6 +3767,8 @@
     <addaction name="m_serial_servo"/>
     <addaction name="separator"/>
     <addaction name="a_eta_extension"/>
+    <addaction name="separator"/>
+    <addaction name="a_show_telemetry"/>
    </widget>
    <widget class="QMenu" name="m_sensors">
     <property name="title">
@@ -3778,7 +3800,6 @@
     <addaction name="a_disconnect_all"/>
    </widget>
    <addaction name="m_preferences"/>
-   <addaction name="m_automation"/>
    <addaction name="m_trajectory"/>
    <addaction name="m_motion_control"/>
    <addaction name="m_actuators"/>
@@ -3810,14 +3831,14 @@
      </property>
      <item>
       <widget class="QLabel" name="l_epos_telemetry">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="sizePolicy">
         <sizepolicy hsizetype="Ignored" vsizetype="Preferred">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
-       </property>
-       <property name="enabled">
-        <bool>true</bool>
        </property>
        <property name="font">
         <font>
@@ -3977,7 +3998,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show actuator telemetry</string>
+    <string>Show telemetry</string>
    </property>
    <property name="statusTip">
     <string>Show or hide the actuator telemetry panel</string>
@@ -4253,15 +4274,15 @@
   <tabstop>sb_arm_j1</tabstop>
   <tabstop>sb_arm_j2</tabstop>
   <tabstop>sb_arm_j3</tabstop>
+  <tabstop>pb_release_pitch</tabstop>
+  <tabstop>cb_motion_mode</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
   <tabstop>pb_arm_return</tabstop>
-  <tabstop>pb_release_pitch</tabstop>
-  <tabstop>cb_motion_mode</tabstop>
-  <tabstop>pb_trajectory_add</tabstop>
-  <tabstop>pb_trajectory_clear</tabstop>
   <tabstop>pb_trajectory_play</tabstop>
   <tabstop>pb_trajectory_reverse</tabstop>
+  <tabstop>pb_trajectory_add</tabstop>
+  <tabstop>pb_trajectory_clear</tabstop>
   <tabstop>chk_trajectory_loop</tabstop>
   <tabstop>chk_trajectory_confirm</tabstop>
   <tabstop>pb_camera_refresh</tabstop>
@@ -4283,6 +4304,7 @@
   <include location="../res/resources.qrc"/>
   <include location="../res/resources.qrc"/>
   <include location="../res/resources.qrc"/>
+  <include location="../res/resources.qrc"/>
  </resources>
  <connections>
   <connection>
@@ -4290,12 +4312,32 @@
    <signal>toggled(bool)</signal>
    <receiver>dw_telemetry</receiver>
    <slot>setVisible(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+   </hints>
   </connection>
   <connection>
    <sender>dw_telemetry</sender>
    <signal>visibilityChanged(bool)</signal>
    <receiver>a_show_telemetry</receiver>
    <slot>setChecked(bool)</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>20</x>
+     <y>20</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+   </hints>
   </connection>
  </connections>
 </ui>

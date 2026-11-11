@@ -49,7 +49,6 @@
 /* --- TABLE OF CONTENTS ---
  * !Local Helpers
  * !Preferences
- * !Automation
  * !Trajectory
  * !Motion Control
  * !Actuators
@@ -315,61 +314,18 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 
 /**
  * @brief Event handler for "Preferences" menu action "Reset window size".
- *        Restores the window size set in the UI file.
+ *        Resizes the window to fit its contents without scrollbars.
  */
 void MainWindow::on_a_reset_window_size_triggered() {
     if (isMaximized() || isFullScreen()) {
         showNormal();
     }
-    resize(default_size_);
-}
 
-//------------------------------------------------------------------------------
-// !Automation
-//------------------------------------------------------------------------------
-
-/**
- * @brief Event handler for "Automation/Reactive CW" menu action "Torque
- *        bounds...". Opens a dialog to configure reactive counterweight torque
- *        bounds.
- */
-void MainWindow::on_a_reactive_cw_bounds_triggered() {
-    // Prompt user to input new bounds
-    const auto [lower, upper] = hebi_thread_->GetReactiveCwBounds();
-    ReactiveCwDialog dialog(this, lower, upper);
-    if (dialog.exec() != QDialog::Accepted) {
-        logger_->Debug("Torque bound setting cancelled by user");
-        return;
-    }
-
-    const double lower_bound = dialog.GetLowerBound();
-    const double upper_bound = dialog.GetUpperBound();
-    const std::string bounds_str = "lower=" + Motion::FormatNum(lower_bound)
-                                   + " Nm, upper="
-                                   + Motion::FormatNum(upper_bound) + " Nm";
-
-    if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
-        logger_->Warn("Ignoring invalid reactive CW bounds: " + bounds_str);
-        return;
-    }
-
-    // Send the new bounds to whoever needs them
-    emit UpdateReactiveCwBounds(lower_bound, upper_bound);
-    logger_->Info("Reactive CW bounds: " + bounds_str);
-}
-
-/**
- * @brief Event handler for "Automation/Reactive CW" menu action "Ignore water
- *        level". Toggles whether reactive counterweight stops when a tank
- *        limit is reached.
- *
- * @param checked Whether to ignore the water level (no auto-stop)
- */
-void MainWindow::on_a_reactive_cw_ignore_water_level_triggered(bool checked) {
-    logger_->Info(std::string(checked ? "Disabling" : "Enabling")
-                  + " reactive CW stop on tank limit reached");
-
-    ui_->l_water_ignore_level->setVisible(checked);
+    // Scroll area's size hint is capped, so swap in its contents' hint
+    ensurePolished();  // style affects size hints
+    const QSize contents_extra = ui_->sa_central_contents->sizeHint()
+                                 - ui_->sa_central->sizeHint();
+    resize(sizeHint() + contents_extra);
 }
 
 //------------------------------------------------------------------------------
@@ -508,6 +464,50 @@ void MainWindow::on_a_trajectory_save_triggered() {
 //------------------------------------------------------------------------------
 // !Motion Control
 //------------------------------------------------------------------------------
+
+/**
+ * @brief Event handler for "Motion Control/Reactive CW" menu action "Torque
+ *        bounds...". Opens a dialog to configure reactive counterweight torque
+ *        bounds.
+ */
+void MainWindow::on_a_reactive_cw_bounds_triggered() {
+    // Prompt user to input new bounds
+    const auto [lower, upper] = hebi_thread_->GetReactiveCwBounds();
+    ReactiveCwDialog dialog(this, lower, upper);
+    if (dialog.exec() != QDialog::Accepted) {
+        logger_->Debug("Torque bound setting cancelled by user");
+        return;
+    }
+
+    const double lower_bound = dialog.GetLowerBound();
+    const double upper_bound = dialog.GetUpperBound();
+    const std::string bounds_str = "lower=" + Motion::FormatNum(lower_bound)
+                                   + " Nm, upper="
+                                   + Motion::FormatNum(upper_bound) + " Nm";
+
+    if (!(lower_bound >= 0.0) || !(lower_bound < upper_bound)) {
+        logger_->Warn("Ignoring invalid reactive CW bounds: " + bounds_str);
+        return;
+    }
+
+    // Send the new bounds to whoever needs them
+    emit UpdateReactiveCwBounds(lower_bound, upper_bound);
+    logger_->Info("Reactive CW bounds: " + bounds_str);
+}
+
+/**
+ * @brief Event handler for "Motion Control/Reactive CW" menu action "Ignore
+ *        water level". Toggles whether reactive counterweight stops when a
+ *        tank limit is reached.
+ *
+ * @param checked Whether to ignore the water level (no auto-stop)
+ */
+void MainWindow::on_a_reactive_cw_ignore_water_level_triggered(bool checked) {
+    logger_->Info(std::string(checked ? "Disabling" : "Enabling")
+                  + " reactive CW stop on tank limit reached");
+
+    ui_->l_water_ignore_level->setVisible(checked);
+}
 
 #if LIBRA_VERSION == 2
 /**

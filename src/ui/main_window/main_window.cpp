@@ -134,7 +134,6 @@ QColor MotionModeColor(const Motion::MotionMode& mode) {
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent), ui_(new Ui::MainWindow) {
     ui_->setupUi(this);
-    default_size_ = this->size();  // for "Reset window size"
 
     logger_ = std::make_unique<QtLogger>("main_window", debug_mode_);
     logger_->Debug("Initializing MainWindow");
@@ -166,6 +165,8 @@ MainWindow::MainWindow(QWidget* parent)
     ui_->dw_telemetry->setVisible(ui_->a_show_telemetry->isChecked());
     ui_->l_water_ignore_level->setVisible(
         ui_->a_reactive_cw_ignore_water_level->isChecked());
+
+    on_a_reset_window_size_triggered();  // fit window to above changes
 
 #if LIBRA_VERSION == 1
     manip_controller_->EnablePitchCorrection(
@@ -251,14 +252,29 @@ void MainWindow::ConfigureUi() {
     // ========== Menu Bar ==========
 
     // Unneeded menus/actions
-#if LIBRA_VERSION != 1
-    ui_->m_serial_servo->setEnabled(false);
-#elif LIBRA_VERSION != 2
-    ui_->m_epos->setEnabled(false);
-#endif
+    // - Actuators
+    ui_->m_serial_servo->setEnabled(false);  // currently unused
 #if LIBRA_VERSION != 2
-    ui_->m_motion_control->setEnabled(false);
+    ui_->m_epos->setEnabled(false);
     ui_->a_eta_extension->setEnabled(false);
+#endif
+
+    // - Motion Control
+#if LIBRA_VERSION != 2
+    // Everything other than "Reactive CW" is LIBRA-II only
+    ui_->a_motion_handoff_band->setEnabled(false);
+    ui_->a_motion_inertia_ff->setEnabled(false);
+
+    ui_->a_motion_calibration_load->setEnabled(false);
+    ui_->a_motion_calibration_save->setEnabled(false);
+    ui_->a_motion_calibration_clear->setEnabled(false);
+
+    ui_->a_motion_calibrate_two_angle->setEnabled(false);
+    ui_->a_motion_calibrate_level->setEnabled(false);
+    ui_->a_motion_calibrate_friction->setEnabled(false);
+    ui_->a_motion_calibrate_cancel->setEnabled(false);
+
+    ui_->a_motion_model_logging->setEnabled(false);
 #endif
 
     // Slots
@@ -924,7 +940,8 @@ void MainWindow::UpdateMotionControls() {
                                                   && !pitch_released);
     ui_->a_motion_calibrate_friction->setEnabled(hebi_connected && !busy
                                                  && !pitch_released);
-    ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected);
+    ui_->a_motion_calibrate_cancel->setEnabled(hebi_connected
+                                               && calibration_running_);
 
     ui_->a_motion_calibration_save->setEnabled(!busy);
     ui_->a_motion_calibration_load->setEnabled(!busy);
@@ -1055,7 +1072,7 @@ void MainWindow::HandleWaterVolume(const Water::Side& side,
  * @param side Fluid system side
  * @param full true = estimated full, false = estimated empty
  *
- * @note "Ignore water level" (in the Automation menu) keeps the automation
+ * @note "Ignore water level" (in the Motion Control menu) keeps the automation
  *       running, for when the estimate is known to be off. The manual fill
  *       guard always applies, since overfilling can cause leaks or failure.
  */
@@ -1363,6 +1380,10 @@ void MainWindow::HandleCalibrationProgress(const QString& text,
     constexpr int kOutcomeTimeout = 10000;  // ms
 
     ui_->l_motion_status_val->setText(text);
+
+    calibration_running_ = running;
+    UpdateMotionControls();  // cancel only while running
+
     if (!running) {
         // Back to idle, unless a newer status replaced the outcome
         QTimer::singleShot(kOutcomeTimeout, this, [this, text]() {

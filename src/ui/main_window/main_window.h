@@ -159,17 +159,15 @@ class MainWindow : public QMainWindow {
     void on_a_debug_mode_toggled(bool checked);
     void on_a_reset_window_size_triggered();
 
-    // Automation Menu
-
-    void on_a_reactive_cw_bounds_triggered();
-    void on_a_reactive_cw_ignore_water_level_triggered(bool checked);
-
     // Trajectory Menu
 
     void on_a_trajectory_load_triggered();
     void on_a_trajectory_save_triggered();
 
     // Motion Control Menu
+
+    void on_a_reactive_cw_bounds_triggered();
+    void on_a_reactive_cw_ignore_water_level_triggered(bool checked);
 
 #if LIBRA_VERSION == 2
     void on_a_motion_handoff_band_triggered();
@@ -301,8 +299,6 @@ class MainWindow : public QMainWindow {
     std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
-    QSize default_size_{};  // main UI window size
-
     FeedbackElementMapOfMaps feedback_element_map_;
     std::unordered_map<Joint::Name, QDoubleSpinBox*> target_spin_box_map_;
 
@@ -363,5 +359,6 @@ class MainWindow : public QMainWindow {
     // Motion Control
 
     std::shared_ptr<Libra2MotionController> motion_controller_;  // pitch joint
+    bool calibration_running_{false};
 #endif
 };
