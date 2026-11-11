@@ -41,8 +41,12 @@ constexpr double kCwMeanSqDistSlope =
     -0.0017897;  // mean r_bag² change per liter, D (m²/L)
 constexpr double kCwHangOffset = kCwBracketHeight
                                  - kPitchJointHeight;  // q_P (m)
-constexpr double kArmInertia =
-    47.6;  // I_CAD, from Inertial Properties -> Global -> Izz (kg·m²)
+constexpr double kArmInertia = 3.63;                   // I_meas (kg·m²)
+/* NOTE: I_CAD = 47.6 kg·m² (from Inertial Properties -> Global -> Izz),
+ *       which is insanely high for the system. I probably set up the assembly
+ *       incorrectly, but it doesn't really matter since the motion controller
+ *       experiments gave us a good fit.
+ */
 
 // Experimentally, friction was so low it fell within the calculated uncertainty,
 // so both default to zero (any artifacts will barely affect the controller)
