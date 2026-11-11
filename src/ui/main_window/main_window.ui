@@ -3743,11 +3743,11 @@
      <addaction name="a_hebi_connect"/>
      <addaction name="a_hebi_disconnect"/>
      <addaction name="separator"/>
-     <addaction name="a_hebi_load_gains"/>
-     <addaction name="a_hebi_load_safety"/>
      <addaction name="a_hebi_log_start"/>
      <addaction name="a_hebi_log_stop"/>
      <addaction name="separator"/>
+     <addaction name="a_hebi_load_gains"/>
+     <addaction name="a_hebi_load_safety"/>
      <addaction name="a_hebi_override_limits"/>
     </widget>
     <widget class="QMenu" name="m_serial_servo">
