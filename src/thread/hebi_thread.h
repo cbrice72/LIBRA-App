@@ -41,10 +41,16 @@ using msgJointState = sensor_msgs::msg::JointState;
 #endif
 
 // Reactive counterweight constants
+#if LIBRA_VERSION == 1
 constexpr double kReactiveCwLowerBound = 3.0;  // Nm
 constexpr double kReactiveCwUpperBound = 6.0;  // Nm
-constexpr double kReactiveCwOffMargin = 0.5;   // Nm
-constexpr double kReactiveCwSlowRate = 0.5;    // velocity rate between bounds
+#elif LIBRA_VERSION == 2
+// Lower than LIBRA-I's since motion controller improves system stability
+constexpr double kReactiveCwLowerBound = 2.0;  // Nm
+constexpr double kReactiveCwUpperBound = 5.0;  // Nm
+#endif
+constexpr double kReactiveCwOffMargin = 0.5;  // Nm
+constexpr double kReactiveCwSlowRate = 0.5;   // velocity rate between bounds
 
 /**
  * @brief Control class for HEBI actuators.
