@@ -314,7 +314,7 @@ void MainWindow::on_a_debug_mode_toggled(bool checked) {
 
 /**
  * @brief Event handler for "Preferences" menu action "Reset window size".
- *        Resizes the window to fit its contents without scrollbars.
+ *        Resizes the window to fit its contents.
  */
 void MainWindow::on_a_reset_window_size_triggered() {
     if (isMaximized() || isFullScreen()) {
