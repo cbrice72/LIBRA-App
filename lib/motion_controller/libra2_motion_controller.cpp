@@ -940,7 +940,7 @@ Motion::Libra2Command Libra2MotionController::Update(
     bool arm_free = false;
 
     if (cw_primary && cw_phase_ == CwPhase::kCwMoving) {
-        // (A) CW Primary: arm spins freely while CW moves it
+        // [MODE] CW Primary: arm spins freely while CW moves it
         if (!model_ready || !target || calibrating || !reactive_cw_en_) {
             logger_->Warn(
                 "CW Primary: model, CW volume, target, or reactive CW "
@@ -952,20 +952,19 @@ Motion::Libra2Command Libra2MotionController::Update(
     }
 
     if (!arm_free && calibrator_.IsFrictionRunning()) {
-        // Friction sweep: no throttle or CW command necessary
+        // [CALIB] Friction sweep: no throttle or CW command necessary
         command.trajectory_rate = 1.0;
         command.cw_command = Motion::CwCommand::kIdle;
         calibrator_.Update(cycle);
 
     } else if (!arm_free) {
         if (calibrating) {
-            // Arm calibration: CW idle so samples share one volume, and no
-            // torque throttle so moves to high-torque angles don't stall
+            // [CALIB] Arm calibration: CW idle so samples share the same volume
             command.trajectory_rate = 1.0;
             command.cw_command = Motion::CwCommand::kIdle;
             calibrator_.Update(cycle);
         } else {
-            // (B) Tandem/Holding: torque throttle always applies
+            // [MODE] Tandem/Holding: throttle torque
             const Motion::CwCommand direction = (actual_torque > 0.0)
                                                     ? Motion::CwCommand::kFill
                                                     : Motion::CwCommand::kDrain;
@@ -975,8 +974,8 @@ Motion::Libra2Command Libra2MotionController::Update(
                 UpdateReactiveCw(std::abs(actual_torque), direction, braking);
             command.trajectory_rate = reactive_cw.trajectory_rate;
 
-            // Reactive CW only corrects the model's error, so it waits until
-            // predictive CW reaches its target mass (or CW Primary hands off)
+            // Reactive CW only corrects the model's error, so wait until either:
+            // (1) predictive CW reaches target mass, or (2) CW Primary hand-off
             if (!cw_assist_done_) {
                 command.cw_command = Motion::CwCommand::kIdle;
                 if (target) {
@@ -991,15 +990,29 @@ Motion::Libra2Command Libra2MotionController::Update(
                     } else {
                         const Motion::CwCommand cw =
                             PredictiveCwCommand(*cw_mass_tgt, *cw_mass_);
-                        if (cw == Motion::CwCommand::kIdle) {
+
+                        // If torque keeps increasing after reaching the target,
+                        // the CW may be overshooting due to model error.
+                        // Prematurely stop and allow reactive CW to take over.
+                        const bool passed_balance =
+                            !trajectory_active_ && cw != direction
+                            && cw != Motion::CwCommand::kIdle;
+                        if (cw == Motion::CwCommand::kIdle || passed_balance) {
                             // Reactive CW starts fresh at lower bound
                             cw_assist_done_ = true;
                             torque_high_ = false;
                             predictive_cw_mass_ = *cw_mass_tgt;
                             reactive_cw_used_ = false;
-                            logger_->Info("Predictive CW reached "
-                                          + Motion::FormatNum(*cw_mass_)
-                                          + " kg; reactive CW on");
+                            logger_->Info(
+                                std::string(passed_balance
+                                                ? "Predictive CW stopped past "
+                                                  "balance at "
+                                                : "Predictive CW reached ")
+                                + Motion::FormatNum(*cw_mass_) + " kg (target "
+                                + Motion::FormatNum(*cw_mass_tgt)
+                                + " kg, torque="
+                                + Motion::FormatNum(actual_torque)
+                                + " Nm); reactive CW on");
                         } else {
                             command.cw_command = cw;
                         }
