@@ -212,12 +212,13 @@ bool Libra2MotionController::SetHandoffBand(const double& band) {
 
     if (!(band > 0.0) || !std::isfinite(band)) {
         logger_->Warn("Ignoring invalid hand-off band: "
-                      + Motion::FormatNum(band) + " rad");
+                      + Motion::FormatRadAsDeg(band) + " deg");
         return false;
     }
 
     handoff_band_ = band;
-    logger_->Info("Hand-off band updated: " + Motion::FormatNum(band) + " rad");
+    logger_->Info("Hand-off band updated: " + Motion::FormatRadAsDeg(band)
+                  + " deg");
 
     return true;
 }
