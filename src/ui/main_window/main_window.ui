@@ -4043,7 +4043,10 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Load new gains...</string>
+    <string>Load gains...</string>
+   </property>
+   <property name="statusTip">
+    <string>Load position, velocity, and effort gains, i-clamps, deadzones, etc.</string>
    </property>
   </action>
   <action name="a_hebi_load_safety">
@@ -4051,10 +4054,10 @@
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Load new safety limits...</string>
+    <string>Load safety params...</string>
    </property>
    <property name="statusTip">
-    <string>Load position, velocity, and effort limits; the velocity limit also caps trajectory speed</string>
+    <string>Load position, velocity, and effort limits</string>
    </property>
   </action>
   <action name="a_hebi_log_start">
