@@ -229,7 +229,8 @@ HebiThread::HebiThread(QObject* parent,
       families_(std::move(families)),
       names_(std::move(names)),
       n_actuators_(names_.size()),
-      loop_period_ms_(10)  // 100 Hz
+      loop_period_ms_(10),  // 100 Hz
+      max_vel_(kMaxVel)     // until safety parameters are loaded
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
@@ -242,8 +243,6 @@ HebiThread::HebiThread(QObject* parent,
     // Initialize HEBI objects
     command_ = std::make_shared<hebi::GroupCommand>(n_actuators_);
     feedback_ = std::make_shared<hebi::GroupFeedback>(n_actuators_);
-
-    max_vel_ = kMaxVel;  // until safety parameters are loaded
 
     latest_cmd_pos_ = Eigen::VectorXd::Constant(n_actuators_, kNone);
     latest_cmd_vel_ = Eigen::VectorXd::Zero(n_actuators_);
@@ -280,7 +279,7 @@ HebiThread::HebiThread(QObject* parent,
     // NOTE: this doesn't belong here, but until we replace either of LIBRA-I's
     //       or LIBRA-II's static joint with something else, this is the easiest
     //       way to get it into the ROS2 message.
-    hebi_names.push_back("Static-Manip");
+    hebi_names.emplace_back("Static-Manip");
 # endif
 
     // One entry per joint name

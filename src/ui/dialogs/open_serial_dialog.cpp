@@ -9,7 +9,7 @@
 #include "open_serial_dialog.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <utility>
 
 // Other Library Headers
 //   (none)
@@ -38,11 +38,12 @@
  * @param wanted_device_desc Device description (human-readable name) to
  *                           automatically search for
  */
-OpenSerialDialog::OpenSerialDialog(QWidget* parent, QString device_to_prompt,
+OpenSerialDialog::OpenSerialDialog(QWidget* parent,
+                                   const QString& device_to_prompt,
                                    QString wanted_device_desc)
     : QDialog(parent),
       ui_(new Ui::OpenSerialDialog),
-      wanted_device_desc_(wanted_device_desc) {
+      wanted_device_desc_(std::move(wanted_device_desc)) {
     ui_->setupUi(this);
 
     // Set dialog title to include the port label
@@ -158,7 +159,7 @@ QString OpenSerialDialog::GetSelectedPortName() {
         return valid_ports_[i].portName();
     }
 
-    return QString();
+    return {};
 }
 
 //------------------------------------------------------------------------------

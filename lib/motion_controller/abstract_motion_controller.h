@@ -34,7 +34,7 @@
  */
 class AbstractMotionController {
   public:
-    explicit AbstractMotionController(const std::vector<Joint::Name>& joints,
+    explicit AbstractMotionController(std::vector<Joint::Name> joints,
                                       const bool& debug_mode);
     virtual ~AbstractMotionController() = default;
 

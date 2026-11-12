@@ -69,7 +69,7 @@ namespace {
  * @param bytes Byte array to convert
  */
 std::string BytesToStr(const QByteArray& bytes) {
-    std::string str("");
+    std::string str;
 
     for (auto byte : bytes) {
         str += std::bitset<4>(static_cast<unsigned char>(byte) & kWaterCmdMask)

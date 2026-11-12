@@ -32,7 +32,7 @@ class OpenSerialDialog : public QDialog {
 
   public:
     explicit OpenSerialDialog(QWidget* parent = nullptr,
-                              QString device_to_prompt = "Serial",
+                              const QString& device_to_prompt = "Serial",
                               QString wanted_device_desc = "");
     ~OpenSerialDialog() override;
 

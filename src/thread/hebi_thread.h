@@ -92,7 +92,7 @@ class HebiThread : public AbstractActuatorThread
     void Connect() override;
     void Disconnect() override;
 
-    void SetTarget(const std::vector<double>& deg) override;
+    void SetTarget(const std::vector<double>& target) override;
     void Stop() override;
 
     void LoadGains(const QString& file_path);

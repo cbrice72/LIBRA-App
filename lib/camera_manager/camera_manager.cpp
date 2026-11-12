@@ -290,8 +290,10 @@ void CameraManager::CheckRos2Connectivity() {
  * @param input Image to transform
  */
 cv::Mat CameraManager::TransformImage(const cv::Mat& input) const {
-    if (!flip_horizontal_ && !flip_vertical_)
+    if (!flip_horizontal_ && !flip_vertical_) {
         return input;
+    }
+
     cv::Mat result;
     if (flip_horizontal_ && flip_vertical_) {
         cv::flip(input, result, -1);
@@ -300,6 +302,7 @@ cv::Mat CameraManager::TransformImage(const cv::Mat& input) const {
     } else if (flip_vertical_) {
         cv::flip(input, result, 0);
     }
+
     return result;
 }
 
@@ -309,7 +312,7 @@ cv::Mat CameraManager::TransformImage(const cv::Mat& input) const {
  * @param msg A ROS2 RGB image message (e.g., `/camera/color/image_raw`)
  */
 void CameraManager::ProcessRos2Image(
-    const sensor_msgs::msg::Image::SharedPtr msg) {
+    const sensor_msgs::msg::Image::ConstSharedPtr& msg) {
     // Recording settings
     constexpr double kVideoFps = 30.0;
 
@@ -320,7 +323,7 @@ void CameraManager::ProcessRos2Image(
 
         // Flip frame if needed, then convert to QVideoFrame for streaming to GUI
         cv::Mat frame = TransformImage(cv_ptr->image);
-        if (video_sink_) {
+        if (video_sink_ != nullptr) {
             QImage qimg(frame.data, frame.cols, frame.rows, frame.step,
                         QImage::Format_RGB888);
             QVideoFrame frame(qimg);
@@ -378,7 +381,7 @@ void CameraManager::Start() {
         // Set up image subscription
         image_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
             kCameraRgbTopic, rclcpp::SensorDataQoS(),
-            [this](const sensor_msgs::msg::Image::SharedPtr msg) {
+            [this](const sensor_msgs::msg::Image::ConstSharedPtr& msg) {
                 this->ProcessRos2Image(msg);
             });
 

@@ -10,7 +10,7 @@
 #include "generic_serial_device.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <utility>
 
 // Other Library Headers
 #include <QSerialPortInfo>  // Qt::SerialPort
@@ -42,21 +42,20 @@ constexpr int kReconnectIntervalMs = 3000;  // ms (0.33 Hz)
  */
 GenericSerialDevice::GenericSerialDevice(QObject* parent,
                                          const bool& debug_mode,
-                                         const std::string& device_name)
+                                         std::string device_name)
     : QObject(parent),
       debug_mode_(debug_mode),
-      device_name_(device_name),
-      serial_port_(new QSerialPort(this)) {
+      device_name_(std::move(device_name)),
+      serial_port_(new QSerialPort(this)),
+      update_timer_(new QTimer(this)),
+      reconnect_timer_(new QTimer(this)) {
     // Initialize the logger
     logger_ = std::make_unique<QtLogger>(device_name_ + "Controller",
                                          debug_mode_);
     logger_->Debug("Initializing " + device_name_ + "Controller");
 
     // Configure timers
-    update_timer_ = new QTimer(this);
     update_timer_->setInterval(kUpdateIntervalMs);
-
-    reconnect_timer_ = new QTimer(this);
     reconnect_timer_->setInterval(kReconnectIntervalMs);
 
     // Connect timer signals (internal)

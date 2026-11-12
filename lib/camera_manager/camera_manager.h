@@ -69,7 +69,7 @@ class CameraManager : public QObject
 #ifdef BUILD_WITH_ROS2
     void CheckRos2Connectivity();
     cv::Mat TransformImage(const cv::Mat& input) const;
-    void ProcessRos2Image(const sensor_msgs::msg::Image::SharedPtr msg);
+    void ProcessRos2Image(const sensor_msgs::msg::Image::ConstSharedPtr& msg);
 #endif
 
     // --- Data Members ---

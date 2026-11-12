@@ -57,7 +57,7 @@ void RemoveUiElement(T*& element) {
 
     // To avoid duplicating code, define this lambda capable of handling both
     // QWidgets and QLayouts (since they boil down to different QObjects)
-    auto RemoveFromParentLayout = [](QObject* obj) {
+    auto remove_from_parent_layout = [](QObject* obj) {
         if (!obj) {
             return;
         }
@@ -79,7 +79,7 @@ void RemoveUiElement(T*& element) {
         }
     };
 
-    RemoveFromParentLayout(element);
+    remove_from_parent_layout(element);
 
     // Handle layouts
     if constexpr (std::is_base_of_v<QLayout, T>) {
@@ -132,7 +132,11 @@ QColor MotionModeColor(const Motion::MotionMode& mode) {
  * @param parent Owning Qt widget
  */
 MainWindow::MainWindow(QWidget* parent)
-    : QMainWindow(parent), ui_(new Ui::MainWindow) {
+    : QMainWindow(parent),
+      ui_(new Ui::MainWindow),
+      current_target_(Motion::kNumJoints,
+                      std::numeric_limits<double>::quiet_NaN()),
+      previous_target_(current_target_) {
     ui_->setupUi(this);
 
     logger_ = std::make_unique<QtLogger>("main_window", debug_mode_);
@@ -140,11 +144,6 @@ MainWindow::MainWindow(QWidget* parent)
 
     // Runtime checks
     util::IsWslEnvironment();  // only warns, no action needed
-
-    // Member initialization
-    current_target_.assign(Motion::kNumJoints,
-                           std::numeric_limits<double>::quiet_NaN());
-    previous_target_ = current_target_;
 
     // GUI configuration
     ConfigureUi();
@@ -194,7 +193,7 @@ MainWindow::MainWindow(QWidget* parent)
  */
 MainWindow::~MainWindow() {
     // Define a lambda for gracefully wrapping up worker thread(s)
-    auto StopThread = [](QThread* thread) {
+    auto stop_thread = [](QThread* thread) {
         if (thread != nullptr && thread->isRunning()) {
             thread->requestInterruption();  // signal thread to stop looping
             thread->wait();                 // wait for thread cleanup to finish
@@ -202,9 +201,9 @@ MainWindow::~MainWindow() {
     };
 
     // Cleanup
-    StopThread(hebi_thread_);
+    stop_thread(hebi_thread_);
 #if LIBRA_VERSION == 2
-    StopThread(epos_thread_);
+    stop_thread(epos_thread_);
 #endif
 
     delete ui_;

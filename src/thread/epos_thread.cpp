@@ -33,18 +33,18 @@
 
 // Mechanical Properties
 
-constexpr long kEncoderResolution = 500;  // Maxon part #: 228452
-constexpr long kGearheadReduction = 113;  // Maxon part #: 203126
+constexpr int kEncoderResolution = 500;  // Maxon part #: 228452
+constexpr int kGearheadReduction = 113;  // Maxon part #: 203126
 
-constexpr long kPinionTeeth = 15;    // KG Gear part #: SG1S15L-1010
-constexpr long kSlewRingTeeth = 48;  // igus part #: PRT-04-50-TI-ST
+constexpr int kPinionTeeth = 15;    // KG Gear part #: SG1S15L-1010
+constexpr int kSlewRingTeeth = 48;  // igus part #: PRT-04-50-TI-ST
 constexpr double kSlewGearReduction = static_cast<double>(kSlewRingTeeth)
                                       / kPinionTeeth;
 
 // Improving Readability of Conversions
 
-constexpr long kDegPerRotation = 360;
-constexpr long kSecPerMin = 60;
+constexpr int kDegPerRotation = 360;
+constexpr int kSecPerMin = 60;
 
 // NOTE: In the following conversions, encoder resolution is multiplied by 4
 //       because it is a quadrature encoder (see EPOS4 Firmware Specification

@@ -11,6 +11,7 @@
 
 // C++ Standard Library Headers
 #include <cmath>
+#include <utility>
 
 // Project Headers
 #include "qt_logger.h"
@@ -32,8 +33,8 @@
  * @param debug_mode Whether to output verbose debug text
  */
 AbstractMotionController::AbstractMotionController(
-    const std::vector<Joint::Name>& joints, const bool& debug_mode)
-    : joints_(joints) {
+    std::vector<Joint::Name> joints, const bool& debug_mode)
+    : joints_(std::move(joints)) {
     logger_ = std::make_unique<QtLogger>("motion_controller", debug_mode);
     logger_->Debug("Initializing motion controller");
 }

@@ -356,14 +356,16 @@ bool Libra2Calibrator::StartTwoAngleCalibration(const double& angle_a,
                       + Motion::FormatNum(angle_a)
                       + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
-    } else if (std::abs(angle_a) > Motion::kMaxCalibrationAngle
-               || std::abs(angle_b) > Motion::kMaxCalibrationAngle) {
+    }
+    if (std::abs(angle_a) > Motion::kMaxCalibrationAngle
+        || std::abs(angle_b) > Motion::kMaxCalibrationAngle) {
         logger_->Warn("Two-angle calibration rejected: need |angle| <= "
                       + Motion::FormatNum(Motion::kMaxCalibrationAngle)
                       + " rad (got a=" + Motion::FormatNum(angle_a)
                       + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
-    } else if (std::abs(angle_b - angle_a) < Motion::kMinAngleSeparation) {
+    }
+    if (std::abs(angle_b - angle_a) < Motion::kMinAngleSeparation) {
         logger_->Warn("Two-angle calibration rejected: need |b - a| >= "
                       + Motion::FormatNum(Motion::kMinAngleSeparation)
                       + " rad (got a=" + Motion::FormatNum(angle_a)
@@ -421,14 +423,16 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
                       + Motion::FormatNum(angle_a)
                       + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
-    } else if (std::abs(lo) > Motion::kMaxCalibrationAngle
-               || std::abs(hi) > Motion::kMaxCalibrationAngle) {
+    }
+    if (std::abs(lo) > Motion::kMaxCalibrationAngle
+        || std::abs(hi) > Motion::kMaxCalibrationAngle) {
         logger_->Warn("Friction calibration rejected: need |angle| <= "
                       + Motion::FormatNum(Motion::kMaxCalibrationAngle)
                       + " rad (got a=" + Motion::FormatNum(angle_a)
                       + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
-    } else if (hi - lo < Motion::kFrictionMinWindow) {
+    }
+    if (hi - lo < Motion::kFrictionMinWindow) {
         logger_->Warn("Friction calibration rejected: need |b - a| >= "
                       + Motion::FormatNum(Motion::kFrictionMinWindow)
                       + " rad (got a=" + Motion::FormatNum(angle_a)

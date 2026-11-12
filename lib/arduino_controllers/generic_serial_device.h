@@ -39,7 +39,7 @@ class GenericSerialDevice : public QObject {
   public:
     GenericSerialDevice() = delete;
     explicit GenericSerialDevice(QObject* parent, const bool& debug_mode,
-                                 const std::string& device_name);
+                                 std::string device_name);
     ~GenericSerialDevice() override;
 
     bool IsOpen() const;

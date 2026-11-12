@@ -92,7 +92,7 @@ void TankWidget::SetVolume(double volume) {
 /**
  * @brief Overrides `paintEvent()` to handle this widget's custom drawing.
  */
-void TankWidget::paintEvent(QPaintEvent*) {
+void TankWidget::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
