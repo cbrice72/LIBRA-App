@@ -49,6 +49,7 @@ constexpr double k7_8Pi = M_PI * 7.0 / 8.0;
 // Volume Tracking
 
 constexpr int kVolumeTrackPeriodMs = 1000 / 30;  // ms (30 Hz)
+constexpr double kMlPerL = 1000.0;
 
 // LIBRA-II's inflow solenoid valve sometimes doesn't open when commanded; no
 // measured inflow this long after a fill command means it's stuck (arbitrary)
@@ -478,9 +479,9 @@ void WaterController::UpdateFlowRate(const Water::Side& side,
     tank.drain_rate = 0;  // default: Water::kDrainRate;
 
     if (flow > 0.0) {
-        tank.fill_rate = flow / 1000.0;  // mL/s -> L/s
+        tank.fill_rate = flow / kMlPerL;
     } else if (flow < 0.0 && flow != -1.0) {
-        tank.drain_rate = -flow / 1000.0;  // mL/s -> L/s
+        tank.drain_rate = -flow / kMlPerL;
     }
 }
 

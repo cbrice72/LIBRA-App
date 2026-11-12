@@ -13,6 +13,7 @@ FormatStyle: file
 # - cppcoreguidelines-avoid-magic-numbers: alias (readability)
 # - cppcoreguidelines-narrowing-conversions: alias (bugprone)
 # - cppcoreguidelines-non-private-member-variables-in-classes: alias (misc)
+# - cppcoreguidelines-owning-memory: Qt parents own (and delete) `new` objects
 # - cppcoreguidelines-pro-type-vararg: alias (hicpp)
 # - cppcoreguidelines-special-member-functions: not necessary in such a small project
 # - google-readability-todo: not necessary in single-user project
@@ -38,6 +39,7 @@ Checks: -*,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-narrowing-conversions,
     -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-owning-memory,
     -cppcoreguidelines-pro-type-vararg,
     -cppcoreguidelines-special-member-functions,
     -google-readability-todo,
@@ -56,7 +58,7 @@ WarningsAsErrors: ''
 # Specific options for the aforementioned checks
 CheckOptions:
   - { key: hicpp-signed-bitwise.IgnorePositiveIntegerLiterals,  value: true }
-  - { key: readability-identifier-length.IgnoredVariableNames,        value: x|y }
+  - { key: readability-identifier-length.IgnoredVariableNames,        value: i|j|k|n|x|y }
   - { key: readability-identifier-length.MinimumParameterNameLength,  value: 2   }
   - { key: readability-identifier-length.MinimumVariableNameLength,   value: 2   }
   - { key: readability-identifier-naming.NamespaceCase,            value: lower_case }
@@ -71,3 +73,4 @@ CheckOptions:
   - { key: readability-identifier-naming.ProtectedMemberSuffix,    value: _          }
   - { key: readability-identifier-naming.MacroDefinitionCase,      value: UPPER_CASE }
   - { key: readability-magic-numbers.IgnoredIntegerValues,  value: 1; 2; 3; 4; 5; 6; 7; 8; 9; 10; 50; 100; 150; 255; 1000; 2000 }
+  - { key: readability-magic-numbers.IgnoredFloatingPointValues,  value: 0.5; 1.0; 2.0; 100.0 }  # halves/doubles in equations

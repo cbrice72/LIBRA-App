@@ -43,6 +43,10 @@ constexpr int kRos2SpinIntervalMs = 10;            // ms (100 Hz)
 constexpr int kRos2ConnectivityIntervalMs = 5000;  // ms (0.2 Hz)
 #endif
 
+// Camera Format
+
+constexpr QSize kDefaultResolution(1280, 720);  // 720p (HD)
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -175,7 +179,7 @@ CameraManager::CameraManager(QString id, QVideoWidget* viewfinder,
         for (const QCameraFormat& format : supported_formats) {
             // Our "safe default" is a JPEG-formatted 720p (HD) stream
             if (format.pixelFormat() == QVideoFrameFormat::Format_Jpeg
-                && format.resolution() == QSize(1280, 720)) {
+                && format.resolution() == kDefaultResolution) {
                 camera_->setCameraFormat(format);
                 selected = true;
                 break;

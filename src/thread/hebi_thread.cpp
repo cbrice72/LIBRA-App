@@ -48,6 +48,7 @@
 
 constexpr double kDegToRad = M_PI / 180;
 constexpr double kRadToDeg = 180 / M_PI;
+constexpr double kMsPerS = 1000.0;
 
 // HEBI Functions
 
@@ -626,7 +627,7 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
     // A zero-length move would give a zero-duration (invalid) trajectory, so
     // allow at least one loop period (the shortest the loop can follow)
     Eigen::VectorXd time(2);
-    time << 0, std::max(t_move_s, loop_period_ms_ / 1000.0);
+    time << 0, std::max(t_move_s, loop_period_ms_ / kMsPerS);
 
     // Create trajectory and log start time
     auto trajectory =

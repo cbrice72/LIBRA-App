@@ -65,10 +65,12 @@ constexpr double kRpmToDegs = kDegPerRotation
 
 // EPOS Functions
 
+constexpr int kNodeID = 1;  // for now, we only support one actuator
+
 constexpr int kEposTrue = 1;       // TRUE
 constexpr int kEposFalse = 0;      // FALSE
 constexpr int32_t kTimeout = 100;  // ms
-constexpr int kNodeID = 1;         // for now, we only support one actuator
+constexpr uint kDefaultBaudRate = 1000000;
 
 // - For Profile Position/Velocity Modes
 
@@ -97,8 +99,8 @@ constexpr int kMoveWaitForLast = 0;  // `Immediately` = FALSE
  * @param debug_mode Whether to output verbose debug text
  */
 EposThread::EposThread(QObject* parent, const bool& debug_mode)
-    : EposThread(parent, "EPOS4", "MAXON SERIAL V2", "USB", "USB0", 1000000,
-                 debug_mode) {}
+    : EposThread(parent, "EPOS4", "MAXON SERIAL V2", "USB", "USB0",
+                 kDefaultBaudRate, debug_mode) {}
 
 /**
  * @brief Standard constructor.

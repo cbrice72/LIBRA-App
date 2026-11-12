@@ -27,6 +27,10 @@
  * !Calibration Results
  */
 
+// Unit Conversions
+
+constexpr double kMmPerM = 1000.0;
+
 // Mechanical Constants (heights above the arm/CW centerline)
 
 constexpr double kPitchJointHeight = 0.1005;  // pitch joint O (m)
@@ -256,7 +260,7 @@ void Libra2MotionController::SetEtaExtension(const double& extension) {
     eta_extension_ = extension;
 
     logger_->Info("ETA extension set to "
-                  + Motion::FormatNum(extension * 1000.0) + " mm");
+                  + Motion::FormatNum(extension * kMmPerM) + " mm");
 }
 
 /**
