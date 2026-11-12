@@ -879,6 +879,8 @@ void Libra2MotionController::LogPredictiveCwError(
  *
  * @note Reactive CW only runs once predictive CW reaches its target mass (or
  *       CW Primary hands off), never during calibrations or before a target.
+ *
+ * @todo Split into per-mode helpers (cognitive complexity 86, limit 25).
  */
 Motion::Libra2Command Libra2MotionController::Update(
     const Motion::ActualState& actual, const Motion::CommandedState& commanded,

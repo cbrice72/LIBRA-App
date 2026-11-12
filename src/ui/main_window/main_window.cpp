@@ -48,6 +48,8 @@ namespace {
  *
  * @tparam T Any visual QObject type
  * @param element Widget or layout to remove
+ *
+ * @todo Simplify (cognitive complexity 30, limit 25).
  */
 template<typename T>
 void RemoveUiElement(T*& element) {
