@@ -902,9 +902,9 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
         }
         for (int k = 0; k < 4; ++k) {
             pos(i, k) = Actuator::JointToActuatorSimple(enum_names_[i],
-                                                        pitch_pos[k]);
+                                                        pitch_pos.at(k));
             vel(i, k) = Actuator::JointToActuatorSimple(enum_names_[i],
-                                                        pitch_vel[k]);
+                                                        pitch_vel.at(k));
         }
     }
 

@@ -234,10 +234,10 @@ void WaterController::MapTorqueToCommand(const double& torque_dir) {
         const uint8_t in = kAIn | kBIn;  // one CW, both sides' bits
         const uint8_t out = kAOut | kBOut;
 #endif
-        if (tanks_[i].volume <= 0.0) {
+        if (tanks_.at(i).volume <= 0.0) {
             command &= static_cast<uint8_t>(~out);
         }
-        if (tanks_[i].volume >= Water::kSideCapacity) {
+        if (tanks_.at(i).volume >= Water::kSideCapacity) {
             command &= static_cast<uint8_t>(~in);
         }
     }
@@ -324,7 +324,7 @@ void WaterController::SendStatus(const Water::Side& side) {
     // Volume tracking follows valve state
     const auto index = static_cast<std::size_t>(side);
     if (index < Water::kSideCount) {
-        tanks_[index].state = state;
+        tanks_.at(index).state = state;
     }
 
     emit ReportStatus(side, state);
@@ -340,7 +340,7 @@ void WaterController::TrackVolume() {
     const double dt = volume_clock_.restart() / 1000.0;  // ms -> s
 
     for (std::size_t i = 0; i < Water::kSideCount; ++i) {
-        auto& tank = tanks_[i];
+        auto& tank = tanks_.at(i);
         const auto side = static_cast<Water::Side>(i);
 
         double flow = 0.0;
@@ -474,7 +474,7 @@ void WaterController::UpdateFlowRate(const Water::Side& side,
 
     flow_measured_ = (flow != -1.0);
 
-    auto& tank = tanks_[index];
+    auto& tank = tanks_.at(index);
     tank.fill_rate = 0;   // default: Water::kFillRate;
     tank.drain_rate = 0;  // default: Water::kDrainRate;
 
@@ -502,8 +502,8 @@ void WaterController::OverrideVolume(const Water::Side& side,
 
     for (std::size_t i = 0; i < Water::kSideCount; ++i) {
         if (side == Water::Side::kAll || static_cast<std::size_t>(side) == i) {
-            tanks_[i].volume = std::max(volume, 0.0);
-            tanks_[i].unreported = true;
+            tanks_.at(i).volume = std::max(volume, 0.0);
+            tanks_.at(i).unreported = true;
         }
     }
 

@@ -1118,7 +1118,7 @@ void MainWindow::on_a_water_set_mass_triggered() {
         sb->setRange(0.0, Water::kSideCapacity);
         sb->setDecimals(2);
         sb->setSuffix(" kg");
-        spin_boxes[i] = sb;
+        spin_boxes.at(i) = sb;
 
         const auto side = static_cast<Water::Side>(i);
         form->addRow(Water::kSideCount > 1 ? QString::fromStdString(
@@ -1134,7 +1134,7 @@ void MainWindow::on_a_water_set_mass_triggered() {
 
     for (std::size_t i = 0; i < Water::kSideCount; ++i) {
         water_controller_->OverrideVolume(static_cast<Water::Side>(i),
-                                          spin_boxes[i]->value());
+                                          spin_boxes.at(i)->value());
     }
 }
 
