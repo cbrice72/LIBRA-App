@@ -23,6 +23,7 @@ FormatStyle: file
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
 # - performance-avoid-endl: endl is essentially required for cout/cerr in threads
+# - readability-else-after-return: an if/else-if chain reads as one decision
 # - readability-redundant-access-specifiers: Qt's `public slots:` etc. look redundant
 
 # List the checks we will run
@@ -50,6 +51,7 @@ Checks: -*,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-trailing-return-type,
     -performance-avoid-endl,
+    -readability-else-after-return,
     -readability-redundant-access-specifiers
 
 # Don't turn all the warnings from the above checks into errors
