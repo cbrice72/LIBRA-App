@@ -9,7 +9,7 @@
 #include "open_epos_dialog.h"
 
 // C++ Standard Library Headers
-//   (none)
+#include <array>
 
 // Other Library Headers
 #include "Definitions.h"  // EPOS (Maxon)
@@ -47,25 +47,26 @@ OpenEposDialog::OpenEposDialog(QWidget* parent)
     ui_->setupUi(this);
 
     QStringList devices;
-    char name[kMaxCharBufSize];
+    std::array<char, kMaxCharBufSize> name{};
     int end_of_sel = 0;
     uint err_code = 0;
 
     // Get name of first device communicating on network
-    if (VCS_GetDeviceNameSelection(kMaxonTrue, name, kMaxCharBufSize,
+    if (VCS_GetDeviceNameSelection(kMaxonTrue, name.data(), kMaxCharBufSize,
                                    &end_of_sel, &err_code)
         != 0) {
-        devices << name;
+        devices << name.data();
 
         // Get names of other devices on the network, if any
         while (end_of_sel == 0) {
-            memset(name, '\0', kMaxCharBufSize);
-            if (VCS_GetDeviceNameSelection(kMaxonFalse, name, kMaxCharBufSize,
-                                           &end_of_sel, &err_code)
+            name.fill('\0');
+            if (VCS_GetDeviceNameSelection(kMaxonFalse, name.data(),
+                                           kMaxCharBufSize, &end_of_sel,
+                                           &err_code)
                 == 0) {
                 break;  // avoid looping forever on a failed query
             }
-            devices << name;
+            devices << name.data();
         }
     }
 
@@ -134,27 +135,27 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
 
     // Get name of first protocol used on network
     QStringList protocols;
-    char name[kMaxCharBufSize];
+    std::array<char, kMaxCharBufSize> name{};
     int end_of_sel = 0;
     uint err_code = 0;
 
-    if (VCS_GetProtocolStackNameSelection(params_.device_name.data(),
-                                          kMaxonTrue, name, kMaxCharBufSize,
+    if (VCS_GetProtocolStackNameSelection(params_.device_name.data(), kMaxonTrue,
+                                          name.data(), kMaxCharBufSize,
                                           &end_of_sel, &err_code)
         > 0) {
-        protocols << name;
+        protocols << name.data();
 
         // Get names of other protocols on the network, if any
         while (end_of_sel == 0) {
-            memset(name, '\0', kMaxCharBufSize);
+            name.fill('\0');
             if (VCS_GetProtocolStackNameSelection(params_.device_name.data(),
-                                                  kMaxonFalse, name,
+                                                  kMaxonFalse, name.data(),
                                                   kMaxCharBufSize, &end_of_sel,
                                                   &err_code)
                 == 0) {
                 break;  // avoid looping forever on a failed query
             }
-            protocols << name;
+            protocols << name.data();
         }
     }
 
@@ -210,28 +211,29 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
 
     // Get name of first interface listed on network
     QStringList interfaces;
-    char name[kMaxCharBufSize];
+    std::array<char, kMaxCharBufSize> name{};
     int end_of_sel = 0;
     uint err_code = 0;
 
     if (VCS_GetInterfaceNameSelection(params_.device_name.data(),
                                       params_.protocol_name.data(), kMaxonTrue,
-                                      name, kMaxCharBufSize, &end_of_sel,
+                                      name.data(), kMaxCharBufSize, &end_of_sel,
                                       &err_code)
         > 0) {
-        interfaces << name;
+        interfaces << name.data();
 
         // Get names of other interfaces on the network, if any
         while (end_of_sel == 0) {
-            memset(name, '\0', kMaxCharBufSize);
+            name.fill('\0');
             if (VCS_GetInterfaceNameSelection(params_.device_name.data(),
                                               params_.protocol_name.data(),
-                                              kMaxonFalse, name, kMaxCharBufSize,
-                                              &end_of_sel, &err_code)
+                                              kMaxonFalse, name.data(),
+                                              kMaxCharBufSize, &end_of_sel,
+                                              &err_code)
                 == 0) {
                 break;  // avoid looping forever on a failed query
             }
-            interfaces << name;
+            interfaces << name.data();
         }
     }
 
@@ -283,29 +285,30 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
 
     // Get name of first port open on network
     QStringList ports;
-    char name[kMaxCharBufSize];
+    std::array<char, kMaxCharBufSize> name{};
     int end_of_sel = 0;
     uint err_code = 0;
 
     if (VCS_GetPortNameSelection(params_.device_name.data(),
                                  params_.protocol_name.data(),
                                  params_.interface_name.data(), kMaxonTrue,
-                                 name, kMaxCharBufSize, &end_of_sel, &err_code)
+                                 name.data(), kMaxCharBufSize, &end_of_sel,
+                                 &err_code)
         > 0) {
-        ports << name;
+        ports << name.data();
 
         // Get names of other ports on the network, if any
         while (end_of_sel == 0) {
-            memset(name, '\0', kMaxCharBufSize);
+            name.fill('\0');
             if (VCS_GetPortNameSelection(params_.device_name.data(),
                                          params_.protocol_name.data(),
                                          params_.interface_name.data(),
-                                         kMaxonFalse, name, kMaxCharBufSize,
-                                         &end_of_sel, &err_code)
+                                         kMaxonFalse, name.data(),
+                                         kMaxCharBufSize, &end_of_sel, &err_code)
                 == 0) {
                 break;  // avoid looping forever on a failed query
             }
-            ports << name;
+            ports << name.data();
         }
     }
 

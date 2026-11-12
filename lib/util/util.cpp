@@ -11,6 +11,8 @@
 // C++ Standard Library Headers
 #include <sys/stat.h>
 
+#include <array>
+
 // Other Library Headers
 #include <QDateTime>  // Qt::Core
 #include <QDebug>     // Qt::Core
@@ -100,17 +102,15 @@ QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
     // Add the actual error text
     err_msg += " failed: ";
 
-    // NOLINTBEGIN(*-avoid-c-arrays): EPOS C API fills a char buffer
     if (err != 0) {
-        char err_text[kMaxCharBufSize];
-        VCS_GetErrorInfo(err, err_text, kMaxCharBufSize);
-        err_msg += QString::fromLocal8Bit(err_text);
+        std::array<char, kMaxCharBufSize> err_text{};
+        VCS_GetErrorInfo(err, err_text.data(), kMaxCharBufSize);
+        err_msg += QString::fromLocal8Bit(err_text.data());
     } else {
         // Although err = 0 means "No error" in the EPOS library, getting here
         // means the node is not connected, so replace the error text
         err_msg += QString::fromStdString("Not connected");
     }
-    // NOLINTEND(*-avoid-c-arrays)
 
     return err_msg;
 }
