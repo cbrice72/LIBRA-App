@@ -34,7 +34,7 @@ constexpr uint kMaxCharBufSize = 100;
 // !Utilities
 //------------------------------------------------------------------------------
 
-namespace util {
+namespace Util {
 
 /**
  * @brief Checks if the app is running in Windows Subsystem for Linux (WSL2).
@@ -116,4 +116,4 @@ QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
 }
 #endif
 
-}  // namespace util
+}  // namespace Util

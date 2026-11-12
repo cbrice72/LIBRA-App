@@ -23,6 +23,7 @@ FormatStyle: file
 # - misc-non-private-member-variables-in-classes: too strict
 # - modernize-use-trailing-return-type: preference
 # - performance-avoid-endl: endl is essentially required for cout/cerr in threads
+# - readability-redundant-access-specifiers: Qt's `public slots:` etc. look redundant
 
 # List the checks we will run
 Checks: -*,
@@ -48,7 +49,8 @@ Checks: -*,
     -misc-include-cleaner,
     -misc-non-private-member-variables-in-classes,
     -modernize-use-trailing-return-type,
-    -performance-avoid-endl
+    -performance-avoid-endl,
+    -readability-redundant-access-specifiers
 
 # Don't turn all the warnings from the above checks into errors
 # (since this project was inherited filled with outdated/legacy code practices,
@@ -61,7 +63,7 @@ CheckOptions:
   - { key: readability-identifier-length.IgnoredVariableNames,        value: i|j|k|n|x|y }
   - { key: readability-identifier-length.MinimumParameterNameLength,  value: 2   }
   - { key: readability-identifier-length.MinimumVariableNameLength,   value: 2   }
-  - { key: readability-identifier-naming.NamespaceCase,            value: lower_case }
+  - { key: readability-identifier-naming.NamespaceCase,            value: CamelCase  }
   - { key: readability-identifier-naming.ClassCase,                value: CamelCase  }
   - { key: readability-identifier-naming.StructCase,               value: CamelCase  }
   - { key: readability-identifier-naming.TemplateParameterCase,    value: CamelCase  }

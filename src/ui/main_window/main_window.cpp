@@ -145,7 +145,7 @@ MainWindow::MainWindow(QWidget* parent)
     logger_->Debug("Initializing MainWindow");
 
     // Runtime checks
-    util::IsWslEnvironment();  // only warns, no action needed
+    Util::IsWslEnvironment();  // only warns, no action needed
 
     // GUI configuration
     ConfigureUi();

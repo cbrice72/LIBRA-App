@@ -16,7 +16,7 @@
 // Project Headers
 //   (none)
 
-namespace util {
+namespace Util {
 
 bool IsWslEnvironment();
 
@@ -28,4 +28,4 @@ QString GetFormattedEposErrTxt(const std::string& func_name, const uint& err,
                                const int& node_id = 0);
 #endif
 
-}  // namespace util
+}  // namespace Util

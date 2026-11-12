@@ -82,7 +82,7 @@ std::ofstream LogThread::InitializeLog(std::string name) {
 
     // Create log file and populate column headers
     std::ofstream logfile;
-    logfile.open("log/" + util::GetDateTimeStr() + "_" + name + ".csv");
+    logfile.open("log/" + Util::GetDateTimeStr() + "_" + name + ".csv");
     logfile << "Time,,"
             << "TP_Yaw (deg),TP_Pitch (deg),,"
             << "AP_Yaw (deg),AP_Pitch (deg),,"
@@ -121,7 +121,7 @@ void LogThread::run() {
         /*
         if (something) {
             // Timestamp
-            continuous_log_ << util::GetTimestampStr() + ",,";
+            continuous_log_ << Util::GetTimestampStr() + ",,";
 
             // Actuator info
             for (auto i = 0; i < kHebiFeedbackCount; i++) {

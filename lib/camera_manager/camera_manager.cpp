@@ -461,7 +461,7 @@ void CameraManager::Capture() {
         return;
     }
 
-    image_filename_ = output_dir_ + "img/" + util::GetDateTimeStr() + ".jpg";
+    image_filename_ = output_dir_ + "img/" + Util::GetDateTimeStr() + ".jpg";
 
     // Capture a single frame
     if (use_ros2_node_) {
@@ -502,7 +502,7 @@ bool CameraManager::Record() {
     }
 
     if (!is_recording_.load()) {
-        video_filename_ = output_dir_ + "vid/" + util::GetDateTimeStr()
+        video_filename_ = output_dir_ + "vid/" + Util::GetDateTimeStr()
                           + ".mp4";
 
         // Start recording

@@ -810,7 +810,7 @@ void MainWindow::on_a_motion_model_logging_toggled(bool checked) {
  */
 void MainWindow::on_a_epos_connect_triggered() {
     // Native Linux should have no issues connecting with defaults
-    if (!ui_->a_epos_usedefaults->isChecked() || util::IsWslEnvironment()) {
+    if (!ui_->a_epos_usedefaults->isChecked() || Util::IsWslEnvironment()) {
         // Prompt user to select an EPOS device
         OpenEposDialog dialog(this);
 
@@ -822,7 +822,7 @@ void MainWindow::on_a_epos_connect_triggered() {
                 return;
             }
 
-            if (util::IsWslEnvironment()) {
+            if (Util::IsWslEnvironment()) {
                 // What the EPOS API retrieves as "USB#" on WSL is actually
                 // "hidraw#", so we modify the port name here
                 if (auto pos = params.port_name.find("USB");

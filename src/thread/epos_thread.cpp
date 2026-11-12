@@ -172,7 +172,7 @@ QString EposThread::GetTelemetry() {
     if (VCS_GetState(handle_, kNodeID, &state, &err_code) == 0) {
         emit ErrorThrown(
             "EPOS - Couldn't retrieve device state!\n"
-            + util::GetFormattedEposErrTxt("VCS_GetState", err_code, kNodeID));
+            + Util::GetFormattedEposErrTxt("VCS_GetState", err_code, kNodeID));
         return QStringLiteral("Error!");
     }
 
@@ -192,7 +192,7 @@ QString EposThread::GetTelemetry() {
     if (VCS_GetVelocityIsAveraged(handle_, kNodeID, &a_vel, &err_code) == 0) {
         emit ErrorThrown(
             "EPOS - Couldn't retrieve actual velocity!\n"
-            + util::GetFormattedEposErrTxt("VCS_GetVelocityIsAveraged",
+            + Util::GetFormattedEposErrTxt("VCS_GetVelocityIsAveraged",
                                            err_code, kNodeID));
         return QStringLiteral("Error!");
     }
@@ -200,7 +200,7 @@ QString EposThread::GetTelemetry() {
     int a_curr = 0;  // mA
     if (VCS_GetCurrentIsEx(handle_, kNodeID, &a_curr, &err_code) == 0) {
         emit ErrorThrown("EPOS - Couldn't retrieve current!\n"
-                         + util::GetFormattedEposErrTxt("VCS_GetCurrentIsEx",
+                         + Util::GetFormattedEposErrTxt("VCS_GetCurrentIsEx",
                                                         err_code, kNodeID));
         return QStringLiteral("Error!");
     }
@@ -288,7 +288,7 @@ void EposThread::run() {
                 == 0) {
                 emit ErrorThrown(
                     "EPOS - Move command failed!\n"
-                    + util::GetFormattedEposErrTxt("VCS_MoveToPosition",
+                    + Util::GetFormattedEposErrTxt("VCS_MoveToPosition",
                                                    err_code, kNodeID));
                 lock.unlock();
                 Disconnect();
@@ -305,7 +305,7 @@ void EposThread::run() {
             == 0) {
             emit ErrorThrown(
                 "EPOS - Failed to retrieve movement state!\n"
-                + util::GetFormattedEposErrTxt("VCS_GetMovementState", err_code,
+                + Util::GetFormattedEposErrTxt("VCS_GetMovementState", err_code,
                                                kNodeID));
             lock.unlock();
             Disconnect();
@@ -319,7 +319,7 @@ void EposThread::run() {
         if (VCS_GetTargetPosition(handle_, kNodeID, &t_pos, &err_code) == 0) {
             emit ErrorThrown(
                 "EPOS - Failed to retrieve target position!\n"
-                + util::GetFormattedEposErrTxt("VCS_GetTargetPosition",
+                + Util::GetFormattedEposErrTxt("VCS_GetTargetPosition",
                                                err_code, kNodeID));
             lock.unlock();
             Disconnect();
@@ -333,7 +333,7 @@ void EposThread::run() {
 
         if (VCS_GetPositionIs(handle_, kNodeID, &a_pos, &err_code) == 0) {
             emit ErrorThrown("EPOS - Failed to retrieve actual position!\n"
-                             + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
+                             + Util::GetFormattedEposErrTxt("VCS_GetPositionIs",
                                                             err_code, kNodeID));
             lock.unlock();
             Disconnect();
@@ -387,7 +387,7 @@ void EposThread::Connect() {
 
     if (handle == nullptr || err_code != 0) {
         emit ErrorThrown("EPOS - Couldn't open device!\n"
-                         + util::GetFormattedEposErrTxt("VCS_OpenDevice",
+                         + Util::GetFormattedEposErrTxt("VCS_OpenDevice",
                                                         err_code, kNodeID));
         return;
     }
@@ -440,7 +440,7 @@ void EposThread::Connect() {
         == 0) {
         emit ErrorThrown(
             "EPOS - Couldn't set baud rate!\n"
-            + util::GetFormattedEposErrTxt("VCS_SetProtocolStackSettings",
+            + Util::GetFormattedEposErrTxt("VCS_SetProtocolStackSettings",
                                            err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -450,7 +450,7 @@ void EposThread::Connect() {
     // Just in case, clear any faults persisting from previous operation
     if (VCS_ClearFault(handle, kNodeID, &err_code) == 0) {
         emit ErrorThrown("EPOS - Couldn't clear existing fault(s)!\n"
-                         + util::GetFormattedEposErrTxt("VCS_ClearFault",
+                         + Util::GetFormattedEposErrTxt("VCS_ClearFault",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -462,7 +462,7 @@ void EposThread::Connect() {
                              &err_code)
         == 0) {
         emit ErrorThrown("EPOS - Couldn't set operational mode to PPM!\n"
-                         + util::GetFormattedEposErrTxt("VCS_SetOperationMode",
+                         + Util::GetFormattedEposErrTxt("VCS_SetOperationMode",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -475,7 +475,7 @@ void EposThread::Connect() {
         == 0) {
         emit ErrorThrown(
             "EPOS - Couldn't set movement profile!\n"
-            + util::GetFormattedEposErrTxt("VCS_SetPositionProfile", err_code,
+            + Util::GetFormattedEposErrTxt("VCS_SetPositionProfile", err_code,
                                            kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -485,7 +485,7 @@ void EposThread::Connect() {
     // Enable the controller
     if (VCS_SetEnableState(handle, kNodeID, &err_code) == 0) {
         emit ErrorThrown("EPOS - Couldn't enable controller!\n"
-                         + util::GetFormattedEposErrTxt("VCS_SetEnableState",
+                         + Util::GetFormattedEposErrTxt("VCS_SetEnableState",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -496,7 +496,7 @@ void EposThread::Connect() {
     int a_pos = 0;
     if (VCS_GetPositionIs(handle, kNodeID, &a_pos, &err_code) == 0) {
         emit ErrorThrown("EPOS - Failed to retrieve starting position!\n"
-                         + util::GetFormattedEposErrTxt("VCS_GetPositionIs",
+                         + Util::GetFormattedEposErrTxt("VCS_GetPositionIs",
                                                         err_code, kNodeID));
         VCS_CloseDevice(handle, &err_code);
         handle = nullptr;
@@ -536,7 +536,7 @@ void EposThread::Disconnect() {
 
     if (!closed) {
         emit ErrorThrown("EPOS - Problem closing device!\n"
-                         + util::GetFormattedEposErrTxt("VCS_CloseDevice",
+                         + Util::GetFormattedEposErrTxt("VCS_CloseDevice",
                                                         err_code, kNodeID));
         return;
     }
@@ -591,7 +591,7 @@ void EposThread::Stop() {
     // Reset class target variables to current position
     if (VCS_GetPositionIs(handle_, kNodeID, &target_inc_, &err_code) == 0) {
         err += "EPOS - Failed to retrieve actual position!\n"
-               + util::GetFormattedEposErrTxt("VCS_GetPositionIs", err_code,
+               + Util::GetFormattedEposErrTxt("VCS_GetPositionIs", err_code,
                                               kNodeID)
                + "\n\n";
     }
@@ -602,7 +602,7 @@ void EposThread::Stop() {
                                kEmergencyProfileDec, &err_code)
         == 0) {
         err += "EPOS - Couldn't set emergency deceleration profile!\n"
-               + util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
+               + Util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
                                               err_code, kNodeID)
                + "\n\n";
         // ... even if this fails, don't return; try to stop the actuator
@@ -611,7 +611,7 @@ void EposThread::Stop() {
     // Stop the actuator via the EPOS API
     if (VCS_HaltPositionMovement(handle_, kNodeID, &err_code) == 0) {
         err += "EPOS - Couldn't stop actuator!\n"
-               + util::GetFormattedEposErrTxt("VCS_HaltPositionMovement",
+               + Util::GetFormattedEposErrTxt("VCS_HaltPositionMovement",
                                               err_code, kNodeID);
         // This is the most critical error of the function, so immediately throw
         // an error popup and return
@@ -624,7 +624,7 @@ void EposThread::Stop() {
                                kProfileDec, &err_code)
         == 0) {
         err += "EPOS - Couldn't restore movement profile!\n"
-               + util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
+               + Util::GetFormattedEposErrTxt("VCS_SetPositionProfile",
                                               err_code, kNodeID);
     }
 

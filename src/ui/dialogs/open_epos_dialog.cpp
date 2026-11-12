@@ -72,7 +72,7 @@ OpenEposDialog::OpenEposDialog(QWidget* parent)
 
     // Validation
     if (err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt(
+        qCritical() << Util::GetFormattedEposErrTxt(
             "VCS_GetDeviceNameSelection", err_code);
         return;
     }
@@ -161,7 +161,7 @@ void OpenEposDialog::on_cb_device_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt(
+        qCritical() << Util::GetFormattedEposErrTxt(
             "VCS_GetProtocolStackNameSelection", err_code);
         return;
     }
@@ -239,7 +239,7 @@ void OpenEposDialog::on_cb_protocol_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt(
+        qCritical() << Util::GetFormattedEposErrTxt(
             "VCS_GetInterfaceNameSelection", err_code);
         return;
     }
@@ -314,7 +314,7 @@ void OpenEposDialog::on_cb_interface_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt("VCS_GetPortNameSelection",
+        qCritical() << Util::GetFormattedEposErrTxt("VCS_GetPortNameSelection",
                                                     err_code);
         return;
     }
@@ -384,7 +384,7 @@ void OpenEposDialog::on_cb_port_name_textActivated(const QString& sel) {
 
     // Validation
     if (err_code != 0) {
-        qCritical() << util::GetFormattedEposErrTxt("VCS_GetBaudrateSelection",
+        qCritical() << Util::GetFormattedEposErrTxt("VCS_GetBaudrateSelection",
                                                     err_code);
         return;
     }
