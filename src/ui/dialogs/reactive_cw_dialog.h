@@ -29,13 +29,12 @@ class ReactiveCwDialog : public QDialog {
     // NOLINTEND
 
   public:
-    explicit ReactiveCwDialog(QWidget* parent = nullptr,
-                              const double& lower_bound = 2.5,
-                              const double& upper_bound = 5.0);
+    ReactiveCwDialog(QWidget* parent, const double& lower_bound,
+                     const double& upper_bound);
     ~ReactiveCwDialog() override;
 
-    double GetLowerBound() const;
-    double GetUpperBound() const;
+    [[nodiscard]] double GetLowerBound() const;
+    [[nodiscard]] double GetUpperBound() const;
 
     // NOLINTBEGIN: Qt-generated
   private slots:

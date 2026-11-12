@@ -97,10 +97,6 @@ class CameraManager : public QObject
 
     bool ros2_connected_{false};
 #ifdef BUILD_WITH_ROS2
-    const std::string kCameraRgbTopic = "/camera/color/image_raw";
-    const std::string kCameraDepthTopic = "/camera/depth/image_rect_raw";
-    const std::string kCameraInfraTopic = "/camera/infra1/image_rect_raw";
-
     rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr image_sub_;
     QTimer* spin_timer_{nullptr};
     QTimer* connectivity_timer_{nullptr};

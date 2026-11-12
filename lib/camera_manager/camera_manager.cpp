@@ -47,6 +47,14 @@ constexpr int kRos2ConnectivityIntervalMs = 5000;  // ms (0.2 Hz)
 
 constexpr QSize kDefaultResolution(1280, 720);  // 720p (HD)
 
+#ifdef BUILD_WITH_ROS2
+// ROS2 Topics
+
+constexpr const char* kCameraRgbTopic = "/camera/color/image_raw";
+constexpr const char* kCameraDepthTopic = "/camera/depth/image_rect_raw";
+constexpr const char* kCameraInfraTopic = "/camera/infra1/image_rect_raw";
+#endif
+
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -278,9 +286,11 @@ void CameraManager::CheckRos2Connectivity() {
     ros2_connected_ = !active_publishers.empty();  // get current state
 
     if (was_connected && !ros2_connected_) {  // yes -> no
-        logger_->Warn("Lost connection to publishers on " + kCameraRgbTopic);
+        logger_->Warn(std::string("Lost connection to publishers on ")
+                      + kCameraRgbTopic);
     } else if (!was_connected && ros2_connected_) {  // no -> yes
-        logger_->Info("Connected to publishers on " + kCameraRgbTopic);
+        logger_->Info(std::string("Connected to publishers on ")
+                      + kCameraRgbTopic);
     }
 }
 
@@ -402,7 +412,8 @@ void CameraManager::Start() {
         connect(connectivity_timer_, &QTimer::timeout,  // check publishers
                 this, [this]() { CheckRos2Connectivity(); });
         connectivity_timer_->start(kRos2ConnectivityIntervalMs);
-        logger_->Debug("Waiting for publishers on " + kCameraRgbTopic);
+        logger_->Debug(std::string("Waiting for publishers on ")
+                       + kCameraRgbTopic);
 #else
         logger_->Error("Built with BUILD_WITH_ROS2 set to \"OFF\". You "
                        "shouldn't be able to get here!");

@@ -70,9 +70,9 @@ class QtLogger : public Logger {
                                      const std::string& msg) const {
         auto now = std::chrono::system_clock::now().time_since_epoch();
         auto secs = std::chrono::duration_cast<std::chrono::seconds>(now).count();
-        auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now)
-                         .count()
-                     % 1'000'000'000LL;
+        auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         now % std::chrono::seconds(1))
+                         .count();
 
         std::ostringstream oss;
         oss << "[" << level << "] "

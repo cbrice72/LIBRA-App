@@ -55,7 +55,7 @@ inline QColor ToQColor(const char* rgb) {
     int g = 0;
     int b = 0;
     std::sscanf(rgb, "rgb(%d, %d, %d)", &r, &g, &b);
-    return QColor(r, g, b);
+    return {r, g, b};
 }
 
 }  // namespace Color

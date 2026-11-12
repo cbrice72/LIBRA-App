@@ -42,8 +42,8 @@ class GenericSerialDevice : public QObject {
                                  std::string device_name);
     ~GenericSerialDevice() override;
 
-    bool IsOpen() const;
-    QString GetPortName() const;
+    [[nodiscard]] bool IsOpen() const;
+    [[nodiscard]] QString GetPortName() const;
 
   public slots:
 
