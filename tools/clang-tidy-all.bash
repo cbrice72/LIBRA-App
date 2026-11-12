@@ -18,45 +18,46 @@ N_JOBS="$(nproc)"
 
 # Manually accepted warnings (format: "<file name>|<check>|<regex>")
 ACCEPTED=(
-  # Short names that read clearly in their context
+  # Short names, obvious in context
+  "colors.h|readability-identifier-length|name '(r|g|b)'"
+  "hebi_thread.cpp|readability-identifier-length|name '(v|d)'"
   "libra2_calibration_json.cpp|readability-identifier-length|name '(p|b)'"
   "libra2_calibrator.cpp|readability-identifier-length|name '(p|r)'"
   "libra2_model.cpp|readability-identifier-length|name '(c|s)'"
   "libra2_motion_controller.cpp|readability-identifier-length|name '(a|b)'"
-  "hebi_thread.cpp|readability-identifier-length|name '(v|d)'"
   "main_window.cpp|readability-identifier-length|name '(p|w|l)'"
+  "motion_defs.h|readability-identifier-length|name 'x'"
 
-  # Documented coefficients, LIBRA-I servo math, animation values
-  "libra2_calibrator.cpp|readability-magic-numbers|^0\.75 is"
-  "manip_controller.cpp|readability-magic-numbers|^180 is"
-  "tank_widget.cpp|readability-magic-numbers|^(120|160|200|16) is"
+  # Numbers that don't need naming
+  "libra2_calibrator.cpp|readability-magic-numbers|^0\.75 is"           # documented coefficient
+  "main_window.h|readability-magic-numbers|^180\.0 is"                  # fallback limits (set from .ui)
+  "manip_controller.cpp|readability-magic-numbers|^180 is"              # LIBRA-I servo math
+  "tank_widget.cpp|readability-magic-numbers|^(120|160|200|16) is"      # paint values
 
-  # uint8_t bit constants get promoted to int (water command is a char QByteArray)
-  "water_controller.cpp|hicpp-signed-bitwise|."
+  # LIBRA_VERSION-specific code
+  "actuator_defs.h|misc-unused-parameters|'(roll|pitch|name)'"          # only used by LIBRA-I
+  "joint_defs.h|misc-unused-parameters|'(ma|mb)'"                       # only used by LIBRA-I
+  "main_window.cpp|hicpp-multiway-paths-covered|switch \((mode|side|type)\)"  # one case left
+  "water_controller.cpp|hicpp-multiway-paths-covered|switch \(side\)"   # one case left
 
-  # Switches that shrink to one case under `#if LIBRA_VERSION`
-  "water_controller.cpp|hicpp-multiway-paths-covered|switch \(side\)"
-  "main_window.cpp|hicpp-multiway-paths-covered|switch \((mode|side|type)\)"
+  # Dictated by external APIs
+  "camera_manager.cpp|cppcoreguidelines-pro-bounds-array-to-pointer-decay|image_encodings::"  # ROS2 C strings
+  "epos_thread.cpp|google-runtime-int|long t_pos"                       # EPOS API takes long*
+  "epos_thread.h|google-runtime-int|loop_period_ms_"                    # msleep() takes unsigned long
+  "hebi_thread.h|google-runtime-int|loop_period_ms_"                    # msleep() takes unsigned long
+  "main.cpp|readability-static-accessed-through-instance|app\.exec\(\)" # Qt idiom
+  "ros2_logger.h|readability-function-cognitive-complexity|."           # inside RCLCPP macros
+  "water_controller.cpp|hicpp-signed-bitwise|."                         # uint8_t promoted; char QByteArray
 
-  # EPOS API takes `long*`
-  "epos_thread.cpp|google-runtime-int|long t_pos"
+  # Intentional design choices
+  "actuator_defs.h|bugprone-branch-clone|."                             # one case per actuator
+  "hebi_thread.cpp|cppcoreguidelines-slicing|MotionCommand\(cmd\)"      # loop only needs the base
+  "joint_defs.h|bugprone-branch-clone|."                                # one case per joint
+  "libra2_motion_controller.cpp|readability-convert-member-functions-to-static|PredictiveCwCommand"  # commented-out alternative uses cw_flow_
+  "main_window.cpp|misc-no-recursion|RemoveUiElement"                   # layouts nest
+  "motion_defs.h|readability-implicit-bool-conversion|\(x [<>] 0\.0\)"  # Sign() idiom
 
-  # Intentional: control loop only needs the MotionCommand part
-  "hebi_thread.cpp|cppcoreguidelines-slicing|MotionCommand\(cmd\)"
-
-  # Layouts nest, so removing one recurses
-  "main_window.cpp|misc-no-recursion|RemoveUiElement"
-
-  # ROS defines image encodings as C strings
-  "camera_manager.cpp|cppcoreguidelines-pro-bounds-array-to-pointer-decay|image_encodings::"
-
-  # Its commented-out alternative uses `cw_flow_`
-  "libra2_motion_controller.cpp|readability-convert-member-functions-to-static|PredictiveCwCommand"
-
-  # `exec()` is static, but `app.exec()` is clearer (Qt idiom)
-  "main.cpp|readability-static-accessed-through-instance|app\.exec\(\)"
-
-  # Tracked by `@todo` in code
+  # Active TODOs
   "libra2_motion_controller.cpp|readability-function-cognitive-complexity|'Update'"
   "main_window.cpp|readability-function-cognitive-complexity|'RemoveUiElement"
 )
