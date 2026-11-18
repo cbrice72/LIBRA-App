@@ -11,7 +11,7 @@
 // C++ Standard Library Headers
 #include <algorithm>
 #include <cmath>
-#include <numeric>
+#include <limits>
 
 // Other Library Headers
 #include <QPainter>   // Qt::Gui
@@ -26,6 +26,8 @@
  * !QWidget Overrides
  * !Helper Functions
  */
+
+constexpr double kNoData = std::numeric_limits<double>::quiet_NaN();
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -126,10 +128,11 @@ void LineGraphWidget::AddSamples(const std::vector<double>& values) {
                  values.size(), series_.size());
         return;
     }
-    auto is_finite = [](double val) { return std::isfinite(val); };
-    if (!std::all_of(values.begin(), values.end(), is_finite)) {
-        qWarning("LineGraphWidget::AddSamples(): one or more values are not "
-                 "finite");
+
+    auto is_inf = [](double val) { return std::isinf(val); };
+    if (std::any_of(values.begin(), values.end(), is_inf)) {
+        qWarning("LineGraphWidget::AddSamples(): one or more values are "
+                 "infinite");
         return;
     }
 
@@ -146,7 +149,7 @@ void LineGraphWidget::AddSamples(const std::vector<double>& values) {
 }
 
 /**
- * @brief Gets a line's average over the shown window.
+ * @brief Gets a line's average over the shown window, skipping gaps.
  *
  * @param series Line index, from `AddSeries()`
  */
@@ -167,9 +170,19 @@ std::optional<double> LineGraphWidget::GetWindowMean(std::size_t series) const {
         return std::nullopt;
     }
 
-    const auto first = samples.end() - static_cast<std::ptrdiff_t>(shown);
-    return std::accumulate(first, samples.end(), 0.0)
-           / static_cast<double>(shown);
+    double sum = 0.0;
+    std::size_t count = 0;
+    for (auto it = samples.end() - static_cast<std::ptrdiff_t>(shown);
+         it != samples.end(); ++it) {
+        if (!std::isnan(*it)) {
+            sum += *it;
+            ++count;
+        }
+    }
+    if (count == 0) {
+        return std::nullopt;
+    }
+    return sum / static_cast<double>(count);
 }
 
 //------------------------------------------------------------------------------
@@ -195,14 +208,19 @@ void LineGraphWidget::paintEvent(QPaintEvent* /*event*/) {
         series_.front().samples.size() - shown);
 
     // Use one scale for all lines, for ease of comparison
-    double y_min = series_.front().samples[window_start];
-    double y_max = y_min;
+    double y_min = std::numeric_limits<double>::infinity();
+    double y_max = -y_min;
     for (const auto& series : series_) {
-        const auto [min_it, max_it] = std::minmax_element(series.samples.begin()
-                                                              + window_start,
-                                                          series.samples.end());
-        y_min = std::min(y_min, *min_it);
-        y_max = std::max(y_max, *max_it);
+        for (auto it = series.samples.begin() + window_start;
+             it != series.samples.end(); ++it) {
+            if (!std::isnan(*it)) {  // skip gaps
+                y_min = std::min(y_min, *it);
+                y_max = std::max(y_max, *it);
+            }
+        }
+    }
+    if (y_min > y_max) {
+        return;  // only gaps in the window
     }
     if (y_max - y_min < 1e-9) {
         // If line is relatively flat, add padding so it's easier to see
@@ -233,32 +251,44 @@ void LineGraphWidget::paintEvent(QPaintEvent* /*event*/) {
         // (the wider the window, the more samples exist on a single pixel, so
         // samples sharing a pixel are grouped into bin + drawn as its min/max)
         QPolygonF line;
-        double bin_x = to_x(0);
-        double bin_min = *first;
-        double bin_max = *first;
+        double bin_x = kNoData;
+        double bin_min = kNoData;
+        double bin_max = kNoData;
         auto add_bin = [&]() {
+            if (std::isnan(bin_min)) {
+                return;
+            }
             line << QPointF(bin_x, to_y(bin_min));
             if (bin_max != bin_min) {
                 line << QPointF(bin_x, to_y(bin_max));
             }
         };
 
-        for (std::size_t i = 1; i < shown; ++i) {
+        painter.setPen(QPen(series.color, line_width));
+        for (std::size_t i = 0; i < shown; ++i) {
             const double val = first[static_cast<std::ptrdiff_t>(i)];
             const double x = to_x(i);
-            if (x != bin_x) {
+            if (std::isnan(val)) {
+                // Gap: draw the line so far, then start a new one
+                add_bin();
+                painter.drawPolyline(line);
+                line.clear();
+                bin_x = kNoData;
+                bin_min = kNoData;
+                bin_max = kNoData;
+            } else if (x != bin_x) {
+                // New pixel: draw the previous bin, then start a new one
                 add_bin();
                 bin_x = x;
                 bin_min = val;
                 bin_max = val;
             } else {
+                // Same pixel: update the bin's min/max
                 bin_min = std::min(bin_min, val);
                 bin_max = std::max(bin_max, val);
             }
         }
         add_bin();
-
-        painter.setPen(QPen(series.color, line_width));
         painter.drawPolyline(line);
     }
 }

@@ -23,6 +23,8 @@
 /**
  * @brief Plots a rolling window of samples as lines on an invisible grid.
  *        Newest value shown at right, scaled to the window's min/max.
+ *
+ * @note A NaN sample means "no data" and leaves a gap in its line.
  */
 class LineGraphWidget : public QWidget {
     // NOLINTBEGIN: required by Qt
