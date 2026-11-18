@@ -8,6 +8,7 @@
 #pragma once
 
 // C++ Standard Library Headers
+#include <chrono>
 #include <fstream>
 #include <memory>
 #include <optional>
@@ -99,6 +100,8 @@ class MainWindow : public QMainWindow {
 
     void HandleCalibrationChanged(const Motion::Calibration& level);
     void HandleCalibrationProgress(const QString& text, const bool& running);
+
+    void HandleEtaExtension(const double& extension);
 #endif
 
   signals:
@@ -148,6 +151,10 @@ class MainWindow : public QMainWindow {
 #if LIBRA_VERSION == 2
     void ConnectEpos();
     void CommandEpos(const std::vector<double>& deg);
+
+    // ETA
+
+    void ReportEtaExtension(const double& extension);
 #endif
 
     // NOLINTBEGIN: Qt-generated
@@ -227,6 +234,9 @@ class MainWindow : public QMainWindow {
     void on_cb_motion_mode_activated(int index);
 #if LIBRA_VERSION == 2
     void on_pb_release_pitch_toggled(bool checked);
+
+    void on_pb_eta_extend_clicked(bool checked);
+    void on_pb_eta_retract_clicked(bool checked);
 #endif
 
     // Trajectory (trajectory.cpp)
@@ -282,6 +292,11 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions (arm.cpp) ---
 
     void SendJointTargets(const std::vector<double>& targets);
+
+#if LIBRA_VERSION == 2
+    void SetEtaVel(const double& vel);
+    void UpdateEtaExtension();
+#endif
 
     // --- Helper Functions (trajectory.cpp) ---
 
@@ -360,5 +375,17 @@ class MainWindow : public QMainWindow {
 
     std::shared_ptr<Libra2MotionController> motion_controller_;  // pitch joint
     bool calibration_running_{false};
+
+    // ETA extension estimate
+    /*
+     * @todo: Doesn't use an AbstractActuatorThread-based class since the ETA
+     *        actuator currently doesn't have a controller; the accuracy of this
+     *        estimate depends on how well the user mirrors the ETA's motion.
+     *        Once the ETA actuator is replaced with one that can be digitally
+     *        controlled, this should be removed.
+     */
+    QTimer* eta_timer_{nullptr};
+    std::chrono::steady_clock::time_point eta_time_;  // last estimate update
+    double eta_vel_{0.0};  // m/s, negative = retracting
 #endif
 };

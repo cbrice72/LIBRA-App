@@ -27,10 +27,6 @@
  * !Calibration Results
  */
 
-// Unit Conversions
-
-constexpr double kMmPerM = 1000.0;
-
 // Mechanical Constants (heights above the arm/CW centerline)
 
 constexpr double kPitchJointHeight = 0.1005;  // pitch joint O (m)
@@ -243,8 +239,9 @@ double Libra2MotionController::GetHandoffBand() const {
  * @note Shifts τ_g1,0 for the torque feedforward and predictive CW, and
  *       converts new calibrations to min. extension (Eq. 44).
  *
- * @todo As of 2026/11/05, the ETA's actuator does not have a controller so this
- *       function must be invoked by the user.
+ * @todo As of 2026/11/18, the ETA's actuator does not have a controller, so
+ *       MainWindow estimates the extension (see `MainWindow::SetEtaVel()`) and
+ *       the user corrects it via the menu.
  *
  * @see Libra2MotionController::LevelTorqueAtExtension
  */
@@ -258,9 +255,6 @@ void Libra2MotionController::SetEtaExtension(const double& extension) {
     }
 
     eta_extension_ = extension;
-
-    logger_->Info("ETA extension set to "
-                  + Motion::FormatNum(extension * kMmPerM) + " mm");
 }
 
 /**

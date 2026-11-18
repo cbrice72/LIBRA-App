@@ -54,6 +54,10 @@ constexpr std::size_t kNumJoints = Joint::Name::kUndefined;  // array size
 constexpr double kGrav = 9.80665;      // g (m/s²)
 constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 
+// Unit conversions
+
+constexpr double kMmPerM = 1000.0;
+
 //------------------------------------------------------------------------------
 // !Shared Types
 //------------------------------------------------------------------------------

@@ -299,6 +299,8 @@ void MainWindow::ConfigureUi() {
 #elif LIBRA_VERSION != 2
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
+    RemoveUiElement(ui_->gl_eta_input);
+    RemoveUiElement(ui_->hl_actual_eta);
     RemoveUiElement(ui_->pb_release_pitch);
 
     RemoveUiElement(ui_->l_epos_telemetry);
@@ -335,6 +337,12 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_yaw, &QAbstractSlider::setValue);
+
+    eta_timer_ = new QTimer(this);
+    connect(eta_timer_, &QTimer::timeout,            // while the ETA moves,
+            this, &MainWindow::UpdateEtaExtension);  // update estimate
+    connect(this, &MainWindow::ReportEtaExtension,   // get extension
+            this, &MainWindow::HandleEtaExtension);
 #endif
 
     // Store original limits for override functionality
@@ -657,6 +665,7 @@ void MainWindow::InitializeThreads() {
                                                  kReactiveCwSlowRate,
                                                  kReactiveCwOffMargin,
                                                  debug_mode_);
+    HandleEtaExtension(motion_controller_->GetEtaExtension());  // start value
 
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             this, [this](const bool& enabled) {
@@ -669,6 +678,10 @@ void MainWindow::InitializeThreads() {
                 if (side == Water::Side::kA) {
                     motion_controller_->SetCwState(volume, flow);
                 }
+            });
+    connect(this, &MainWindow::ReportEtaExtension,  // ETA state
+            this, [this](const double& extension) {
+                motion_controller_->SetEtaExtension(extension);
             });
 #endif
 
@@ -1266,6 +1279,18 @@ void MainWindow::HandleActuatorFeedback(
         UpdateActuatorControls();  // targets may now be known
     }
 }
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Updates the shown ETA extension.
+ *
+ * @param extension Extension from minimum (m)
+ */
+void MainWindow::HandleEtaExtension(const double& extension) {
+    ui_->l_actual_eta->setText(
+        QString::number(extension * Motion::kMmPerM, 'f', kPrecision));
+}
+#endif
 
 /**
  * @brief Shows actuator telemetry at the bottom of the UI.
