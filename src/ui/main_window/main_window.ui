@@ -50,7 +50,7 @@
        </property>
        <layout class="QGridLayout" name="gl_central_widget">
         <item row="0" column="0">
-         <layout class="QGridLayout" name="gl_main" columnstretch="1,1">
+         <layout class="QGridLayout" name="gl_main" columnstretch="1,1,0">
           <property name="sizeConstraint">
            <enum>QLayout::SizeConstraint::SetMinimumSize</enum>
           </property>
@@ -3648,6 +3648,30 @@
             </item>
            </layout>
           </item>
+          <item row="0" column="2">
+           <widget class="CollapsibleColumn" name="cc_diagnostics">
+            <property name="title" stdset="0">
+             <string>Diagnostics</string>
+            </property>
+            <layout class="QVBoxLayout" name="vl_diagnostics">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+             <item>
+              <widget class="DiagnosticsWidget" name="w_diagnostics"/>
+             </item>
+            </layout>
+           </widget>
+          </item>
          </layout>
         </item>
        </layout>
@@ -4268,6 +4292,17 @@
    <class>TankWidget</class>
    <extends>QWidget</extends>
    <header>widgets/tank_widget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CollapsibleColumn</class>
+   <extends>QWidget</extends>
+   <header>widgets/collapsible_column.h</header>
+   <container>1</container>
+  </customwidget>
+  <customwidget>
+   <class>DiagnosticsWidget</class>
+   <extends>QWidget</extends>
+   <header>widgets/diagnostics_widget.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

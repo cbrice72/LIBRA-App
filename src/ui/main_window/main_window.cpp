@@ -450,6 +450,10 @@ void MainWindow::ConfigureUi() {
 
     connect(ui_->pb_camera_refresh, &QPushButton::clicked,     // when clicked,
             ui_->a_refresh_camera_list, &QAction::triggered);  // refresh list
+
+    // ========== Diagnostics ==========
+
+    ui_->cc_diagnostics->SetExpanded(false);  // .ui shows it expanded
 }
 
 /**
