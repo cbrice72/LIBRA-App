@@ -145,7 +145,7 @@ Libra2MotionController::Libra2MotionController(
  */
 void Libra2MotionController::SetCwState(const double& volume,
                                         const double& flow) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!std::isfinite(volume) || volume < 0.0 || !std::isfinite(flow)) {
         logger_->Warn("Ignoring invalid CW state: " + Motion::FormatNum(volume)
@@ -163,7 +163,7 @@ void Libra2MotionController::SetCwState(const double& volume,
  * @param enabled Whether to enable reactive CW
  */
 void Libra2MotionController::EnableReactiveCw(const bool& enabled) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     reactive_cw_en_ = enabled;
     if (!reactive_cw_en_) {
@@ -180,7 +180,7 @@ void Libra2MotionController::EnableReactiveCw(const bool& enabled) {
  * @param enabled Whether to include inertia in the feedforward torque
  */
 void Libra2MotionController::EnableInertiaFeedforward(const bool& enabled) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     inertia_ff_en_ = enabled;
     logger_->Info("Inertia feedforward "
                   + std::string(enabled ? "enabled" : "disabled"));
@@ -196,7 +196,7 @@ void Libra2MotionController::EnableInertiaFeedforward(const bool& enabled) {
  */
 void Libra2MotionController::SetReactiveCwBounds(const double& lower_bound,
                                                  const double& upper_bound) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     reactive_cw_lower_bound_ = lower_bound;
     reactive_cw_upper_bound_ = upper_bound;
@@ -212,7 +212,7 @@ void Libra2MotionController::SetReactiveCwBounds(const double& lower_bound,
  *             actuator takes over
  */
 bool Libra2MotionController::SetHandoffBand(const double& band) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!(band > 0.0) || !std::isfinite(band)) {
         logger_->Warn("Ignoring invalid hand-off band: "
@@ -231,7 +231,7 @@ bool Libra2MotionController::SetHandoffBand(const double& band) {
  * @brief Gets the CW Primary mode's hand-off band (rad).
  */
 double Libra2MotionController::GetHandoffBand() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return handoff_band_;
 }
 
@@ -249,7 +249,7 @@ double Libra2MotionController::GetHandoffBand() const {
  * @see Libra2MotionController::LevelTorqueAtExtension
  */
 void Libra2MotionController::SetEtaExtension(const double& extension) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!(extension >= 0.0) || !std::isfinite(extension)) {
         logger_->Warn("Ignoring invalid ETA extension: "
@@ -267,7 +267,7 @@ void Libra2MotionController::SetEtaExtension(const double& extension) {
  * @brief Gets the ETA's extension (m).
  */
 double Libra2MotionController::GetEtaExtension() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return eta_extension_;
 }
 
@@ -278,7 +278,7 @@ double Libra2MotionController::GetEtaExtension() const {
  * @return Whether the models were cleared
  */
 bool Libra2MotionController::ClearModel() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (IsMovingLocked()) {
         logger_->Warn("Can't clear motion controller model while arm is in "
@@ -304,7 +304,7 @@ bool Libra2MotionController::ClearModel() {
  * @brief Checks whether an arm model is available (calibrated or loaded).
  */
 bool Libra2MotionController::IsArmCalibrated() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return arm_model_.has_value();
 }
 
@@ -314,7 +314,7 @@ bool Libra2MotionController::IsArmCalibrated() const {
  * @note An arm model only counts with a valid CW model.
  */
 Motion::Calibration Libra2MotionController::GetCalibration() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     const bool arm_ok = arm_model_ && cw_model_.IsValid();
     if (arm_ok && friction_model_) {
@@ -385,7 +385,7 @@ double Libra2MotionController::LevelTorqueAtExtension() const {
  * @see Libra2MotionController::FinishLevelCalibration
  */
 bool Libra2MotionController::StartLevelCalibration() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!cw_model_.IsValid()) {
         logger_->Error("Can't calibrate: invalid CW model ("
@@ -414,7 +414,7 @@ bool Libra2MotionController::StartLevelCalibration() {
  */
 bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
                                                       const double& angle_b) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!cw_model_.IsValid()) {
         logger_->Error("Can't calibrate: invalid CW model ("
@@ -446,7 +446,7 @@ bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
 bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
                                                       const double& angle_b,
                                                       const double& max_vel) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!cw_volume_) {
         logger_->Warn("Friction calibration rejected: CW volume unknown");
@@ -467,7 +467,7 @@ bool Libra2MotionController::StartFrictionCalibration(const double& angle_a,
  * @brief Cancels a running calibration.
  */
 void Libra2MotionController::CancelCalibration() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     calibrator_.CancelCalibration();
 }
 
@@ -475,7 +475,7 @@ void Libra2MotionController::CancelCalibration() {
  * @brief Gets calibration progress.
  */
 Motion::CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return calibrator_.GetCalibrationStatus();
 }
 
@@ -483,7 +483,7 @@ Motion::CalibrationStatus Libra2MotionController::GetCalibrationStatus() const {
  * @brief Gets a description of the last calibration, if any.
  */
 std::string Libra2MotionController::GetCalibrationMessage() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return calibrator_.GetCalibrationMessage();
 }
 
@@ -492,7 +492,7 @@ std::string Libra2MotionController::GetCalibrationMessage() const {
  *        calibration [3/9]: ..."); empty if none is running.
  */
 std::string Libra2MotionController::GetCalibrationProgress() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     return calibrator_.GetCalibrationProgress();
 }
 
@@ -506,7 +506,7 @@ std::string Libra2MotionController::GetCalibrationProgress() const {
  * @note Record metadata is left empty.
  */
 Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     Motion::CalibrationRecord record;
     record.cw_model = cw_model_.GetParams();
@@ -528,7 +528,7 @@ Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
  */
 bool Libra2MotionController::LoadCalibrationRecord(
     const Motion::CalibrationRecord& record) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (IsMovingLocked()) {
         logger_->Warn("Can't load a calibration while the arm is moving or "
@@ -886,7 +886,7 @@ Motion::Libra2Command Libra2MotionController::Update(
     const Motion::ActualState& actual, const Motion::CommandedState& commanded,
     const double& dt, const bool& trajectory_active,
     const Motion::MotionMode& mode) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     if (!IsValidInput(actual, commanded)) {
         if (!state_warned_) {

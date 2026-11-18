@@ -45,7 +45,7 @@ AbstractMotionController::AbstractMotionController(
  * @param enabled Whether to output verbose debug text
  */
 void AbstractMotionController::SetDebugMode(const bool& enabled) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     logger_->SetDebugMode(enabled);
 }
 
@@ -93,7 +93,7 @@ bool AbstractMotionController::IsValidInput(
  * @param target_pos One angle per driven joint, indexed by `Joint::Name` (rad)
  */
 void AbstractMotionController::SetTarget(const std::vector<double>& target_pos) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
 
     bool valid = (target_pos.size() == Motion::kNumJoints);
     for (const auto& joint : joints_) {
@@ -115,7 +115,7 @@ void AbstractMotionController::SetTarget(const std::vector<double>& target_pos) 
  * @brief Clears the target and halts movement.
  */
 void AbstractMotionController::Stop() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     target_pos_.reset();
     OnStop();  // implemented by child
 }
@@ -125,7 +125,7 @@ void AbstractMotionController::Stop() {
  *        disconnect.
  */
 void AbstractMotionController::Reset() {
-    std::lock_guard<std::mutex> lock(mutex_);
+    const std::scoped_lock lock(mutex_);
     target_pos_.reset();
     OnReset();  // implemented by child
 }

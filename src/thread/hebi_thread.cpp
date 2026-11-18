@@ -433,7 +433,7 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
     // (NOTE: motion controller may request a pause on the current trajectory)
     std::optional<Eigen::VectorXd> target_pos;
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         target_pos.swap(pending_target_pos_);
     }
     if (target_pos) {
@@ -633,7 +633,7 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
         hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos, &vel,
                                                             &accel);
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         t_trajectory_s_ = 0.0;
         trajectory_ = std::move(trajectory);
     }
@@ -686,7 +686,7 @@ bool HebiThread::FollowTrajectory(const double& dt_s, Eigen::VectorXd& cmd_pos,
                                   const double& trajectory_rate) {
     const double rate = std::clamp(trajectory_rate, 0.0, 1.0);
 
-    const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+    const std::scoped_lock lock(trajectory_mutex_);
 
     if (trajectory_ == nullptr) {
         latest_cmd_vel_.setZero();  // hold last commanded pose
@@ -739,7 +739,7 @@ std::optional<Motion::MotionCommand> HebiThread::RunMotionController(
     // Without a trajectory, there's nothing to reference
     bool trajectory_active = false;
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         trajectory_active = (trajectory_ != nullptr);
     }
     if (!trajectory_active) {
@@ -795,7 +795,7 @@ std::optional<Motion::MotionCommand> HebiThread::RunMotionController(
 
     // Deal with stop request, if any
     if (cmd.stop_trajectory) {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         trajectory_.reset();
         t_trajectory_s_ = 0.0;
         logger_->Info("Trajectory stopped by motion controller");
@@ -911,7 +911,7 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
         hebi::trajectory::Trajectory::createUnconstrainedQp(time, pos, &vel,
                                                             &accel);
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         t_trajectory_s_ = 0.0;
         trajectory_ = std::move(trajectory);
     }
@@ -1374,7 +1374,7 @@ void HebiThread::Connect() {
     latest_cmd_pos_ = feedback_->getPosition();
     latest_cmd_vel_ = Eigen::VectorXd::Zero(n_actuators_);
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         t_trajectory_s_ = 0.0;
     }
 
@@ -1525,7 +1525,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
     // Control loop starts it from the held pose
     // NOTE: Original LIBRA-I code started from measured pose
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         pending_target_pos_ = target_pos;
     }
     move_requested_ = true;
@@ -1542,7 +1542,7 @@ void HebiThread::Stop() {
     // End trajectory following; the arm holds its last commanded pose
     move_requested_ = false;
     {
-        const std::lock_guard<std::mutex> lock(trajectory_mutex_);
+        const std::scoped_lock lock(trajectory_mutex_);
         trajectory_.reset();
         t_trajectory_s_ = 0.0;
         pending_target_pos_.reset();
