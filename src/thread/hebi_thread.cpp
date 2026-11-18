@@ -1092,6 +1092,7 @@ void HebiThread::SendFeedback() {
 
     // Report miscellaneous statuses in one batch
     emit ReportTelemetry(GetTelemetry(), type_);
+    emit ReportPower(GetPower(), type_);
 
 #ifdef BUILD_WITH_ROS2
     // Make actuator state info available to other ROS2 nodes
@@ -1146,6 +1147,16 @@ QString HebiThread::GetTelemetry() const {
     AddTelemetryRow(ss, "Temperature", temp_, "C");
 
     return QString::fromStdString(ss.str());
+}
+
+/**
+ * @brief Gets the electrical power drawn by all connected actuators' motors (W).
+ *
+ * @note HEBI's `motorCurrent` is measured at the bus voltage, so V·I is the
+ *       supply draw. Excludes the actuators' own electronics (not reported).
+ */
+double HebiThread::GetPower() const {
+    return feedback_->getVoltage().dot(feedback_->getMotorCurrent());
 }
 
 #ifdef BUILD_WITH_ROS2

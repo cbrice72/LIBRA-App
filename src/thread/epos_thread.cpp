@@ -9,6 +9,8 @@
 #include "epos_thread.h"
 
 // C++ Standard Library Headers
+#include <algorithm>
+#include <cmath>
 #include <iomanip>
 #include <sstream>
 
@@ -35,6 +37,9 @@
 
 constexpr int kEncoderResolution = 500;  // Maxon part #: 228452
 constexpr int kGearheadReduction = 113;  // Maxon part #: 203126
+
+constexpr double kTerminalResistance = 0.115;  // Ohms, Maxon part #: 148866
+constexpr double kTorqueConstant = 0.0164;     // Nm/A, Maxon part #: 148866
 
 constexpr int kPinionTeeth = 15;    // KG Gear part #: SG1S15L-1010
 constexpr int kSlewRingTeeth = 48;  // igus part #: PRT-04-50-TI-ST
@@ -187,27 +192,9 @@ QString EposThread::GetTelemetry() {
         state_str = "fault";
     }
 
-    // Get values
-    int a_vel = 0;  // rpm
-    if (VCS_GetVelocityIsAveraged(handle_, kNodeID, &a_vel, &err_code) == 0) {
-        emit ErrorThrown(
-            "EPOS - Couldn't retrieve actual velocity!\n"
-            + Util::GetFormattedEposErrTxt("VCS_GetVelocityIsAveraged",
-                                           err_code, kNodeID));
-        return QStringLiteral("Error!");
-    }
-
-    int a_curr = 0;  // mA
-    if (VCS_GetCurrentIsEx(handle_, kNodeID, &a_curr, &err_code) == 0) {
-        emit ErrorThrown("EPOS - Couldn't retrieve current!\n"
-                         + Util::GetFormattedEposErrTxt("VCS_GetCurrentIsEx",
-                                                        err_code, kNodeID));
-        return QStringLiteral("Error!");
-    }
-
     // Perform conversions
-    const double vel = a_vel * kRpmToDegs;  // to deg/s
-    const double curr = a_curr / 1000.0;    // to A
+    const double vel = a_vel_ * kRpmToDegs;  // to deg/s
+    const double curr = a_curr_ / 1000.0;    // to A
 
     // Format telemetry
     std::ostringstream ss;
@@ -218,8 +205,25 @@ QString EposThread::GetTelemetry() {
     AddTelemetryTextRow(ss, "State", {state_str});
     AddTelemetryRow(ss, "Actual Velocity", {vel}, "deg/s");
     AddTelemetryRow(ss, "Current", {curr}, "A");
+    AddTelemetryRow(ss, "Power", {GetPower()}, "W");
 
     return QString::fromStdString(ss.str());
+}
+
+/**
+ * @brief Estimates the motor's electrical power draw (W).
+ *
+ * @note Standard DC motor model: P = I²R + k_t·I·ω (Joule loss + mechanical
+ *       power). Ignores friction, R's rise with winding temperature, and EPOS4
+ *       losses (max. efficiency 97%). Clamped at 0 W while braking, since the
+ *       supply can't take energy back.
+ */
+double EposThread::GetPower() const {
+    const double vel = a_vel_ * 2.0 * M_PI / kSecPerMin;  // to rad/s
+    const double curr = a_curr_ / 1000.0;                 // to A
+
+    return std::max(0.0, (curr * curr * kTerminalResistance)
+                             + (kTorqueConstant * curr * vel));
 }
 
 //------------------------------------------------------------------------------
@@ -344,6 +348,31 @@ void EposThread::run() {
         emit ReportFeedback({{Joint::Name::kYaw, Joint::ActuatorToJointSimple(Joint::Name::kYaw, a_pos * kIncToDeg)}},
                             Actuator::Feedback::kActualPos);
         // clang-format on
+
+        // Read values shared by power and telemetry reports
+        if (VCS_GetVelocityIsAveraged(handle_, kNodeID, &a_vel_, &err_code)
+            == 0) {
+            emit ErrorThrown(
+                "EPOS - Couldn't retrieve actual velocity!\n"
+                + Util::GetFormattedEposErrTxt("VCS_GetVelocityIsAveraged",
+                                               err_code, kNodeID));
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(loop_period_ms_);
+            continue;
+        }
+        if (VCS_GetCurrentIsEx(handle_, kNodeID, &a_curr_, &err_code) == 0) {
+            emit ErrorThrown(
+                "EPOS - Couldn't retrieve current!\n"
+                + Util::GetFormattedEposErrTxt("VCS_GetCurrentIsEx", err_code,
+                                               kNodeID));
+            lock.unlock();
+            Disconnect();
+            QThread::msleep(loop_period_ms_);
+            continue;
+        }
+
+        emit ReportPower(GetPower(), type_);
 
         // Report miscellaneous statuses in one batch
         telemetry = GetTelemetry();

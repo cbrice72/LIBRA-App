@@ -80,6 +80,7 @@ class AbstractActuatorThread : public QThread {
     void ReportFeedback(const std::unordered_map<Joint::Name, double>& feedbacks,
                         const Actuator::Feedback& feedback_type);
     void ReportTelemetry(const QString& telemetry, const Actuator::Type& type);
+    void ReportPower(const double& power, const Actuator::Type& type);
     void MovementStateChanged(const bool& moving);
 
     void ErrorThrown(const QString& err);

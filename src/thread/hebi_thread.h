@@ -168,6 +168,7 @@ class HebiThread : public AbstractActuatorThread
 
     void SendFeedback();
     [[nodiscard]] QString GetTelemetry() const;
+    [[nodiscard]] double GetPower() const;
 #ifdef BUILD_WITH_ROS2
     void PublishState();
 #endif

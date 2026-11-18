@@ -73,6 +73,7 @@ class EposThread : public AbstractActuatorThread
     // --- Helper Functions ---
 
     QString GetTelemetry();
+    [[nodiscard]] double GetPower() const;
 
     // --- Data Members ---
 
@@ -86,6 +87,10 @@ class EposThread : public AbstractActuatorThread
 
     void* handle_{nullptr};  // void* are dangerous, but Maxon handles use them
     std::mutex handle_mutex_;
+
+    // Latest readings, shared by power and telemetry
+    int a_vel_{0};   // motor shaft, before the gearhead (rpm)
+    int a_curr_{0};  // motor current (mA)
 
     int target_inc_{0};  // in encoder increments, not degrees
     int last_target_inc_{0};

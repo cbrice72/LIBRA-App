@@ -58,13 +58,18 @@ constexpr std::size_t kSideCount = 2;  // A and B
 #elif LIBRA_VERSION == 2
 // - 10L + 10L + 6L
 
-constexpr double kFillRate = 0;        // L/s, TODO: measure w/ flow sensors
-constexpr double kDrainRate = 0;       // L/s, TODO: measure w/ flow sensors
+constexpr double kFillRate = 0;        // L/s per side, average (TODO: measure)
+constexpr double kDrainRate = 0;       // L/s per side, average (TODO: measure)
 constexpr double kTotalCapacity = 26;  // L, sum of all bladders
 constexpr std::size_t kSideCount = 1;  // A only
 #endif
 
 constexpr double kSideCapacity = kTotalCapacity / kSideCount;  // L
+
+// Per-side Power (only drawn while the WaterArduino powers its outlet)
+
+constexpr double kValvePower = 6.7;   // W, CKD AB41-04-8-AC100V at 50 Hz
+constexpr double kPumpPower = 870.0;  // W, Koshin MG-25 rated consumption
 
 //------------------------------------------------------------------------------
 // !Water Helpers

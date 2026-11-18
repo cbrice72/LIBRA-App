@@ -128,6 +128,7 @@ void WaterController::OnUpdate() {
 #if LIBRA_VERSION == 1
     SendStatus(Water::Side::kB);
 #endif
+    SendPower();
 }
 
 /**
@@ -328,6 +329,24 @@ void WaterController::SendStatus(const Water::Side& side) {
     }
 
     emit ReportStatus(side, state);
+}
+
+/**
+ * @brief Reports the estimated electrical power (W) drawn by the valves and
+ *        pumps, based on each side's commanded state.
+ */
+void WaterController::SendPower() {
+    double power = 0.0;
+
+    for (const auto& tank : tanks_) {
+        if (tank.state == Water::State::kFilling) {
+            power += Water::kValvePower;
+        } else if (tank.state == Water::State::kDraining) {
+            power += Water::kValvePower + Water::kPumpPower;
+        }
+    }
+
+    emit ReportPower(power);
 }
 
 /**
