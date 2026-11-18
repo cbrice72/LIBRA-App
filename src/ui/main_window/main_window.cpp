@@ -566,6 +566,9 @@ void MainWindow::InitializeDeviceManagers() {
     connect(water_controller_, &WaterController::TankLimitReached,  // stop CW
             this, &MainWindow::HandleWaterTankLimit);
 
+    connect(water_controller_, &WaterController::ReportPower,  // get power
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateFluidPower);
+
     // ========== Flow Controller ==========
 
     flow_controller_ = new FlowController(this, debug_mode_);
@@ -733,6 +736,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorFeedback);
     connect(hebi_thread_, &HebiThread::ReportTelemetry,  // get telemetry
             this, &MainWindow::HandleActuatorTelemetry);
+    connect(hebi_thread_, &HebiThread::ReportPower,  // get power
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateActuatorPower);
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 
@@ -788,6 +793,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorFeedback);
     connect(epos_thread_, &EposThread::ReportTelemetry,  // get telemetry
             this, &MainWindow::HandleActuatorTelemetry);
+    connect(epos_thread_, &EposThread::ReportPower,  // get power
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateActuatorPower);
     connect(epos_thread_, &EposThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 
@@ -996,6 +1003,12 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
+    if (!connected) {
+        // Power is only reported while connected
+        ui_->w_diagnostics->UpdateFluidPower(0.0);
+    }
+
+    // Special cases
     if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
         logger_->Warn("CW disconnected; stopping automatic CW control");
         SetMotionMode(Motion::MotionMode::kManual);
@@ -1158,11 +1171,15 @@ void MainWindow::HandleFlowStatus(const double& flow) {
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
-    // Targets are set from the next actual position
     if (connected) {
+        // Targets are set from the next actual position
         populate_targets_ = true;
+    } else {
+        // Power is only reported while connected
+        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kHebi);
     }
 
+    // Special cases
     if (!connected && trajectory_playing_) {
         logger_->Warn("HEBI disconnected; pausing trajectory");
         SetTrajectoryPlaying(false);
@@ -1189,11 +1206,15 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
-    // Targets are set from the next actual position
     if (connected) {
+        // Targets are set from the next actual position
         populate_targets_ = true;
+    } else {
+        // Power is only reported while connected
+        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kEpos);
     }
 
+    // Special cases
     if (!connected && trajectory_playing_) {
         logger_->Warn("EPOS disconnected; pausing trajectory");
         SetTrajectoryPlaying(false);

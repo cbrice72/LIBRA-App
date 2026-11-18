@@ -10,6 +10,7 @@
 
 // C++ Standard Library Headers
 #include <algorithm>
+#include <cmath>
 
 // Other Library Headers
 #include <QStringList>  // Qt::Core
@@ -26,6 +27,7 @@
 // Power graph settings
 
 constexpr double kPowerSamplePeriod = 0.05;  // s (20 Hz)
+constexpr int kPowerPrecision = 1;           // i.e., "0.1" W
 
 namespace {
 
@@ -67,12 +69,23 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
     on_cb_power_window_currentIndexChanged(ui_->cb_power_window->currentIndex());
 
     // Prefer colors that aren't already used by buttons, etc. in the UI
-    ui_->lg_power->AddSeries(Color::ToQColor(Color::kMagenta));  // actuators
-    ui_->lg_power->AddSeries(Color::ToQColor(Color::kBlue));     // fluid system
+    actuators_series_ = ui_->lg_power->AddSeries(
+        Color::ToQColor(Color::kMagenta));
+    fluid_series_ = ui_->lg_power->AddSeries(Color::ToQColor(Color::kBlue));
 
     const QString style = QStringLiteral("color: %1;");
     ui_->static_l_power_actuators->setStyleSheet(style.arg(Color::kMagenta));
     ui_->static_l_power_fluid->setStyleSheet(style.arg(Color::kBlue));
+
+    // Sources report at their own rates; sample their latest values evenly
+    power_timer_ = new QTimer(this);
+    power_timer_->setInterval(
+        static_cast<int>(std::lround(kPowerSamplePeriod * 1000.0)));  // ms
+
+    connect(power_timer_, &QTimer::timeout,          // every sample period,
+            this, &DiagnosticsWidget::SamplePower);  // update graph & table
+
+    power_timer_->start();
 }
 
 /**
@@ -94,4 +107,54 @@ DiagnosticsWidget::~DiagnosticsWidget() {
 void DiagnosticsWidget::on_cb_power_window_currentIndexChanged(int index) {
     ui_->lg_power->SetWindow(
         GetWindowLengths(ui_->cb_power_window).value(index).toDouble());
+}
+
+/**
+ * @brief Stores an actuator type's latest power reading.
+ *
+ * @param power Electrical power (W)
+ * @param type Type of actuator reporting it
+ */
+void DiagnosticsWidget::UpdateActuatorPower(const double& power,
+                                            const Actuator::Type& type) {
+    actuator_power_[type] = power;
+}
+
+/**
+ * @brief Stores the fluid system's latest power reading.
+ *
+ * @param power Electrical power (W)
+ */
+void DiagnosticsWidget::UpdateFluidPower(const double& power) {
+    fluid_power_ = power;
+}
+
+/**
+ * @brief Adds the latest power reading of each category to the graph, and shows
+ *        them with their window averages in the table.
+ */
+void DiagnosticsWidget::SamplePower() {
+    // Graph
+    double actuators = 0.0;
+    for (const auto& type_power : actuator_power_) {
+        actuators += type_power.second;
+    }
+
+    ui_->lg_power->AddSamples({actuators, fluid_power_});
+
+    // Table
+    const double actuators_avg = ui_->lg_power->GetWindowMean(actuators_series_)
+                                     .value_or(0.0);
+    const double fluid_avg = ui_->lg_power->GetWindowMean(fluid_series_)
+                                 .value_or(0.0);
+
+    auto show = [](QLabel* label, const double& power) {
+        label->setText(QString::number(power, 'f', kPowerPrecision));
+    };
+    show(ui_->l_power_actuators_now, actuators);
+    show(ui_->l_power_fluid_now, fluid_power_);
+    show(ui_->l_power_total_now, actuators + fluid_power_);
+    show(ui_->l_power_actuators_avg, actuators_avg);
+    show(ui_->l_power_fluid_avg, fluid_avg);
+    show(ui_->l_power_total_avg, actuators_avg + fluid_avg);
 }
