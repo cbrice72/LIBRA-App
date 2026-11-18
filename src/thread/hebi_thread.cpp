@@ -961,7 +961,7 @@ void HebiThread::ReportCalibrationStatus() {
  * @brief Whether a calibration may start.
  */
 bool HebiThread::CanCalibrate() {
-    if (group_ == nullptr) {
+    if (GetGroup() == nullptr) {
         emit ErrorThrown("HEBI - Can't calibrate; not connected!");
         return false;
     }
@@ -1255,10 +1255,13 @@ void HebiThread::run() {
 
     // Loop until MainWindow calls QThread::requestInterruption()
     while (!isInterruptionRequested()) {
+        std::unique_lock<std::mutex> lock(group_mutex_);
+
         if (group_ == nullptr) {
             emit ReportTelemetry(GetTelemetry(), type_);  // "Not Connected"
             // Keep the first `dt` after `Connect()` small
             last_loop_time = std::chrono::steady_clock::now();
+            lock.unlock();
             QThread::msleep(loop_period_ms_);
             continue;
         }
@@ -1272,6 +1275,7 @@ void HebiThread::run() {
         if (!group_->getNextFeedback(*feedback_)) {
             emit ErrorThrown("HEBI - Failed to receive actuator feedback; "
                              "connection lost!");
+            lock.unlock();
             Disconnect();
             continue;
         }
@@ -1282,10 +1286,13 @@ void HebiThread::run() {
         if (!command_sent) {
             emit ErrorThrown("HEBI - Failed to send actuator command; "
                              "connection lost!");
+            lock.unlock();
             Disconnect();
             continue;
         }
         SendFeedback();
+
+        lock.unlock();
 
         // Don't overwhelm network
         QThread::msleep(loop_period_ms_);
@@ -1357,10 +1364,8 @@ void HebiThread::Connect() {
     command_->clear();
 
     // Command actuator(s) to hold current position
-    group_ = group;
-    if (!group_->getNextFeedback(*feedback_)) {
+    if (!group->getNextFeedback(*feedback_)) {
         emit ErrorThrown("HEBI - Failed to retrieve starting position!");
-        group_.reset();
         return;
     }
     command_->setPosition(feedback_->getPosition());
@@ -1390,6 +1395,12 @@ void HebiThread::Connect() {
     }
 #endif
 
+    // Finally, hand the group off to the control loop
+    {
+        const std::scoped_lock lock(group_mutex_);
+        group_ = group;
+    }
+
     logger_->Info("Connection successful");
     emit Connected(true);
 }
@@ -1401,30 +1412,50 @@ void HebiThread::Disconnect() {
     // In case this was called in the middle of a movement, gracefully stop
     Stop();
 
-    if (group_ != nullptr) {
-        StopHebiLog();
+    if (GetGroup() == nullptr) {
+        return;  // already disconnected
+    }
+    StopHebiLog();
 
-        // Idle CW just in case
-        emit ReportArmTorque(std::nullopt);
+    // Safely destruct the group and clear the command buffer
+    {
+        const std::scoped_lock lock(group_mutex_);
 
 #if LIBRA_VERSION == 2
         // Reset motion state (reconnecting reloads the control strategy)
         motion_controller_->Reset();
-        ReportCalibrationStatus();
         pitch_released_ = false;
         settings_before_off_.clear();
-        emit PitchReleaseChanged(false);
 #endif
 
         // Destructing hebi::Group automatically cleans it up
         group_.reset();
         command_->clear();
-
-        ReportMovement(false);  // control loop inactive
-
-        logger_->Info("Disconnected from actuator(s)");
-        ReportDisconnected();
     }
+
+    // Send signals to the rest of the system
+    emit ReportArmTorque(std::nullopt);  // idle CW just in case
+#if LIBRA_VERSION == 2
+    ReportCalibrationStatus();
+    emit PitchReleaseChanged(false);
+#endif
+
+    ReportMovement(false);  // control loop inactive
+
+    logger_->Info("Disconnected from actuator(s)");
+    ReportDisconnected();
+}
+
+/**
+ * @brief Gets the actuator group for use outside the control loop.
+ *
+ * @note The copy keeps the group alive even if the control loop disconnects, so
+ *       don't emit signals while holding `group_mutex_` (slots on this thread
+ *       could block the loop or re-lock it).
+ */
+std::shared_ptr<hebi::Group> HebiThread::GetGroup() {
+    const std::scoped_lock lock(group_mutex_);
+    return group_;
 }
 
 /**
@@ -1441,7 +1472,7 @@ void HebiThread::Disconnect() {
  *       effective Roll, Pitch, J1 (Yaw), J2 (Yaw), and J3 (Pitch) angles.
  */
 void HebiThread::SetTarget(const std::vector<double>& target) {
-    if (group_ == nullptr) {
+    if (GetGroup() == nullptr) {
         emit ErrorThrown("HEBI - Can't move actuators; not connected!");
         return;
     }
@@ -1504,7 +1535,7 @@ void HebiThread::SetTarget(const std::vector<double>& target) {
  * @brief Halts the trajectories of all actuators.
  */
 void HebiThread::Stop() {
-    if (group_ == nullptr) {
+    if (GetGroup() == nullptr) {
         return;  // do nothing
     }
 
@@ -1530,18 +1561,19 @@ void HebiThread::Stop() {
  * @param file_path Path to an XML gains file
  */
 void HebiThread::LoadGains(const QString& file_path) {
-    if (group_ == nullptr) {
+    const auto group = GetGroup();
+    if (group == nullptr) {
         emit ErrorThrown("HEBI - Can't load gains; not connected!");
         return;
     }
 
-    hebi::GroupCommand gain_cmd(group_->size());
+    hebi::GroupCommand gain_cmd(group->size());
     if (!gain_cmd.readGains(file_path.toStdString())) {
         emit ErrorThrown("HEBI - Failed to load gains from: " + file_path);
         return;
     }
 
-    if (!group_->sendCommandWithAcknowledgement(gain_cmd, kTimeout)) {
+    if (!group->sendCommandWithAcknowledgement(gain_cmd, kTimeout)) {
         emit ErrorThrown(
             "HEBI - Didn't receive acknowledgement from gains update!");
         return;
@@ -1559,19 +1591,20 @@ void HebiThread::LoadGains(const QString& file_path) {
  *       speed, from the next trajectory onward.
  */
 void HebiThread::LoadSafety(const QString& file_path) {
-    if (group_ == nullptr) {
+    const auto group = GetGroup();
+    if (group == nullptr) {
         emit ErrorThrown("HEBI - Can't load safety limits; not connected!");
         return;
     }
 
-    hebi::GroupCommand safety_cmd(group_->size());
+    hebi::GroupCommand safety_cmd(group->size());
     if (!safety_cmd.readSafetyParameters(file_path.toStdString())) {
         emit ErrorThrown("HEBI - Failed to load safety limits from: "
                          + file_path);
         return;
     }
 
-    if (!group_->sendCommandWithAcknowledgement(safety_cmd, kTimeout)) {
+    if (!group->sendCommandWithAcknowledgement(safety_cmd, kTimeout)) {
         emit ErrorThrown(
             "HEBI - Didn't receive acknowledgement from safety update!");
         return;
@@ -1589,7 +1622,8 @@ void HebiThread::LoadSafety(const QString& file_path) {
  *       `log_file_YYYY-MM-DD_HH-MM-SS.MSS.hebilog`
  */
 void HebiThread::StartHebiLog() {
-    if (group_ == nullptr) {
+    const auto group = GetGroup();
+    if (group == nullptr) {
         emit ErrorThrown("HEBI - Can't start logging; not connected!");
         return;
     }
@@ -1599,7 +1633,7 @@ void HebiThread::StartHebiLog() {
         return;
     }
 
-    // Ensure a log directory exists (or else group_->startLog() will fail!)
+    // Ensure a log directory exists (or else group->startLog() will fail!)
     const QDir log_dir("./log");
     if (!log_dir.exists()) {
         if (!log_dir.mkpath(".")) {
@@ -1609,7 +1643,7 @@ void HebiThread::StartHebiLog() {
     }
 
     // Start logging
-    const std::string log_path = group_->startLog("./log");
+    const std::string log_path = group->startLog("./log");
     if (log_path.empty()) {
         emit ErrorThrown("HEBI - Failed to start logging! Ensure log directory "
                          "(log/) exists in CWD.");
@@ -1625,7 +1659,8 @@ void HebiThread::StartHebiLog() {
  * @brief Stops HEBI logging.
  */
 void HebiThread::StopHebiLog() {
-    if (group_ == nullptr) {
+    const auto group = GetGroup();
+    if (group == nullptr) {
         emit ErrorThrown("HEBI - Can't stop logging; not connected!");
         return;
     }
@@ -1636,7 +1671,7 @@ void HebiThread::StopHebiLog() {
     }
 
     // Stop logging
-    group_->stopLog();
+    group->stopLog();
     logging_active_ = false;
 
     logger_->Info("Stopped logging");
@@ -1689,7 +1724,7 @@ void HebiThread::SetReactiveCwBounds(const double& lower_bound,
  *       `SetControlOff()`).
  */
 void HebiThread::EnablePitchRelease(const bool& enabled) {
-    if (enabled && group_ == nullptr) {
+    if (enabled && GetGroup() == nullptr) {
         emit ErrorThrown("HEBI - Can't release pitch; not connected!");
         emit PitchReleaseChanged(false);
         return;
