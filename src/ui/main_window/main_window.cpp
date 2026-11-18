@@ -1003,11 +1003,6 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
-    if (!connected) {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateFluidPower(0.0);
-    }
-
     // Special cases
     if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
         logger_->Warn("CW disconnected; stopping automatic CW control");
@@ -1171,12 +1166,9 @@ void MainWindow::HandleFlowStatus(const double& flow) {
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
     if (connected) {
-        // Targets are set from the next actual position
         populate_targets_ = true;
-    } else {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kHebi);
     }
 
     // Special cases
@@ -1206,12 +1198,9 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
     if (connected) {
-        // Targets are set from the next actual position
         populate_targets_ = true;
-    } else {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kEpos);
     }
 
     // Special cases

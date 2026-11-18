@@ -1423,7 +1423,7 @@ void HebiThread::Disconnect() {
         ReportMovement(false);  // control loop inactive
 
         logger_->Info("Disconnected from actuator(s)");
-        emit Connected(false);
+        ReportDisconnected();
     }
 }
 

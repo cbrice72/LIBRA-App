@@ -63,6 +63,8 @@ class GenericSerialDevice : public QObject {
     void Connected(const bool& connected);
     void ErrorThrown(const QString& err);
 
+    void ReportPower(const double& power);  // W, if the device draws any
+
   protected:
     virtual void OnUpdate() = 0;
 
@@ -81,6 +83,10 @@ class GenericSerialDevice : public QObject {
     void TryReconnect();
 
   private:
+    // --- Helper Functions ---
+
+    void ReportDisconnected();
+
     // --- Data Members (common) ---
 
     QTimer* update_timer_{nullptr};

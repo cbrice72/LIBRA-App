@@ -561,7 +561,7 @@ void EposThread::Disconnect() {
     // Void our class handle (even on error, to avoid a dangling pointer)
     handle_ = nullptr;
     ReportMovement(false);  // control loop no longer reports
-    emit Connected(false);
+    ReportDisconnected();
 
     if (!closed) {
         emit ErrorThrown("EPOS - Problem closing device!\n"
