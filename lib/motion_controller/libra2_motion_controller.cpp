@@ -134,7 +134,7 @@ Libra2MotionController::Libra2MotionController(
       reactive_cw_upper_bound_(reactive_cw_upper_bound),
       reactive_cw_slow_rate_(reactive_cw_slow_rate),
       reactive_cw_off_margin_(reactive_cw_off_margin),
-      calibrator_(*logger_) {
+      calibrator_(*logger_, cw_model_, arm_model_, eta_extension_) {
     if (!cw_model_.IsValid()) {
         logger_->Warn("CW model invalid: " + cw_model_.GetError()
                       + " (calibration and feedforward are unavailable)");
@@ -311,6 +311,63 @@ bool Libra2MotionController::ClearModel() {
 }
 
 /**
+ * @brief Checks whether the arm is stable at every possible CW volume.
+ *
+ * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
+ *
+ * @note Stable while the numerator g·S of Eq. 26c' is negative (Eq. 27'):
+ *         g·S = m_arm·h_1·g + m_cw·g·q_P
+ *
+ *       S is linear in m_cw, so checking only empty and full covers every
+ *       volume.
+ */
+bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
+    const auto stability_torque = [&](const double& cw_mass) {
+        return arm_hang_torque
+               + (Motion::kGrav * cw_model_.HangMoment(cw_mass));
+    };
+
+    const double cap = cw_model_.GetCapacityMass();
+    const double empty = stability_torque(0.0);
+    const double full = stability_torque(cap);
+
+    const std::string values = Motion::FormatNum(empty) + " Nm empty, "
+                               + Motion::FormatNum(full) + " Nm full";
+    if (std::max(empty, full) < 0.0) {
+        logger_->Info("Arm model is stable at all CW volumes (g*S < 0): "
+                      + values);
+        return true;
+    }
+
+    // NOTE: Code-specific equation. S is linear in m_cw, so a sign change
+    //       between empty and full has one crossover:
+    //         V_cross = m_cap·g·S_empty / (g·S_empty - g·S_full) / ρ_water
+    std::string unstable_range_str = "at every CW volume";
+    if ((empty < 0.0) != (full < 0.0)) {
+        const double crossover = cap * empty / (empty - full)
+                                 / Motion::kWaterDensity;
+        unstable_range_str = std::string(empty < 0.0 ? "above " : "below ")
+                             + Motion::FormatNum(crossover) + " L";
+    }
+    logger_->Warn("Arm model is unstable " + unstable_range_str
+                  + " (g*S >= 0): " + values + "; check the calibration");
+
+    return false;
+}
+
+/**
+ * @brief Replaces the friction model.
+ *
+ * @param model New friction model
+ */
+void Libra2MotionController::SetFrictionModel(
+    const Motion::FrictionModel& model) {
+    friction_coulomb_ = model.coulomb;
+    friction_viscous_ = model.viscous;
+    friction_model_ = model;
+}
+
+/**
  * @brief Checks whether an arm model is available (calibrated or loaded).
  */
 bool Libra2MotionController::IsArmCalibrated() const {
@@ -459,22 +516,10 @@ double Libra2MotionController::LevelTorqueAtExtension() const {
  * @note Uses Eq. 34 at the measured angle (near 0), which reduces to Eq. 31:
  *         τ_g1,0 = τ_meas(0) - m_cw·g·r_P
  *
- * @see Libra2MotionController::FinishLevelCalibration
+ * @see Libra2Calibrator::SolveLevelCalibration
  */
 bool Libra2MotionController::StartLevelCalibration() {
     const std::scoped_lock lock(mutex_);
-
-    if (!cw_model_.IsValid()) {
-        logger_->Error("Can't calibrate: invalid CW model ("
-                       + cw_model_.GetError() + ")");
-        return false;
-    }
-    if (!arm_model_) {
-        logger_->Warn("Can't calibrate: missing required arm hang torque "
-                      "(m_arm*h_1*g) from a two-angle (or loaded) calibration");
-        return false;
-    }
-
     return calibrator_.StartLevelCalibration();
 }
 
@@ -487,18 +532,11 @@ bool Libra2MotionController::StartLevelCalibration() {
  * @note From Eq. 35c:
  *         τ_g1,0 = (τ_g1(θ_a)·sinθ_b - τ_g1(θ_b)·sinθ_a) / sin(θ_b - θ_a)
  *
- * @see Libra2MotionController::FinishTwoAngleCalibration
+ * @see Libra2Calibrator::SolveTwoAngleCalibration
  */
 bool Libra2MotionController::StartTwoAngleCalibration(const double& angle_a,
                                                       const double& angle_b) {
     const std::scoped_lock lock(mutex_);
-
-    if (!cw_model_.IsValid()) {
-        logger_->Error("Can't calibrate: invalid CW model ("
-                       + cw_model_.GetError() + ")");
-        return false;
-    }
-
     return calibrator_.StartTwoAngleCalibration(angle_a, angle_b);
 }
 
@@ -578,134 +616,46 @@ std::string Libra2MotionController::GetCalibrationProgress() const {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Applies a given calibration.
+ * @brief Applies a successful calibration's results and ends it.
  *
- * @param output Calibrator's output
+ * @param output Calibrator's output this cycle
+ *
+ * @note Only one calibration runs at a time, so at most one result is set.
  */
 void Libra2MotionController::ApplyCalibrationResults(
     const Libra2Calibrator::Output& output) {
-    if (output.level_sample) {
-        FinishLevelCalibration(*output.level_sample);
+    if (output.success_msg.empty()) {
+        return;  // no calibration succeeded this cycle
     }
-    if (output.two_angle_samples) {
-        FinishTwoAngleCalibration(output.two_angle_samples->first,
-                                  output.two_angle_samples->second);
+
+    std::string note;
+    if (output.arm_model) {
+        arm_model_ = *output.arm_model;
+        if (!CheckStability(output.arm_model->hang_torque)) {
+            note = " (UNSTABLE; see log)";
+        }
     }
+
     if (output.friction) {
-        FinishFrictionCalibration(*output.friction);
+        SetFrictionModel(*output.friction);
+        LogArmModelError(*output.friction);
     }
+
+    calibrator_.FinishCalibration(true, output.success_msg + note);
 }
 
 /**
- * @brief Solves the arm model from a level sample and applies it.
+ * @brief Logs how far the arm model is from the friction sweeps' holding
+ *        torques.
  *
- * @param sample Averaged sample with the arm level
- *
- * @note Uses Eq. 34 with the current arm hang torque (from a two-angle or
- *       loaded calibration), since one sample can't separate the two arm
- *       terms. τ_g1,0 is converted to min. ETA extension (see
- *       `LevelTorqueAtExtension()`).
- *
- * @see Libra2Model::ArmLevelTorque Libra2Model::EtaMomentChange
- */
-void Libra2MotionController::FinishLevelCalibration(
-    const Motion::RestSample& sample) {
-    if (std::abs(sample.angle) > Motion::kMaxLevelAngle) {
-        calibrator_.FinishCalibration(false,
-                                      "arm is not level (theta="
-                                          + Motion::FormatNum(sample.angle)
-                                          + " rad)");
-        return;
-    }
-
-    // Eq. 34 with current m_arm·h_1·g
-    const double hang_torque = arm_model_->hang_torque;
-    const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(sample),
-                                                   sample.angle, hang_torque);
-    if (!level) {
-        calibrator_.FinishCalibration(false, "cos(theta) too small");
-        return;
-    }
-
-    Motion::ArmModel arm;
-    arm.source = "level";
-    arm.cw_model = cw_model_.GetParams();
-    // Convert to min. ETA extension (Eq. 44)
-    arm.level_torque = *level
-                       + (Motion::kGrav
-                          * Libra2Model::EtaMomentChange(eta_extension_));
-    arm.hang_torque = hang_torque;
-    arm_model_ = arm;
-
-    calibrator_.FinishCalibration(true, "Level calibration succeeded: τ_g1,0="
-                                            + Motion::FormatNum(arm.level_torque)
-                                            + " Nm"
-                                            + (eta_extension_ > 0.0
-                                                   ? " (at min. extension)"
-                                                   : "")
-                                            + ", m_arm*h_1*g="
-                                            + Motion::FormatNum(arm.hang_torque)
-                                            + " Nm");
-}
-
-/**
- * @brief Solves the arm model from the samples at both angles and applies it.
- *
- * @param sample_a Averaged sample at the first angle
- * @param sample_b Averaged sample at the second angle
- *
- * @note τ_g1,0 is converted to min. ETA extension (see
- *       `LevelTorqueAtExtension()`).
- *
- * @see Libra2Model::SolveTwoAngle Libra2Model::EtaMomentChange
- */
-void Libra2MotionController::FinishTwoAngleCalibration(
-    const Motion::RestSample& sample_a, const Motion::RestSample& sample_b) {
-    // Separate statements so samples log in order (a, b)
-    const double arm_torque_a = SampleToArmTorque(sample_a);
-    const double arm_torque_b = SampleToArmTorque(sample_b);
-
-    // Eq. 35 with measured angles
-    auto arm = Libra2Model::SolveTwoAngle(arm_torque_a, sample_a.angle,
-                                          arm_torque_b, sample_b.angle);
-    if (!arm) {
-        calibrator_.FinishCalibration(false,
-                                      "measured angles too close together");
-        return;
-    }
-
-    arm->source = "two-angle";
-    arm->cw_model = cw_model_.GetParams();
-    // Convert to min. ETA extension (Eq. 44)
-    arm->level_torque += Motion::kGrav
-                         * Libra2Model::EtaMomentChange(eta_extension_);
-    arm_model_ = arm;
-    const bool stable = CheckStability(arm->hang_torque);
-
-    calibrator_.FinishCalibration(
-        true, "Two-angle calibration succeeded: τ_g1,0="
-                  + Motion::FormatNum(arm->level_torque) + " Nm"
-                  + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
-                  + ", m_arm*h_1*g=" + Motion::FormatNum(arm->hang_torque)
-                  + " Nm" + (stable ? "" : " (UNSTABLE; see log)"));
-}
-
-/**
- * @brief Applies a fitted friction model, and checks the arm model against the
- *        sweeps' holding torques.
- *
- * @param model Friction model from the calibrator
+ * @param model Friction model from the calibrator, with its sweep data
  *
  * @note Each bin's holding torque should equal -τ_ext,g(θ) at its center, so
  *       the model error per speed is the bins' mean of:
  *         holding + τ_ext,g(θ_bin)
  */
-void Libra2MotionController::FinishFrictionCalibration(
-    const Motion::FrictionModel& model) {
-    friction_coulomb_ = model.coulomb;
-    friction_viscous_ = model.viscous;
-    friction_model_ = model;
-
+void Libra2MotionController::LogArmModelError(
+    const Motion::FrictionModel& model) const {
     if (arm_model_ && cw_model_.IsValid()) {
         const double cw_mass = Libra2Model::CwMass(model.volume);
 
@@ -723,95 +673,6 @@ void Libra2MotionController::FinishFrictionCalibration(
         }
         logger_->Debug(msg);
     }
-
-    calibrator_.FinishCalibration(true,
-                                  "Friction calibration succeeded: tau_c="
-                                      + Motion::FormatNum(model.coulomb)
-                                      + " Nm, b="
-                                      + Motion::FormatNum(model.viscous)
-                                      + " Nm*s/rad (fit RMS "
-                                      + Motion::FormatNum(model.residual_rms)
-                                      + " Nm)");
-}
-
-/**
- * @brief Converts an averaged rest sample into the arm's own gravitational
- *        torque (Nm).
- *
- * @param sample Averaged measurements
- *
- * @note At rest, measured torque is the opposite of actual actuator torque, per
- *       Eq. 19b. Using Eq. 29a removes the CW torque (Eq. 29b'), and with
- *       Eq. 28 for CW mass:
- *         τ_meas(θ) = -τ_actuator
- *         τ_g2(θ) = m_cw·g·(r_P·cosθ + q_P·sinθ)
- *         τ_g1(θ) = τ_meas(θ) - τ_g2(θ)
- */
-double Libra2MotionController::SampleToArmTorque(
-    const Motion::RestSample& sample) const {
-    const double cw_mass = Libra2Model::CwMass(sample.volume);
-    const double cw_torque = Motion::kGrav
-                             * ((cw_model_.Moment(cw_mass)
-                                 * std::cos(sample.angle))
-                                + (cw_model_.HangMoment(cw_mass)
-                                   * std::sin(sample.angle)));
-    const double arm_torque = -sample.torque - cw_torque;
-
-    // Logging a sample's terms could help with troubleshooting where a
-    // calibration error comes from
-    logger_->Debug("Calibration sample: θ="
-                   + Motion::FormatRadAsDeg(sample.angle)
-                   + " deg, τ_actuator=" + Motion::FormatNum(sample.torque)
-                   + " Nm, V=" + Motion::FormatNum(sample.volume)
-                   + " L, τ_g2=" + Motion::FormatNum(cw_torque)
-                   + " Nm, τ_g1=" + Motion::FormatNum(arm_torque) + " Nm");
-
-    return arm_torque;
-}
-
-/**
- * @brief Checks whether the arm is stable at every possible CW volume.
- *
- * @param arm_hang_torque Arm hang torque, m_arm·h_1·g (Nm)
- *
- * @note Stable while the numerator g·S of Eq. 26c' is negative (Eq. 27'):
- *         g·S = m_arm·h_1·g + m_cw·g·q_P
- *
- *       S is linear in m_cw, so checking only empty and full covers every
- *       volume.
- */
-bool Libra2MotionController::CheckStability(const double& arm_hang_torque) {
-    const auto stability_torque = [&](const double& cw_mass) {
-        return arm_hang_torque
-               + (Motion::kGrav * cw_model_.HangMoment(cw_mass));
-    };
-
-    const double cap = cw_model_.GetCapacityMass();
-    const double empty = stability_torque(0.0);
-    const double full = stability_torque(cap);
-
-    const std::string values = Motion::FormatNum(empty) + " Nm empty, "
-                               + Motion::FormatNum(full) + " Nm full";
-    if (std::max(empty, full) < 0.0) {
-        logger_->Info("Arm model is stable at all CW volumes (g*S < 0): "
-                      + values);
-        return true;
-    }
-
-    // NOTE: Code-specific equation. S is linear in m_cw, so a sign change
-    //       between empty and full has one crossover:
-    //         V_cross = m_cap·g·S_empty / (g·S_empty - g·S_full) / ρ_water
-    std::string unstable_range_str = "at every CW volume";
-    if ((empty < 0.0) != (full < 0.0)) {
-        const double crossover = cap * empty / (empty - full)
-                                 / Motion::kWaterDensity;
-        unstable_range_str = std::string(empty < 0.0 ? "above " : "below ")
-                             + Motion::FormatNum(crossover) + " L";
-    }
-    logger_->Warn("Arm model is unstable " + unstable_range_str
-                  + " (g*S >= 0): " + values + "; check the calibration");
-
-    return false;
 }
 
 //------------------------------------------------------------------------------
@@ -892,9 +753,7 @@ bool Libra2MotionController::LoadCalibrationRecord(
             + Motion::FormatNum(friction_viscous_) + " -> "
             + Motion::FormatNum(record.friction->viscous) + " Nm*s/rad");
 
-        friction_coulomb_ = record.friction->coulomb;
-        friction_viscous_ = record.friction->viscous;
-        friction_model_ = record.friction;
+        SetFrictionModel(*record.friction);
     }
     return true;
 }
@@ -1011,7 +870,7 @@ Motion::Libra2Command Libra2MotionController::Update(
                    ? std::optional<double>(Libra2Model::CwMass(*cw_volume_))
                    : std::nullopt;
 
-    const Libra2Calibrator::PitchCycle cycle{
+    const Libra2Calibrator::Measurements measurements{
         dt, angle, actual_vel, actual_torque, trajectory_active, cw_volume_,
     };
     const bool calibrating = calibrator_.IsRunning();
@@ -1054,14 +913,14 @@ Motion::Libra2Command Libra2MotionController::Update(
         // [CALIB] Friction sweep: no throttle or CW command necessary
         command.trajectory_rate = 1.0;
         command.cw_command = Motion::CwCommand::kIdle;
-        calibrator_.Update(cycle);
+        calibrator_.Update(measurements);
 
     } else if (!arm_free) {
         if (calibrating) {
             // [CALIB] Arm calibration: CW idle so samples share the same volume
             command.trajectory_rate = 1.0;
             command.cw_command = Motion::CwCommand::kIdle;
-            calibrator_.Update(cycle);
+            calibrator_.Update(measurements);
         } else {
             // [MODE] Tandem/Holding: throttle torque
             const auto direction = CwDirection(actual_torque);

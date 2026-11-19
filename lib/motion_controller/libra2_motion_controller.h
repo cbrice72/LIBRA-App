@@ -111,6 +111,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     // --- Arm Model ---
 
+    bool CheckStability(const double& arm_hang_torque);
+    void SetFrictionModel(const Motion::FrictionModel& model);
+
     [[nodiscard]] double ComputeNetGravTorque(const double& angle,
                                               const double& cw_mass) const;
     [[nodiscard]] double ModelFeedforward(const double& angle,
@@ -123,15 +126,7 @@ class Libra2MotionController : public AbstractMotionController {
     // --- Calibration Results ---
 
     void ApplyCalibrationResults(const Libra2Calibrator::Output& output);
-
-    void FinishLevelCalibration(const Motion::RestSample& sample);
-    void FinishTwoAngleCalibration(const Motion::RestSample& sample_a,
-                                   const Motion::RestSample& sample_b);
-    void FinishFrictionCalibration(const Motion::FrictionModel& model);
-
-    [[nodiscard]] double SampleToArmTorque(
-        const Motion::RestSample& sample) const;
-    bool CheckStability(const double& arm_hang_torque);
+    void LogArmModelError(const Motion::FrictionModel& model) const;
 
     // --- Control Cycle ---
 
