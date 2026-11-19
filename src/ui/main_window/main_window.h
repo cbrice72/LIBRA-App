@@ -287,6 +287,7 @@ class MainWindow : public QMainWindow {
     void UpdateModeControls();
 #if LIBRA_VERSION == 2
     void UpdateMotionControls();
+    void UpdateMotionStatus();
 #endif
 
     // --- Helper Functions (arm.cpp) ---
@@ -375,6 +376,7 @@ class MainWindow : public QMainWindow {
 
     std::shared_ptr<Libra2MotionController> motion_controller_;  // pitch joint
     bool calibration_running_{false};
+    bool calibration_status_shown_{false};  // step/outcome on motion status
 
     // ETA extension estimate
     /*

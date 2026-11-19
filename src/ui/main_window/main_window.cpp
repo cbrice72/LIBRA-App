@@ -35,8 +35,6 @@
 constexpr int kPrecision = 1;     // i.e., "0.1"
 constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
 
-constexpr const char* kIdleText = "Idle";  // state/status with nothing running
-
 //------------------------------------------------------------------------------
 // !Local Helpers
 //------------------------------------------------------------------------------
@@ -136,7 +134,6 @@ MainWindow::MainWindow(QWidget* parent)
     HandleMovementStateChanged();
 #if LIBRA_VERSION == 2
     HandleCalibrationChanged(motion_controller_->GetCalibration());
-    ui_->l_motion_status_val->setText(kIdleText);
 #endif
 
     // Apply startup defaults (set in the .ui)
@@ -957,6 +954,23 @@ void MainWindow::UpdateMotionControls() {
     ui_->a_motion_calibration_load->setEnabled(!busy);
     ui_->a_motion_calibration_clear->setEnabled(!busy);
 }
+
+/**
+ * @brief Shows whether the motion controller is in use.
+ *
+ * @note Calibration steps and outcomes take precedence (see
+ *       `HandleCalibrationProgress()`).
+ */
+void MainWindow::UpdateMotionStatus() {
+    if (calibration_status_shown_) {
+        return;
+    }
+
+    // `arm_moving_` includes the motion controller's own moving state
+    const bool active = arm_moving_
+                        && Motion::UsesMotionController(motion_mode_);
+    ui_->l_motion_status_val->setText(active ? "Active" : "Idle");
+}
 #endif
 
 //------------------------------------------------------------------------------
@@ -1337,9 +1351,12 @@ void MainWindow::HandleMovementStateChanged() {
     }
 
     // UI widgets
-    ui_->l_arm_state_val->setText(arm_moving_ ? "Moving" : kIdleText);
+    ui_->l_arm_state_val->setText(arm_moving_ ? "Moving" : "Idle");
     ui_->l_arm_state_val->setStyleSheet(
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
+#if LIBRA_VERSION == 2
+    UpdateMotionStatus();
+#endif
 
     UpdateActuatorControls();
     UpdateModeControls();
@@ -1425,16 +1442,18 @@ void MainWindow::HandleCalibrationProgress(const QString& text,
     constexpr int kOutcomeTimeout = 10000;  // ms
 
     ui_->l_motion_status_val->setText(text);
+    calibration_status_shown_ = true;
 
     calibration_running_ = running;
     UpdateMotionControls();  // cancel only while running
 
     if (!running) {
-        // Back to idle, unless a newer status replaced the outcome
+        // Back to idle/active, unless a newer status replaced the outcome
         QTimer::singleShot(kOutcomeTimeout, this, [this, text]() {
-            // Guard against "Idle" replacing a newer status
+            // Guard against replacing a newer calibration's status
             if (ui_->l_motion_status_val->text() == text) {
-                ui_->l_motion_status_val->setText(kIdleText);
+                calibration_status_shown_ = false;
+                UpdateMotionStatus();
             }
         });
     }
