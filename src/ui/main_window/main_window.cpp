@@ -84,7 +84,7 @@ void RemoveUiElement(T*& element) {
  */
 QColor MotionModeColor(const Motion::MotionMode& mode) {
     switch (mode) {
-        case Motion::MotionMode::kFeedbackOnly:
+        case Motion::MotionMode::kReactiveOnly:
             return Color::ToQColor(Color::kOrange);  // CW only reacts
 #if LIBRA_VERSION == 2
         case Motion::MotionMode::kTandem:
@@ -357,7 +357,7 @@ void MainWindow::ConfigureUi() {
         add_mode(Motion::MotionMode::kManual,
                  "Actuators just follow a trajectory; CW must be manually "
                  "adjusted via fill/drain buttons");
-        add_mode(Motion::MotionMode::kFeedbackOnly,
+        add_mode(Motion::MotionMode::kReactiveOnly,
                  "Actuator trajectory slowed or paused while CW is "
                  "automatically balanced based on measured torque");
 #if LIBRA_VERSION == 2
