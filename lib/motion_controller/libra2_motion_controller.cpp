@@ -630,7 +630,7 @@ void Libra2MotionController::ApplyCalibrationResults(
 
     std::string note;
     if (output.arm_model) {
-        arm_model_ = *output.arm_model;
+        arm_model_ = output.arm_model;
         if (!CheckStability(output.arm_model->hang_torque)) {
             note = " (UNSTABLE; see log)";
         }

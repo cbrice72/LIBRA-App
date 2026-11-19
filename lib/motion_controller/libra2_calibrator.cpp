@@ -321,10 +321,10 @@ Libra2Calibrator::Libra2Calibrator(
     Logger& logger, const CwModel& cw_model,
     const std::optional<Motion::ArmModel>& arm_model,
     const double& eta_extension)
-    : logger_(&logger),
-      cw_model_(&cw_model),
-      arm_model_(&arm_model),
-      eta_extension_(&eta_extension) {}
+    : logger_(logger),
+      cw_model_(cw_model),
+      arm_model_(arm_model),
+      eta_extension_(eta_extension) {}
 
 //------------------------------------------------------------------------------
 // !Commands
@@ -332,27 +332,25 @@ Libra2Calibrator::Libra2Calibrator(
 
 /**
  * @brief Starts the level calibration (arm must already be level and at rest).
- *
- * @note Hands the solved arm model over as `Output::arm_model`.
  */
 bool Libra2Calibrator::StartLevelCalibration() {
-    if (!cw_model_->IsValid()) {
-        logger_->Error("Can't calibrate: invalid CW model ("
-                       + cw_model_->GetError() + ")");
+    if (!cw_model_.IsValid()) {
+        logger_.Error("Can't calibrate: invalid CW model ("
+                      + cw_model_.GetError() + ")");
         return false;
     }
-    if (!*arm_model_) {
-        logger_->Warn("Can't calibrate: missing required arm hang torque "
-                      "(m_arm*h_1*g) from a two-angle (or loaded) calibration");
+    if (!arm_model_) {
+        logger_.Warn("Can't calibrate: missing required arm hang torque "
+                     "(m_arm*h_1*g) from a two-angle (or loaded) calibration");
         return false;
     }
 
     if (IsRunning()) {
-        logger_->Warn("Calibration already running; ignoring level request");
+        logger_.Warn("Calibration already running; ignoring level request");
         return false;
     }
 
-    logger_->Info("Starting level calibration");
+    logger_.Info("Starting level calibration");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmSamplingLevel);
 
     return true;
@@ -363,43 +361,40 @@ bool Libra2Calibrator::StartLevelCalibration() {
  *
  * @param angle_a First angle, θ_a (rad)
  * @param angle_b Second angle, θ_b (rad)
- *
- * @note Hands the solved arm model over as `Output::arm_model`.
  */
 bool Libra2Calibrator::StartTwoAngleCalibration(const double& angle_a,
                                                 const double& angle_b) {
-    if (!cw_model_->IsValid()) {
-        logger_->Error("Can't calibrate: invalid CW model ("
-                       + cw_model_->GetError() + ")");
+    if (!cw_model_.IsValid()) {
+        logger_.Error("Can't calibrate: invalid CW model ("
+                      + cw_model_.GetError() + ")");
         return false;
     }
 
     if (IsRunning()) {
-        logger_->Warn(
-            "Calibration already running; ignoring two-angle request");
+        logger_.Warn("Calibration already running; ignoring two-angle request");
         return false;
     }
 
     // Validate params
     if (!std::isfinite(angle_a) || !std::isfinite(angle_b)
         || angle_a == angle_b) {
-        logger_->Warn("Two-angle calibration rejected: need two distinct "
-                      "finite angles (got a="
-                      + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Two-angle calibration rejected: need two distinct "
+                     "finite angles (got a="
+                     + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     } else if (std::abs(angle_a) > Motion::kMaxCalibrationAngle
                || std::abs(angle_b) > Motion::kMaxCalibrationAngle) {
-        logger_->Warn("Two-angle calibration rejected: need |angle| <= "
-                      + Motion::FormatNum(Motion::kMaxCalibrationAngle)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Two-angle calibration rejected: need |angle| <= "
+                     + Motion::FormatNum(Motion::kMaxCalibrationAngle)
+                     + " rad (got a=" + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     } else if (std::abs(angle_b - angle_a) < Motion::kMinAngleSeparation) {
-        logger_->Warn("Two-angle calibration rejected: need |b - a| >= "
-                      + Motion::FormatNum(Motion::kMinAngleSeparation)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Two-angle calibration rejected: need |b - a| >= "
+                     + Motion::FormatNum(Motion::kMinAngleSeparation)
+                     + " rad (got a=" + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     }
 
@@ -407,9 +402,9 @@ bool Libra2Calibrator::StartTwoAngleCalibration(const double& angle_a,
     angle_a_ = angle_a;
     angle_b_ = angle_b;
 
-    logger_->Info("Starting two-angle calibration: a="
-                  + Motion::FormatRadAsDeg(angle_a)
-                  + " deg, b=" + Motion::FormatRadAsDeg(angle_b) + " deg");
+    logger_.Info("Starting two-angle calibration: a="
+                 + Motion::FormatRadAsDeg(angle_a)
+                 + " deg, b=" + Motion::FormatRadAsDeg(angle_b) + " deg");
     BeginCalibrationStage(Motion::CalibrationStatus::kArmMovingToA);
 
     return true;
@@ -434,37 +429,37 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
                                                 const double& cw_volume,
                                                 const double& inertia) {
     if (IsRunning()) {
-        logger_->Warn("Calibration already running; ignoring friction request");
+        logger_.Warn("Calibration already running; ignoring friction request");
         return false;
     }
 
     // Validate params
     if (!(max_vel > 0.0) || !std::isfinite(max_vel)) {
-        logger_->Error("Friction calibration rejected: invalid max speed "
-                       + Motion::FormatNum(max_vel) + " rad/s");
+        logger_.Error("Friction calibration rejected: invalid max speed "
+                      + Motion::FormatNum(max_vel) + " rad/s");
         return false;
     }
 
     const double lo = std::min(angle_a, angle_b);
     const double hi = std::max(angle_a, angle_b);
     if (!std::isfinite(lo) || !std::isfinite(hi) || lo == hi) {
-        logger_->Warn("Friction calibration rejected: need two distinct "
-                      "finite angles (got a="
-                      + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Friction calibration rejected: need two distinct "
+                     "finite angles (got a="
+                     + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     } else if (std::abs(lo) > Motion::kMaxCalibrationAngle
                || std::abs(hi) > Motion::kMaxCalibrationAngle) {
-        logger_->Warn("Friction calibration rejected: need |angle| <= "
-                      + Motion::FormatNum(Motion::kMaxCalibrationAngle)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Friction calibration rejected: need |angle| <= "
+                     + Motion::FormatNum(Motion::kMaxCalibrationAngle)
+                     + " rad (got a=" + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     } else if (hi - lo < Motion::kFrictionMinWindow) {
-        logger_->Warn("Friction calibration rejected: need |b - a| >= "
-                      + Motion::FormatNum(Motion::kFrictionMinWindow)
-                      + " rad (got a=" + Motion::FormatNum(angle_a)
-                      + ", b=" + Motion::FormatNum(angle_b) + ")");
+        logger_.Warn("Friction calibration rejected: need |b - a| >= "
+                     + Motion::FormatNum(Motion::kFrictionMinWindow)
+                     + " rad (got a=" + Motion::FormatNum(angle_a)
+                     + ", b=" + Motion::FormatNum(angle_b) + ")");
         return false;
     }
 
@@ -475,12 +470,12 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
     const double min_window = (2.0 * margin)
                               + (kFrictionMinBins * kFrictionBinWidth);
     if (hi - lo < min_window) {
-        logger_->Warn("Friction calibration rejected: window is "
-                      + Motion::FormatRadAsDeg(hi - lo) + " deg, need at least "
-                      + Motion::FormatRadAsDeg(min_window) + " deg (the "
-                      + Motion::FormatRadAsDeg(max_vel) + " deg/s sweeps take "
-                      + Motion::FormatRadAsDeg(longest_ramp)
-                      + " deg at each end to speed up and slow down)");
+        logger_.Warn("Friction calibration rejected: window is "
+                     + Motion::FormatRadAsDeg(hi - lo) + " deg, need at least "
+                     + Motion::FormatRadAsDeg(min_window) + " deg (the "
+                     + Motion::FormatRadAsDeg(max_vel) + " deg/s sweeps take "
+                     + Motion::FormatRadAsDeg(longest_ramp)
+                     + " deg at each end to speed up and slow down)");
         return false;
     }
 
@@ -489,10 +484,10 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
     const double t_slowest_s = SweepTime(lo, hi, slowest,
                                          RampDist(slowest, inertia));
     if (t_slowest_s > kMoveTimeout) {
-        logger_->Warn("Friction calibration rejected: slowest sweep takes "
-                      + Motion::FormatNum(t_slowest_s) + " s (limit "
-                      + Motion::FormatNum(kMoveTimeout)
-                      + " s); use a smaller window");
+        logger_.Warn("Friction calibration rejected: slowest sweep takes "
+                     + Motion::FormatNum(t_slowest_s) + " s (limit "
+                     + Motion::FormatNum(kMoveTimeout)
+                     + " s); use a smaller window");
         return false;
     }
 
@@ -512,14 +507,14 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
                     + Motion::FormatRadAsDeg(max_vel * fraction);
     }
 
-    logger_->Info("Starting friction calibration: " + Motion::FormatRadAsDeg(lo)
-                  + " to " + Motion::FormatRadAsDeg(hi) + " deg at " + vels_deg
-                  + " deg/s");
-    logger_->Debug("Friction calibration samples "
-                   + Motion::FormatRadAsDeg(lo + margin) + " to "
-                   + Motion::FormatRadAsDeg(hi - margin) + " deg, CW idle at "
-                   + Motion::FormatNum(cw_volume) + " L, aborts above "
-                   + Motion::FormatNum(kMaxFrictionTorque) + " Nm");
+    logger_.Info("Starting friction calibration: " + Motion::FormatRadAsDeg(lo)
+                 + " to " + Motion::FormatRadAsDeg(hi) + " deg at " + vels_deg
+                 + " deg/s");
+    logger_.Debug("Friction calibration samples "
+                  + Motion::FormatRadAsDeg(lo + margin) + " to "
+                  + Motion::FormatRadAsDeg(hi - margin) + " deg, CW idle at "
+                  + Motion::FormatNum(cw_volume) + " L, aborts above "
+                  + Motion::FormatNum(kMaxFrictionTorque) + " Nm");
     BeginCalibrationStage(Motion::CalibrationStatus::kFrictionMovingToStart);
 
     return true;
@@ -547,7 +542,7 @@ void Libra2Calibrator::CancelCalibration() {
     calibration_progress_.clear();
 
     calibration_msg_ = "Calibration cancelled";
-    logger_->Info(calibration_msg_);
+    logger_.Info(calibration_msg_);
 }
 
 /**
@@ -572,10 +567,10 @@ void Libra2Calibrator::FinishCalibration(const bool& success,
 
     if (success) {
         calibration_msg_ = message;
-        logger_->Info(calibration_msg_);
+        logger_.Info(calibration_msg_);
     } else {
         calibration_msg_ = "Calibration failed: " + message;
-        logger_->Error(calibration_msg_);
+        logger_.Error(calibration_msg_);
     }
 }
 
@@ -715,7 +710,7 @@ void Libra2Calibrator::BeginCalibrationStage(
 
     calibration_progress_ = DescribeCalibrationStage();
     if (!calibration_progress_.empty()) {
-        logger_->Debug(calibration_progress_);
+        logger_.Debug(calibration_progress_);
     }
     t_progress_log_s_ = 0.0;
 }
@@ -822,7 +817,7 @@ void Libra2Calibrator::LogCalibrationProgress(const Measurements& measurements,
     }
     t_progress_log_s_ = 0.0;
 
-    logger_->Debug(
+    logger_.Debug(
         calibration_progress_ + " (still running at "
         + std::to_string(static_cast<int>(t_stage_s_)) + "/"
         + std::to_string(static_cast<int>(timeout)) + " s; angle="
@@ -930,7 +925,7 @@ void Libra2Calibrator::SolveLevelCalibration(const Motion::RestSample& sample) {
     }
 
     // Eq. 34 with current m_arm·h_1·g
-    const double hang_torque = (*arm_model_)->hang_torque;
+    const double hang_torque = arm_model_->hang_torque;
     const auto level = Libra2Model::ArmLevelTorque(SampleToArmTorque(sample),
                                                    sample.angle, hang_torque);
     if (!level) {
@@ -940,17 +935,17 @@ void Libra2Calibrator::SolveLevelCalibration(const Motion::RestSample& sample) {
 
     Motion::ArmModel arm;
     arm.source = "level";
-    arm.cw_model = cw_model_->GetParams();
+    arm.cw_model = cw_model_.GetParams();
     // Convert to min. ETA extension (Eq. 44)
     arm.level_torque = *level
                        + (Motion::kGrav
-                          * Libra2Model::EtaMomentChange(*eta_extension_));
+                          * Libra2Model::EtaMomentChange(eta_extension_));
     arm.hang_torque = hang_torque;
 
     output_.arm_model = arm;
     output_.success_msg = "Level calibration succeeded: τ_g1,0="
                           + Motion::FormatNum(arm.level_torque) + " Nm"
-                          + (*eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm.hang_torque) + " Nm";
 }
@@ -981,15 +976,15 @@ void Libra2Calibrator::SolveTwoAngleCalibration(
     }
 
     arm->source = "two-angle";
-    arm->cw_model = cw_model_->GetParams();
+    arm->cw_model = cw_model_.GetParams();
     // Convert to min. ETA extension (Eq. 44)
     arm->level_torque += Motion::kGrav
-                         * Libra2Model::EtaMomentChange(*eta_extension_);
+                         * Libra2Model::EtaMomentChange(eta_extension_);
 
     output_.arm_model = arm;
     output_.success_msg = "Two-angle calibration succeeded: τ_g1,0="
                           + Motion::FormatNum(arm->level_torque) + " Nm"
-                          + (*eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm->hang_torque) + " Nm";
 }
@@ -1011,20 +1006,19 @@ double Libra2Calibrator::SampleToArmTorque(
     const Motion::RestSample& sample) const {
     const double cw_mass = Libra2Model::CwMass(sample.volume);
     const double cw_torque = Motion::kGrav
-                             * ((cw_model_->Moment(cw_mass)
+                             * ((cw_model_.Moment(cw_mass)
                                  * std::cos(sample.angle))
-                                + (cw_model_->HangMoment(cw_mass)
+                                + (cw_model_.HangMoment(cw_mass)
                                    * std::sin(sample.angle)));
     const double arm_torque = -sample.torque - cw_torque;
 
     // Logging a sample's terms could help with troubleshooting where a
     // calibration error comes from
-    logger_->Debug("Calibration sample: θ="
-                   + Motion::FormatRadAsDeg(sample.angle)
-                   + " deg, τ_actuator=" + Motion::FormatNum(sample.torque)
-                   + " Nm, V=" + Motion::FormatNum(sample.volume)
-                   + " L, τ_g2=" + Motion::FormatNum(cw_torque)
-                   + " Nm, τ_g1=" + Motion::FormatNum(arm_torque) + " Nm");
+    logger_.Debug("Calibration sample: θ=" + Motion::FormatRadAsDeg(sample.angle)
+                  + " deg, τ_actuator=" + Motion::FormatNum(sample.torque)
+                  + " Nm, V=" + Motion::FormatNum(sample.volume)
+                  + " L, τ_g2=" + Motion::FormatNum(cw_torque)
+                  + " Nm, τ_g1=" + Motion::FormatNum(arm_torque) + " Nm");
 
     return arm_torque;
 }
@@ -1266,20 +1260,20 @@ std::optional<std::string> Libra2Calibrator::FinishFrictionVel(
         std::lround(100.0 * point.steady_fraction));
     run.points.push_back(point);
 
-    logger_->Debug("Friction speed " + std::to_string(run.vel_idx + 1) + "/"
-                   + std::to_string(kFrictionVelFractions.size()) + " done ("
-                   + Motion::FormatRadAsDeg(vel)
-                   + " deg/s):"
-                     "\n  drag:           "
-                   + Motion::FormatNum(point.drag) + " Nm (spread "
-                   + Motion::FormatNum(point.spread) + " Nm over "
-                   + std::to_string(point.n_bins)
-                   + " bins)"
-                     "\n  steady samples: "
-                   + std::to_string(steady_pct)
-                   + "% of samples in the sampled range"
-                     "\n  holding torque: "
-                   + Motion::FormatNum(grav_sum / n) + " Nm (mean)");
+    logger_.Debug("Friction speed " + std::to_string(run.vel_idx + 1) + "/"
+                  + std::to_string(kFrictionVelFractions.size()) + " done ("
+                  + Motion::FormatRadAsDeg(vel)
+                  + " deg/s):"
+                    "\n  drag:           "
+                  + Motion::FormatNum(point.drag) + " Nm (spread "
+                  + Motion::FormatNum(point.spread) + " Nm over "
+                  + std::to_string(point.n_bins)
+                  + " bins)"
+                    "\n  steady samples: "
+                  + std::to_string(steady_pct)
+                  + "% of samples in the sampled range"
+                    "\n  holding torque: "
+                  + Motion::FormatNum(grav_sum / n) + " Nm (mean)");
 
     return std::nullopt;
 }
@@ -1311,8 +1305,8 @@ void Libra2Calibrator::FinishFrictionCalibration() {
 
     Motion::FrictionModel& model = *fit;
     if (model.viscous < 0.0) {
-        logger_->Warn("Fitted b is negative (" + Motion::FormatNum(model.viscous)
-                      + " Nm*s/rad), so friction looks flat; using b = 0");
+        logger_.Warn("Fitted b is negative (" + Motion::FormatNum(model.viscous)
+                     + " Nm*s/rad), so friction looks flat; using b = 0");
 
         model.viscous = 0.0;
         model.coulomb = std::accumulate(drags.begin(), drags.end(), 0.0)
@@ -1335,10 +1329,10 @@ void Libra2Calibrator::FinishFrictionCalibration() {
             return;  // nonsensical result
         }
 
-        logger_->Info(
-            "Fitted tau_c is negative (" + Motion::FormatNum(model.coulomb)
-            + " Nm) but within bin spread (" + Motion::FormatNum(noise)
-            + " Nm), so friction is negligible; using tau_c = 0");
+        logger_.Info("Fitted tau_c is negative ("
+                     + Motion::FormatNum(model.coulomb)
+                     + " Nm) but within bin spread (" + Motion::FormatNum(noise)
+                     + " Nm), so friction is negligible; using tau_c = 0");
 
         // Refit b through the origin
         double s_vv = 0.0;

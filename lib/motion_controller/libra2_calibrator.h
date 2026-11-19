@@ -194,10 +194,10 @@ class Libra2Calibrator {
 
     // Motion Controller's (not owned)
 
-    Logger* logger_;
-    const CwModel* cw_model_;
-    const std::optional<Motion::ArmModel>* arm_model_;  // current, if any
-    const double* eta_extension_;  // from min. extension (m)
+    Logger& logger_;
+    const CwModel& cw_model_;
+    const std::optional<Motion::ArmModel>& arm_model_;  // current, if any
+    const double& eta_extension_;  // from min. extension (m)
 
     // Calibration Metadata
 
