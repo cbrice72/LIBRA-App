@@ -3,7 +3,7 @@
  * @brief  Physical approximation of LIBRA-II (CW and arm gravity); header file.
  *
  * @note   Equation numbers (Eq. ##) refer to the notebook scans in
- *         `LIBRA Archive/2026-10-02 LIBRA-II Controller Equations/`.
+ *         `LIBRA Archive/LIBRA-II/2026-10-02 Controller Equations/`.
  *         All values are in joint space (positive pitch = arm up).
  *
  * @author Christian Brice
