@@ -13,7 +13,8 @@
 
 // Other Library Headers
 #ifdef BUILD_WITH_ROS2
-# include <rclcpp/rclcpp.hpp>  // ROS2 Core
+# include <rclcpp/rclcpp.hpp>                // ROS2 Core
+# include <sensor_msgs/msg/joint_state.hpp>  // ROS2 Messages
 #endif
 
 // Project Headers
@@ -94,4 +95,9 @@ class EposThread : public AbstractActuatorThread
 
     int target_inc_{0};  // in encoder increments, not degrees
     int last_target_inc_{0};
+
+#ifdef BUILD_WITH_ROS2
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr state_pub_;
+    sensor_msgs::msg::JointState state_msg_;  // reused for efficiency
+#endif
 };

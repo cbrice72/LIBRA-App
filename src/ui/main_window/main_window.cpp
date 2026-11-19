@@ -17,6 +17,10 @@
 #include <QMessageBox>     // Qt::Widgets
 #include <QPalette>        // Qt::Gui
 #include <QSignalBlocker>  // Qt::Core
+#ifdef BUILD_WITH_ROS2
+# include <rclcpp/rclcpp.hpp>                // ROS2 Core
+# include <sensor_msgs/msg/joint_state.hpp>  // ROS2 Messages
+#endif
 
 // Project Headers
 #include "colors.h"
@@ -36,6 +40,11 @@ constexpr int kPrecision = 1;     // i.e., "0.1"
 constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
 
 constexpr const char* kIdleText = "Idle";  // state/status with nothing running
+
+#ifdef BUILD_WITH_ROS2
+// Same rate as the actuators, so TF through mocked joints stays fresh
+constexpr int kMockJointPeriodMs = 10;  // 100 Hz
+#endif
 
 //------------------------------------------------------------------------------
 // !Local Helpers
@@ -803,6 +812,41 @@ void MainWindow::InitializeThreads() {
             epos_thread_, &EposThread::deleteLater);  // deallocate
 
     epos_thread_->start();
+#endif
+
+#ifdef BUILD_WITH_ROS2
+    // ========== Mocked Joints ==========
+
+    // Joints without an actuator interface still go to /joint_states, so ROS2
+    // nodes see the whole robot
+    auto node = rclcpp::Node::make_shared("mock_joint_node");
+    auto publisher =
+        node->create_publisher<sensor_msgs::msg::JointState>(Joint::kStatesTopic,
+                                                             10);
+
+    sensor_msgs::msg::JointState mock_joints;
+# if LIBRA_VERSION == 1
+    mock_joints.name = {"Static-Manip"};  // immobile
+# elif LIBRA_VERSION == 2
+    mock_joints.name = {"ETA"};  // extension entered via the menu (m)
+# endif
+    mock_joints.position = {0.0};
+
+    auto* mock_joint_timer = new QTimer(this);
+    mock_joint_timer->setTimerType(Qt::PreciseTimer);
+    mock_joint_timer->setInterval(kMockJointPeriodMs);
+
+    // NOTE: The connection keeps the node, publisher, and message alive
+    connect(mock_joint_timer, &QTimer::timeout,  // publish mocked joints
+            this, [=, msg = std::move(mock_joints)]() mutable {
+                msg.header.stamp = node->now();
+# if LIBRA_VERSION == 2
+                msg.position[0] = motion_controller_->GetEtaExtension();
+# endif
+                publisher->publish(msg);
+            });
+
+    mock_joint_timer->start();
 #endif
 }
 

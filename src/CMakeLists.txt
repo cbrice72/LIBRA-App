@@ -75,6 +75,11 @@ target_link_libraries(
     PRIVATE Qt${QT_VERSION_MAJOR}::Widgets
 )
 
+if(BUILD_WITH_ROS2)
+    # ROS2 nodes owned by the UI (mocked joints)
+    ament_target_dependencies(libra_app_qt PUBLIC rclcpp sensor_msgs)
+endif()
+
 # Specify platform-specific properties
 # cmake-format: off
 set_target_properties(

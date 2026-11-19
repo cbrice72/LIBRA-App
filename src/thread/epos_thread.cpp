@@ -50,6 +50,7 @@ constexpr double kSlewGearReduction = static_cast<double>(kSlewRingTeeth)
 
 constexpr int kDegPerRotation = 360;
 constexpr int kSecPerMin = 60;
+constexpr double kDegToRad = M_PI / 180.0;
 
 // NOTE: In the following conversions, encoder resolution is multiplied by 4
 //       because it is a quadrature encoder (see EPOS4 Firmware Specification
@@ -140,6 +141,16 @@ EposThread::EposThread(QObject* parent, std::string device_name,
     logger_ = std::make_unique<QtLogger>("epos_manager", debug_mode_);
 #endif
     logger_->Debug("Initializing EposThread");
+
+#ifdef BUILD_WITH_ROS2
+    // Initialize ROS2 components
+    state_pub_ =
+        this->create_publisher<sensor_msgs::msg::JointState>(Joint::kStatesTopic,
+                                                             10);
+    state_msg_.name = {Joint::NameEnumToString(Joint::Name::kYaw)};
+    state_msg_.position.resize(1);
+    state_msg_.velocity.resize(1);
+#endif
 
     // (nothing else to do here; waits until QThread::start() is called)
 }
@@ -375,6 +386,18 @@ void EposThread::run() {
         }
 
         emit ReportPower(GetPower(), type_);
+
+#ifdef BUILD_WITH_ROS2
+        // Make actuator state info available to other ROS2 nodes
+        const auto to_joint_rad = [](const double& actuator_deg) {
+            return Joint::ActuatorToJointSimple(Joint::Name::kYaw, actuator_deg)
+                   * kDegToRad;
+        };
+        state_msg_.header.stamp = this->now();
+        state_msg_.position[0] = to_joint_rad(a_pos * kIncToDeg);
+        state_msg_.velocity[0] = to_joint_rad(a_vel_ * kRpmToDegs);
+        state_pub_->publish(state_msg_);
+#endif
 
         // Report miscellaneous statuses in one batch
         telemetry = GetTelemetry();

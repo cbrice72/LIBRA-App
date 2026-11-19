@@ -271,16 +271,10 @@ HebiThread::HebiThread(QObject* parent,
 
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
-    state_pub_ = this->create_publisher<msgJointState>("/joint_states", 10);
+    state_pub_ = this->create_publisher<msgJointState>(Joint::kStatesTopic, 10);
     target_pub_ = this->create_publisher<msgJointState>("/joint_targets", 10);
 
-    auto hebi_names = Joint::GetHebiStrings();
-# if LIBRA_VERSION == 1
-    // NOTE: this doesn't belong here, but until we replace either of LIBRA-I's
-    //       or LIBRA-II's static joint with something else, this is the easiest
-    //       way to get it into the ROS2 message.
-    hebi_names.emplace_back("Static-Manip");
-# endif
+    const auto hebi_names = Joint::GetHebiStrings();
 
     // One entry per joint name
     for (auto* msg : {&state_msg_, &target_msg_}) {
@@ -1200,17 +1194,6 @@ void HebiThread::PublishState() {
         target_msg_.velocity[i] = command_vel_map.at(joint) * kDegToRad;
         target_msg_.effort[i] = command_eff_map.at(joint);
     }
-
-# if LIBRA_VERSION == 1
-    // TODO: temporary static manipulator joint
-    state_msg_.position[n_actuators_] = 0.0;
-    state_msg_.velocity[n_actuators_] = 0.0;
-    state_msg_.effort[n_actuators_] = 0.0;
-
-    target_msg_.position[n_actuators_] = 0.0;
-    target_msg_.velocity[n_actuators_] = 0.0;
-    target_msg_.effort[n_actuators_] = 0.0;
-# endif
 
     state_pub_->publish(state_msg_);
     target_pub_->publish(target_msg_);
