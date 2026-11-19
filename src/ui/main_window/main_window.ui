@@ -57,7 +57,7 @@
           <item row="0" column="0">
            <layout class="QVBoxLayout" name="vl_main_left">
             <property name="spacing">
-             <number>10</number>
+             <number>16</number>
             </property>
             <item>
              <layout class="QHBoxLayout" name="hl_main_header">
