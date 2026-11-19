@@ -48,8 +48,6 @@ namespace {
  *
  * @tparam T Any visual QObject type
  * @param element Widget or layout to remove
- *
- * @todo Simplify (cognitive complexity 30, limit 25).
  */
 template<typename T>
 void RemoveUiElement(T*& element) {
@@ -57,35 +55,8 @@ void RemoveUiElement(T*& element) {
         return;
     }
 
-    // To avoid duplicating code, define this lambda capable of handling both
-    // QWidgets and QLayouts (since they boil down to different QObjects)
-    auto remove_from_parent_layout = [](QObject* obj) {
-        if (!obj) {
-            return;
-        }
-
-        // All objects are eventually children of a QWidget, so this is allowed
-        if (auto* p = qobject_cast<QWidget*>(obj->parent())) {
-            if (auto* pl = p->layout()) {
-                // We must explicitly cast since indexOf() does not take QObjects
-                if (auto* w = qobject_cast<QWidget*>(obj)) {
-                    if (int i = pl->indexOf(w); i >= 0) {
-                        delete pl->takeAt(i);
-                    }
-                } else if (auto* l = qobject_cast<QLayout*>(obj)) {
-                    if (int i = pl->indexOf(l); i >= 0) {
-                        delete pl->takeAt(i);
-                    }
-                }
-            }
-        }
-    };
-
-    remove_from_parent_layout(element);
-
-    // Handle layouts
     if constexpr (std::is_base_of_v<QLayout, T>) {
-        // Recursively delete all children
+        // A layout doesn't own its widgets, so remove them too
         while (QLayoutItem* item = element->takeAt(0)) {
             if (auto* w = item->widget()) {
                 RemoveUiElement(w);
@@ -94,9 +65,15 @@ void RemoveUiElement(T*& element) {
             }
             delete item;
         }
+
+        // Free its space now rather than once it's deleted
+        if (auto* parent = qobject_cast<QLayout*>(element->parent())) {
+            parent->removeItem(element);
+        }
+    } else {
+        element->hide();  // hidden widgets take no layout space
     }
 
-    // Mark for deletion to reclaim visual space
     element->deleteLater();
     element = nullptr;
 }
