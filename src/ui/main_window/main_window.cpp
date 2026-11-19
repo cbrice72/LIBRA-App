@@ -277,7 +277,7 @@ void MainWindow::ConfigureUi() {
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
     RemoveUiElement(ui_->gl_eta_input);
-    RemoveUiElement(ui_->hl_actual_eta);
+    RemoveUiElement(ui_->gl_eta_output);
     RemoveUiElement(ui_->pb_release_pitch);
 
     RemoveUiElement(ui_->l_epos_telemetry);
