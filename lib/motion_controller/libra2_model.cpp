@@ -33,8 +33,7 @@ constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
 
 // - Spiral conduit
 constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
-// TODO: input after measuring
-constexpr double kEtaConduitMinLength = 0.0;  // L_conduit,min (m)
+constexpr double kEtaConduitMinLength = 0.64;       // L_conduit,min (m)
 
 // - Cables fed out with the conduit
 constexpr double kCameraCableMassPerLength = 0.0642;  // RealSense D456 (kg/m)
