@@ -577,6 +577,10 @@ void MainWindow::InitializeDeviceManagers() {
 
     connect(water_controller_, &WaterController::ReportPower,  // get power
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateFluidPower);
+#ifdef BUILD_WITH_ROS2
+    connect(water_controller_, &WaterController::ReportVolume,  // CW state
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateCwState);
+#endif
 
     // ========== Flow Controller ==========
 
@@ -747,6 +751,10 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorTelemetry);
     connect(hebi_thread_, &HebiThread::ReportPower,  // get power
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateActuatorPower);
+#ifdef BUILD_WITH_ROS2
+    connect(hebi_thread_, &HebiThread::ReportDiagnostics,  // torques
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelDiagnostics);
+#endif
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 

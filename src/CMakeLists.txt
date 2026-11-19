@@ -76,8 +76,10 @@ target_link_libraries(
 )
 
 if(BUILD_WITH_ROS2)
-    # ROS2 nodes owned by the UI (mocked joints)
-    ament_target_dependencies(libra_app_qt PUBLIC rclcpp sensor_msgs)
+    # ROS2 nodes owned by the UI (mocked joints; LIBRA-II: diagnostics)
+    ament_target_dependencies(
+        libra_app_qt PUBLIC rclcpp sensor_msgs libra_interfaces
+    )
 endif()
 
 # Specify platform-specific properties

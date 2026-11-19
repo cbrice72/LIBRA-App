@@ -11,6 +11,7 @@
 // C++ Standard Library Headers
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 // Other Library Headers
 #include <QStringList>  // Qt::Core
@@ -22,12 +23,20 @@
 /* --- TABLE OF CONTENTS ---
  * !Class Management
  * !Power
+ * !ROS2
  */
 
 // Power graph settings
 
 constexpr double kPowerSamplePeriod = 0.05;  // s (20 Hz)
 constexpr int kPowerPrecision = 1;           // i.e., "0.1" W
+
+#ifdef BUILD_WITH_ROS2
+// ROS2
+
+constexpr int kPublishPeriodMs = 10;  // same as actuator control loops (100 Hz)
+constexpr double kNone = std::numeric_limits<double>::quiet_NaN();  // unknown
+#endif
 
 namespace {
 
@@ -55,7 +64,11 @@ QStringList GetWindowLengths(const QComboBox* combo) {
  * @param parent Owning Qt widget
  */
 DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
-    : QWidget(parent), ui_(new Ui::DiagnosticsWidget) {
+    : QWidget(parent),
+#ifdef BUILD_WITH_ROS2
+      rclcpp::Node("diagnostics_node"),
+#endif
+      ui_(new Ui::DiagnosticsWidget) {
     ui_->setupUi(this);
 
     // ========== Power ==========
@@ -86,6 +99,35 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
             this, &DiagnosticsWidget::SamplePower);  // update graph & table
 
     power_timer_->start();
+
+#ifdef BUILD_WITH_ROS2
+    // ========== ROS2 ==========
+
+    diagnostics_pub_ = this->create_publisher<
+        libra_interfaces::msg::Diagnostics>("/libra/diagnostics", 10);
+    cw_state_pub_ = this->create_publisher<libra_interfaces::msg::CwState>(
+        "/libra/cw_state", 10);
+
+    // Initialize messages
+    diagnostics_msg_.power_epos = kNone;
+    diagnostics_msg_.torque_meas = kNone;
+    diagnostics_msg_.torque_ext_g = kNone;
+
+    cw_state_msg_.cws.resize(Water::kSideCount);
+    for (auto& cw : cw_state_msg_.cws) {
+        cw.volume = cw.flow = cw.target_volume = kNone;
+    }
+
+    // Sources report at their own rates; publish their latest values
+    publish_timer_ = new QTimer(this);
+    publish_timer_->setTimerType(Qt::PreciseTimer);
+    publish_timer_->setInterval(kPublishPeriodMs);
+
+    connect(publish_timer_, &QTimer::timeout,          // every publish period,
+            this, &DiagnosticsWidget::PublishLatest);  // send latest values
+
+    publish_timer_->start();
+#endif
 }
 
 /**
@@ -158,3 +200,72 @@ void DiagnosticsWidget::SamplePower() {
     show(ui_->l_power_fluid_avg, fluid_avg);
     show(ui_->l_power_total_avg, actuators_avg + fluid_avg);
 }
+
+#ifdef BUILD_WITH_ROS2
+//------------------------------------------------------------------------------
+// !ROS2
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Stores the latest measured and predicted pitch torques, and the
+ *        counterweight (CW) volume the motion controller aims for.
+ *
+ * @param torque_meas Measured torque, τ_meas = -τ_actuator (Nm)
+ * @param torque_ext_g Predicted torque, τ_ext,g(θ) (Nm)
+ *                     cycle
+ * @param cw_volume_tgt Predictive CW target, V_bal(θ_tgt) (L)
+ *
+ * @note Only LIBRA-II has a motion controller, and its only CW is side A.
+ */
+void DiagnosticsWidget::UpdateModelDiagnostics(
+    const double& torque_meas, const std::optional<double>& torque_ext_g,
+    const std::optional<double>& cw_volume_tgt) {
+    diagnostics_msg_.torque_meas = torque_meas;
+    diagnostics_msg_.torque_ext_g = torque_ext_g.value_or(kNone);
+    cw_state_msg_.cws.at(static_cast<std::size_t>(Water::Side::kA))
+        .target_volume = cw_volume_tgt.value_or(kNone);
+}
+
+/**
+ * @brief Stores a counterweight's (CW) latest volume and net flow rate.
+ *
+ * @param side Fluid system side of the CW
+ * @param volume CW volume, V (L)
+ * @param flow Net flow rate, V' (L/s); positive = filling
+ */
+void DiagnosticsWidget::UpdateCwState(const Water::Side& side,
+                                      const double& volume,
+                                      const double& flow) {
+    const auto i = static_cast<std::size_t>(side);
+    if (i >= cw_state_msg_.cws.size()) {
+        return;
+    }
+
+    auto& cw = cw_state_msg_.cws[i];
+    cw.volume = volume;
+    cw.flow = flow;
+}
+
+/**
+ * @brief Publishes the latest diagnostics and CW state.
+ */
+void DiagnosticsWidget::PublishLatest() {
+    const auto power = [this](const Actuator::Type& type) {
+        const auto it = actuator_power_.find(type);
+        return (it != actuator_power_.end()) ? it->second : kNone;
+    };
+
+    const rclcpp::Time stamp = this->now();
+
+    diagnostics_msg_.header.stamp = stamp;
+    diagnostics_msg_.power_hebi = power(Actuator::Type::kHebi);
+# if LIBRA_VERSION == 2
+    diagnostics_msg_.power_epos = power(Actuator::Type::kEpos);
+# endif
+    diagnostics_msg_.power_fluid = fluid_power_;
+    diagnostics_pub_->publish(diagnostics_msg_);
+
+    cw_state_msg_.header.stamp = stamp;
+    cw_state_pub_->publish(cw_state_msg_);
+}
+#endif

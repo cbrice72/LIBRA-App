@@ -124,6 +124,9 @@ class HebiThread : public AbstractActuatorThread
     // NOTE: See AbstractActuatorThread for generic signals
 
     void ReportArmTorque(const std::optional<double>& theta);
+    void ReportDiagnostics(const double& torque_meas,
+                           const std::optional<double>& torque_ext_g,
+                           const std::optional<double>& cw_volume_tgt);
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
@@ -250,6 +253,9 @@ class HebiThread : public AbstractActuatorThread
 
     std::atomic<bool> diag_log_en_{false};  // periodic model log
     double t_diag_log_elapsed_s_{0.0};      // s since last log (for throttling)
+
+    // This cycle's model values (none = motion controller didn't run)
+    std::optional<Motion::Libra2Diagnostics> mc_diagnostics_;
 #endif
 
 #ifdef BUILD_WITH_ROS2

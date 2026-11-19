@@ -41,6 +41,7 @@ set(ROS_MSG_PACKAGES
     builtin_interfaces
     std_msgs
     sensor_msgs
+    libra_interfaces # LIBRA-ROS2-Tools
 )
 
 foreach(PKG ${ROS_MSG_PACKAGES})

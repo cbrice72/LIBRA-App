@@ -397,6 +397,8 @@ bool HebiThread::ExecuteMovement(std::chrono::duration<double> dt,
     const double dt_s = dt.count();
 
 #if LIBRA_VERSION == 2
+    mc_diagnostics_.reset();  // set again if the motion controller runs
+
     // Pitch control released (send nothing)
     if (pitch_released_) {
         SetControlOff(true);
@@ -781,6 +783,7 @@ std::optional<Motion::MotionCommand> HebiThread::RunMotionController(
     if (!Motion::UsesMotionController(motion_mode_)) {
         cmd.ff_torque.assign(Motion::kNumJoints, std::nullopt);
     }
+    mc_diagnostics_ = cmd.diagnostics;
 
     // Pass CW command to WaterController
     if (cmd.cw_command) {
@@ -1080,13 +1083,27 @@ void HebiThread::SendFeedback() {
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
                                             Actuator::Feedback::kActualPos),
                         Actuator::Feedback::kActualPos);
-    emit ReportFeedback(GetJointFeedbackMap(feedback_,
-                                            Actuator::Feedback::kActualTorque),
-                        Actuator::Feedback::kActualTorque);
+    const auto torque = GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kActualTorque);
+    emit ReportFeedback(torque, Actuator::Feedback::kActualTorque);
 
     // Report miscellaneous statuses in one batch
     emit ReportTelemetry(GetTelemetry(), type_);
     emit ReportPower(GetPower(), type_);
+
+    // Measured vs. predicted torque (Eq. 19b: τ_meas = -τ_actuator), and the CW
+    // volume the motion controller aims for (only LIBRA-II has one)
+    std::optional<double> torque_ext_g;
+    std::optional<double> cw_volume_tgt;
+#if LIBRA_VERSION == 2
+    const auto model = mc_diagnostics_.value_or(Motion::Libra2Diagnostics());
+    torque_ext_g = model.torque_ext_g;
+    if (model.cw_mass_tgt) {
+        cw_volume_tgt = *model.cw_mass_tgt / Motion::kWaterDensity;  // Eq. 28
+    }
+#endif
+    emit ReportDiagnostics(-torque.at(Joint::Name::kPitch), torque_ext_g,
+                           cw_volume_tgt);
 
 #ifdef BUILD_WITH_ROS2
     // Make actuator state info available to other ROS2 nodes
