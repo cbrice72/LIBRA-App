@@ -29,7 +29,10 @@
 
 constexpr double kSamplePeriod = 0.05;  // s (20 Hz)
 constexpr int kPowerPrecision = 1;      // i.e., "0.1" W
+constexpr int kEnergyPrecision = 2;     // i.e., "0.01" Wh
 constexpr int kTorquePrecision = 2;     // i.e., "0.01" Nm
+
+constexpr double kSecondsPerHour = 3600.0;
 
 namespace {
 
@@ -180,8 +183,9 @@ void DiagnosticsWidget::UpdateFluidPower(const double& power) {
 }
 
 /**
- * @brief Adds the latest power reading of each category to the graph, and shows
- *        them with their window averages in the table.
+ * @brief Adds the latest power reading of each category to the graph, shows
+ *        them with their window averages in the table, and adds them to the
+ *        energy total.
  */
 void DiagnosticsWidget::SamplePower() {
     // Graph
@@ -206,6 +210,19 @@ void DiagnosticsWidget::SamplePower() {
     SetLabelValue(ui_->l_power_fluid_avg, fluid_avg, kPowerPrecision);
     SetLabelValue(ui_->l_power_total_avg, actuators_avg + fluid_avg,
                   kPowerPrecision);
+
+    // Energy: each sample's power lasts one sample period
+    energy_ += (actuators + fluid_power_) * kSamplePeriod / kSecondsPerHour;
+    SetLabelValue(ui_->l_energy, energy_, kEnergyPrecision);
+}
+
+/**
+ * @brief Restarts the energy total from zero (e.g., at the start of an
+ *        experiment).
+ */
+void DiagnosticsWidget::on_pb_energy_clear_clicked() {
+    energy_ = 0.0;
+    SetLabelValue(ui_->l_energy, energy_, kEnergyPrecision);
 }
 
 //------------------------------------------------------------------------------

@@ -57,6 +57,11 @@ class DiagnosticsWidget : public QWidget {
     void SetTorqueLimits(const double& lower, const double& upper);
     void ClearTorques();
 
+  private slots:
+    // --- Power ---
+
+    void on_pb_energy_clear_clicked();
+
   private:
     // --- Helper Functions ---
 
@@ -71,6 +76,8 @@ class DiagnosticsWidget : public QWidget {
 
     std::unordered_map<Actuator::Type, double> actuator_power_;  // latest (W)
     double fluid_power_{0.0};                                    // latest (W)
+
+    double energy_{0.0};  // total since start or last clear (Wh)
 
     std::size_t actuators_series_{0};
     std::size_t fluid_series_{0};
