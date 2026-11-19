@@ -295,6 +295,264 @@
        </item>
       </layout>
      </widget>
+     <widget class="QWidget" name="tab_torque">
+      <attribute name="title">
+       <string>Torque</string>
+      </attribute>
+      <layout class="QVBoxLayout" name="vl_torque">
+       <item>
+        <layout class="QHBoxLayout" name="hl_torque_header">
+         <item>
+          <spacer name="h_spacer_torque_header">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QComboBox" name="cb_torque_window">
+           <property name="statusTip">
+            <string>Time span shown in the graph</string>
+           </property>
+           <property name="window_lengths_s" stdset="0">
+            <stringlist notr="true">
+             <string>30</string>
+             <string>120</string>
+             <string>600</string>
+             <string>1800</string>
+            </stringlist>
+           </property>
+           <item>
+            <property name="text">
+             <string>30 s</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>2 min</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>10 min</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>30 min</string>
+            </property>
+           </item>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="LineGraphWidget" name="lg_torque">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="minimumSize">
+          <size>
+           <width>250</width>
+           <height>150</height>
+          </size>
+         </property>
+         <property name="statusTip">
+          <string>Pitch torque, scaled to the window's min and max</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="hl_torque_values">
+         <item>
+          <layout class="QGridLayout" name="gl_torque_values">
+         <item row="0" column="0">
+          <widget class="QLabel" name="static_l_torque_unit">
+           <property name="text">
+            <string>(Nm)</string>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="1">
+          <widget class="QLabel" name="static_l_torque_measured">
+           <property name="text">
+            <string>Measured</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="0" column="2">
+          <widget class="QLabel" name="static_l_torque_model">
+           <property name="text">
+            <string>Model</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="0">
+          <widget class="QLabel" name="static_l_torque_now">
+           <property name="text">
+            <string>now</string>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="0">
+          <widget class="QLabel" name="static_l_torque_avg">
+           <property name="text">
+            <string>avg</string>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="1">
+          <widget class="QLabel" name="l_torque_measured_now">
+           <property name="minimumSize">
+            <size>
+             <width>55</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="statusTip">
+            <string>Latest measured pitch torque</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="1">
+          <widget class="QLabel" name="l_torque_measured_avg">
+           <property name="font">
+            <font>
+             <italic>true</italic>
+            </font>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>55</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="statusTip">
+            <string>Average over the shown window</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="1" column="2">
+          <widget class="QLabel" name="l_torque_model_now">
+           <property name="minimumSize">
+            <size>
+             <width>55</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="statusTip">
+            <string>Latest pitch torque predicted by the arm and CW model</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+         <item row="2" column="2">
+          <widget class="QLabel" name="l_torque_model_avg">
+           <property name="font">
+            <font>
+             <italic>true</italic>
+            </font>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>55</width>
+             <height>25</height>
+            </size>
+           </property>
+           <property name="statusTip">
+            <string>Average over the shown window</string>
+           </property>
+           <property name="text">
+            <string>...</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignmentFlag::AlignRight|Qt::AlignmentFlag::AlignTrailing|Qt::AlignmentFlag::AlignVCenter</set>
+           </property>
+          </widget>
+         </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="h_spacer_torque_values">
+           <property name="orientation">
+            <enum>Qt::Orientation::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="DotPlotWidget" name="dp_torque">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>90</width>
+             <height>90</height>
+            </size>
+           </property>
+           <property name="statusTip">
+            <string>Measured torque at the central joint (up = arm forward); rings = torque limits</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <spacer name="v_spacer_torque">
+         <property name="orientation">
+          <enum>Qt::Orientation::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>0</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+      </layout>
+     </widget>
     </widget>
    </item>
   </layout>
@@ -304,6 +562,11 @@
    <class>LineGraphWidget</class>
    <extends>QWidget</extends>
    <header>widgets/line_graph_widget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>DotPlotWidget</class>
+   <extends>QWidget</extends>
+   <header>widgets/dot_plot_widget.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

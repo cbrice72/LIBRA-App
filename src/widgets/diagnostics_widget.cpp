@@ -22,12 +22,14 @@
 /* --- TABLE OF CONTENTS ---
  * !Class Management
  * !Power
+ * !Torque
  */
 
-// Power graph settings
+// Graph settings
 
-constexpr double kPowerSamplePeriod = 0.05;  // s (20 Hz)
-constexpr int kPowerPrecision = 1;           // i.e., "0.1" W
+constexpr double kSamplePeriod = 0.05;  // s (20 Hz)
+constexpr int kPowerPrecision = 1;      // i.e., "0.1" W
+constexpr int kTorquePrecision = 2;     // i.e., "0.01" Nm
 
 namespace {
 
@@ -41,6 +43,45 @@ namespace {
  */
 QStringList GetWindowLengths(const QComboBox* combo) {
     return combo->property("window_lengths_s").toStringList();
+}
+
+/**
+ * @brief Links a combo box to a graph, allowing the user to choose the window
+ *        of data shown.
+ *
+ * @param combo Combo box listing window lengths
+ * @param graph Graph showing the chosen window
+ *
+ * @note The graph will always keep enough data for the longest window
+ */
+void ConfigureGraphWindow(QComboBox* combo, LineGraphWidget* graph) {
+    // Keep enough data for the longest window
+    double history_s = 0.0;
+    for (const auto& length : GetWindowLengths(combo)) {
+        history_s = std::max(history_s, length.toDouble());
+    }
+    graph->SetSampling(kSamplePeriod, history_s);
+
+    // Show the chosen window now and whenever the choice changes
+    auto set_window = [combo, graph](int index) {
+        graph->SetWindow(GetWindowLengths(combo).value(index).toDouble());
+    };
+    set_window(combo->currentIndex());
+    QObject::connect(combo, &QComboBox::currentIndexChanged,  // on change,
+                     graph, set_window);                      // update window
+}
+
+/**
+ * @brief Sets a table label to a value.
+ *
+ * @param label Table cell
+ * @param value Value to show; none = "..."
+ * @param precision Decimal places
+ */
+void SetLabelValue(QLabel* label, const std::optional<double>& value,
+                   const int& precision) {
+    label->setText(value ? QString::number(*value, 'f', precision)
+                         : QStringLiteral("..."));
 }
 
 }  // namespace
@@ -58,34 +99,53 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
     : QWidget(parent), ui_(new Ui::DiagnosticsWidget) {
     ui_->setupUi(this);
 
+    // NOTE: Prefer colors that aren't already used by buttons, etc. in the UI
+    const QString style = QStringLiteral("color: %1;");
+
     // ========== Power ==========
 
-    // Keep enough history for the longest window, and show the selected one
-    double history_s = 0.0;
-    for (const auto& length : GetWindowLengths(ui_->cb_power_window)) {
-        history_s = std::max(history_s, length.toDouble());
-    }
-    ui_->lg_power->SetSampling(kPowerSamplePeriod, history_s);
-    on_cb_power_window_currentIndexChanged(ui_->cb_power_window->currentIndex());
+    ConfigureGraphWindow(ui_->cb_power_window, ui_->lg_power);
 
-    // Prefer colors that aren't already used by buttons, etc. in the UI
     actuators_series_ = ui_->lg_power->AddSeries(
         Color::ToQColor(Color::kMagenta));
     fluid_series_ = ui_->lg_power->AddSeries(Color::ToQColor(Color::kBlue));
 
-    const QString style = QStringLiteral("color: %1;");
     ui_->static_l_power_actuators->setStyleSheet(style.arg(Color::kMagenta));
     ui_->static_l_power_fluid->setStyleSheet(style.arg(Color::kBlue));
 
+    // ========== Torque ==========
+
+    ConfigureGraphWindow(ui_->cb_torque_window, ui_->lg_torque);
+
+    torque_meas_series_ = ui_->lg_torque->AddSeries(
+        Color::ToQColor(Color::kOrange));
+    ui_->static_l_torque_measured->setStyleSheet(style.arg(Color::kOrange));
+    ui_->dp_torque->SetDotColor(Color::ToQColor(Color::kOrange));
+
+#if LIBRA_VERSION == 2
+    torque_model_series_ = ui_->lg_torque->AddSeries(
+        Color::ToQColor(Color::kLightBlue));
+    ui_->static_l_torque_model->setStyleSheet(style.arg(Color::kLightBlue));
+#else
+    // No arm model to compare against
+    ui_->static_l_torque_model->hide();
+    ui_->l_torque_model_now->hide();
+    ui_->l_torque_model_avg->hide();
+#endif
+
+    // ========== Sampling ==========
+
     // Sources report at their own rates; sample their latest values evenly
-    power_timer_ = new QTimer(this);
-    power_timer_->setInterval(
-        static_cast<int>(std::lround(kPowerSamplePeriod * 1000.0)));  // ms
+    sample_timer_ = new QTimer(this);
+    sample_timer_->setInterval(
+        static_cast<int>(std::lround(kSamplePeriod * 1000.0)));  // ms
 
-    connect(power_timer_, &QTimer::timeout,          // every sample period,
-            this, &DiagnosticsWidget::SamplePower);  // update graph & table
+    connect(sample_timer_, &QTimer::timeout,         // every sample period,
+            this, &DiagnosticsWidget::SamplePower);  // update graphs & tables
+    connect(sample_timer_, &QTimer::timeout,         // "
+            this, &DiagnosticsWidget::SampleTorque);
 
-    power_timer_->start();
+    sample_timer_->start();
 }
 
 /**
@@ -98,16 +158,6 @@ DiagnosticsWidget::~DiagnosticsWidget() {
 //------------------------------------------------------------------------------
 // !Power
 //------------------------------------------------------------------------------
-
-/**
- * @brief Sets the time span shown in the power graph.
- *
- * @param index Selected series
- */
-void DiagnosticsWidget::on_cb_power_window_currentIndexChanged(int index) {
-    ui_->lg_power->SetWindow(
-        GetWindowLengths(ui_->cb_power_window).value(index).toDouble());
-}
 
 /**
  * @brief Stores an actuator type's latest power reading.
@@ -148,13 +198,111 @@ void DiagnosticsWidget::SamplePower() {
     const double fluid_avg = ui_->lg_power->GetWindowMean(fluid_series_)
                                  .value_or(0.0);
 
-    auto show = [](QLabel* label, const double& power) {
-        label->setText(QString::number(power, 'f', kPowerPrecision));
-    };
-    show(ui_->l_power_actuators_now, actuators);
-    show(ui_->l_power_fluid_now, fluid_power_);
-    show(ui_->l_power_total_now, actuators + fluid_power_);
-    show(ui_->l_power_actuators_avg, actuators_avg);
-    show(ui_->l_power_fluid_avg, fluid_avg);
-    show(ui_->l_power_total_avg, actuators_avg + fluid_avg);
+    SetLabelValue(ui_->l_power_actuators_now, actuators, kPowerPrecision);
+    SetLabelValue(ui_->l_power_fluid_now, fluid_power_, kPowerPrecision);
+    SetLabelValue(ui_->l_power_total_now, actuators + fluid_power_,
+                  kPowerPrecision);
+    SetLabelValue(ui_->l_power_actuators_avg, actuators_avg, kPowerPrecision);
+    SetLabelValue(ui_->l_power_fluid_avg, fluid_avg, kPowerPrecision);
+    SetLabelValue(ui_->l_power_total_avg, actuators_avg + fluid_avg,
+                  kPowerPrecision);
+}
+
+//------------------------------------------------------------------------------
+// !Torque
+//------------------------------------------------------------------------------
+
+/**
+ * @brief Stores the latest measured pitch torque.
+ *
+ * @param torque Joint torque (Nm)
+ */
+void DiagnosticsWidget::UpdatePitchTorque(const double& torque) {
+    pitch_torque_ = torque;
+}
+
+#if LIBRA_VERSION == 1
+/**
+ * @brief Stores the latest measured roll torque.
+ *
+ * @param torque Joint torque (Nm)
+ */
+void DiagnosticsWidget::UpdateRollTorque(const double& torque) {
+    roll_torque_ = torque;
+}
+#elif LIBRA_VERSION == 2
+/**
+ * @brief Stores the latest pitch torque predicted by the motion controller.
+ *
+ * @param torque Joint torque (Nm); none = no prediction
+ */
+void DiagnosticsWidget::UpdateModelTorque(const std::optional<double>& torque) {
+    model_torque_ = torque;
+}
+#endif
+
+/**
+ * @brief Draws torque limits as rings centered on the origin.
+ *
+ * @param lower Lower limit (Nm)
+ * @param upper Upper limit (Nm)
+ */
+void DiagnosticsWidget::SetTorqueLimits(const double& lower,
+                                        const double& upper) {
+    ui_->dp_torque->SetRings({lower, upper});
+}
+
+/**
+ * @brief Adds the latest torques to the graph and table, and moves the dot.
+ *
+ * @note Dot: up = positive pitch torque (front-heavy); additionally, in LIBRA-I
+ *       left = positive roll torque (left-heavy).
+ */
+void DiagnosticsWidget::SampleTorque() {
+    // Graph
+#if LIBRA_VERSION == 1
+    ui_->lg_torque->AddSamples(
+        {pitch_torque_.value_or(LineGraphWidget::kNoData)});
+#elif LIBRA_VERSION == 2
+    ui_->lg_torque->AddSamples(
+        {pitch_torque_.value_or(LineGraphWidget::kNoData),
+         model_torque_.value_or(LineGraphWidget::kNoData)});
+#endif
+
+    // Table
+    SetLabelValue(ui_->l_torque_measured_now, pitch_torque_, kTorquePrecision);
+    SetLabelValue(ui_->l_torque_measured_avg,
+                  ui_->lg_torque->GetWindowMean(torque_meas_series_),
+                  kTorquePrecision);
+#if LIBRA_VERSION == 2
+    SetLabelValue(ui_->l_torque_model_now, model_torque_, kTorquePrecision);
+    SetLabelValue(ui_->l_torque_model_avg,
+                  ui_->lg_torque->GetWindowMean(torque_model_series_),
+                  kTorquePrecision);
+#endif
+
+    // Dot
+    std::optional<QPointF> dot;
+#if LIBRA_VERSION == 1
+    if (pitch_torque_ && roll_torque_) {
+        dot = QPointF(-*roll_torque_, *pitch_torque_);
+    }
+#elif LIBRA_VERSION == 2
+    if (pitch_torque_) {
+        dot = QPointF(0.0, *pitch_torque_);
+    }
+#endif
+    ui_->dp_torque->SetDot(dot);
+}
+
+/**
+ * @brief Resets all torque values.
+ */
+void DiagnosticsWidget::ClearTorques() {
+    pitch_torque_.reset();
+#if LIBRA_VERSION == 1
+    roll_torque_.reset();
+#elif LIBRA_VERSION == 2
+    model_torque_.reset();
+#endif
 }

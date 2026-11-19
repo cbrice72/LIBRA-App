@@ -68,6 +68,9 @@ class Libra2MotionController : public AbstractMotionController {
     [[nodiscard]] bool IsArmCalibrated() const;
     [[nodiscard]] Motion::Calibration GetCalibration() const;
 
+    [[nodiscard]] std::optional<double> PredictHoldingTorque(
+        const double& angle) const;
+
     // --- Calibration ---
 
     bool StartLevelCalibration();

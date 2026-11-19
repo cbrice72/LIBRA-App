@@ -1094,6 +1094,15 @@ void HebiThread::SendFeedback() {
     emit ReportTelemetry(GetTelemetry(), type_);
     emit ReportPower(GetPower(), type_);
 
+#if LIBRA_VERSION == 2
+    // Predicted here rather than in `RunMotionController()` so the model can be
+    // checked regardless of mode
+    const double pitch_angle = Joint::ActuatorToJointSimple(
+        Joint::Name::kPitch, feedback_->getPosition()[Actuator::Name::kPitch]);
+    emit ReportModelTorque(
+        motion_controller_->PredictHoldingTorque(pitch_angle));
+#endif
+
 #ifdef BUILD_WITH_ROS2
     // Make actuator state info available to other ROS2 nodes
     PublishState();

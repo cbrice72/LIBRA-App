@@ -754,6 +754,12 @@ void MainWindow::InitializeThreads() {
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 
+    connect(this, &MainWindow::UpdateReactiveCwBounds,  // torque limits
+            ui_->w_diagnostics, &DiagnosticsWidget::SetTorqueLimits);
+    const auto [cw_lower_bound,
+                cw_upper_bound] = hebi_thread_->GetReactiveCwBounds();
+    ui_->w_diagnostics->SetTorqueLimits(cw_lower_bound, cw_upper_bound);
+
 #if LIBRA_VERSION == 2
     connect(hebi_thread_, &HebiThread::PitchReleaseChanged,  // sync toggle
             this, &MainWindow::HandlePitchReleaseChanged);
@@ -761,6 +767,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleCalibrationChanged);
     connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
             this, &MainWindow::HandleCalibrationProgress);
+    connect(hebi_thread_, &HebiThread::ReportModelTorque,  // model torque
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelTorque);
 #endif
 
     // ArduinoManager slots
@@ -1204,6 +1212,10 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     UpdateActuatorControls();
     UpdateModeControls();
+
+    if (!connected) {
+        ui_->w_diagnostics->ClearTorques();
+    }
 }
 
 #if LIBRA_VERSION == 2
@@ -1277,6 +1289,20 @@ void MainWindow::HandleActuatorFeedback(
 
     if (initialize) {
         UpdateActuatorControls();  // targets may now be known
+    }
+
+    // Diagnostics
+    if (feedback_type == Actuator::Feedback::kActualTorque) {
+        const auto pitch = feedbacks.find(Joint::Name::kPitch);
+        if (pitch != feedbacks.end()) {
+            ui_->w_diagnostics->UpdatePitchTorque(pitch->second);
+        }
+#if LIBRA_VERSION == 1
+        const auto roll = feedbacks.find(Joint::Name::kRoll);
+        if (roll != feedbacks.end()) {
+            ui_->w_diagnostics->UpdateRollTorque(roll->second);
+        }
+#endif
     }
 }
 

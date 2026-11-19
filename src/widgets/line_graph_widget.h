@@ -10,6 +10,7 @@
 // C++ Standard Library Headers
 #include <cstddef>
 #include <deque>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -32,6 +33,9 @@ class LineGraphWidget : public QWidget {
     // NOLINTEND
 
   public:
+    static constexpr double kNoData =  // sample value that leaves a gap
+        std::numeric_limits<double>::quiet_NaN();
+
     explicit LineGraphWidget(QWidget* parent = nullptr);
     ~LineGraphWidget() override = default;
 

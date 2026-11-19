@@ -20,5 +20,8 @@ set(WIDGET_SOURCE
     # Scrolling Line Graph
     ${CMAKE_CURRENT_SOURCE_DIR}/line_graph_widget.h
     ${CMAKE_CURRENT_SOURCE_DIR}/line_graph_widget.cpp
+    # 2D Dot Plot
+    ${CMAKE_CURRENT_SOURCE_DIR}/dot_plot_widget.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/dot_plot_widget.cpp
     PARENT_SCOPE
 )

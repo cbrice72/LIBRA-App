@@ -9,6 +9,7 @@
 
 // C++ Standard Library Headers
 #include <cstddef>
+#include <optional>
 #include <unordered_map>
 
 // Other Library Headers
@@ -44,15 +45,23 @@ class DiagnosticsWidget : public QWidget {
     void UpdateActuatorPower(const double& power, const Actuator::Type& type);
     void UpdateFluidPower(const double& power);
 
-    // NOLINTBEGIN: Qt-generated
-  private slots:
-    void on_cb_power_window_currentIndexChanged(int index);
+    // --- Torque ---
+
+    void UpdatePitchTorque(const double& torque);
+#if LIBRA_VERSION == 1
+    void UpdateRollTorque(const double& torque);
+#elif LIBRA_VERSION == 2
+    void UpdateModelTorque(const std::optional<double>& torque);
+#endif
+
+    void SetTorqueLimits(const double& lower, const double& upper);
+    void ClearTorques();
 
   private:
-    // NOLINTEND
     // --- Helper Functions ---
 
     void SamplePower();
+    void SampleTorque();
 
     // --- Data Members ---
 
@@ -66,5 +75,19 @@ class DiagnosticsWidget : public QWidget {
     std::size_t actuators_series_{0};
     std::size_t fluid_series_{0};
 
-    QTimer* power_timer_{nullptr};  // samples latest values for graph/table
+    // Torque (joint space)
+
+    std::optional<double> pitch_torque_;  // latest measured (Nm)
+#if LIBRA_VERSION == 1
+    std::optional<double> roll_torque_;  // latest measured (Nm)
+#elif LIBRA_VERSION == 2
+    std::optional<double> model_torque_;  // latest predicted (Nm)
+#endif
+
+    std::size_t torque_meas_series_{0};
+#if LIBRA_VERSION == 2
+    std::size_t torque_model_series_{0};
+#endif
+
+    QTimer* sample_timer_{nullptr};
 };

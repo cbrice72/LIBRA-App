@@ -324,6 +324,29 @@ Motion::Calibration Libra2MotionController::GetCalibration() const {
 }
 
 /**
+ * @brief Predicts the pitch joint torque (Nm) needed for equilibrium at a given
+ *        angle with the current CW mass, for comparing the model against
+ *        measurements.
+ *
+ * @param angle Pitch angle, θ (rad)
+ *
+ * @note From Eq. 37 at rest (θ'_ref = θ''_ref = 0):
+ *         τ_actuator = -τ_ext,g(θ)
+ */
+std::optional<double> Libra2MotionController::PredictHoldingTorque(
+    const double& angle) const {
+    const std::scoped_lock lock(mutex_);
+
+    if (!arm_model_ || !cw_model_.IsValid()) {
+        return std::nullopt;
+    }
+    if (!cw_mass_) {
+        return std::nullopt;
+    }
+    return -ComputeNetGravTorque(angle, *cw_mass_);
+}
+
+/**
  * @brief Computes the net gravitational torque (Nm) about pitch joint O for a
  *        given angle and CW mass.
  *
