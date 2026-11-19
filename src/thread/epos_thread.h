@@ -90,7 +90,7 @@ class EposThread : public AbstractActuatorThread
 
     // Latest readings, shared by power and telemetry
     int a_vel_{0};   // motor shaft, before the gearhead (rpm)
-    int a_curr_{0};  // motor current (mA)
+    int a_curr_{0};  // motor current, averaged (mA)
 
     int target_inc_{0};  // in encoder increments, not degrees
     int last_target_inc_{0};

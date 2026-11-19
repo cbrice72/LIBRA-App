@@ -361,11 +361,13 @@ void EposThread::run() {
             QThread::msleep(loop_period_ms_);
             continue;
         }
-        if (VCS_GetCurrentIsEx(handle_, kNodeID, &a_curr_, &err_code) == 0) {
+        // NOTE: Averaged, per maxon's recommendation
+        if (VCS_GetCurrentIsAveragedEx(handle_, kNodeID, &a_curr_, &err_code)
+            == 0) {
             emit ErrorThrown(
                 "EPOS - Couldn't retrieve current!\n"
-                + Util::GetFormattedEposErrTxt("VCS_GetCurrentIsEx", err_code,
-                                               kNodeID));
+                + Util::GetFormattedEposErrTxt("VCS_GetCurrentIsAveragedEx",
+                                               err_code, kNodeID));
             lock.unlock();
             Disconnect();
             QThread::msleep(loop_period_ms_);
