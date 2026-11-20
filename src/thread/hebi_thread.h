@@ -124,9 +124,6 @@ class HebiThread : public AbstractActuatorThread
     // NOTE: See AbstractActuatorThread for generic signals
 
     void ReportArmTorque(const std::optional<double>& theta);
-    void ReportDiagnostics(const double& torque_meas,
-                           const std::optional<double>& torque_ext_g,
-                           const std::optional<double>& cw_volume_tgt);
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
@@ -136,6 +133,7 @@ class HebiThread : public AbstractActuatorThread
     void CalibrationProgressChanged(const QString& text, const bool& running);
 
     void ReportModelTorque(const std::optional<double>& torque);
+    void ReportCwTarget(const std::optional<double>& volume);
 #endif
 
   protected:

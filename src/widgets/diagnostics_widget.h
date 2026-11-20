@@ -72,11 +72,9 @@ class DiagnosticsWidget : public QWidget
     void ClearTorques();
 
 #ifdef BUILD_WITH_ROS2
-    // --- Torque and CW (ROS2 only) ---
+    // --- CW (ROS2 only) ---
 
-    void UpdateModelDiagnostics(const double& torque_meas,
-                                const std::optional<double>& torque_ext_g,
-                                const std::optional<double>& cw_volume_tgt);
+    void UpdateCwTarget(const std::optional<double>& volume);
     void UpdateCwState(const Water::Side& side, const double& volume,
                        const double& flow);
 #endif

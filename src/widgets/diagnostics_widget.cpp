@@ -171,9 +171,8 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
     cw_state_pub_ = this->create_publisher<libra_interfaces::msg::CwState>(
         "/libra/cw_state", 10);
 
-    // Initialize messages
+    // Initialize messages (LIBRA-I has no EPOS or model)
     diagnostics_msg_.power_epos = kNone;
-    diagnostics_msg_.torque_meas = kNone;
     diagnostics_msg_.torque_ext_g = kNone;
 
     cw_state_msg_.cws.resize(Water::kSideCount);
@@ -372,23 +371,15 @@ void DiagnosticsWidget::ClearTorques() {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Stores the latest measured and predicted pitch torques, and the
- *        counterweight (CW) volume the motion controller aims for.
+ * @brief Stores the counterweight (CW) volume the motion controller aims for.
  *
- * @param torque_meas Measured torque, τ_meas = -τ_actuator (Nm)
- * @param torque_ext_g Predicted torque, τ_ext,g(θ) (Nm)
- *                     cycle
- * @param cw_volume_tgt Predictive CW target, V_bal(θ_tgt) (L)
+ * @param volume Predictive CW target, V_bal(θ_tgt) (L); none = no target
  *
  * @note Only LIBRA-II has a motion controller, and its only CW is side A.
  */
-void DiagnosticsWidget::UpdateModelDiagnostics(
-    const double& torque_meas, const std::optional<double>& torque_ext_g,
-    const std::optional<double>& cw_volume_tgt) {
-    diagnostics_msg_.torque_meas = torque_meas;
-    diagnostics_msg_.torque_ext_g = torque_ext_g.value_or(kNone);
+void DiagnosticsWidget::UpdateCwTarget(const std::optional<double>& volume) {
     cw_state_msg_.cws.at(static_cast<std::size_t>(Water::Side::kA))
-        .target_volume = cw_volume_tgt.value_or(kNone);
+        .target_volume = volume.value_or(kNone);
 }
 
 /**
@@ -428,6 +419,13 @@ void DiagnosticsWidget::PublishLatest() {
     diagnostics_msg_.power_epos = power(Actuator::Type::kEpos);
 # endif
     diagnostics_msg_.power_fluid = fluid_power_;
+
+    // Tab stores τ_actuator and predicted holding torque; message carries their
+    // negatives, τ_meas and τ_ext,g (Eq. 19b)
+    diagnostics_msg_.torque_meas = pitch_torque_ ? -*pitch_torque_ : kNone;
+# if LIBRA_VERSION == 2
+    diagnostics_msg_.torque_ext_g = model_torque_ ? -*model_torque_ : kNone;
+# endif
     diagnostics_pub_->publish(diagnostics_msg_);
 
     cw_state_msg_.header.stamp = stamp;

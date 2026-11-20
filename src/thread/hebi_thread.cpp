@@ -1086,27 +1086,13 @@ void HebiThread::SendFeedback() {
     emit ReportFeedback(GetJointFeedbackMap(feedback_,
                                             Actuator::Feedback::kActualPos),
                         Actuator::Feedback::kActualPos);
-    const auto torque = GetJointFeedbackMap(feedback_,
-                                            Actuator::Feedback::kActualTorque);
-    emit ReportFeedback(torque, Actuator::Feedback::kActualTorque);
+    emit ReportFeedback(GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kActualTorque),
+                        Actuator::Feedback::kActualTorque);
 
     // Report miscellaneous statuses in one batch
     emit ReportTelemetry(GetTelemetry(), type_);
     emit ReportPower(GetPower(), type_);
-
-    // Measured vs. predicted torque (Eq. 19b: τ_meas = -τ_actuator), and the CW
-    // volume the motion controller aims for (only LIBRA-II has one)
-    std::optional<double> torque_ext_g;
-    std::optional<double> cw_volume_tgt;
-#if LIBRA_VERSION == 2
-    const auto model = mc_diagnostics_.value_or(Motion::Libra2Diagnostics());
-    torque_ext_g = model.torque_ext_g;
-    if (model.cw_mass_tgt) {
-        cw_volume_tgt = *model.cw_mass_tgt / Motion::kWaterDensity;  // Eq. 28
-    }
-#endif
-    emit ReportDiagnostics(-torque.at(Joint::Name::kPitch), torque_ext_g,
-                           cw_volume_tgt);
 
 #if LIBRA_VERSION == 2
     // Predicted here rather than in `RunMotionController()` so the model can be
@@ -1115,6 +1101,14 @@ void HebiThread::SendFeedback() {
         Joint::Name::kPitch, feedback_->getPosition()[Actuator::Name::kPitch]);
     emit ReportModelTorque(
         motion_controller_->PredictHoldingTorque(pitch_angle));
+
+    // CW volume the motion controller aims for (none = no target this cycle)
+    std::optional<double> cw_volume_tgt;
+    if (mc_diagnostics_ && mc_diagnostics_->cw_mass_tgt) {
+        cw_volume_tgt = *mc_diagnostics_->cw_mass_tgt
+                        / Motion::kWaterDensity;  // Eq. 28
+    }
+    emit ReportCwTarget(cw_volume_tgt);
 #endif
 
 #ifdef BUILD_WITH_ROS2

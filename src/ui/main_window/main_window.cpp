@@ -738,10 +738,6 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleActuatorTelemetry);
     connect(hebi_thread_, &HebiThread::ReportPower,  // get power
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateActuatorPower);
-#ifdef BUILD_WITH_ROS2
-    connect(hebi_thread_, &HebiThread::ReportDiagnostics,  // torques
-            ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelDiagnostics);
-#endif
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 
@@ -760,6 +756,10 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleCalibrationProgress);
     connect(hebi_thread_, &HebiThread::ReportModelTorque,  // model torque
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelTorque);
+# ifdef BUILD_WITH_ROS2
+    connect(hebi_thread_, &HebiThread::ReportCwTarget,  // CW target
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateCwTarget);
+# endif
 #endif
 
     // ArduinoManager slots
