@@ -133,7 +133,8 @@ class HebiThread : public AbstractActuatorThread
     void CalibrationProgressChanged(const QString& text, const bool& running);
 
     void ReportModelTorque(const std::optional<double>& torque);
-    void ReportCwTarget(const std::optional<double>& volume);
+    void ReportModelCwTarget(const std::optional<double>& volume,
+                             const std::optional<double>& torque);
 #endif
 
   protected:

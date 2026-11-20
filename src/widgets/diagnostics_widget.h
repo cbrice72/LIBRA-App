@@ -71,10 +71,13 @@ class DiagnosticsWidget : public QWidget
     void SetTorqueLimits(const double& lower, const double& upper);
     void ClearTorques();
 
-#ifdef BUILD_WITH_ROS2
-    // --- CW (ROS2 only) ---
+    // --- Counterweight ---
 
-    void UpdateCwTarget(const std::optional<double>& volume);
+#if LIBRA_VERSION == 2
+    void UpdateModelCwTarget(const std::optional<double>& volume,
+                             const std::optional<double>& torque);
+#endif
+#ifdef BUILD_WITH_ROS2
     void UpdateCwState(const Water::Side& side, const double& volume,
                        const double& flow);
 #endif
@@ -113,12 +116,14 @@ class DiagnosticsWidget : public QWidget
 #if LIBRA_VERSION == 1
     std::optional<double> roll_torque_;  // latest measured (Nm)
 #elif LIBRA_VERSION == 2
-    std::optional<double> model_torque_;  // latest predicted (Nm)
+    std::optional<double> model_torque_;         // latest predicted (Nm)
+    std::optional<double> target_model_torque_;  // latest at target (Nm)
 #endif
 
     std::size_t torque_meas_series_{0};
 #if LIBRA_VERSION == 2
     std::size_t torque_model_series_{0};
+    std::size_t torque_target_series_{0};
 #endif
 
     QTimer* sample_timer_{nullptr};

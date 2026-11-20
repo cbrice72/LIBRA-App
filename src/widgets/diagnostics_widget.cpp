@@ -24,6 +24,7 @@
  * !Class Management
  * !Power
  * !Torque
+ * !Counterweight
  * !ROS2
  */
 
@@ -142,11 +143,18 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
     torque_model_series_ = ui_->lg_torque->AddSeries(
         Color::ToQColor(Color::kLightBlue));
     ui_->static_l_torque_model->setStyleSheet(style.arg(Color::kLightBlue));
+
+    torque_target_series_ = ui_->lg_torque->AddSeries(
+        Color::ToQColor(Color::kBlue));
+    ui_->static_l_torque_target->setStyleSheet(style.arg(Color::kBlue));
 #else
     // No arm model to compare against
     ui_->static_l_torque_model->hide();
     ui_->l_torque_model_now->hide();
     ui_->l_torque_model_avg->hide();
+    ui_->static_l_torque_target->hide();
+    ui_->l_torque_target_now->hide();
+    ui_->l_torque_target_avg->hide();
 #endif
 
     // ========== Sampling ==========
@@ -173,7 +181,8 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
 
     // Initialize messages (LIBRA-I has no EPOS or model)
     diagnostics_msg_.power_epos = kNone;
-    diagnostics_msg_.torque_ext_g = kNone;
+    diagnostics_msg_.torque_model_actual = kNone;
+    diagnostics_msg_.torque_model_target = kNone;
 
     cw_state_msg_.cws.resize(Water::kSideCount);
     for (auto& cw : cw_state_msg_.cws) {
@@ -324,7 +333,8 @@ void DiagnosticsWidget::SampleTorque() {
 #elif LIBRA_VERSION == 2
     ui_->lg_torque->AddSamples(
         {pitch_torque_.value_or(LineGraphWidget::kNoData),
-         model_torque_.value_or(LineGraphWidget::kNoData)});
+         model_torque_.value_or(LineGraphWidget::kNoData),
+         target_model_torque_.value_or(LineGraphWidget::kNoData)});
 #endif
 
     // Table
@@ -336,6 +346,11 @@ void DiagnosticsWidget::SampleTorque() {
     SetLabelValue(ui_->l_torque_model_now, model_torque_, kTorquePrecision);
     SetLabelValue(ui_->l_torque_model_avg,
                   ui_->lg_torque->GetWindowMean(torque_model_series_),
+                  kTorquePrecision);
+    SetLabelValue(ui_->l_torque_target_now, target_model_torque_,
+                  kTorquePrecision);
+    SetLabelValue(ui_->l_torque_target_avg,
+                  ui_->lg_torque->GetWindowMean(torque_target_series_),
                   kTorquePrecision);
 #endif
 
@@ -362,26 +377,37 @@ void DiagnosticsWidget::ClearTorques() {
     roll_torque_.reset();
 #elif LIBRA_VERSION == 2
     model_torque_.reset();
+    target_model_torque_.reset();
 #endif
 }
 
-#ifdef BUILD_WITH_ROS2
 //------------------------------------------------------------------------------
-// !ROS2
+// !Counterweight
 //------------------------------------------------------------------------------
 
+#if LIBRA_VERSION == 2
 /**
- * @brief Stores the counterweight (CW) volume the motion controller aims for.
+ * @brief Stores the counterweight (CW) target the motion controller aims for,
+ *        both as a volume (publishing only) and as the pitch torque it predicts
+ *        at the target angle with the current CW.
  *
- * @param volume Predictive CW target, V_bal(θ_tgt) (L); none = no target
+ * @param volume Predictive CW target, V_bal(θ_tgt) (L)
+ * @param torque Predicted holding torque at target, -τ_ext,g(θ_tgt) (Nm)
  *
  * @note Only LIBRA-II has a motion controller, and its only CW is side A.
  */
-void DiagnosticsWidget::UpdateCwTarget(const std::optional<double>& volume) {
+void DiagnosticsWidget::UpdateModelCwTarget(
+    [[maybe_unused]] const std::optional<double>& volume,
+    const std::optional<double>& torque) {
+    target_model_torque_ = torque;
+# ifdef BUILD_WITH_ROS2
     cw_state_msg_.cws.at(static_cast<std::size_t>(Water::Side::kA))
         .target_volume = volume.value_or(kNone);
+# endif
 }
+#endif
 
+#ifdef BUILD_WITH_ROS2
 /**
  * @brief Stores a counterweight's (CW) latest volume and net flow rate.
  *
@@ -402,6 +428,10 @@ void DiagnosticsWidget::UpdateCwState(const Water::Side& side,
     cw.flow = flow;
 }
 
+//------------------------------------------------------------------------------
+// !ROS2
+//------------------------------------------------------------------------------
+
 /**
  * @brief Publishes the latest diagnostics and CW state.
  */
@@ -420,11 +450,10 @@ void DiagnosticsWidget::PublishLatest() {
 # endif
     diagnostics_msg_.power_fluid = fluid_power_;
 
-    // Tab stores τ_actuator and predicted holding torque; message carries their
-    // negatives, τ_meas and τ_ext,g (Eq. 19b)
-    diagnostics_msg_.torque_meas = pitch_torque_ ? -*pitch_torque_ : kNone;
+    diagnostics_msg_.torque_actual = pitch_torque_.value_or(kNone);
 # if LIBRA_VERSION == 2
-    diagnostics_msg_.torque_ext_g = model_torque_ ? -*model_torque_ : kNone;
+    diagnostics_msg_.torque_model_actual = model_torque_.value_or(kNone);
+    diagnostics_msg_.torque_model_target = target_model_torque_.value_or(kNone);
 # endif
     diagnostics_pub_->publish(diagnostics_msg_);
 

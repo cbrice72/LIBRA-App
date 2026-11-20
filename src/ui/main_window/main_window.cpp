@@ -756,10 +756,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleCalibrationProgress);
     connect(hebi_thread_, &HebiThread::ReportModelTorque,  // model torque
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelTorque);
-# ifdef BUILD_WITH_ROS2
-    connect(hebi_thread_, &HebiThread::ReportCwTarget,  // CW target
-            ui_->w_diagnostics, &DiagnosticsWidget::UpdateCwTarget);
-# endif
+    connect(hebi_thread_, &HebiThread::ReportModelCwTarget,  // CW target
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelCwTarget);
 #endif
 
     // ArduinoManager slots

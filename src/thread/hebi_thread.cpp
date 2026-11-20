@@ -1102,13 +1102,19 @@ void HebiThread::SendFeedback() {
     emit ReportModelTorque(
         motion_controller_->PredictHoldingTorque(pitch_angle));
 
-    // CW volume the motion controller aims for (none = no target this cycle)
+    // CW targets the motion controller aims for (none = no target this cycle)
     std::optional<double> cw_volume_tgt;
-    if (mc_diagnostics_ && mc_diagnostics_->cw_mass_tgt) {
-        cw_volume_tgt = *mc_diagnostics_->cw_mass_tgt
-                        / Motion::kWaterDensity;  // Eq. 28
+    std::optional<double> torque_tgt;
+    if (mc_diagnostics_) {
+        if (mc_diagnostics_->cw_mass_tgt) {
+            cw_volume_tgt = *mc_diagnostics_->cw_mass_tgt
+                            / Motion::kWaterDensity;  // Eq. 28
+        }
+        if (mc_diagnostics_->torque_ext_g_tgt) {
+            torque_tgt = -*mc_diagnostics_->torque_ext_g_tgt;  // holding torque
+        }
     }
-    emit ReportCwTarget(cw_volume_tgt);
+    emit ReportModelCwTarget(cw_volume_tgt, torque_tgt);
 #endif
 
 #ifdef BUILD_WITH_ROS2
