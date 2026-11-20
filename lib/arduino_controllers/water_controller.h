@@ -52,7 +52,6 @@ class WaterController : public GenericSerialDevice {
     void ReportStatus(const Water::Side& side, const Water::State& state);
     void ReportVolume(const Water::Side& side, const double& volume,
                       const double& flow);
-    void ReportPower(const double& power);
 
     void TankLimitReached(const Water::Side& side, const bool& full);
 

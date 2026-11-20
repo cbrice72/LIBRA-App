@@ -10,6 +10,7 @@
 // C++ Standard Library Headers
 #include <cstddef>
 #include <deque>
+#include <limits>
 #include <optional>
 #include <vector>
 
@@ -23,6 +24,8 @@
 /**
  * @brief Plots a rolling window of samples as lines on an invisible grid.
  *        Newest value shown at right, scaled to the window's min/max.
+ *
+ * @note A NaN sample means "no data" and leaves a gap in its line.
  */
 class LineGraphWidget : public QWidget {
     // NOLINTBEGIN: required by Qt
@@ -30,6 +33,9 @@ class LineGraphWidget : public QWidget {
     // NOLINTEND
 
   public:
+    static constexpr double kNoData =  // sample value that leaves a gap
+        std::numeric_limits<double>::quiet_NaN();
+
     explicit LineGraphWidget(QWidget* parent = nullptr);
     ~LineGraphWidget() override = default;
 

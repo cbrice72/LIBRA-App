@@ -66,7 +66,6 @@ constexpr int kTrajectoryDecimals = 1;  // saved angle precision, i.e., "0.1"
 // Motion Control Dialogs
 
 constexpr double kRadToDeg = 180.0 / M_PI;
-constexpr double kMmPerM = 1000.0;
 
 constexpr double kDefaultCalHalfWindow = 20.0;       // ± current angle (deg)
 constexpr double kDefaultFrictionHalfWindow = 15.0;  // window is ± this (deg)
@@ -862,11 +861,13 @@ void MainWindow::on_a_eta_extension_triggered() {
     const double mm =
         QInputDialog::getDouble(this, "ETA Extension",
                                 "Extension from minimum (mm):",
-                                motion_controller_->GetEtaExtension() * kMmPerM,
+                                motion_controller_->GetEtaExtension()
+                                    * Motion::kMmPerM,
                                 0.0, kMaxArmExtension, 1, &ok);
 
     if (ok) {
-        motion_controller_->SetEtaExtension(mm / kMmPerM);
+        emit ReportEtaExtension(mm / Motion::kMmPerM);
+        logger_->Info("ETA extension set to " + Motion::FormatNum(mm) + " mm");
     } else {
         logger_->Debug("ETA extension setting cancelled by user");
     }

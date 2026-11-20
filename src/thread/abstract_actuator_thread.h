@@ -104,6 +104,15 @@ class AbstractActuatorThread : public QThread {
     }
 
     /**
+     * @brief Tells listeners the actuator(s) disconnected.
+     */
+    void ReportDisconnected() {
+        emit Connected(false);
+        // Related updates
+        emit ReportPower(0.0, type_);
+    }
+
+    /**
      * @brief Appends an aligned row of numbers (one per actuator) for telemetry
      *        display.
      *

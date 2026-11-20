@@ -59,6 +59,18 @@ class DiagnosticsWidget : public QWidget
     void UpdateActuatorPower(const double& power, const Actuator::Type& type);
     void UpdateFluidPower(const double& power);
 
+    // --- Torque ---
+
+    void UpdatePitchTorque(const double& torque);
+#if LIBRA_VERSION == 1
+    void UpdateRollTorque(const double& torque);
+#elif LIBRA_VERSION == 2
+    void UpdateModelTorque(const std::optional<double>& torque);
+#endif
+
+    void SetTorqueLimits(const double& lower, const double& upper);
+    void ClearTorques();
+
 #ifdef BUILD_WITH_ROS2
     // --- Torque and CW (ROS2 only) ---
 
@@ -69,15 +81,16 @@ class DiagnosticsWidget : public QWidget
                        const double& flow);
 #endif
 
-    // NOLINTBEGIN: Qt-generated
   private slots:
-    void on_cb_power_window_currentIndexChanged(int index);
+    // --- Power ---
+
+    void on_pb_energy_clear_clicked();
 
   private:
-    // NOLINTEND
     // --- Helper Functions ---
 
     void SamplePower();
+    void SampleTorque();
 #ifdef BUILD_WITH_ROS2
     void PublishLatest();
 #endif
@@ -91,10 +104,26 @@ class DiagnosticsWidget : public QWidget
     std::unordered_map<Actuator::Type, double> actuator_power_;  // latest (W)
     double fluid_power_{0.0};                                    // latest (W)
 
+    double energy_{0.0};  // total since start or last clear (Wh)
+
     std::size_t actuators_series_{0};
     std::size_t fluid_series_{0};
 
-    QTimer* power_timer_{nullptr};  // samples latest values for graph/table
+    // Torque (joint space)
+
+    std::optional<double> pitch_torque_;  // latest measured (Nm)
+#if LIBRA_VERSION == 1
+    std::optional<double> roll_torque_;  // latest measured (Nm)
+#elif LIBRA_VERSION == 2
+    std::optional<double> model_torque_;  // latest predicted (Nm)
+#endif
+
+    std::size_t torque_meas_series_{0};
+#if LIBRA_VERSION == 2
+    std::size_t torque_model_series_{0};
+#endif
+
+    QTimer* sample_timer_{nullptr};
 
 #ifdef BUILD_WITH_ROS2
     // ROS2

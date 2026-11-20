@@ -39,8 +39,6 @@
 constexpr int kPrecision = 1;     // i.e., "0.1"
 constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
 
-constexpr const char* kIdleText = "Idle";  // state/status with nothing running
-
 #ifdef BUILD_WITH_ROS2
 // Same rate as the actuators, so TF through mocked joints stays fresh
 constexpr int kMockJointPeriodMs = 10;  // 100 Hz
@@ -57,8 +55,6 @@ namespace {
  *
  * @tparam T Any visual QObject type
  * @param element Widget or layout to remove
- *
- * @todo Simplify (cognitive complexity 30, limit 25).
  */
 template<typename T>
 void RemoveUiElement(T*& element) {
@@ -66,35 +62,8 @@ void RemoveUiElement(T*& element) {
         return;
     }
 
-    // To avoid duplicating code, define this lambda capable of handling both
-    // QWidgets and QLayouts (since they boil down to different QObjects)
-    auto remove_from_parent_layout = [](QObject* obj) {
-        if (!obj) {
-            return;
-        }
-
-        // All objects are eventually children of a QWidget, so this is allowed
-        if (auto* p = qobject_cast<QWidget*>(obj->parent())) {
-            if (auto* pl = p->layout()) {
-                // We must explicitly cast since indexOf() does not take QObjects
-                if (auto* w = qobject_cast<QWidget*>(obj)) {
-                    if (int i = pl->indexOf(w); i >= 0) {
-                        delete pl->takeAt(i);
-                    }
-                } else if (auto* l = qobject_cast<QLayout*>(obj)) {
-                    if (int i = pl->indexOf(l); i >= 0) {
-                        delete pl->takeAt(i);
-                    }
-                }
-            }
-        }
-    };
-
-    remove_from_parent_layout(element);
-
-    // Handle layouts
     if constexpr (std::is_base_of_v<QLayout, T>) {
-        // Recursively delete all children
+        // A layout doesn't own its widgets, so remove them too
         while (QLayoutItem* item = element->takeAt(0)) {
             if (auto* w = item->widget()) {
                 RemoveUiElement(w);
@@ -103,9 +72,15 @@ void RemoveUiElement(T*& element) {
             }
             delete item;
         }
+
+        // Free its space now rather than once it's deleted
+        if (auto* parent = qobject_cast<QLayout*>(element->parent())) {
+            parent->removeItem(element);
+        }
+    } else {
+        element->hide();  // hidden widgets take no layout space
     }
 
-    // Mark for deletion to reclaim visual space
     element->deleteLater();
     element = nullptr;
 }
@@ -118,7 +93,7 @@ void RemoveUiElement(T*& element) {
  */
 QColor MotionModeColor(const Motion::MotionMode& mode) {
     switch (mode) {
-        case Motion::MotionMode::kFeedbackOnly:
+        case Motion::MotionMode::kReactiveOnly:
             return Color::ToQColor(Color::kOrange);  // CW only reacts
 #if LIBRA_VERSION == 2
         case Motion::MotionMode::kTandem:
@@ -168,7 +143,6 @@ MainWindow::MainWindow(QWidget* parent)
     HandleMovementStateChanged();
 #if LIBRA_VERSION == 2
     HandleCalibrationChanged(motion_controller_->GetCalibration());
-    ui_->l_motion_status_val->setText(kIdleText);
 #endif
 
     // Apply startup defaults (set in the .ui)
@@ -308,6 +282,8 @@ void MainWindow::ConfigureUi() {
 #elif LIBRA_VERSION != 2
     RemoveUiElement(ui_->gl_yaw_input);
     RemoveUiElement(ui_->gl_yaw_output);
+    RemoveUiElement(ui_->gl_eta_input);
+    RemoveUiElement(ui_->gl_eta_output);
     RemoveUiElement(ui_->pb_release_pitch);
 
     RemoveUiElement(ui_->l_epos_telemetry);
@@ -344,6 +320,12 @@ void MainWindow::ConfigureUi() {
             ui_->sb_arm_yaw, &QDoubleSpinBox::setValue);
     connect(ui_->sb_arm_yaw, &QDoubleSpinBox::valueChanged,  // "
             ui_->hs_arm_yaw, &QAbstractSlider::setValue);
+
+    eta_timer_ = new QTimer(this);
+    connect(eta_timer_, &QTimer::timeout,            // while the ETA moves,
+            this, &MainWindow::UpdateEtaExtension);  // update estimate
+    connect(this, &MainWindow::ReportEtaExtension,   // get extension
+            this, &MainWindow::HandleEtaExtension);
 #endif
 
     // Store original limits for override functionality
@@ -384,7 +366,7 @@ void MainWindow::ConfigureUi() {
         add_mode(Motion::MotionMode::kManual,
                  "Actuators just follow a trajectory; CW must be manually "
                  "adjusted via fill/drain buttons");
-        add_mode(Motion::MotionMode::kFeedbackOnly,
+        add_mode(Motion::MotionMode::kReactiveOnly,
                  "Actuator trajectory slowed or paused while CW is "
                  "automatically balanced based on measured torque");
 #if LIBRA_VERSION == 2
@@ -670,6 +652,7 @@ void MainWindow::InitializeThreads() {
                                                  kReactiveCwSlowRate,
                                                  kReactiveCwOffMargin,
                                                  debug_mode_);
+    HandleEtaExtension(motion_controller_->GetEtaExtension());  // start value
 
     connect(this, &MainWindow::EnableDebugMode,  // update debug mode
             this, [this](const bool& enabled) {
@@ -682,6 +665,10 @@ void MainWindow::InitializeThreads() {
                 if (side == Water::Side::kA) {
                     motion_controller_->SetCwState(volume, flow);
                 }
+            });
+    connect(this, &MainWindow::ReportEtaExtension,  // ETA state
+            this, [this](const double& extension) {
+                motion_controller_->SetEtaExtension(extension);
             });
 #endif
 
@@ -758,6 +745,12 @@ void MainWindow::InitializeThreads() {
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
 
+    connect(this, &MainWindow::UpdateReactiveCwBounds,  // torque limits
+            ui_->w_diagnostics, &DiagnosticsWidget::SetTorqueLimits);
+    const auto [cw_lower_bound,
+                cw_upper_bound] = hebi_thread_->GetReactiveCwBounds();
+    ui_->w_diagnostics->SetTorqueLimits(cw_lower_bound, cw_upper_bound);
+
 #if LIBRA_VERSION == 2
     connect(hebi_thread_, &HebiThread::PitchReleaseChanged,  // sync toggle
             this, &MainWindow::HandlePitchReleaseChanged);
@@ -765,6 +758,8 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleCalibrationChanged);
     connect(hebi_thread_, &HebiThread::CalibrationProgressChanged,  // status
             this, &MainWindow::HandleCalibrationProgress);
+    connect(hebi_thread_, &HebiThread::ReportModelTorque,  // model torque
+            ui_->w_diagnostics, &DiagnosticsWidget::UpdateModelTorque);
 #endif
 
     // ArduinoManager slots
@@ -1011,6 +1006,23 @@ void MainWindow::UpdateMotionControls() {
     ui_->a_motion_calibration_load->setEnabled(!busy);
     ui_->a_motion_calibration_clear->setEnabled(!busy);
 }
+
+/**
+ * @brief Shows whether the motion controller is in use.
+ *
+ * @note Calibration steps and outcomes take precedence (see
+ *       `HandleCalibrationProgress()`).
+ */
+void MainWindow::UpdateMotionStatus() {
+    if (calibration_status_shown_) {
+        return;
+    }
+
+    // `arm_moving_` includes the motion controller's own moving state
+    const bool active = arm_moving_
+                        && Motion::UsesMotionController(motion_mode_);
+    ui_->l_motion_status_val->setText(active ? "Active" : "Idle");
+}
 #endif
 
 //------------------------------------------------------------------------------
@@ -1055,11 +1067,6 @@ void MainWindow::HandleManipPosition(const double& base, const double& pan,
  * @brief Reflects WaterArduino connection status in the UI.
  */
 void MainWindow::HandleWaterConnChanged(const bool& connected) {
-    if (!connected) {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateFluidPower(0.0);
-    }
-
     // Special cases
     if (!connected && motion_mode_ != Motion::MotionMode::kManual) {
         logger_->Warn("CW disconnected; stopping automatic CW control");
@@ -1223,12 +1230,9 @@ void MainWindow::HandleFlowStatus(const double& flow) {
  * @brief Reflects HEBI actuator connection status in the UI.
  */
 void MainWindow::HandleHebiConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
     if (connected) {
-        // Targets are set from the next actual position
         populate_targets_ = true;
-    } else {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kHebi);
     }
 
     // Special cases
@@ -1251,6 +1255,10 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     // UI widgets
     UpdateActuatorControls();
     UpdateModeControls();
+
+    if (!connected) {
+        ui_->w_diagnostics->ClearTorques();
+    }
 }
 
 #if LIBRA_VERSION == 2
@@ -1258,12 +1266,9 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
  * @brief Reflects EPOS (Maxon) actuator connection status in the UI.
  */
 void MainWindow::HandleEposConnChanged(const bool& connected) {
+    // Targets are set from the next actual position
     if (connected) {
-        // Targets are set from the next actual position
         populate_targets_ = true;
-    } else {
-        // Power is only reported while connected
-        ui_->w_diagnostics->UpdateActuatorPower(0.0, Actuator::Type::kEpos);
     }
 
     // Special cases
@@ -1328,7 +1333,33 @@ void MainWindow::HandleActuatorFeedback(
     if (initialize) {
         UpdateActuatorControls();  // targets may now be known
     }
+
+    // Diagnostics
+    if (feedback_type == Actuator::Feedback::kActualTorque) {
+        const auto pitch = feedbacks.find(Joint::Name::kPitch);
+        if (pitch != feedbacks.end()) {
+            ui_->w_diagnostics->UpdatePitchTorque(pitch->second);
+        }
+#if LIBRA_VERSION == 1
+        const auto roll = feedbacks.find(Joint::Name::kRoll);
+        if (roll != feedbacks.end()) {
+            ui_->w_diagnostics->UpdateRollTorque(roll->second);
+        }
+#endif
+    }
 }
+
+#if LIBRA_VERSION == 2
+/**
+ * @brief Updates the shown ETA extension.
+ *
+ * @param extension Extension from minimum (m)
+ */
+void MainWindow::HandleEtaExtension(const double& extension) {
+    ui_->l_actual_eta->setText(
+        QString::number(extension * Motion::kMmPerM, 'f', kPrecision));
+}
+#endif
 
 /**
  * @brief Shows actuator telemetry at the bottom of the UI.
@@ -1372,9 +1403,12 @@ void MainWindow::HandleMovementStateChanged() {
     }
 
     // UI widgets
-    ui_->l_arm_state_val->setText(arm_moving_ ? "Moving" : kIdleText);
+    ui_->l_arm_state_val->setText(arm_moving_ ? "Moving" : "Idle");
     ui_->l_arm_state_val->setStyleSheet(
         QString("color: %1;").arg(arm_moving_ ? Color::kOrange : Color::kGreen));
+#if LIBRA_VERSION == 2
+    UpdateMotionStatus();
+#endif
 
     UpdateActuatorControls();
     UpdateModeControls();
@@ -1460,16 +1494,18 @@ void MainWindow::HandleCalibrationProgress(const QString& text,
     constexpr int kOutcomeTimeout = 10000;  // ms
 
     ui_->l_motion_status_val->setText(text);
+    calibration_status_shown_ = true;
 
     calibration_running_ = running;
     UpdateMotionControls();  // cancel only while running
 
     if (!running) {
-        // Back to idle, unless a newer status replaced the outcome
+        // Back to idle/active, unless a newer status replaced the outcome
         QTimer::singleShot(kOutcomeTimeout, this, [this, text]() {
-            // Guard against "Idle" replacing a newer status
+            // Guard against replacing a newer calibration's status
             if (ui_->l_motion_status_val->text() == text) {
-                ui_->l_motion_status_val->setText(kIdleText);
+                calibration_status_shown_ = false;
+                UpdateMotionStatus();
             }
         });
     }

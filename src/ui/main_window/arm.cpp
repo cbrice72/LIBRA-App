@@ -9,6 +9,8 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
+#include <algorithm>
+#include <chrono>
 #include <sstream>
 #include <utility>
 
@@ -23,6 +25,13 @@
  * !Class Helpers
  * !Buttons
  */
+
+#if LIBRA_VERSION == 2
+// ETA Extension Estimate (until the ETA's actuator has a controller)
+
+constexpr double kEtaVel = 0.0;          // m/s, actuation rate (TODO: measure)
+constexpr int kEtaUpdatePeriodMs = 100;  // how often the estimate advances
+#endif
 
 //------------------------------------------------------------------------------
 // !Class Helpers
@@ -96,6 +105,63 @@ void MainWindow::SendJointTargets(const std::vector<double>& targets) {
     UpdateActuatorControls();
 }
 
+#if LIBRA_VERSION == 2
+/**
+ * @brief Starts, stops, or reverses the ETA extension estimate.
+ *
+ * @param vel Extension velocity (m/s); negative = retracting
+ *
+ * @todo The ETA's actuator is currently incapable of being digitally
+ *       controlled, so its extension is estimated based on two things:
+ *       (1) a known constant rate, and (2) manual user input on whether the ETA
+ *       is moving and in which direction. Replace with the controller's
+ *       feedback once it has one.
+ */
+void MainWindow::SetEtaVel(const double& vel) {
+    UpdateEtaExtension();  // finish the previous motion, restart the clock
+    eta_vel_ = vel;
+
+    // Only one direction at a time
+    ui_->pb_eta_extend->setChecked(vel > 0.0);
+    ui_->pb_eta_retract->setChecked(vel < 0.0);
+
+    if (vel == 0.0) {
+        eta_timer_->stop();
+    } else {
+        eta_timer_->start(kEtaUpdatePeriodMs);
+    }
+
+    logger_->Info("ETA velocity set to "
+                  + Motion::FormatNum(vel * Motion::kMmPerM) + " mm/s at "
+                  + Motion::FormatNum(motion_controller_->GetEtaExtension()
+                                      * Motion::kMmPerM)
+                  + " mm (estimated)");
+}
+
+/**
+ * @brief Advances the ETA extension estimate by time since last update.
+ */
+void MainWindow::UpdateEtaExtension() {
+    const auto now = std::chrono::steady_clock::now();
+    const double dt_s = std::chrono::duration<double>(now - eta_time_).count();
+    eta_time_ = now;
+
+    if (eta_vel_ == 0.0) {
+        return;
+    }
+
+    // Measured from min. extension
+    const double extension = std::max(0.0, motion_controller_->GetEtaExtension()
+                                               + (eta_vel_ * dt_s));
+    emit ReportEtaExtension(extension);
+
+    if (extension == 0.0) {  // fully retracted, nothing left to estimate
+        eta_vel_ = 0.0;
+        SetEtaVel(0.0);
+    }
+}
+#endif
+
 //------------------------------------------------------------------------------
 // !Buttons
 //------------------------------------------------------------------------------
@@ -113,12 +179,19 @@ void MainWindow::on_pb_arm_start_clicked() {
 }
 
 /**
- * @brief Pauses trajectory playback, if active.
+ * @brief Pauses trajectory playback and stops the ETA estimate, if active.
  *
  * @note The actuators themselves are stopped via signals (see
  *       `InitializeThreads()`).
  */
 void MainWindow::on_pb_arm_stop_clicked() {
+#if LIBRA_VERSION == 2
+    // NOTE: assumes a LIBRA App "STOP" means the ETA has also been stopped
+    if (eta_vel_ != 0.0) {
+        SetEtaVel(0.0);
+    }
+#endif
+
     if (!trajectory_playing_) {
         return;
     }
@@ -218,5 +291,28 @@ void MainWindow::on_pb_release_pitch_toggled(bool checked) {
     }
 
     emit EnablePitchRelease(checked);
+}
+
+/**
+ * @brief Tells the ETA extension estimate the ETA started or stopped extending.
+ *
+ * @param checked Whether the ETA is extending
+ *
+ * @see MainWindow::SetEtaVel
+ */
+void MainWindow::on_pb_eta_extend_clicked(bool checked) {
+    SetEtaVel(checked ? kEtaVel : 0.0);
+}
+
+/**
+ * @brief Tells the ETA extension estimate the ETA started or stopped
+ *        retracting.
+ *
+ * @param checked Whether the ETA is retracting
+ *
+ * @see MainWindow::SetEtaVel
+ */
+void MainWindow::on_pb_eta_retract_clicked(bool checked) {
+    SetEtaVel(checked ? -kEtaVel : 0.0);
 }
 #endif

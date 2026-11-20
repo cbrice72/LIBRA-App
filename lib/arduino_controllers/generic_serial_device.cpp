@@ -130,7 +130,7 @@ void GenericSerialDevice::Disconnect() {
         serial_port_->close();
 
         logger_->Info("Disconnected from device");
-        emit Connected(false);
+        ReportDisconnected();
     }
 }
 
@@ -146,6 +146,15 @@ bool GenericSerialDevice::IsOpen() const {
  */
 QString GenericSerialDevice::GetPortName() const {
     return serial_port_->portName();
+}
+
+/**
+ * @brief Tells listeners the device disconnected.
+ */
+void GenericSerialDevice::ReportDisconnected() {
+    emit Connected(false);
+    // Related updates
+    emit ReportPower(0.0);
 }
 
 //------------------------------------------------------------------------------
@@ -169,7 +178,7 @@ void GenericSerialDevice::Update() {
         // Close the problematic connection
         update_timer_->stop();
         serial_port_->close();
-        emit Connected(false);
+        ReportDisconnected();
 
         // Periodically try to reconnect
         reconnect_timer_->start();

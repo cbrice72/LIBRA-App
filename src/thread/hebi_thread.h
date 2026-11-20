@@ -134,6 +134,8 @@ class HebiThread : public AbstractActuatorThread
 
     void CalibrationChanged(const Motion::Calibration& level);
     void CalibrationProgressChanged(const QString& text, const bool& running);
+
+    void ReportModelTorque(const std::optional<double>& torque);
 #endif
 
   protected:
@@ -141,6 +143,8 @@ class HebiThread : public AbstractActuatorThread
 
   private:
     // --- Helper Functions ---
+
+    [[nodiscard]] std::shared_ptr<hebi::Group> GetGroup();
 
     std::unordered_map<Joint::Name, double> GetJointFeedbackMap(
         const std::shared_ptr<hebi::GroupFeedback>& feedback,
@@ -188,6 +192,7 @@ class HebiThread : public AbstractActuatorThread
     const unsigned long loop_period_ms_;
 
     std::shared_ptr<hebi::Group> group_{nullptr};
+    std::mutex group_mutex_;  // held by the control loop each cycle
     std::shared_ptr<hebi::GroupCommand> command_;
     std::shared_ptr<hebi::GroupFeedback> feedback_;
 

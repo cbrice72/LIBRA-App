@@ -1,6 +1,6 @@
 /******************************************************************************
  * @file   libra2_calibrator.h
- * @brief  LIBRA-II calibration measurements; header file.
+ * @brief  Full LIBRA-II calibration life cycle; header file.
  *
  * @note   Equation numbers (Eq. ##) refer to the notebook scans in
  *         `LIBRA Archive/LIBRA-II/2026-10-02 Controller Equations/`.
@@ -23,6 +23,7 @@
 // (none)
 
 // Project Headers
+#include "libra2_model.h"
 #include "logger.h"
 #include "motion_defs.h"
 
@@ -76,9 +77,9 @@ class RestSampler {
 
 /**
  * @brief Runs the LIBRA-II calibrations: requests their moves and sweeps,
- *        averages rest samples, and fits friction. The motion controller turns
- *        the results into its models and must call `FinishCalibration()` the
- *        same cycle it takes them.
+ *        averages rest samples, and solves the arm and friction models. The
+ *        motion controller applies the results and must call
+ *        `FinishCalibration()` the same cycle it takes them.
  *
  * @note Not thread-safe; the motion controller calls it under its own lock.
  */
@@ -87,7 +88,7 @@ class Libra2Calibrator {
     /**
      * @brief One control cycle's pitch measurements.
      */
-    struct PitchCycle {
+    struct Measurements {
         double dt{0.0};      // time since last cycle (s)
         double angle{0.0};   // actual angle, θ (rad)
         double vel{0.0};     // actual velocity, θ' (rad/s)
@@ -104,13 +105,14 @@ class Libra2Calibrator {
         std::optional<Motion::SweepRequest> sweep;
         bool stop_trajectory{false};
 
-        std::optional<Motion::RestSample> level_sample;
-        std::optional<std::pair<Motion::RestSample, Motion::RestSample>>
-            two_angle_samples;  // (a, b)
+        std::optional<Motion::ArmModel> arm_model;
         std::optional<Motion::FrictionModel> friction;
+        std::string success_msg;  // empty unless a calibration succeeded
     };
 
-    explicit Libra2Calibrator(Logger& logger);
+    Libra2Calibrator(Logger& logger, const CwModel& cw_model,
+                     const std::optional<Motion::ArmModel>& arm_model,
+                     const double& eta_extension);
 
     // --- Commands ---
 
@@ -126,7 +128,7 @@ class Libra2Calibrator {
 
     // --- Control Cycle ---
 
-    void Update(const PitchCycle& cycle);
+    void Update(const Measurements& measurements);
     [[nodiscard]] Output TakeOutput();
 
     // --- Status ---
@@ -172,19 +174,30 @@ class Libra2Calibrator {
 
     void BeginCalibrationStage(const Motion::CalibrationStatus& status);
     [[nodiscard]] std::string DescribeCalibrationStage() const;
-    void LogCalibrationProgress(const PitchCycle& cycle, const double& timeout);
+    void LogCalibrationProgress(const Measurements& measurements,
+                                const double& timeout);
 
-    void RunArmCalibration(const PitchCycle& cycle);
+    void RunArmCalibration(const Measurements& measurements);
+    void SolveLevelCalibration(const Motion::RestSample& sample);
+    void SolveTwoAngleCalibration(const Motion::RestSample& sample_a,
+                                  const Motion::RestSample& sample_b);
+    [[nodiscard]] double SampleToArmTorque(
+        const Motion::RestSample& sample) const;
 
-    void RunFrictionCalibration(const PitchCycle& cycle);
-    void AddFrictionSample(const PitchCycle& cycle, const bool& going_up,
-                           const double& vel);
+    void RunFrictionCalibration(const Measurements& measurements);
+    void AddFrictionSample(const Measurements& measurements,
+                           const bool& going_up, const double& vel);
     [[nodiscard]] std::optional<std::string> FinishFrictionVel(const double& vel);
     void FinishFrictionCalibration();
 
     // --- Data Members ---
 
-    Logger* logger_;  // motion controller's (not owned)
+    // Motion Controller's (not owned)
+
+    Logger& logger_;
+    const CwModel& cw_model_;
+    const std::optional<Motion::ArmModel>& arm_model_;  // current, if any
+    const double& eta_extension_;  // from min. extension (m)
 
     // Calibration Metadata
 

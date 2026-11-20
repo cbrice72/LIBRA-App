@@ -40,24 +40,19 @@ class Libra2MotionController : public AbstractMotionController {
                                     const double& reactive_cw_off_margin,
                                     const bool& debug_mode = false);
 
-    // --- Control Cycle ---
-
-    Motion::Libra2Command Update(const Motion::ActualState& actual,
-                                 const Motion::CommandedState& commanded,
-                                 const double& dt,
-                                 const bool& trajectory_active,
-                                 const Motion::MotionMode& mode);
-
     // --- Settings ---
 
     void SetCwState(const double& volume, const double& flow);
 
     void EnableReactiveCw(const bool& enabled);
-    void EnableInertiaFeedforward(const bool& enabled);
     void SetReactiveCwBounds(const double& lower_bound,
                              const double& upper_bound);
+
+    void EnableInertiaFeedforward(const bool& enabled);
+
     bool SetHandoffBand(const double& band);
     [[nodiscard]] double GetHandoffBand() const;
+
     void SetEtaExtension(const double& extension);
     [[nodiscard]] double GetEtaExtension() const;
 
@@ -67,6 +62,9 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] bool IsArmCalibrated() const;
     [[nodiscard]] Motion::Calibration GetCalibration() const;
+
+    [[nodiscard]] std::optional<double> PredictHoldingTorque(
+        const double& angle) const;
 
     // --- Calibration ---
 
@@ -84,6 +82,14 @@ class Libra2MotionController : public AbstractMotionController {
 
     [[nodiscard]] Motion::CalibrationRecord GetCalibrationRecord() const;
     bool LoadCalibrationRecord(const Motion::CalibrationRecord& record);
+
+    // --- Control Cycle ---
+
+    Motion::Libra2Command Update(const Motion::ActualState& actual,
+                                 const Motion::CommandedState& commanded,
+                                 const double& dt,
+                                 const bool& trajectory_active,
+                                 const Motion::MotionMode& mode);
 
   protected:
     // --- Overrides ---
@@ -103,22 +109,10 @@ class Libra2MotionController : public AbstractMotionController {
         std::optional<Motion::CwCommand> cw_command;
     };
 
-    // --- Helper Functions ---
+    // --- Arm Model ---
 
-    ReactiveCwResult UpdateReactiveCw(const double& torque_magnitude,
-                                      const Motion::CwCommand& direction,
-                                      const bool& braking);
-    [[nodiscard]] std::optional<double> TargetCwMass(
-        const double& angle_tgt) const;
-    [[nodiscard]] Motion::CwCommand PredictiveCwCommand(
-        const double& cw_mass_tgt, const double& cw_mass) const;
-    bool RunCwPrimary(const double& angle, const double& angle_tgt,
-                      Motion::Libra2Command& command);
-    void HandOffToActuator();
-    void LogMoveStart(const Motion::MotionMode& mode, const double& angle,
-                      const double& angle_tgt) const;
-    void LogPredictiveCwError(const std::optional<Motion::CwCommand>& reactive,
-                              const double& angle, const double& torque);
+    bool CheckStability(const double& arm_hang_torque);
+    void SetFrictionModel(const Motion::FrictionModel& model);
 
     [[nodiscard]] double ComputeNetGravTorque(const double& angle,
                                               const double& cw_mass) const;
@@ -127,20 +121,52 @@ class Libra2MotionController : public AbstractMotionController {
                                           const double& ref_acc,
                                           const bool& model_ready) const;
 
+    [[nodiscard]] double LevelTorqueAtExtension() const;
+
+    // --- Calibration Results ---
+
+    void ApplyCalibrationResults(const Libra2Calibrator::Output& output);
+    void LogArmModelError(const Motion::FrictionModel& model) const;
+
+    // --- Control Cycle ---
+
+    void HandleNewTarget(const Motion::MotionMode& mode, const double& angle,
+                         const std::optional<double>& angle_tgt);
+
     [[nodiscard]] Motion::Libra2Diagnostics ComputeDiagnostics(
         const double& angle, const std::optional<double>& angle_tgt) const;
 
-    void FinishLevelCalibration(const Motion::RestSample& sample);
-    void FinishTwoAngleCalibration(const Motion::RestSample& sample_a,
-                                   const Motion::RestSample& sample_b);
-    void FinishFrictionCalibration(const Motion::FrictionModel& model);
-
-    [[nodiscard]] double SampleToArmTorque(
-        const Motion::RestSample& sample) const;
-    bool CheckStability(const double& arm_hang_torque);
-    [[nodiscard]] double LevelTorqueAtExtension() const;
-
     [[nodiscard]] bool IsMovingLocked() const;
+
+    // --- Counterweight ---
+
+    [[nodiscard]] std::optional<double> TargetCwMass(
+        const double& angle_tgt) const;
+    [[nodiscard]] Motion::CwCommand PredictiveCwCommand(
+        const double& cw_mass_tgt, const double& cw_mass) const;
+
+    bool RunCwPrimary(const double& angle, const double& angle_tgt,
+                      Motion::Libra2Command& command);
+    void HandOffToActuator();
+
+    Motion::CwCommand RunPredictiveCw(const Motion::CwCommand& direction,
+                                      const double& torque,
+                                      const std::optional<double>& angle_tgt,
+                                      const bool& model_ready);
+
+    ReactiveCwResult UpdateReactiveCw(const double& torque_magnitude,
+                                      const Motion::CwCommand& direction,
+                                      const bool& braking);
+
+    // --- Logging ---
+
+    void LogMoveStart(const Motion::MotionMode& mode, const double& angle,
+                      const double& angle_tgt) const;
+
+    void LogReactiveCw(const std::optional<Motion::CwCommand>& reactive,
+                       const double& angle, const double& torque);
+    void LogPredictiveCwError(const std::optional<Motion::CwCommand>& reactive,
+                              const double& angle, const double& torque);
 
     // --- Data Members ---
 

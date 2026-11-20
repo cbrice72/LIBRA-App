@@ -54,13 +54,17 @@ constexpr std::size_t kNumJoints = Joint::Name::kUndefined;  // array size
 constexpr double kGrav = 9.80665;      // g (m/s²)
 constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
 
+// Unit conversions
+
+constexpr double kMmPerM = 1000.0;
+
 //------------------------------------------------------------------------------
 // !Shared Types
 //------------------------------------------------------------------------------
 
 /**
  * @brief How the arm reaches its targets, i.e., what type of automation assists
- *        the trajectory: none, reactive counterweight (torque feedback only),
+ *        the trajectory: none, reactive counterweight only,
  *        or a motion controller.
  *
  * @note "Reactive Counterweight" adjusts counterweight fill level based on
@@ -69,7 +73,7 @@ constexpr double kWaterDensity = 1.0;  // ρ_water (kg/L)
  */
 enum class MotionMode : uint8_t {
     kManual,        // trajectory only; user adjusts CW via fill/drain buttons
-    kFeedbackOnly,  // trajectory throttled by reactive counterweight
+    kReactiveOnly,  // trajectory throttled by reactive counterweight
 #if LIBRA_VERSION == 2
     kTandem,    // trajectory executed while CW adjusts to estimated target mass
     kCwPrimary  // CW moves arm; actuator takes over near target
@@ -170,8 +174,8 @@ inline std::string MotionModeEnumToString(const MotionMode& mode) {
     switch (mode) {
         case MotionMode::kManual:
             return "Manual";
-        case MotionMode::kFeedbackOnly:
-            return "Feedback Only";
+        case MotionMode::kReactiveOnly:
+            return "Reactive Only";
 #if LIBRA_VERSION == 2
         case MotionMode::kTandem:
             return "Tandem";
