@@ -397,8 +397,7 @@ void DiagnosticsWidget::ClearTorques() {
  * @note Only LIBRA-II has a motion controller, and its only CW is side A.
  */
 void DiagnosticsWidget::UpdateModelCwTarget(
-    [[maybe_unused]] const std::optional<double>& volume,
-    const std::optional<double>& torque) {
+    const std::optional<double>& volume, const std::optional<double>& torque) {
     target_model_torque_ = torque;
 # ifdef BUILD_WITH_ROS2
     cw_state_msg_.cws.at(static_cast<std::size_t>(Water::Side::kA))
