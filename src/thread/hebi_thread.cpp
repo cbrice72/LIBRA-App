@@ -347,12 +347,21 @@ std::unordered_map<Joint::Name, double> HebiThread::GetJointFeedbackMap(
         if (enum_names_[i] == Actuator::Name::kMB) {
             const double mb_val = val;
 
+            // Torques add where positions average (both actuators' power goes
+            // to the joint)
+            const bool is_torque = (type == Actuator::Feedback::kCommandTorque
+                                    || type
+                                           == Actuator::Feedback::kActualTorque);
+            const double scale = is_torque ? 2.0 : 1.0;
+
             joint_feedback_map[Joint::Name::kRoll] =
-                Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
-                                                   mb_val);
+                scale
+                * Joint::ActuatorToJointDifferential(Joint::Name::kRoll, ma_val,
+                                                     mb_val);
             joint_feedback_map[Joint::Name::kPitch] =
-                Joint::ActuatorToJointDifferential(Joint::Name::kPitch, ma_val,
-                                                   mb_val);
+                scale
+                * Joint::ActuatorToJointDifferential(Joint::Name::kPitch,
+                                                     ma_val, mb_val);
 
             continue;
         }
@@ -504,17 +513,11 @@ double HebiThread::UpdateTrajectoryRate() {
     const auto& eff = feedback_->getEffort();
 
 #if LIBRA_VERSION == 1
-    const double arm_roll_torque =
-        Joint::ActuatorToJointDifferential(Joint::Name::kRoll,
-                                           eff[Actuator::Name::kMA],
-                                           eff[Actuator::Name::kMB]);
-    const double arm_pitch_torque =
-        Joint::ActuatorToJointDifferential(Joint::Name::kPitch,
-                                           eff[Actuator::Name::kMA],
-                                           eff[Actuator::Name::kMB]);
-    const double arm_torque_r =
-        std::hypot(arm_roll_torque,    // hypot calculates sqrt(x^2 + y^2)
-                   arm_pitch_torque);  // without overflow/underflow issues
+    const auto torque = GetJointFeedbackMap(feedback_,
+                                            Actuator::Feedback::kActualTorque);
+    // hypot calculates sqrt(x^2 + y^2) without overflow/underflow issues
+    const double arm_torque_r = std::hypot(torque.at(Joint::Name::kRoll),
+                                           torque.at(Joint::Name::kPitch));
 
     const double arm_torque_theta =
         std::atan2(-eff[Actuator::Name::kMA]
