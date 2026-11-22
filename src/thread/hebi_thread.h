@@ -167,10 +167,12 @@ class HebiThread : public AbstractActuatorThread
     void SetControlOff(const bool& off);
 
     bool CanCalibrate();
+
+    [[nodiscard]] double GetPitchVelLimit();
 #endif
 
-    void SetMaxVel(const hebi::GroupCommand& safety_cmd,
-                   const std::string& source);
+    void SetVelLimits(const hebi::GroupCommand& safety_cmd,
+                      const std::string& source);
 
     void SendFeedback();
     [[nodiscard]] QString GetTelemetry() const;
@@ -217,7 +219,8 @@ class HebiThread : public AbstractActuatorThread
 
     double t_trajectory_s_{0.0};  // s, incr. by dt * trajectory_rate_ / cycle
 
-    std::atomic<double> max_vel_;  // peak trajectory speed (rad/s)
+    // Loaded from safety params
+    Eigen::VectorXd vel_limits_;  // per actuator (rad/s)
 
     // From `SetTarget()`, started by the control loop (in LIBRA-II: only used
     // by modes without the motion controller; guarded by `trajectory_mutex_`)

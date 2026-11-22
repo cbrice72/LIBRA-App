@@ -52,8 +52,9 @@ constexpr double kMsPerS = 1000.0;
 
 // HEBI Functions
 
-constexpr int32_t kTimeout = 3000;  // ms
-constexpr double kMaxVel = 0.052;   // rad/s (~3 deg/s)
+constexpr int32_t kTimeout = 3000;          // ms
+constexpr double kDefaultVelLimit = 0.052;  // until safety loads (rad/s)
+constexpr double kVelLimitFraction = 0.9;   // be safe; never exceet vel limits
 constexpr double kNone = std::numeric_limits<double>::quiet_NaN();  // no command
 
 // Safety
@@ -93,28 +94,6 @@ std::string FormatDouble(const double& value, const int& precision = 2) {
     std::ostringstream ss;
     ss << std::fixed << std::setprecision(precision) << value;
     return ss.str();
-}
-
-/**
- * @brief Gets the lowest velocity limit (rad/s) in a set of safety
- *        parameters, if any actuator has one.
- *
- * @param safety_cmd Command holding safety parameters (from
- *                   `readSafetyParameters()`)
- */
-std::optional<double> MaxVelFromSafety(const hebi::GroupCommand& safety_cmd) {
-    std::optional<double> max_vel;
-    for (std::size_t i = 0; i < safety_cmd.size(); ++i) {
-        const auto& actuator = safety_cmd[i].settings().actuator();
-        for (const auto* limit :
-             {&actuator.velocityLimitMin(), &actuator.velocityLimitMax()}) {
-            if (limit->has() && std::isfinite(limit->get())) {
-                const double v = std::abs(limit->get());
-                max_vel = max_vel ? std::min(*max_vel, v) : v;
-            }
-        }
-    }
-    return max_vel;
 }
 
 /**
@@ -229,8 +208,7 @@ HebiThread::HebiThread(QObject* parent,
       families_(std::move(families)),
       names_(std::move(names)),
       n_actuators_(names_.size()),
-      loop_period_ms_(10),  // 100 Hz
-      max_vel_(kMaxVel)     // until safety parameters are loaded
+      loop_period_ms_(10)  // 100 Hz
 {
     // Initialize the logger
 #ifdef BUILD_WITH_ROS2
@@ -246,6 +224,7 @@ HebiThread::HebiThread(QObject* parent,
 
     latest_cmd_pos_ = Eigen::VectorXd::Constant(n_actuators_, kNone);
     latest_cmd_vel_ = Eigen::VectorXd::Zero(n_actuators_);
+    vel_limits_ = Eigen::VectorXd::Constant(n_actuators_, kDefaultVelLimit);
 
     // "Translate" string names into corresponding enums for feedback_map
     enum_names_.resize(n_actuators_);
@@ -592,7 +571,6 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
                                  const Eigen::VectorXd& target_pos) {
     // Make position, velocity, and acceleration commands for start & end points
     Eigen::MatrixXd pos(n_actuators_, 2);
-    // Eigen::MatrixXd vel = Eigen::MatrixXd::Constant(num_actuators_, 2, kMaxVel);
     Eigen::MatrixXd vel = Eigen::MatrixXd::Zero(n_actuators_, 2);    // default
     Eigen::MatrixXd accel = Eigen::MatrixXd::Zero(n_actuators_, 2);  // default
 
@@ -607,20 +585,22 @@ void HebiThread::StartTrajectory(const Eigen::VectorXd& start_pos,
                       << pos.col(1).format(matrix_print_format_);
     }
 
-    // Determine greatest change in position for calculating trajectory times
-    double max_difference = 0;
-    for (int i = 0; i < n_actuators_; ++i) {
-        max_difference = std::max(std::abs(pos(i, 1) - pos(i, 0)),
-                                  max_difference);
-    }
-
-    // Calculate trajectory start and end times
+    // Calculate trajectory start and end times: the actuator needing the most
+    // time at its own peak speed sets the duration, so all arrive together
     // (NOTE: HEBI trajectories are minimum-jerk (see link below), which peak
-    //        mid-move at 15/8 their average speed; the planned move is
-    //        stretched by 15/8 so the peak happens at `max_vel_`)
+    //        mid-move at 15/8 their average speed)
     // https://files.hebi.us/docs/matlab/hebi-matlab-2.4/HebiTrajectoryGenerator.setAlgorithm.html
     constexpr double kPeakToAvgVel = 15.0 / 8.0;
-    const double t_move_s = kPeakToAvgVel * max_difference / max_vel_;
+    Eigen::VectorXd peak_vel;  // rad/s
+    {
+        const std::scoped_lock lock(trajectory_mutex_);
+        peak_vel = kVelLimitFraction * vel_limits_;
+    }
+    const double t_move_s = kPeakToAvgVel
+                            * (pos.col(1) - pos.col(0))
+                                  .cwiseAbs()
+                                  .cwiseQuotient(peak_vel)
+                                  .maxCoeff();
 
     // A zero-length move would give a zero-duration (invalid) trajectory, so
     // allow at least one loop period (the shortest the loop can follow)
@@ -868,11 +848,12 @@ void HebiThread::StartSweep(const Motion::SweepRequest& sweep) {
                                                        start[i]);
         }
     }
-    if (!(sweep.vel > 0.0) || sweep.vel > max_vel_ || !(sweep.ramp_dist > 0.0)
+    const double vel_limit = GetPitchVelLimit();
+    if (!(sweep.vel > 0.0) || sweep.vel > vel_limit || !(sweep.ramp_dist > 0.0)
         || dir * (ramp_start - ramp_end) < 0.0
         || dir * (ramp_end - pitch_start) <= 0.0) {
         logger_->Error("Rejected sweep: speed=" + FormatDouble(sweep.vel, 4)
-                       + " rad/s (limit " + FormatDouble(max_vel_, 4)
+                       + " rad/s (limit " + FormatDouble(vel_limit, 4)
                        + "), from " + FormatDouble(pitch_start, 3) + " to "
                        + FormatDouble(sweep.to, 3) + " rad");
         motion_controller_->CancelCalibration();
@@ -974,6 +955,20 @@ bool HebiThread::CanCalibrate() {
 }
 
 /**
+ * @brief Gets the pitch actuator's velocity limit (rad/s); 0 if no actuator
+ *        drives the pitch joint.
+ */
+double HebiThread::GetPitchVelLimit() {
+    const std::scoped_lock lock(trajectory_mutex_);
+    for (int i = 0; i < n_actuators_; ++i) {
+        if (JointFromActuator(enum_names_[i]) == Joint::Name::kPitch) {
+            return vel_limits_(i);
+        }
+    }
+    return 0.0;
+}
+
+/**
  * @brief Turns the actuators' control strategy off and loosens their velocity
  *        limit (back-drivable), or restores the strategy and limit they had
  *        before. Does nothing if already so.
@@ -1051,25 +1046,47 @@ void HebiThread::SetControlOff(const bool& off) {
 #endif  // LIBRA_VERSION == 2
 
 /**
- * @brief Sets the maximum trajectory speed from the given safety parameters.
+ * @brief Sets each actuator's velocity limit from the given safety parameters
+ *        (caps trajectory speed).
  *
  * @param safety_cmd HEBI safety parameters (from `readSafetyParameters()`)
  * @param source Where the parameters came from (for logging purposes)
  *
- * @note Falls back to `kMaxVel` if no actuator has a velocity limit.
+ * @note Actuators without a velocity limit use `kDefaultVelLimit`.
  */
-void HebiThread::SetMaxVel(const hebi::GroupCommand& safety_cmd,
-                           const std::string& source) {
-    const auto limit = MaxVelFromSafety(safety_cmd);
-    max_vel_ = limit.value_or(kMaxVel);
+void HebiThread::SetVelLimits(const hebi::GroupCommand& safety_cmd,
+                              const std::string& source) {
+    Eigen::VectorXd vel_limits = Eigen::VectorXd::Constant(n_actuators_,
+                                                           kDefaultVelLimit);
+    std::string limits_str;
+    std::string defaulted_str;  // actuators without a limit
+    for (int i = 0; i < n_actuators_; ++i) {
+        const auto& actuator = safety_cmd[i].settings().actuator();
+        bool found = false;
+        for (const auto* limit :
+             {&actuator.velocityLimitMin(), &actuator.velocityLimitMax()}) {
+            if (limit->has() && std::isfinite(limit->get())) {
+                const double v = std::abs(limit->get());
+                vel_limits(i) = found ? std::min(vel_limits(i), v) : v;
+                found = true;
+            }
+        }
+        if (!found) {
+            defaulted_str += " " + names_[i];
+        }
+        limits_str += (i > 0 ? ", " : "") + FormatDouble(vel_limits(i), 3);
+    }
 
-    if (limit) {
-        logger_->Info("Max. trajectory speed: " + FormatDouble(max_vel_, 3)
-                      + " rad/s (velocity limit in " + source + ")");
-    } else {
-        logger_->Warn("No velocity limit in " + source
-                      + "; max. trajectory speed: " + FormatDouble(max_vel_, 3)
-                      + " rad/s (default)");
+    {
+        const std::scoped_lock lock(trajectory_mutex_);
+        vel_limits_ = vel_limits;
+    }
+
+    logger_->Info("Velocity limits (rad/s): " + limits_str + " (from " + source
+                  + ")");
+    if (!defaulted_str.empty()) {
+        logger_->Warn("No velocity limit in " + source + " for" + defaulted_str
+                      + "; using default");
     }
 }
 
@@ -1359,7 +1376,7 @@ void HebiThread::Connect() {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
     }
-    SetMaxVel(*command_, safety_path);
+    SetVelLimits(*command_, safety_path);
 
     // Load gains
     if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
@@ -1599,8 +1616,8 @@ void HebiThread::LoadGains(const QString& file_path) {
  *
  * @param file_path Path to an XML safety parameters file
  *
- * @note The file's velocity limit (if any) also becomes the max. trajectory
- *       speed, from the next trajectory onward.
+ * @note The file's velocity limits also cap trajectory speeds, from the next
+ *       trajectory onward.
  */
 void HebiThread::LoadSafety(const QString& file_path) {
     const auto group = GetGroup();
@@ -1621,7 +1638,7 @@ void HebiThread::LoadSafety(const QString& file_path) {
             "HEBI - Didn't receive acknowledgement from safety update!");
         return;
     }
-    SetMaxVel(safety_cmd, file_path.toStdString());
+    SetVelLimits(safety_cmd, file_path.toStdString());
 
     logger_->Info("Successfully loaded safety limits from: "
                   + file_path.toStdString());
@@ -1802,8 +1819,8 @@ void HebiThread::StartTwoAngleCalibration(const double& deg_a,
  * @param deg_a One end of the window (deg, joint space, up = +)
  * @param deg_b Other end of the window (deg, joint space, up = +)
  *
- * @note Sweep speeds are fractions of `kMaxSweepVel` (or `max_vel_`, if
- *       lower).
+ * @note Sweep speeds are fractions of `kMaxSweepVel` (or the pitch actuator's
+ *       velocity limit, if lower).
  */
 void HebiThread::StartFrictionCalibration(const double& deg_a,
                                           const double& deg_b) {
@@ -1813,7 +1830,7 @@ void HebiThread::StartFrictionCalibration(const double& deg_a,
     if (!motion_controller_
              ->StartFrictionCalibration(deg_a * kDegToRad, deg_b * kDegToRad,
                                         std::min(kMaxSweepVel,
-                                                 max_vel_.load()))) {
+                                                 GetPitchVelLimit()))) {
         emit ErrorThrown("HEBI - Can't start the friction calibration (see "
                          "the log for the reason)!");
         return;
