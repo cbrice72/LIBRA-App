@@ -1354,7 +1354,7 @@ void HebiThread::Connect() {
     }
 
     // Load safety parameters
-    const std::string safety_path = "./bin/shared/hebi/safety_conservative.xml";
+    const std::string safety_path = "./bin/shared/hebi/safety.xml";
     if (!command_->readSafetyParameters(safety_path)) {
         emit ErrorThrown("HEBI - Failed to load safety parameters!");
         return;
