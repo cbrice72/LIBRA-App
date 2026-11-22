@@ -102,6 +102,10 @@ void MainWindow::SetTrajectoryPlaying(const bool& playing) {
  *
  * @note CW actions use the same controls as the user (motion mode, fill and
  *       drain buttons), so their checks and guards still apply.
+ *
+ * @note "Trajectory step i/n started" and "... reached" (see
+ *       `HandleMovementStateChanged()`) mark each step in the log and, with
+ *       ROS2, in `/rosout` for analysis; KEEP THEIR WORDING STABLE!!
  */
 void MainWindow::SendTrajectoryStep() {
     const auto& step = trajectory_[*trajectory_step_];
@@ -136,6 +140,8 @@ void MainWindow::SendTrajectoryStep() {
         }
     }
 
+    logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
+                  + " started");
     SendJointTargets(step.pose);
 }
 
@@ -175,7 +181,6 @@ void MainWindow::PlayNextTrajectoryStep() {
     }
 
     // Send next step to actuators and update UI
-    logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString());
     SendTrajectoryStep();
 
     UpdateTrajectoryControls();

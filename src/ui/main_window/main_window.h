@@ -20,6 +20,9 @@
 #include <QLabel>          // Qt::Widgets
 #include <QMainWindow>     // Qt::Widgets
 #include <QTimer>          // Qt::Core
+#ifdef BUILD_WITH_ROS2
+# include <rclcpp/rclcpp.hpp>  // ROS2 Core
+#endif
 
 // Project Headers
 // - Actuators
@@ -318,6 +321,9 @@ class MainWindow : public QMainWindow {
 
     Ui::MainWindow* ui_{nullptr};
 
+#ifdef BUILD_WITH_ROS2
+    rclcpp::Node::SharedPtr node_;
+#endif
     std::unique_ptr<Logger> logger_;
     bool debug_mode_{true};
 
