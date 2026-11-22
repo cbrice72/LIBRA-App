@@ -38,3 +38,6 @@ set(LIBRA_CONFIGURED_VARIANT
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
+
+# Let the app look up the source tree's git commit (e.g., for run metadata)
+add_compile_definitions(LIBRA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

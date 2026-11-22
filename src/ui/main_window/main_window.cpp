@@ -751,6 +751,14 @@ void MainWindow::InitializeThreads() {
             this, &MainWindow::HandleMovementStateChanged);
     connect(hebi_thread_, &HebiThread::ThermalLimitReached,  // overheating
             this, &MainWindow::HandleThermalLimit);
+    connect(hebi_thread_, &HebiThread::HebiLogChanged,  // run metadata
+            this, &MainWindow::HandleHebiLogChanged);
+    connect(hebi_thread_, &HebiThread::GainsLoaded,  // "
+            this,
+            [this](const QString& file_path) { gains_file_ = file_path; });
+    connect(hebi_thread_, &HebiThread::SafetyLoaded,  // "
+            this,
+            [this](const QString& file_path) { safety_file_ = file_path; });
 
     connect(this, &MainWindow::UpdateReactiveCwBounds,  // torque limits
             ui_->w_diagnostics, &DiagnosticsWidget::SetTorqueLimits);
@@ -1438,7 +1446,7 @@ void MainWindow::HandleMovementStateChanged() {
         //       KEEP THEIR WORDING STABLE !!
         logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
                       + " reached; holding " + Motion::FormatNum(t_hold_s)
-                      + " s");
+                      + " s" + GetTrajectoryLoopText().toStdString());
 
         hold_timer_->start(
             static_cast<int>(std::lround(t_hold_s * 1000.0)));  // s -> ms
@@ -1474,6 +1482,7 @@ void MainWindow::HandleThermalLimit(const QString& actuator) {
     }
     logger_->Error("Thermal abort (" + actuator.toStdString() + ")."
                    + aborted.toStdString());
+    AppendRunMetadata("thermal abort (" + actuator + ")." + aborted);
 
     if (arm_moving_) {
         logger_->Info("Returning to the last reached pose");
@@ -1483,6 +1492,22 @@ void MainWindow::HandleThermalLimit(const QString& actuator) {
     HandleCriticalError("HEBI - " + actuator
                         + " is overheating and its output is limited." + aborted
                         + " Let it cool before continuing.");
+}
+
+/**
+ * @brief Saves the active hebilog filepath (for run metadata) and notes its
+ *        start or stop in the active run, if any.
+ *
+ * @param file_path Hebilog file (empty = logging stopped)
+ */
+void MainWindow::HandleHebiLogChanged(const QString& file_path) {
+    hebilog_file_ = file_path;
+    if (file_path.isEmpty()) {
+        run_started_hebilog_ = false;  // a new log wouldn't belong to the run
+        AppendRunMetadata("hebilog stopped");
+    } else {
+        AppendRunMetadata("hebilog started: " + file_path);
+    }
 }
 
 #if LIBRA_VERSION == 2

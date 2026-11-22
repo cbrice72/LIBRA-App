@@ -40,6 +40,7 @@ class TankWidget : public QWidget {
     // --- Getters & Setters ---
 
     [[nodiscard]] double GetLevel() const;
+    [[nodiscard]] double GetVolume() const;
     void SetCapacity(double capacity);
     void SetVolume(double volume);
 

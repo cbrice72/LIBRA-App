@@ -101,6 +101,7 @@ class MainWindow : public QMainWindow {
                                  const Actuator::Type& type);
     void HandleMovementStateChanged();
     void HandleThermalLimit(const QString& actuator);
+    void HandleHebiLogChanged(const QString& file_path);
 
 #if LIBRA_VERSION == 2
     void HandlePitchReleaseChanged(const bool& released);
@@ -316,6 +317,11 @@ class MainWindow : public QMainWindow {
     void PlayNextTrajectoryStep();
     bool ConfirmTrajectoryStep();
     [[nodiscard]] QString GetTrajectoryStepText() const;
+    [[nodiscard]] QString GetTrajectoryLoopText() const;
+
+    bool StartTrajectoryRun();
+    void EndTrajectoryRun(const QString& outcome);
+    void AppendRunMetadata(const QString& text);
 
     // --- Data Members ---
 
@@ -367,6 +373,14 @@ class MainWindow : public QMainWindow {
     bool trajectory_playing_{false};
     QTimer* hold_timer_{nullptr};        // time at each reached step
     double t_hold_s_{kDefaultHoldTime};  // sec
+    std::size_t trajectory_loop_{1};     // times through the trajectory
+
+    // Run metadata (see `StartTrajectoryRun()`)
+    QString run_file_;  // active run's metadata file
+    QString gains_file_;
+    QString safety_file_;
+    QString hebilog_file_;
+    bool run_started_hebilog_{false};
 
     // Device Managers
 

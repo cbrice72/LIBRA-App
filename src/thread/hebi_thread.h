@@ -125,6 +125,11 @@ class HebiThread : public AbstractActuatorThread
 
     void ReportArmTorque(const std::optional<double>& theta);
     void ThermalLimitReached(const QString& actuator);
+
+    void GainsLoaded(const QString& file_path);
+    void SafetyLoaded(const QString& file_path);
+    void HebiLogChanged(const QString& file_path);
+
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2

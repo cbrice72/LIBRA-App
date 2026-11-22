@@ -446,6 +446,7 @@ void MainWindow::on_a_trajectory_load_triggered() {
         return;
     }
 
+    EndTrajectoryRun("trajectory replaced");
     trajectory_ = std::move(*steps);
     trajectory_file_ = file_path;
     trajectory_step_.reset();

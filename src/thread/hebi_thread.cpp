@@ -1144,50 +1144,48 @@ void HebiThread::SendFeedback() {
 }
 
 /**
- * @brief Warns once when an actuator's winding temperature passes
- *        `kWarnWindingTemp`, and reports once when an actuator's firmware
- *        starts limiting its output due to heat (temperature state other than
- *        Normal), so the trajectory can be aborted.
+ * @brief Ensures all actuators are within normal operating temperatures and
+ *        takes corrective action if an anomaly is detected.
  *
- * @note Each re-arms once the actuators cool down (the warning only after
- *       cooling `kWarnTempHysteresis` below its threshold).
+ * @note Both the warning and abort signals "re-arm" once the affected actuators
+ *       have cooled `kWarnTempHysteresis` below the threshold.
  */
 void HebiThread::CheckTemperature() {
     const auto& temps = feedback_->getMotorWindingTemperature();  // (C)
 
-    int hottest = -1;            // actuator with the highest temperature
-    std::optional<int> limited;  // first actuator limited by its firmware
+    int hottest_idx = -1;
+    std::optional<int> limited_idx;
     for (int i = 0; i < n_actuators_; ++i) {
         if (std::isfinite(temps[i])
-            && (hottest < 0 || temps[i] > temps[hottest])) {
-            hottest = i;
+            && (hottest_idx < 0 || temps[i] > temps[hottest_idx])) {
+            hottest_idx = i;
         }
         const auto& state = (*feedback_)[i].actuator().temperatureState();
-        if (!limited && state.has()
+        if (!limited_idx && state.has()
             && state.get() != hebi::Feedback::TemperatureState::Normal) {
-            limited = i;
+            limited_idx = i;
         }
     }
 
     // Firmware limiting output: abort
-    if (limited && !temp_limited_) {
-        logger_->Error(names_[*limited] + " output limited by its firmware ("
-                       + FormatDouble(temps[*limited], 1) + " C)");
-        emit ThermalLimitReached(QString::fromStdString(names_[*limited]));
+    if (limited_idx && !temp_limited_) {
+        logger_->Error(names_[*limited_idx] + " output limited by firmware ("
+                       + FormatDouble(temps[*limited_idx], 1) + " C)");
+        emit ThermalLimitReached(QString::fromStdString(names_[*limited_idx]));
     }
-    temp_limited_ = limited.has_value();
+    temp_limited_ = limited_idx.has_value();
 
-    // Approaching the limit: warn the operator
-    if (hottest < 0) {
+    // Approaching limit: warning only
+    if (hottest_idx < 0) {
         return;
     }
-    if (!temp_warned_ && temps[hottest] >= kWarnWindingTemp) {
+    if (!temp_warned_ && temps[hottest_idx] >= kWarnWindingTemp) {
         temp_warned_ = true;
-        logger_->Warn(names_[hottest] + " winding at "
-                      + FormatDouble(temps[hottest], 1) + " C (warning at "
+        logger_->Warn(names_[hottest_idx] + " motor winding at "
+                      + FormatDouble(temps[hottest_idx], 1) + " C (warning at "
                       + FormatDouble(kWarnWindingTemp, 0) + " C)");
     } else if (temp_warned_
-               && temps[hottest] < kWarnWindingTemp - kWarnTempHysteresis) {
+               && temps[hottest_idx] < kWarnWindingTemp - kWarnTempHysteresis) {
         temp_warned_ = false;
     }
 }
@@ -1432,7 +1430,8 @@ void HebiThread::Connect() {
     SetVelLimits(*command_, safety_path);
 
     // Load gains
-    if (!command_->readGains("./bin/shared/hebi/gains.xml")) {
+    const std::string gains_path = "./bin/shared/hebi/gains.xml";
+    if (!command_->readGains(gains_path)) {
         emit ErrorThrown("HEBI - Failed to load gain parameters!");
         return;
     }
@@ -1444,6 +1443,8 @@ void HebiThread::Connect() {
         return;
     }
     command_->clear();
+    emit GainsLoaded(QString::fromStdString(gains_path));
+    emit SafetyLoaded(QString::fromStdString(safety_path));
 
     // Command actuator(s) to hold current position
     if (!group->getNextFeedback(*feedback_)) {
@@ -1666,6 +1667,7 @@ void HebiThread::LoadGains(const QString& file_path) {
     }
 
     logger_->Info("Successfully loaded gains from: " + file_path.toStdString());
+    emit GainsLoaded(file_path);
 }
 
 /**
@@ -1699,6 +1701,7 @@ void HebiThread::LoadSafety(const QString& file_path) {
 
     logger_->Info("Successfully loaded safety limits from: "
                   + file_path.toStdString());
+    emit SafetyLoaded(file_path);
 }
 
 /**
@@ -1739,6 +1742,7 @@ void HebiThread::StartHebiLog() {
 
     auto full_path = std::filesystem::canonical(log_path).string();
     logger_->Info("Started logging to: " + full_path);
+    emit HebiLogChanged(QString::fromStdString(full_path));
 }
 
 /**
@@ -1761,6 +1765,7 @@ void HebiThread::StopHebiLog() {
     logging_active_ = false;
 
     logger_->Info("Stopped logging");
+    emit HebiLogChanged({});
 }
 
 //------------------------------------------------------------------------------

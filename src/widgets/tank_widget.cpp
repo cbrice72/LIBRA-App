@@ -43,12 +43,19 @@ TankWidget::TankWidget(QWidget* parent) : QWidget(parent) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Gets current fluid level as a fraction of capacity.
+ * @brief Gets the current fluid level as a fraction of capacity.
  *
  * @note May be > 1.0 if overfilled.
  */
 double TankWidget::GetLevel() const {
     return capacity_ > 0.0 ? volume_ / capacity_ : 0.0;
+}
+
+/**
+ * @brief Gets the current water volume (L).
+ */
+double TankWidget::GetVolume() const {
+    return volume_;
 }
 
 /**

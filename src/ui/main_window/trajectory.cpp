@@ -10,12 +10,19 @@
 #include "main_window.h"
 
 // C++ Standard Library Headers
+#include <array>
 #include <string>
 #include <utility>
 
 // Other Library Headers
-#include <QFileInfo>    // Qt::Core
-#include <QMessageBox>  // Qt::Widgets
+#include <QDateTime>     // Qt::Core
+#include <QDir>          // Qt::Core
+#include <QFile>         // Qt::Core
+#include <QFileInfo>     // Qt::Core
+#include <QInputDialog>  // Qt::Widgets
+#include <QMessageBox>   // Qt::Widgets
+#include <QProcess>      // Qt::Core
+#include <QTextStream>   // Qt::Core
 
 // Project Headers
 #include "colors.h"
@@ -25,6 +32,14 @@
  * !Class Helpers
  * !Buttons
  */
+
+// Build Info
+
+#ifdef BUILD_WITH_ROS2
+constexpr bool kBuildWithRos2 = true;
+#else
+constexpr bool kBuildWithRos2 = false;
+#endif
 
 //------------------------------------------------------------------------------
 // !Class Helpers
@@ -141,7 +156,7 @@ void MainWindow::SendTrajectoryStep() {
     }
 
     logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
-                  + " started");
+                  + " started" + GetTrajectoryLoopText().toStdString());
     SendJointTargets(step.pose);
 }
 
@@ -162,11 +177,15 @@ void MainWindow::PlayNextTrajectoryStep() {
         logger_->Info("Trajectory complete");
         trajectory_step_.reset();
         SetTrajectoryPlaying(false);
+        EndTrajectoryRun("complete");
         return;
     }
 
     if (*trajectory_step_ == last) {
         trajectory_step_ = first;  // loop
+        ++trajectory_loop_;
+        AppendRunMetadata("loop " + QString::number(trajectory_loop_)
+                          + " started");
     } else {
         trajectory_step_ = reverse ? *trajectory_step_ - 1
                                    : *trajectory_step_ + 1;
@@ -239,6 +258,150 @@ QString MainWindow::GetTrajectoryStepText() const {
            + QString::number(trajectory_.size());
 }
 
+/**
+ * @brief Gets the current loop as " (loop n)" for log messages; empty on the
+ *        first time through the trajectory.
+ */
+QString MainWindow::GetTrajectoryLoopText() const {
+    return trajectory_loop_ > 1
+               ? " (loop " + QString::number(trajectory_loop_) + ")"
+               : QString();
+}
+
+/**
+ * @brief Starts a run. Allows the user to specify a note, writes the
+ *        run's metadata file, and starts a hebilog (if none is active).
+ *
+ * @note The metadata file is `./log/run_<date>_<time>.txt`. Events during the
+ *       run (hebilog, loops, aborts, end) are appended to it with their time.
+ *
+ * @see EndTrajectoryRun AppendRunMetadata
+ */
+bool MainWindow::StartTrajectoryRun() {
+    // Query user for custom note
+    bool ok = false;
+    const QString note = QInputDialog::getText(this, "Trajectory Run",
+                                               "Run note (optional):",
+                                               QLineEdit::Normal, {}, &ok);
+    if (!ok) {
+        return false;
+    }
+
+    // Create and open metadata file
+    const QDir log_dir("./log");
+    if (!log_dir.exists() && !log_dir.mkpath(".")) {
+        HandleCriticalError("Trajectory - Failed to create log directory");
+        return false;
+    }
+    const auto now = QDateTime::currentDateTime();
+    QFile file(log_dir.filePath("run_" + now.toString("yyyy-MM-dd_HH-mm-ss")
+                                + ".txt"));
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        HandleCriticalError("Trajectory - Failed to write run metadata to "
+                            + file.fileName());
+        return false;
+    }
+
+    // Get and write metadata (commit, torque bounds, etc.)
+    QProcess git;
+    git.start("git",
+              {"-C", LIBRA_SOURCE_DIR, "describe", "--always", "--dirty"});
+    const QString commit = git.waitForFinished(2000) && git.exitCode() == 0
+                               ? QString(git.readAllStandardOutput()).trimmed()
+                               : "unknown";
+
+    const auto [cw_lower_bound,
+                cw_upper_bound] = hebi_thread_->GetReactiveCwBounds();
+    const std::array tanks{ui_->tw_water_level_A, ui_->tw_water_level_B};
+    QStringList volumes;
+    for (std::size_t i = 0; i < Water::kSideCount; ++i) {
+        volumes << QString::fromStdString(
+                       Water::SideEnumToString(static_cast<Water::Side>(i)))
+                       + " "
+                       + QString::number(tanks.at(i)->GetVolume(), 'f', 2);
+    }
+
+    QTextStream out(&file);
+    out << "# LIBRA trajectory run metadata\n"
+        << "started: " << now.toString("yyyy-MM-dd HH:mm:ss") << "\n"
+        << "libra_version: " << LIBRA_VERSION << "\n"
+        << "build_with_ros2: " << (kBuildWithRos2 ? "true" : "false") << "\n"
+        << "commit: " << commit << "\n"
+        << "trajectory: "
+        << (trajectory_file_.isEmpty() ? "unsaved recording" : trajectory_file_)
+        << " (" << trajectory_.size() << " steps)\n"
+        << "direction: "
+        << (ui_->pb_trajectory_reverse->isChecked() ? "reverse" : "forward")
+        << "\n"
+        << "loop: " << (ui_->chk_trajectory_loop->isChecked() ? "on" : "off")
+        << "\n"
+        << "hold_s: " << t_hold_s_ << "\n"
+        << "motion_mode: "
+        << QString::fromStdString(Motion::MotionModeEnumToString(motion_mode_))
+        << "\n"
+        << "reactive_cw_bounds_nm: " << cw_lower_bound << ", " << cw_upper_bound
+        << "\n"
+        << "cw_volume_l: " << volumes.join(", ") << "\n"
+        << "gains: " << gains_file_ << "\n"
+        << "safety: " << safety_file_ << "\n"
+        << "note: " << note << "\n";
+
+    run_file_ = file.fileName();
+    trajectory_loop_ = 1;
+    logger_->Info("Started trajectory run (metadata: " + run_file_.toStdString()
+                  + ")");
+
+    if (hebilog_file_.isEmpty()) {
+        run_started_hebilog_ = true;
+        ui_->a_hebi_log_start->trigger();
+    }
+
+    return true;
+}
+
+/**
+ * @brief Ends the active run, if any.
+ *
+ * @note Stops the active hebilog if the run started it.
+ *
+ * @param outcome Why the run ended (e.g., "complete")
+ */
+void MainWindow::EndTrajectoryRun(const QString& outcome) {
+    if (run_file_.isEmpty()) {
+        return;
+    }
+
+    AppendRunMetadata("ended (" + outcome + ")");
+    logger_->Info("Ended trajectory run (" + outcome.toStdString() + ")");
+    run_file_.clear();
+
+    if (run_started_hebilog_ && !hebilog_file_.isEmpty()) {
+        ui_->a_hebi_log_stop->trigger();
+    }
+    run_started_hebilog_ = false;
+}
+
+/**
+ * @brief Appends a timestamped event to the active run's metadata file, if
+ *        any.
+ *
+ * @param text Event description
+ */
+void MainWindow::AppendRunMetadata(const QString& text) {
+    if (run_file_.isEmpty()) {
+        return;
+    }
+
+    QFile file(run_file_);
+    if (!file.open(QIODevice::Append | QIODevice::Text)) {
+        logger_->Error("Failed to append to run metadata: "
+                       + run_file_.toStdString());
+        return;
+    }
+    QTextStream(&file) << QTime::currentTime().toString("HH:mm:ss") << " "
+                       << text << "\n";
+}
+
 //------------------------------------------------------------------------------
 // !Buttons
 //------------------------------------------------------------------------------
@@ -277,6 +440,7 @@ void MainWindow::on_pb_trajectory_clear_clicked() {
 
     logger_->Info("Cleared trajectory (" + std::to_string(trajectory_.size())
                   + " poses)");
+    EndTrajectoryRun("trajectory cleared");
     trajectory_.clear();
     trajectory_file_.clear();
     trajectory_step_.reset();
@@ -302,7 +466,7 @@ void MainWindow::on_pb_trajectory_play_clicked() {
         trajectory_step_ = ui_->pb_trajectory_reverse->isChecked()
                                ? trajectory_.size() - 1
                                : 0;
-        if (!ConfirmTrajectoryStep()) {
+        if (!ConfirmTrajectoryStep() || !StartTrajectoryRun()) {
             logger_->Debug("Trajectory start cancelled by user");
             trajectory_step_.reset();
             return;
