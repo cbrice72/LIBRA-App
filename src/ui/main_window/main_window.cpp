@@ -1140,15 +1140,17 @@ void MainWindow::HandleWaterVolume(const Water::Side& side,
 }
 
 /**
- * @brief Stops CW automation and any manual fill when a CW's estimated volume
- *        reaches a limit.
+ * @brief Stops CW automation and any manual fill or drain when a CW's
+ *        estimated volume reaches a limit.
  *
  * @param side Fluid system side
  * @param full true = estimated full, false = estimated empty
  *
  * @note "Ignore water level" (in the Motion Control menu) keeps the automation
- *       running, for when the estimate is known to be off. The manual fill
- *       guard always applies, since overfilling can cause leaks or failure.
+ *       running, for when the estimate is known to be off. The manual guards
+ *       always apply, since overfilling can cause leaks or failure and
+ *       draining an empty CW pulls air into the outflow; only the user can
+ *       resume a drain past empty.
  */
 void MainWindow::HandleWaterTankLimit(const Water::Side& side,
                                       const bool& full) {
@@ -1161,16 +1163,36 @@ void MainWindow::HandleWaterTankLimit(const Water::Side& side,
         SetMotionMode(Motion::MotionMode::kManual);
     }
 
-    // Soft guard against overfilling
-    QPushButton* pb_fill = ui_->pb_water_fill_A;
-#if LIBRA_VERSION == 1
-    if (side == Water::Side::kB) {
-        pb_fill = ui_->pb_water_fill_B;
+    // Get specified side's buttons
+    const bool is_side_b = (side == Water::Side::kB);
+    QPushButton* pb_fill = is_side_b ? ui_->pb_water_fill_B
+                                     : ui_->pb_water_fill_A;
+    QPushButton* pb_drain = is_side_b ? ui_->pb_water_drain_B
+                                      : ui_->pb_water_drain_A;
+    if (pb_fill == nullptr || pb_drain == nullptr) {
+        return;
     }
-#endif
+
+    // Soft guard against overfilling
     if (full && pb_fill->isChecked()) {
         pb_fill->click();  // uncheck (stops filling)
         logger_->Info(limit + "; manual fill stopped");
+    }
+
+    // Soft guard against overdraining
+    if (!full && pb_drain->isChecked()) {
+        pb_drain->click();  // uncheck (stops draining)
+        logger_->Info(limit + "; manual drain stopped");
+
+        const auto reply = QMessageBox::question(
+            this, "Tank Empty",
+            QString::fromStdString(limit)
+                + ", so draining stopped.\n\nKeep draining anyway?",
+            QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+        if (reply == QMessageBox::Yes) {
+            pb_drain->click();  // re-check button state
+            logger_->Warn(limit + "; manual drain resumed by user");
+        }
     }
 }
 
