@@ -11,6 +11,7 @@
 
 // C++ Standard Library Headers
 #include <string>
+#include <utility>
 
 // Other Library Headers
 #include <QFileInfo>    // Qt::Core
@@ -86,7 +87,7 @@ void MainWindow::UpdateTrajectoryControls() {
 void MainWindow::SetTrajectoryPlaying(const bool& playing) {
     trajectory_playing_ = playing;
     if (!playing) {
-        step_delay_timer_->stop();
+        hold_timer_->stop();
     }
 
     // UI widgets
@@ -95,11 +96,55 @@ void MainWindow::SetTrajectoryPlaying(const bool& playing) {
 }
 
 /**
+ * @brief Starts the current trajectory step: applies its counterweight (CW)
+ *        action, if any, then sends its pose. If CW isn't connected: pauses
+ *        playback.
+ *
+ * @note CW actions use the same controls as the user (motion mode, fill and
+ *       drain buttons), so their checks and guards still apply.
+ */
+void MainWindow::SendTrajectoryStep() {
+    const auto& step = trajectory_[*trajectory_step_];
+
+    if (step.mode || step.cw) {
+        if (!ui_->a_water_cw_disconnect->isEnabled()) {
+            HandleCriticalError("Trajectory - Step " + GetTrajectoryStepText()
+                                + " needs the CW connected");
+            SetTrajectoryPlaying(false);
+            return;
+        }
+
+        if (step.mode) {
+            SetMotionMode(*step.mode);
+        }
+
+        // Click each side's buttons into the requested state (side B is null
+        // when the robot doesn't have it)
+        for (auto [fill, drain] : {
+                 std::pair{ui_->pb_water_fill_A, ui_->pb_water_drain_A},
+                 std::pair{ui_->pb_water_fill_B, ui_->pb_water_drain_B}
+        }) {
+            if (!step.cw || fill == nullptr || drain == nullptr) {
+                continue;
+            }
+            if (fill->isChecked() != (*step.cw == Motion::CwCommand::kFill)) {
+                fill->click();
+            }
+            if (drain->isChecked() != (*step.cw == Motion::CwCommand::kDrain)) {
+                drain->click();
+            }
+        }
+    }
+
+    SendJointTargets(step.pose);
+}
+
+/**
  * @brief Moves to the next trajectory step once arm has settled; wraps around
  *        if looping, otherwise finishes playback.
  *
- * @note Only used by `step_delay_timer_` (see signal/slot connection in
- *       `SetupUi()`); separate function for readability.
+ * @note Only used by `hold_timer_` (see signal/slot connection in
+ *       `ConfigureUi()`); separate function for readability.
  */
 void MainWindow::PlayNextTrajectoryStep() {
     // Calculate next step
@@ -131,7 +176,7 @@ void MainWindow::PlayNextTrajectoryStep() {
 
     // Send next step to actuators and update UI
     logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString());
-    SendJointTargets(trajectory_[*trajectory_step_]);
+    SendTrajectoryStep();
 
     UpdateTrajectoryControls();
 }
@@ -143,13 +188,26 @@ void MainWindow::PlayNextTrajectoryStep() {
  * @note "OK (don't ask again)" unchecks "Confirm steps".
  */
 bool MainWindow::ConfirmTrajectoryStep() {
-    const auto& pose = trajectory_[*trajectory_step_];
+    const auto& step = trajectory_[*trajectory_step_];
 
     QString text = "Move to step " + GetTrajectoryStepText() + "?\n";
     for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
         const auto joint = static_cast<Joint::Name>(i);
         text += "\n" + QString::fromStdString(Joint::NameEnumToString(joint))
-                + ": " + QString::number(pose[i]) + " deg";
+                + ": " + QString::number(step.pose[i]) + " deg";
+    }
+    if (step.hold_s) {
+        text += "\nHold: " + QString::number(*step.hold_s) + " s";
+    }
+    if (step.mode) {
+        text += "\nMotion mode: "
+                + QString::fromStdString(
+                    Motion::MotionModeEnumToString(*step.mode));
+    }
+    if (step.cw) {
+        text += "\nCW: "
+                + QString::fromStdString(
+                    Motion::CwCommandEnumToString(*step.cw));
     }
 
     QMessageBox box(QMessageBox::Question, "Trajectory", text,
@@ -187,7 +245,8 @@ QString MainWindow::GetTrajectoryStepText() const {
  *       matches the file).
  */
 void MainWindow::on_pb_trajectory_add_clicked() {
-    trajectory_.push_back(current_target_);
+    trajectory_.push_back(
+        {current_target_, std::nullopt, std::nullopt, std::nullopt});
     trajectory_file_.clear();
     logger_->Info("Added pose " + std::to_string(trajectory_.size())
                   + " to recording");
@@ -248,5 +307,5 @@ void MainWindow::on_pb_trajectory_play_clicked() {
     logger_->Info("Playing trajectory from step "
                   + GetTrajectoryStepText().toStdString());
     SetTrajectoryPlaying(true);
-    SendJointTargets(trajectory_[*trajectory_step_]);
+    SendTrajectoryStep();
 }

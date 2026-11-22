@@ -36,8 +36,7 @@
  * !Uncategorized
  */
 
-constexpr int kPrecision = 1;     // i.e., "0.1"
-constexpr int kStepDelay = 2000;  // settling time per trajectory step (ms)
+constexpr int kPrecision = 1;  // i.e., "0.1"
 
 #ifdef BUILD_WITH_ROS2
 // Same rate as the actuators, so TF through mocked joints stays fresh
@@ -386,9 +385,9 @@ void MainWindow::ConfigureUi() {
     //   (none)
 
     // Slots
-    step_delay_timer_ = new QTimer(this);
-    step_delay_timer_->setSingleShot(true);
-    connect(step_delay_timer_, &QTimer::timeout,  // arm settled at step
+    hold_timer_ = new QTimer(this);
+    hold_timer_->setSingleShot(true);
+    connect(hold_timer_, &QTimer::timeout,  // arm held step long enough
             this, &MainWindow::PlayNextTrajectoryStep);
 
     // Settings
@@ -1395,9 +1394,12 @@ void MainWindow::HandleMovementStateChanged() {
     arm_moving_ |= epos_thread_->IsMoving();
 #endif
 
-    // Trajectory step reached; let the arm settle before the next one
+    // Trajectory step reached; pause for a time before the next move
     if (trajectory_playing_ && was_moving && !arm_moving_) {
-        step_delay_timer_->start(kStepDelay);
+        const double t_hold_s = trajectory_[*trajectory_step_].hold_s.value_or(
+            t_hold_s_);
+        hold_timer_->start(
+            static_cast<int>(std::lround(t_hold_s * 1000.0)));  // s -> ms
     }
 
     // UI widgets

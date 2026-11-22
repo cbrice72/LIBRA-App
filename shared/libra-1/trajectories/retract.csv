@@ -1,0 +1,8 @@
+# Start: any pose, any gains
+# End: facing downwards, arm folded
+# (NOTE: load gains_near after the first pose)
+roll_deg,pitch_deg,j1_deg,j2_deg,j3_deg,hold_s,cw
+0.0,0.0,45.0,-90.0,170.0,,auto
+0.0,0.0,160.0,-165.0,170.0,,
+# Pitch down: drain both CWs during this move
+0.0,-80.0,160.0,-165.0,170.0,,drain

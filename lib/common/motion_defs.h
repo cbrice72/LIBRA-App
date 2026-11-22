@@ -127,6 +127,22 @@ struct MotionCommand {
     bool moving{false};
 };
 
+/**
+ * @brief Fluid system command.
+ */
+enum class CwCommand : uint8_t { kIdle, kFill, kDrain };
+
+/**
+ * @brief One step of a user-defined trajectory (not an actuator thread's
+ *        trajectory between two poses).
+ */
+struct TrajectoryStep {
+    std::vector<double> pose;        // target, `Joint::Name` order (deg)
+    std::optional<double> hold_s;    // none = app default (sec)
+    std::optional<MotionMode> mode;  // none = unchanged
+    std::optional<CwCommand> cw;     // manual command; none = unchanged
+};
+
 //------------------------------------------------------------------------------
 // !Shared Functions
 //------------------------------------------------------------------------------
@@ -187,6 +203,24 @@ inline std::string MotionModeEnumToString(const MotionMode& mode) {
     }
 }
 
+/**
+ * @brief Converts a fluid system command to its corresponding string name.
+ *
+ * @param command Command to convert
+ */
+inline std::string CwCommandEnumToString(const CwCommand& command) {
+    switch (command) {
+        case CwCommand::kIdle:
+            return "idle";
+        case CwCommand::kFill:
+            return "fill";
+        case CwCommand::kDrain:
+            return "drain";
+        default:
+            return "undefined";
+    }
+}
+
 #if LIBRA_VERSION == 2
 //------------------------------------------------------------------------------
 // !LIBRA-II Constants
@@ -207,29 +241,6 @@ constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
 //------------------------------------------------------------------------------
 // !LIBRA-II Types
 //------------------------------------------------------------------------------
-
-/**
- * @brief Fluid system command.
- */
-enum class CwCommand : uint8_t { kIdle, kFill, kDrain };
-
-/**
- * @brief Converts a fluid system command to its corresponding string name.
- *
- * @param command Command to convert
- */
-inline std::string CwCommandEnumToString(const CwCommand& command) {
-    switch (command) {
-        case CwCommand::kIdle:
-            return "idle";
-        case CwCommand::kFill:
-            return "fill";
-        case CwCommand::kDrain:
-            return "drain";
-        default:
-            return "undefined";
-    }
-}
 
 /**
  * @brief Checks whether a motion mode requires the motion controller to

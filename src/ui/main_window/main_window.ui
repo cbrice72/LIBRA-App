@@ -3972,6 +3972,8 @@
     </property>
     <addaction name="a_trajectory_load"/>
     <addaction name="a_trajectory_save"/>
+    <addaction name="separator"/>
+    <addaction name="a_trajectory_hold_time"/>
    </widget>
    <widget class="QMenu" name="m_motion_control">
     <property name="title">
@@ -4487,6 +4489,14 @@
    </property>
    <property name="statusTip">
     <string>Save recorded poses to a CSV file</string>
+   </property>
+  </action>
+  <action name="a_trajectory_hold_time">
+   <property name="text">
+    <string>Hold time...</string>
+   </property>
+   <property name="statusTip">
+    <string>Set how long the arm holds each reached pose</string>
    </property>
   </action>
   <action name="a_motion_calibration_clear">

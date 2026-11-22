@@ -60,7 +60,9 @@
 // Trajectory Files
 
 constexpr const char* kTrajectoryDir = "./bin/shared/trajectories";
-constexpr int kTrajectoryDecimals = 1;  // saved angle precision, i.e., "0.1"
+constexpr int kTrajectoryDecimals = 1;   // saved angle precision, i.e., "0.1"
+constexpr double kMaxHoldTime = 600.0;   // input limit (s)
+constexpr const char* kCwAuto = "auto";  // "cw" value for Reactive Only mode
 
 #if LIBRA_VERSION == 2
 // Motion Control Dialogs
@@ -217,22 +219,31 @@ QDoubleSpinBox* MakeAngleSpinBox(QWidget* parent, const double& value,
 #endif
 
 /**
- * @brief Reads trajectory poses from a CSV file.
+ * @brief Reads trajectory steps from a CSV file.
  *
  * @param in Open CSV file
  * @param spin_boxes Target spin boxes (joint limits inferred from ranges)
  * @param logger Logger for invalid lines
  *
+ * @note An optional column (anything after the joint angles) with an empty cell
+ *       keeps the default value.
+ *
  * @note Only used in `on_a_trajectory_load_triggered()`; separate function for
  *       readability.
  */
-std::optional<std::vector<std::vector<double>>> ReadTrajectoryCsv(
+std::optional<std::vector<Motion::TrajectoryStep>> ReadTrajectoryCsv(
     QTextStream& in,
     const std::unordered_map<Joint::Name, QDoubleSpinBox*>& spin_boxes,
     Logger& logger) {
-    std::vector<std::vector<double>> poses;
+    std::vector<Motion::TrajectoryStep> steps;
     bool valid = true;
     bool header_checked = false;
+
+    // Columns per line, and where the optional ones are (-1 = none)
+    const auto n_joints = static_cast<qsizetype>(Motion::kNumJoints);
+    qsizetype n_columns = n_joints;
+    qsizetype hold_column = -1;
+    qsizetype cw_column = -1;
 
     for (int line_no = 1; !in.atEnd(); ++line_no) {
         const QString line = in.readLine().trimmed();
@@ -247,13 +258,26 @@ std::optional<std::vector<std::vector<double>>> ReadTrajectoryCsv(
             header_checked = true;
             fields.first().trimmed().toDouble(&is_number);
             if (!is_number) {
+                n_columns = fields.size();
+                for (qsizetype i = n_joints; i < n_columns; ++i) {
+                    const QString name = fields[i].trimmed().toLower();
+                    if (name == "hold_s") {  // settling time before continuing
+                        hold_column = i;
+                    } else if (name == "cw") {  // counterweight action
+                        cw_column = i;
+                    } else {
+                        logger.Warn("Header: unknown column \""
+                                    + name.toStdString() + "\"");
+                        valid = false;
+                    }
+                }
                 continue;
             }
         }
 
         const std::string where = "Line " + std::to_string(line_no) + ": ";
-        if (static_cast<std::size_t>(fields.size()) != Motion::kNumJoints) {
-            logger.Warn(where + "expected " + std::to_string(Motion::kNumJoints)
+        if (fields.size() != n_columns) {
+            logger.Warn(where + "expected " + std::to_string(n_columns)
                         + " values, found " + std::to_string(fields.size()));
             valid = false;
             continue;
@@ -280,13 +304,52 @@ std::optional<std::vector<std::vector<double>>> ReadTrajectoryCsv(
             }
             pose[i] = deg;
         }
-        poses.push_back(pose);
+        Motion::TrajectoryStep step{std::move(pose), std::nullopt, std::nullopt,
+                                    std::nullopt};
+
+        // Optional: settling/hold time between steps
+        const QString hold = (hold_column < 0) ? QString()
+                                               : fields[hold_column].trimmed();
+        if (!hold.isEmpty()) {
+            const double hold_s = hold.toDouble(&is_number);
+            if (!is_number || !(hold_s >= 0.0)) {
+                logger.Warn(where + "hold_s \"" + hold.toStdString()
+                            + "\" not a time >= 0");
+                valid = false;
+            }
+            step.hold_s = hold_s;
+        }
+
+        // Optional: counterweight control (automatic, or a manual command)
+        const std::string cw =
+            (cw_column < 0)
+                ? std::string()
+                : fields[cw_column].trimmed().toLower().toStdString();
+        if (cw == kCwAuto) {
+            step.mode = Motion::MotionMode::kReactiveOnly;
+        } else if (!cw.empty()) {
+            for (const auto command :
+                 {Motion::CwCommand::kIdle, Motion::CwCommand::kFill,
+                  Motion::CwCommand::kDrain}) {
+                if (cw == Motion::CwCommandEnumToString(command)) {
+                    step.mode = Motion::MotionMode::kManual;
+                    step.cw = command;
+                }
+            }
+            if (!step.cw) {
+                logger.Warn(where + "cw \"" + cw
+                            + "\" not auto, fill, drain, or idle");
+                valid = false;
+            }
+        }
+
+        steps.push_back(std::move(step));
     }
 
     if (!valid) {
         return std::nullopt;
     }
-    return poses;
+    return steps;
 }
 
 }  // namespace
@@ -337,7 +400,8 @@ void MainWindow::on_a_reset_window_size_triggered() {
  *        Replaces the current trajectory (if any) with poses from a CSV file.
  *
  * @note Expects one pose per line, as joint angles in `Joint::Name` order
- *       (deg). Lines starting with '#' are comments, and a non-numeric first
+ *       (deg), optionally followed by fine-grained controls (i.e., "hold_s" and
+ *       "cw"). Lines starting with '#' are comments, and a non-numeric first
  *       line is the header.
  */
 void MainWindow::on_a_trajectory_load_triggered() {
@@ -371,18 +435,18 @@ void MainWindow::on_a_trajectory_load_triggered() {
         return;
     }
     QTextStream in(&file);
-    auto poses = ReadTrajectoryCsv(in, target_spin_box_map_, *logger_);
-    if (!poses) {
+    auto steps = ReadTrajectoryCsv(in, target_spin_box_map_, *logger_);
+    if (!steps) {
         HandleCriticalError("Trajectory - Invalid lines in " + file_path
                             + "; see log for details");
         return;
     }
-    if (poses->empty()) {
+    if (steps->empty()) {
         HandleCriticalError("Trajectory - No poses in " + file_path);
         return;
     }
 
-    trajectory_ = std::move(*poses);
+    trajectory_ = std::move(*steps);
     trajectory_file_ = file_path;
     trajectory_step_.reset();
 
@@ -426,24 +490,34 @@ void MainWindow::on_a_trajectory_save_triggered() {
         return;
     }
 
-    // Header: joint names in `Joint::Name` order, with units
+    // Header: joint names in `Joint::Name` order, then the optional columns
     QTextStream out(&file);
     out << "# LIBRA-" << LIBRA_VERSION
-        << " trajectory: one pose per line, joint angles (deg)\n";
+        << " trajectory (columns: see README.md in bin/shared/trajectories)\n";
     QStringList header;
     for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
         const auto joint = static_cast<Joint::Name>(i);
         header << QString::fromStdString(Joint::NameEnumToString(joint)).toLower()
                       + "_deg";
     }
+    header << "hold_s"
+           << "cw";
     out << header.join(',') << '\n';
 
-    // Lines: joint angles in `Joint::Name` order, with specified precision
-    for (const auto& pose : trajectory_) {
+    // Lines: joint angles in `Joint::Name` order, then the optional columns
+    for (const auto& step : trajectory_) {
         QStringList fields;
-        for (const double& deg : pose) {
+        for (const double& deg : step.pose) {
             fields << QString::number(deg, 'f', kTrajectoryDecimals);
         }
+        QString cw;  // empty = unchanged
+        if (step.cw) {
+            cw = QString::fromStdString(Motion::CwCommandEnumToString(*step.cw));
+        } else if (step.mode == Motion::MotionMode::kReactiveOnly) {
+            cw = kCwAuto;
+        }
+        fields << (step.hold_s ? QString::number(*step.hold_s) : QString())
+               << cw;
         out << fields.join(',') << '\n';
     }
 
@@ -459,6 +533,37 @@ void MainWindow::on_a_trajectory_save_triggered() {
                   + " poses) to: " + file_path.toStdString());
 
     UpdateTrajectoryControls();
+}
+
+/**
+ * @brief Event handler for "Trajectory" menu action "Hold time...". Sets how
+ *        long the arm holds each pose before continuing to the next one.
+ *
+ * @note A step's own "hold_s" (from the trajectory file) overrides this.
+ */
+void MainWindow::on_a_trajectory_hold_time_triggered() {
+    QDialog dialog(this);
+    QFormLayout* form = SetUpFormDialog(
+        dialog, "Hold Time",
+        QString("Wait/Settle time before the next trajectory step; overridden "
+                "by the trajectory file if set (hold_s).\nDefault: %1 s.")
+            .arg(kDefaultHoldTime));
+
+    auto* sb = new QDoubleSpinBox(&dialog);
+    sb->setRange(0.0, kMaxHoldTime);
+    sb->setDecimals(1);
+    sb->setSuffix(" s");
+    sb->setValue(t_hold_s_);
+    form->addRow("Hold time:", sb);
+
+    if (dialog.exec() != QDialog::Accepted) {
+        logger_->Debug("Hold time change cancelled by user");
+        return;
+    }
+
+    t_hold_s_ = sb->value();
+    logger_->Info("Trajectory hold time: " + Motion::FormatNum(t_hold_s_)
+                  + " s");
 }
 
 //------------------------------------------------------------------------------

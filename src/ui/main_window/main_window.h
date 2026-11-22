@@ -13,6 +13,7 @@
 #include <memory>
 #include <optional>
 #include <unordered_map>
+#include <vector>
 
 // Other Library Headers
 #include <QDoubleSpinBox>  // Qt::Widgets
@@ -49,6 +50,8 @@ QT_END_NAMESPACE
 // joints and columns are feedback types
 using FeedbackElementMapOfMaps = std::unordered_map<
     Joint::Name, std::unordered_map<Actuator::Feedback, QLabel*>>;
+
+constexpr double kDefaultHoldTime = 10.0;  // time at each trajectory pose (s)
 
 /**
  * @brief The main command app window.
@@ -170,6 +173,7 @@ class MainWindow : public QMainWindow {
 
     void on_a_trajectory_load_triggered();
     void on_a_trajectory_save_triggered();
+    void on_a_trajectory_hold_time_triggered();
 
     // Motion Control Menu
 
@@ -304,6 +308,7 @@ class MainWindow : public QMainWindow {
     void UpdateTrajectoryControls();
 
     void SetTrajectoryPlaying(const bool& playing);
+    void SendTrajectoryStep();
     void PlayNextTrajectoryStep();
     bool ConfirmTrajectoryStep();
     [[nodiscard]] QString GetTrajectoryStepText() const;
@@ -348,13 +353,13 @@ class MainWindow : public QMainWindow {
 
     // Trajectory
 
-    std::vector<std::vector<double>>
-        trajectory_;  // poses in `Joint::Name` order (deg)
+    std::vector<Motion::TrajectoryStep> trajectory_;
     QString trajectory_file_;
 
     std::optional<std::size_t> trajectory_step_;  // none = not started
     bool trajectory_playing_{false};
-    QTimer* step_delay_timer_{nullptr};  // settle time after each step
+    QTimer* hold_timer_{nullptr};        // time at each reached step
+    double t_hold_s_{kDefaultHoldTime};  // sec
 
     // Device Managers
 
