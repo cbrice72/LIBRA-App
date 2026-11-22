@@ -97,6 +97,7 @@ class MainWindow : public QMainWindow {
     void HandleActuatorTelemetry(const QString& telemetry,
                                  const Actuator::Type& type);
     void HandleMovementStateChanged();
+    void HandleThermalLimit(const QString& actuator);
 
 #if LIBRA_VERSION == 2
     void HandlePitchReleaseChanged(const bool& released);

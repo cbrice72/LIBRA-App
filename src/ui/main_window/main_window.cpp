@@ -739,6 +739,8 @@ void MainWindow::InitializeThreads() {
             ui_->w_diagnostics, &DiagnosticsWidget::UpdateActuatorPower);
     connect(hebi_thread_, &HebiThread::MovementStateChanged,  // moving/idle
             this, &MainWindow::HandleMovementStateChanged);
+    connect(hebi_thread_, &HebiThread::ThermalLimitReached,  // overheating
+            this, &MainWindow::HandleThermalLimit);
 
     connect(this, &MainWindow::UpdateReactiveCwBounds,  // torque limits
             ui_->w_diagnostics, &DiagnosticsWidget::SetTorqueLimits);
@@ -1434,6 +1436,35 @@ void MainWindow::HandleMovementStateChanged() {
 
     UpdateActuatorControls();
     UpdateModeControls();
+}
+
+/**
+ * @brief Aborts trajectory playback when an actuator's firmware starts limiting
+ *        its output due to heat, returning a moving arm to the last pose it
+ *        reached.
+ *
+ * @param actuator Name of the overheating actuator
+ *
+ * @note An idle arm already holds a reached pose, so it stays put.
+ */
+void MainWindow::HandleThermalLimit(const QString& actuator) {
+    QString aborted;
+    if (trajectory_playing_) {
+        aborted = " Trajectory aborted at step " + GetTrajectoryStepText()
+                  + ".";
+        SetTrajectoryPlaying(false);
+    }
+    logger_->Error("Thermal abort (" + actuator.toStdString() + ")."
+                   + aborted.toStdString());
+
+    if (arm_moving_) {
+        logger_->Info("Returning to the last reached pose");
+        SendJointTargets(previous_target_);
+    }
+
+    HandleCriticalError("HEBI - " + actuator
+                        + " is overheating and its output is limited." + aborted
+                        + " Let it cool before continuing.");
 }
 
 #if LIBRA_VERSION == 2

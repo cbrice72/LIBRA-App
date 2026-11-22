@@ -61,6 +61,9 @@ constexpr double kNone = std::numeric_limits<double>::quiet_NaN();  // no comman
 
 constexpr bool kAllowFreeJoints = (LIBRA_VERSION == 2);
 
+constexpr double kWarnWindingTemp = 120.0;   // operator warning (C)
+constexpr double kWarnTempHysteresis = 5.0;  // re-warn after cooling (C)
+
 #if LIBRA_VERSION == 2
 // Velocity limit while control is off (see `SetControlOff()`): far above any
 // speed the arm reaches when free (max. 0.2 rad/s in the 2026-11-11 Hebilog),
@@ -1141,6 +1144,55 @@ void HebiThread::SendFeedback() {
 }
 
 /**
+ * @brief Warns once when an actuator's winding temperature passes
+ *        `kWarnWindingTemp`, and reports once when an actuator's firmware
+ *        starts limiting its output due to heat (temperature state other than
+ *        Normal), so the trajectory can be aborted.
+ *
+ * @note Each re-arms once the actuators cool down (the warning only after
+ *       cooling `kWarnTempHysteresis` below its threshold).
+ */
+void HebiThread::CheckTemperature() {
+    const auto& temps = feedback_->getMotorWindingTemperature();  // (C)
+
+    int hottest = -1;            // actuator with the highest temperature
+    std::optional<int> limited;  // first actuator limited by its firmware
+    for (int i = 0; i < n_actuators_; ++i) {
+        if (std::isfinite(temps[i])
+            && (hottest < 0 || temps[i] > temps[hottest])) {
+            hottest = i;
+        }
+        const auto& state = (*feedback_)[i].actuator().temperatureState();
+        if (!limited && state.has()
+            && state.get() != hebi::Feedback::TemperatureState::Normal) {
+            limited = i;
+        }
+    }
+
+    // Firmware limiting output: abort
+    if (limited && !temp_limited_) {
+        logger_->Error(names_[*limited] + " output limited by its firmware ("
+                       + FormatDouble(temps[*limited], 1) + " C)");
+        emit ThermalLimitReached(QString::fromStdString(names_[*limited]));
+    }
+    temp_limited_ = limited.has_value();
+
+    // Approaching the limit: warn the operator
+    if (hottest < 0) {
+        return;
+    }
+    if (!temp_warned_ && temps[hottest] >= kWarnWindingTemp) {
+        temp_warned_ = true;
+        logger_->Warn(names_[hottest] + " winding at "
+                      + FormatDouble(temps[hottest], 1) + " C (warning at "
+                      + FormatDouble(kWarnWindingTemp, 0) + " C)");
+    } else if (temp_warned_
+               && temps[hottest] < kWarnWindingTemp - kWarnTempHysteresis) {
+        temp_warned_ = false;
+    }
+}
+
+/**
  * @brief Telemetry for all connected actuators, as display-ready text
  *        messages (target/actual position and actual torque are sent
  *        separately as signals).
@@ -1320,6 +1372,7 @@ void HebiThread::run() {
             continue;
         }
         SendFeedback();
+        CheckTemperature();
 
         lock.unlock();
 
@@ -1423,6 +1476,10 @@ void HebiThread::Connect() {
         }
     }
 #endif
+
+    // Initialize misc. per-session members
+    temp_warned_ = false;
+    temp_limited_ = false;
 
     // Finally, hand the group off to the control loop
     {

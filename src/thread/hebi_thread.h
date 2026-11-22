@@ -124,6 +124,7 @@ class HebiThread : public AbstractActuatorThread
     // NOTE: See AbstractActuatorThread for generic signals
 
     void ReportArmTorque(const std::optional<double>& theta);
+    void ThermalLimitReached(const QString& actuator);
 #if LIBRA_VERSION == 1
     void InformPitch(const double& angle);
 #elif LIBRA_VERSION == 2
@@ -175,6 +176,7 @@ class HebiThread : public AbstractActuatorThread
                       const std::string& source);
 
     void SendFeedback();
+    void CheckTemperature();
     [[nodiscard]] QString GetTelemetry() const;
     [[nodiscard]] double GetPower() const;
 #ifdef BUILD_WITH_ROS2
@@ -204,6 +206,10 @@ class HebiThread : public AbstractActuatorThread
     // clang-format on
 
     bool logging_active_{false};
+
+    // Temperature reports (see `CheckTemperature()`)
+    bool temp_warned_{false};   // winding past the warning temperature
+    bool temp_limited_{false};  // firmware limiting output due to heat
 
     // Improve performance of GetTelemetry() by allocating these vectors here
     // (the `mutable` keyword allows a const function to modify class members)
