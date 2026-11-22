@@ -974,14 +974,13 @@ double HebiThread::GetPitchVelLimit() {
 /**
  * @brief Turns the actuators' control strategy off and loosens their velocity
  *        limit (back-drivable), or restores the strategy and limit they had
- *        before. Does nothing if already so.
+ *        before.
  *
  * @param off Whether to turn the control strategy off
  *
- * @note "Off" instead of just sending nothing, which still holds position.
- *       The velocity limit is loosened because its safety controller acts in
- *       every strategy: tripped by back-driving, it brakes the arm, and after
- *       holds its last output, keeping the arm where it was left.
+ * @note Explicitly set the strategy to "Off" instead of just sending nothing,
+ *       which would still hold position. The velocity limit is loosened because
+ *       the HEBI safety controller is always active, regardless of strategy.
  *
  * @note Only used by the control loop (released pitch, CW Primary's free arm).
  */
@@ -992,15 +991,16 @@ void HebiThread::SetControlOff(const bool& off) {
 
     hebi::GroupCommand cmd(group_->size());
     if (off) {
-        // Save current settings to restore later (same order in both enums)
         hebi::GroupInfo info(group_->size());
         if (!group_->requestInfo(info, kTimeout)) {
             emit ErrorThrown(
                 "HEBI - Can't turn control off; no actuator info!");
             return;
         }
+
         std::vector<SettingsBeforeOff> settings;
         for (size_t i = 0; i < group_->size(); ++i) {
+            // Save current settings
             const auto& actuator = info[i].settings().actuator();
             if (!actuator.controlStrategy() || !actuator.velocityLimitMin()
                 || !actuator.velocityLimitMax()) {
@@ -1009,16 +1009,21 @@ void HebiThread::SetControlOff(const bool& off) {
                                  "velocity limit!");
                 return;
             }
+
             settings.push_back({static_cast<hebi::Command::ControlStrategy>(
                                     actuator.controlStrategy().get()),
                                 actuator.velocityLimitMin().get(),
                                 actuator.velocityLimitMax().get()});
+
+            // Form "Off" command
             auto& cmd_actuator = cmd[i].settings().actuator();
             cmd_actuator.controlStrategy().set(
                 hebi::Command::ControlStrategy::Off);
             cmd_actuator.velocityLimitMin().set(-kFreeVelLimit);
             cmd_actuator.velocityLimitMax().set(kFreeVelLimit);
         }
+
+        // Send command and save old settings
         if (!group_->sendCommandWithAcknowledgement(cmd, kTimeout)) {
             emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
                              "control strategy change (Off)!");
@@ -1026,6 +1031,7 @@ void HebiThread::SetControlOff(const bool& off) {
         }
         settings_before_off_ = std::move(settings);
     } else {
+        // Restore settings
         for (size_t i = 0; i < group_->size(); ++i) {
             const auto& before = settings_before_off_[i];
             auto& cmd_actuator = cmd[i].settings().actuator();
@@ -1033,11 +1039,13 @@ void HebiThread::SetControlOff(const bool& off) {
             cmd_actuator.velocityLimitMin().set(before.vel_limit_min);
             cmd_actuator.velocityLimitMax().set(before.vel_limit_max);
         }
+
         if (!group_->sendCommandWithAcknowledgement(cmd, kTimeout)) {
             emit ErrorThrown("HEBI - Didn't receive acknowledgement from "
                              "control strategy change (restore)!");
             return;  // retried next cycle
         }
+
         settings_before_off_.clear();
     }
 
