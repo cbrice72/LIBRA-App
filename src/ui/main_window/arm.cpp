@@ -96,23 +96,20 @@ void MainWindow::SendJointTargets(const std::vector<double>& targets) {
     convert_and_set_simple(Actuator::kPitch, targets[Joint::Name::kPitch]);
 #endif
 
-    if (debug_mode_) {
-        std::stringstream command_ss;
-        command_ss << std::fixed << std::setprecision(2)
-                   << "Sending movement command (deg): ";
+    std::stringstream command_ss;
+    command_ss << std::fixed << std::setprecision(2)
+               << "Sending movement command (deg): ";
 
-        for (int i = 0; i < Joint::Name::kUndefined; ++i) {
-            const auto joint = static_cast<Joint::Name>(i);
-            command_ss << Joint::NameEnumToString(joint) << "="
-                       << targets[joint];
+    for (int i = 0; i < Joint::Name::kUndefined; ++i) {
+        const auto joint = static_cast<Joint::Name>(i);
+        command_ss << Joint::NameEnumToString(joint) << "=" << targets[joint];
 
-            if (i < Joint::Name::kUndefined - 1) {
-                command_ss << ", ";
-            }
+        if (i < Joint::Name::kUndefined - 1) {
+            command_ss << ", ";
         }
-
-        logger_->Debug(command_ss.str());
     }
+
+    logger_->Info(command_ss.str());
 
     // Send command(s)
 #if LIBRA_VERSION == 1
