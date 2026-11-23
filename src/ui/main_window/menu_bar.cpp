@@ -225,8 +225,8 @@ QDoubleSpinBox* MakeAngleSpinBox(QWidget* parent, const double& value,
  * @param spin_boxes Target spin boxes (joint limits inferred from ranges)
  * @param logger Logger for invalid lines
  *
- * @note An optional column (anything after the joint angles) with an empty cell
- *       keeps the default value.
+ * @note Columns are found by header name, in any order. An empty cell in an
+ *       optional column keeps the default value.
  *
  * @note Only used in `on_a_trajectory_load_triggered()`; separate function for
  *       readability.
@@ -239,9 +239,9 @@ std::optional<std::vector<Motion::TrajectoryStep>> ReadTrajectoryCsv(
     bool valid = true;
     bool header_checked = false;
 
-    // Columns per line, and where the optional ones are (-1 = none)
-    const auto n_joints = static_cast<qsizetype>(Motion::kNumJoints);
-    qsizetype n_columns = n_joints;
+    // Columns per line, and where each one is (-1 = none)
+    qsizetype n_columns = 0;
+    std::vector<qsizetype> joint_columns(Motion::kNumJoints, -1);
     qsizetype hold_column = -1;
     qsizetype cw_column = -1;
 
@@ -252,27 +252,52 @@ std::optional<std::vector<Motion::TrajectoryStep>> ReadTrajectoryCsv(
         }
         const QStringList fields = line.split(',');
 
-        // Header is denoted by non-numeric first line
-        bool is_number = false;
+        // First line is the header
         if (!header_checked) {
             header_checked = true;
-            fields.first().trimmed().toDouble(&is_number);
-            if (!is_number) {
-                n_columns = fields.size();
-                for (qsizetype i = n_joints; i < n_columns; ++i) {
-                    const QString name = fields[i].trimmed().toLower();
-                    if (name == "hold_s") {  // settling time before continuing
-                        hold_column = i;
-                    } else if (name == "cw") {  // counterweight action
-                        cw_column = i;
-                    } else {
-                        logger.Warn("Header: unknown column \""
-                                    + name.toStdString() + "\"");
-                        valid = false;
-                    }
-                }
-                continue;
+
+            QStringList header;
+            for (const QString& field : fields) {
+                header << field.trimmed().toLower();
             }
+
+            // Make list of expected column names based on current build
+            QStringList known{"hold_s", "cw"};
+            for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
+                const QString name = QString::fromStdString(
+                                         Joint::NameEnumToString(
+                                             static_cast<Joint::Name>(i)))
+                                         .toLower()
+                                     + "_deg";
+                known << name;
+                joint_columns[i] = header.indexOf(name);
+                if (joint_columns[i] < 0) {
+                    logger.Warn("Header: missing column \"" + name.toStdString()
+                                + "\"");
+                    valid = false;
+                }
+            }
+
+            // Check file header
+            for (const QString& name : header) {
+                if (!known.contains(name)) {
+                    logger.Warn("Header: unknown column \"" + name.toStdString()
+                                + "\"");
+                    valid = false;
+                } else if (header.count(name) > 1) {
+                    logger.Warn("Header: duplicate column \""
+                                + name.toStdString() + "\"");
+                    valid = false;
+                }
+            }
+            if (!valid) {
+                return std::nullopt;  // columns can't be located
+            }
+
+            n_columns = header.size();
+            hold_column = header.indexOf("hold_s");
+            cw_column = header.indexOf("cw");
+            continue;
         }
 
         const std::string where = "Line " + std::to_string(line_no) + ": ";
@@ -284,10 +309,11 @@ std::optional<std::vector<Motion::TrajectoryStep>> ReadTrajectoryCsv(
         }
 
         // Parse each joint angle and check against limits
+        bool is_number = false;
         std::vector<double> pose(Motion::kNumJoints);
         for (std::size_t i = 0; i < Motion::kNumJoints; ++i) {
             const auto joint = static_cast<Joint::Name>(i);
-            const QString field = fields[static_cast<qsizetype>(i)].trimmed();
+            const QString field = fields[joint_columns[i]].trimmed();
             const double deg = field.toDouble(&is_number);
             const QDoubleSpinBox* spin_box = spin_boxes.at(joint);
 

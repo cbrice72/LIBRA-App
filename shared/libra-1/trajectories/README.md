@@ -3,7 +3,7 @@
 Loaded via "Trajectory" menu -> "Load trajectory...".
 
 - Each file is a CSV with one pose per line.
-- All columns following the "last" joint are optional. An empty value keeps the default.
+- Columns are found by header name, in any order. All joint columns are required; an empty value in an optional column keeps the default.
 - Lines starting with `#` are comments. The first non-comment line is the header.
 
 ## Columns
