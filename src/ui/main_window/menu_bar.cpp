@@ -1000,6 +1000,17 @@ void MainWindow::on_a_hebi_load_gains_triggered() {
         return;
     }
 
+    // Show the file as the "Custom" gains choice
+    int custom = ui_->cb_gains->findText("Custom");
+    if (custom < 0) {
+        ui_->cb_gains->addItem("Custom");
+        custom = ui_->cb_gains->count() - 1;
+    }
+    ui_->cb_gains->setItemData(custom, file_path);  // file to load
+    ui_->cb_gains->setItemData(custom, file_path, Qt::ToolTipRole);  // on hover
+    ui_->cb_gains->setCurrentIndex(custom);
+
+    logger_->Info("Gains set to Custom (" + file_path.toStdString() + ")");
     emit LoadHebiGains(file_path);
 }
 

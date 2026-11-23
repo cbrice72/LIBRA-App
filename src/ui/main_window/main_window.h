@@ -21,7 +21,8 @@
 #include <QMainWindow>     // Qt::Widgets
 #include <QTimer>          // Qt::Core
 #ifdef BUILD_WITH_ROS2
-# include <rclcpp/rclcpp.hpp>  // ROS2 Core
+# include <libra_interfaces/srv/get_tip_reach.hpp>  // ROS2 Messages
+# include <rclcpp/rclcpp.hpp>                       // ROS2 Core
 #endif
 
 // Project Headers
@@ -55,6 +56,9 @@ using FeedbackElementMapOfMaps = std::unordered_map<
     Joint::Name, std::unordered_map<Actuator::Feedback, QLabel*>>;
 
 constexpr double kDefaultHoldTime = 10.0;  // time at each trajectory pose (s)
+
+// Switch gains at this boundary (see `SwitchGains()`)
+constexpr double kGainReachThreshold = 2.0;  // m
 
 /**
  * @brief The main command app window.
@@ -241,6 +245,7 @@ class MainWindow : public QMainWindow {
     void on_pb_arm_stop_clicked();
     void on_pb_arm_return_clicked();
     void on_cb_motion_mode_activated(int index);
+    void on_cb_gains_activated(int index);
 #if LIBRA_VERSION == 2
     void on_pb_release_pitch_toggled(bool checked);
 
@@ -302,6 +307,9 @@ class MainWindow : public QMainWindow {
     // --- Helper Functions (arm.cpp) ---
 
     void SendJointTargets(const std::vector<double>& targets);
+#ifdef BUILD_WITH_ROS2
+    bool SwitchGains(const std::vector<double>& target);
+#endif
 
 #if LIBRA_VERSION == 2
     void SetEtaVel(const double& vel);
@@ -342,9 +350,15 @@ class MainWindow : public QMainWindow {
     bool arm_moving_{false};        // any actuator moving
     bool populate_targets_{false};  // set on actuator connect
 
-    // Targets as joint angles, indexed by `Joint::Name` (deg)
+    // Joint angles, indexed by `Joint::Name` (deg)
     std::vector<double> current_target_;   // most recently sent
     std::vector<double> previous_target_;  // second most recently sent
+    std::vector<double> actual_pose_;      // latest feedback
+
+#ifdef BUILD_WITH_ROS2
+    rclcpp::Client<libra_interfaces::srv::GetTipReach>::SharedPtr
+        reach_client_;  // tip reach service (libra_essentials)
+#endif
 
     struct ArmLimits {
         double pitch_min{-180.0};

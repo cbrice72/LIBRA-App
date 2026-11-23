@@ -14,6 +14,7 @@
 #include <limits>
 
 // Other Library Headers
+#include <QFileInfo>       // Qt::Core
 #include <QMessageBox>     // Qt::Widgets
 #include <QPalette>        // Qt::Gui
 #include <QSignalBlocker>  // Qt::Core
@@ -125,7 +126,8 @@ MainWindow::MainWindow(QWidget* parent)
       ui_(new Ui::MainWindow),
       current_target_(Motion::kNumJoints,
                       std::numeric_limits<double>::quiet_NaN()),
-      previous_target_(current_target_) {
+      previous_target_(current_target_),
+      actual_pose_(current_target_) {
     ui_->setupUi(this);
 
 #ifdef BUILD_WITH_ROS2
@@ -387,6 +389,28 @@ void MainWindow::ConfigureUi() {
                  "CW alone moves the pitch joint; actuator only takes over "
                  "near the target (needs arm and friction calibrations)");
 #endif
+    }
+
+    // Gains selection (item data: file to load; empty = automatic)
+    {
+        auto add_gains = [this](const QString& name, const QString& file,
+                                const QString& tip) {
+            ui_->cb_gains->addItem(name, file);
+            ui_->cb_gains->setItemData(ui_->cb_gains->count() - 1, tip,
+                                       Qt::ToolTipRole);
+        };
+
+        add_gains("Default", kGainsDefaultFile, "Gains loaded when connecting");
+        if (QFileInfo::exists(kGainsNearFile)
+            && QFileInfo::exists(kGainsFarFile)) {
+            add_gains("Near", kGainsNearFile, "Gains for proximal poses");
+            add_gains("Far", kGainsFarFile, "Gains for distal poses");
+#ifdef BUILD_WITH_ROS2
+            add_gains("Automatic", {},
+                      "Gain switching based on tip position (requires ROS2 "
+                      "package \"libra_essentials\")");
+#endif
+        }
     }
 
     // ========== Trajectory ==========
@@ -754,8 +778,10 @@ void MainWindow::InitializeThreads() {
     connect(hebi_thread_, &HebiThread::HebiLogChanged,  // run metadata
             this, &MainWindow::HandleHebiLogChanged);
     connect(hebi_thread_, &HebiThread::GainsLoaded,  // "
-            this,
-            [this](const QString& file_path) { gains_file_ = file_path; });
+            this, [this](const QString& file_path) {
+                gains_file_ = file_path;
+                AppendRunMetadata("gains loaded: " + file_path);
+            });
     connect(hebi_thread_, &HebiThread::SafetyLoaded,  // "
             this,
             [this](const QString& file_path) { safety_file_ = file_path; });
@@ -867,6 +893,12 @@ void MainWindow::InitializeThreads() {
             });
 
     mock_joint_timer->start();
+
+    // ========== Tip Reach Service (ROS2) ==========
+
+    // Served by libra_essentials (see `SwitchGains()`)
+    reach_client_ = node_->create_client<libra_interfaces::srv::GetTipReach>(
+        "/libra/get_tip_reach");
 #endif
 }
 
@@ -982,6 +1014,7 @@ void MainWindow::UpdateModeControls() {
 
     // Update UI
     ui_->cb_motion_mode->setEnabled(hebi_connected && !mode_locked);
+    ui_->cb_gains->setEnabled(hebi_connected && !mode_locked);
     ui_->a_reactive_cw_bounds->setEnabled(both_connected);
     ui_->a_reactive_cw_ignore_water_level->setEnabled(both_connected);
 
@@ -1298,6 +1331,12 @@ void MainWindow::HandleHebiConnChanged(const bool& connected) {
     if (!connected) {
         ui_->w_diagnostics->ClearTorques();
     }
+
+    // Load non-default gains
+    const QString gains = ui_->cb_gains->currentData().toString();
+    if (connected && !gains.isEmpty() && gains != kGainsDefaultFile) {
+        emit LoadHebiGains(gains);
+    }
 }
 
 #if LIBRA_VERSION == 2
@@ -1356,6 +1395,10 @@ void MainWindow::HandleActuatorFeedback(
                 + ") and feedback type "
                 + Actuator::FeedbackEnumToString(feedback_type) + " ("
                 + std::to_string(static_cast<int>(feedback_type)) + ")");
+        }
+
+        if (feedback_type == Actuator::Feedback::kActualPos) {
+            actual_pose_[joint] = val;
         }
 
         // Initialize targets to actual position after a connect

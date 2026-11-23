@@ -1438,7 +1438,7 @@ void HebiThread::Connect() {
     SetVelLimits(*command_, safety_path);
 
     // Load gains
-    const std::string gains_path = "./bin/shared/hebi/gains.xml";
+    const std::string gains_path = kGainsDefaultFile;
     if (!command_->readGains(gains_path)) {
         emit ErrorThrown("HEBI - Failed to load gain parameters!");
         return;

@@ -52,6 +52,11 @@ constexpr double kReactiveCwUpperBound = 5.0;  // Nm
 constexpr double kReactiveCwOffMargin = 0.5;  // Nm
 constexpr double kReactiveCwSlowRate = 0.5;   // velocity rate between bounds
 
+// Gains files (near/far: LIBRA-I only)
+constexpr const char* kGainsDefaultFile = "./bin/shared/hebi/gains.xml";
+constexpr const char* kGainsNearFile = "./bin/shared/hebi/gains_near.xml";
+constexpr const char* kGainsFarFile = "./bin/shared/hebi/gains_far.xml";
+
 /**
  * @brief Control class for HEBI actuators.
  *

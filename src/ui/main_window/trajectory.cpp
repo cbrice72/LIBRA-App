@@ -342,6 +342,7 @@ bool MainWindow::StartTrajectoryRun() {
         << "reactive_cw_bounds_nm: " << cw_lower_bound << ", " << cw_upper_bound
         << "\n"
         << "cw_volume_l: " << volumes.join(", ") << "\n"
+        << "gains_choice: " << ui_->cb_gains->currentText() << "\n"
         << "gains: " << gains_file_ << "\n"
         << "safety: " << safety_file_ << "\n"
         << "note: " << note << "\n";

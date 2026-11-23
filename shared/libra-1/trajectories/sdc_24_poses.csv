@@ -1,5 +1,5 @@
 # E1 revision run: the 24 poses of "SLAM Data Collection 2" (2026-06-08), from and back to the ready pose (0, 0, 0, 0, 170).
-# Gain notes mark where SDC-2 loaded each gain set by hand (scheduled condition only).
+# Gain notes mark where SDC-2 loaded each gain set by hand (gain-switching condition only).
 roll_deg,pitch_deg,j1_deg,j2_deg,j3_deg,hold_s,cw
 # --- 1a. Distal, left (gains_far): poses 1-7 ---
 0.0,0.0,-45.0,90.0,60.0,,auto

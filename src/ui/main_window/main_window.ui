@@ -1464,6 +1464,32 @@
                   </widget>
                  </item>
                  <item>
+                  <widget class="QLabel" name="static_l_gains">
+                   <property name="statusTip">
+                    <string>Actuator gains used for moves</string>
+                   </property>
+                   <property name="text">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Gains:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="cb_gains">
+                   <property name="enabled">
+                    <bool>false</bool>
+                   </property>
+                   <property name="minimumSize">
+                    <size>
+                     <width>100</width>
+                     <height>30</height>
+                    </size>
+                   </property>
+                   <property name="statusTip">
+                    <string>Actuator gains used for moves</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="h_spacer_arm_control_mode">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
@@ -4576,6 +4602,7 @@
   <tabstop>sb_arm_j3</tabstop>
   <tabstop>pb_release_pitch</tabstop>
   <tabstop>cb_motion_mode</tabstop>
+  <tabstop>cb_gains</tabstop>
   <tabstop>pb_arm_start</tabstop>
   <tabstop>pb_arm_stop</tabstop>
   <tabstop>pb_arm_return</tabstop>
