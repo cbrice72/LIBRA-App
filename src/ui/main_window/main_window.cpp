@@ -14,10 +14,11 @@
 #include <limits>
 
 // Other Library Headers
-#include <QFileInfo>       // Qt::Core
-#include <QMessageBox>     // Qt::Widgets
-#include <QPalette>        // Qt::Gui
-#include <QSignalBlocker>  // Qt::Core
+#include <QFileInfo>               // Qt::Core
+#include <QGraphicsOpacityEffect>  // Qt::Widgets
+#include <QMessageBox>             // Qt::Widgets
+#include <QPalette>                // Qt::Gui
+#include <QSignalBlocker>          // Qt::Core
 #ifdef BUILD_WITH_ROS2
 # include <rclcpp/rclcpp.hpp>                // ROS2 Core
 # include <sensor_msgs/msg/joint_state.hpp>  // ROS2 Messages
@@ -42,6 +43,7 @@
  */
 
 constexpr int kPrecision = 1;  // i.e., "0.1"
+constexpr double kBuildInfoOpacity = 0.6;
 
 #ifdef BUILD_WITH_ROS2
 // Same rate as the actuators, so TF through mocked joints stays fresh
@@ -242,6 +244,14 @@ void MainWindow::ConfigureUi() {
 #endif
         ros2en_text += "</span>";
         ui_->l_ros2enabled_val->setText(ros2en_text);
+    }
+
+    // Build configuration is for reference only, so keep it unobtrusive
+    for (QLabel* label : {ui_->static_l_libraversion, ui_->l_libraversion_val,
+                          ui_->static_l_ros2enabled, ui_->l_ros2enabled_val}) {
+        auto* effect = new QGraphicsOpacityEffect(label);
+        effect->setOpacity(kBuildInfoOpacity);
+        label->setGraphicsEffect(effect);
     }
 
     // ========== Menu Bar ==========
