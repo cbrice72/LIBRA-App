@@ -31,6 +31,14 @@ class DotPlotWidget : public QWidget {
     // NOLINTEND
 
   public:
+    /**
+     * @brief A reference circle centered on the origin.
+     */
+    struct Ring {
+        double radius;  // data units
+        QColor color;
+    };
+
     explicit DotPlotWidget(QWidget* parent = nullptr);
     ~DotPlotWidget() override = default;
 
@@ -40,7 +48,7 @@ class DotPlotWidget : public QWidget {
 
     // --- Getters & Setters ---
 
-    void SetRings(const std::vector<double>& radii);
+    void SetRings(const std::vector<Ring>& rings);
     void SetDotColor(const QColor& color);
     void SetDot(const std::optional<QPointF>& point);
 
@@ -52,7 +60,7 @@ class DotPlotWidget : public QWidget {
   private:
     // --- Data Members ---
 
-    std::vector<double> rings_;  // radius
+    std::vector<Ring> rings_;
     QColor dot_color_{Qt::white};
     std::optional<QPointF> dot_;  // none = hidden
 };

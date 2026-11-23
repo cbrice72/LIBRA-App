@@ -309,14 +309,24 @@ void DiagnosticsWidget::UpdateModelTorque(const std::optional<double>& torque) {
 #endif
 
 /**
- * @brief Draws torque limits as rings centered on the origin.
+ * @brief Shows torque limits as rings centered on the origin, with explanatory
+ *        text.
  *
- * @param lower Lower limit (Nm)
- * @param upper Upper limit (Nm)
+ * @param lower Soft limit (Nm)
+ * @param upper Hard limit (Nm)
  */
 void DiagnosticsWidget::SetTorqueLimits(const double& lower,
                                         const double& upper) {
-    ui_->dp_torque->SetRings({lower, upper});
+    ui_->dp_torque->SetRings({
+        {lower, Color::ToQColor(Color::kYellow)},
+        {upper,    Color::ToQColor(Color::kRed)}
+    });
+
+    ui_->l_torque_limits->setText(
+        QStringLiteral("<span style=\"color: %1;\">Soft %2 Nm</span><br>"
+                       "<span style=\"color: %3;\">Hard %4 Nm</span>")
+            .arg(Color::kYellow, QString::number(lower, 'f', kTorquePrecision),
+                 Color::kRed, QString::number(upper, 'f', kTorquePrecision)));
 }
 
 /**

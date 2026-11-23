@@ -29,6 +29,7 @@
 constexpr double kEdgeMargin = 1.2;  // plot edge, as multiple of largest ring
 constexpr double kDotRadius = 4.0;   // px
 constexpr double kLineWidth = 1.0;   // px
+constexpr double kAxisOpacity = 0.4;
 
 //------------------------------------------------------------------------------
 // !Class Management
@@ -49,20 +50,23 @@ DotPlotWidget::DotPlotWidget(QWidget* parent) : QWidget(parent) {
 //------------------------------------------------------------------------------
 
 /**
- * @brief Sets the reference rings, which also determines scale.
+ * @brief Sets the reference rings, which also determines graph scale.
  *
- * @param radii Ring radii, in data units (> 0)
+ * @param rings Rings to draw; radii in data units (> 0)
  */
-void DotPlotWidget::SetRings(const std::vector<double>& radii) {
+void DotPlotWidget::SetRings(const std::vector<Ring>& rings) {
     // Validate input
-    auto is_valid = [](double r) { return std::isfinite(r) && r > 0.0; };
-    if (!std::all_of(radii.begin(), radii.end(), is_valid)) {
-        qCritical("DotPlotWidget::SetRings(): radii must be finite and > 0");
+    auto is_valid = [](const Ring& ring) {
+        return std::isfinite(ring.radius) && ring.radius > 0.0;
+    };
+    if (!std::all_of(rings.begin(), rings.end(), is_valid)) {
+        qCritical(
+            "DotPlotWidget::SetRings(): all radii must be finite and > 0");
         return;
     }
 
     // Update members
-    rings_ = radii;
+    rings_ = rings;
     update();
 }
 
@@ -103,10 +107,11 @@ void DotPlotWidget::SetDot(const std::optional<QPointF>& point) {
  */
 void DotPlotWidget::paintEvent(QPaintEvent* /*event*/) {
     // Ensure plot fits inside widget (map to shortest side)
-    const double max_ring = rings_.empty() ? 1.0
-                                           : *std::max_element(rings_.begin(),
-                                                               rings_.end());
-    const double edge = kEdgeMargin * max_ring;
+    double largest_ring = rings_.empty() ? 1.0 : 0.0;
+    for (const Ring& ring : rings_) {
+        largest_ring = std::max(largest_ring, ring.radius);
+    }
+    const double edge = kEdgeMargin * largest_ring;
     const double edge_px = (std::min(width(), height()) / 2.0)
                            - kDotRadius;  // dot at edge shouldn't get clipped
     const double px_per_unit = edge_px / edge;
@@ -115,14 +120,20 @@ void DotPlotWidget::paintEvent(QPaintEvent* /*event*/) {
     QPainter painter(this);
     painter.setRenderHint(QPainter::Antialiasing);
 
-    // Axes and rings
-    painter.setPen(QPen(palette().color(QPalette::Mid), kLineWidth));
+    // Axes
+    QColor axis_color = palette().color(QPalette::WindowText);
+    axis_color.setAlphaF(kAxisOpacity);
+    painter.setPen(QPen(axis_color, kLineWidth));
     painter.drawLine(center - QPointF(edge_px, 0.0),
                      center + QPointF(edge_px, 0.0));
     painter.drawLine(center - QPointF(0.0, edge_px),
                      center + QPointF(0.0, edge_px));
-    for (const double& r : rings_) {
-        painter.drawEllipse(center, r * px_per_unit, r * px_per_unit);
+
+    // Rings
+    for (const Ring& ring : rings_) {
+        painter.setPen(QPen(ring.color, kLineWidth));
+        painter.drawEllipse(center, ring.radius * px_per_unit,
+                            ring.radius * px_per_unit);
     }
 
     if (!dot_) {
