@@ -135,9 +135,9 @@ DiagnosticsWidget::DiagnosticsWidget(QWidget* parent)
     ConfigureGraphWindow(ui_->cb_torque_window, ui_->lg_torque);
 
     torque_meas_series_ = ui_->lg_torque->AddSeries(
-        Color::ToQColor(Color::kOrange));
-    ui_->static_l_torque_measured->setStyleSheet(style.arg(Color::kOrange));
-    ui_->dp_torque->SetDotColor(Color::ToQColor(Color::kOrange));
+        Color::ToQColor(Color::kMagenta));
+    ui_->static_l_torque_measured->setStyleSheet(style.arg(Color::kMagenta));
+    ui_->dp_torque->SetDotColor(Color::ToQColor(Color::kMagenta));
 
 #if LIBRA_VERSION == 2
     torque_model_series_ = ui_->lg_torque->AddSeries(
@@ -318,14 +318,15 @@ void DiagnosticsWidget::UpdateModelTorque(const std::optional<double>& torque) {
 void DiagnosticsWidget::SetTorqueLimits(const double& lower,
                                         const double& upper) {
     ui_->dp_torque->SetRings({
-        {lower, Color::ToQColor(Color::kYellow)},
+        {lower, Color::ToQColor(Color::kOrange)},
         {upper,    Color::ToQColor(Color::kRed)}
     });
 
     ui_->l_torque_limits->setText(
-        QStringLiteral("<span style=\"color: %1;\">Soft %2 Nm</span><br>"
-                       "<span style=\"color: %3;\">Hard %4 Nm</span>")
-            .arg(Color::kYellow, QString::number(lower, 'f', kTorquePrecision),
+        QStringLiteral(
+            "<span style=\"color: %1;\">&#9679;</span> Soft %2 Nm<br>"
+            "<span style=\"color: %3;\">&#9679;</span> Hard %4 Nm")
+            .arg(Color::kOrange, QString::number(lower, 'f', kTorquePrecision),
                  Color::kRed, QString::number(upper, 'f', kTorquePrecision)));
 }
 
