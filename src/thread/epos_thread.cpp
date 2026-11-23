@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 // Other Library Headers
@@ -72,6 +73,9 @@ constexpr double kRpmToDegs = kDegPerRotation
 // EPOS Functions
 
 constexpr int kNodeID = 1;  // for now, we only support one actuator
+
+constexpr unsigned short kPosDemandIndex = 0x6062;  // current target position
+constexpr unsigned char kPosDemandSubIndex = 0x00;
 
 constexpr int kEposTrue = 1;       // TRUE
 constexpr int kEposFalse = 0;      // FALSE
@@ -150,6 +154,14 @@ EposThread::EposThread(QObject* parent, std::string device_name,
     state_msg_.name = {Joint::NameEnumToString(Joint::Name::kYaw)};
     state_msg_.position.resize(1);
     state_msg_.velocity.resize(1);
+
+    const double none = std::numeric_limits<double>::quiet_NaN();
+    target_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
+        Joint::kTargetsTopic, 10);
+    target_msg_.name = state_msg_.name;
+    target_msg_.position = {none};
+    target_msg_.velocity = {none};  // not used
+    target_msg_.effort = {none};    // not used
 #endif
 
     // (nothing else to do here; waits until QThread::start() is called)
@@ -397,6 +409,28 @@ void EposThread::run() {
         state_msg_.position[0] = to_joint_rad(a_pos * kIncToDeg);
         state_msg_.velocity[0] = to_joint_rad(a_vel_ * kRpmToDegs);
         state_pub_->publish(state_msg_);
+
+        // Make controller state info available to other ROS2 nodes
+        int32_t demand_pos = 0;
+        uint n_bytes_read = 0;
+        const bool demand_read = VCS_GetObject(handle_, kNodeID,
+                                               kPosDemandIndex,
+                                               kPosDemandSubIndex, &demand_pos,
+                                               sizeof(demand_pos),
+                                               &n_bytes_read, &err_code)
+                                 != 0;
+        if (!demand_read && !demand_read_failed_) {
+            logger_->Warn(
+                Util::GetFormattedEposErrTxt("VCS_GetObject", err_code, kNodeID)
+                    .toStdString());
+        }
+        demand_read_failed_ = !demand_read;
+
+        target_msg_.header.stamp = state_msg_.header.stamp;
+        target_msg_.position[0] = demand_read
+                                      ? to_joint_rad(demand_pos * kIncToDeg)
+                                      : std::numeric_limits<double>::quiet_NaN();
+        target_pub_->publish(target_msg_);
 #endif
 
         // Report miscellaneous statuses in one batch

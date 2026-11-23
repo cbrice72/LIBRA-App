@@ -98,6 +98,10 @@ class EposThread : public AbstractActuatorThread
 
 #ifdef BUILD_WITH_ROS2
     rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr state_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr target_pub_;
     sensor_msgs::msg::JointState state_msg_;  // reused for efficiency
+    sensor_msgs::msg::JointState target_msg_;
+
+    bool demand_read_failed_{false};  // only warns once on failure
 #endif
 };

@@ -254,7 +254,8 @@ HebiThread::HebiThread(QObject* parent,
 #ifdef BUILD_WITH_ROS2
     // Initialize ROS2 components
     state_pub_ = this->create_publisher<msgJointState>(Joint::kStatesTopic, 10);
-    target_pub_ = this->create_publisher<msgJointState>("/joint_targets", 10);
+    target_pub_ = this->create_publisher<msgJointState>(Joint::kTargetsTopic,
+                                                        10);
 
     const auto hebi_names = Joint::GetHebiStrings();
 

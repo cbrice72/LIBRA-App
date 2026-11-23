@@ -30,8 +30,11 @@ namespace Joint {
 // !Constants
 //------------------------------------------------------------------------------
 
-// ROS2 topic each joint publisher sends its own joints to
+// ROS2 topic each joint publisher sends its current positions to
 constexpr const char* kStatesTopic = "/joint_states";
+
+// ROS2 topic each joint publisher sends its commanded setpoints to
+constexpr const char* kTargetsTopic = "/joint_targets";
 
 /**
  * @brief Joint direction (revolute only).
