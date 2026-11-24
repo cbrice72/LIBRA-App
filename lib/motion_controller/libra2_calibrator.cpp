@@ -945,7 +945,8 @@ void Libra2Calibrator::SolveLevelCalibration(const Motion::RestSample& sample) {
     output_.arm_model = arm;
     output_.success_msg = "Level calibration succeeded: τ_g1,0="
                           + Motion::FormatNum(arm.level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + (eta_extension_ > 0.0 ? " (est. at min. extension)"
+                                                  : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm.hang_torque) + " Nm";
 }
@@ -984,7 +985,8 @@ void Libra2Calibrator::SolveTwoAngleCalibration(
     output_.arm_model = arm;
     output_.success_msg = "Two-angle calibration succeeded:\nτ_g1,0="
                           + Motion::FormatNum(arm->level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
+                          + (eta_extension_ > 0.0 ? " (est. at min. extension)"
+                                                  : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm->hang_torque) + " Nm";
 }

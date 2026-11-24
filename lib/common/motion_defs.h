@@ -385,7 +385,7 @@ struct ArmModel {
 
     CwModelParams cw_model;  // CW model used to compute it
 
-    double level_torque{0.0};  // τ_g1,0 at min. ETA extension (Nm)
+    double level_torque{0.0};  // τ_g1,0 est. at min. ETA extension (Nm)
     double hang_torque{0.0};   // m_arm·h_1·g (Nm)
 };
 
