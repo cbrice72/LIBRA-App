@@ -11,6 +11,7 @@
 
 // C++ Standard Library Headers
 #include <array>
+#include <cmath>
 #include <string>
 #include <utility>
 
@@ -102,6 +103,7 @@ void MainWindow::UpdateTrajectoryControls() {
 void MainWindow::SetTrajectoryPlaying(const bool& playing) {
     trajectory_playing_ = playing;
     if (!playing) {
+        hold_pending_ = false;
         hold_timer_->stop();
     }
 
@@ -119,7 +121,7 @@ void MainWindow::SetTrajectoryPlaying(const bool& playing) {
  *       drain buttons), so their checks and guards still apply.
  *
  * @note "Trajectory step i/n started" and "... reached" (see
- *       `HandleMovementStateChanged()`) mark each step in the log and, with
+ *       `StartHoldIfSettled()`) mark each step in the log and, with
  *       ROS2, in `/rosout` for analysis; KEEP THEIR WORDING STABLE!!
  */
 void MainWindow::SendTrajectoryStep() {
@@ -158,6 +160,36 @@ void MainWindow::SendTrajectoryStep() {
     logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
                   + " started" + GetTrajectoryLoopText().toStdString());
     SendJointTargets(step.pose);
+}
+
+/**
+ * @brief Initiates a hold at the current pose if both (1) the arm has finished
+ *        its move, and (2) the counterweight (CW) its adjustment.
+ *
+ * @note Without automatic CW control (i.e., "Manual" mode), the hold simply
+ *       waits for the arm to reach its target.
+ */
+void MainWindow::StartHoldIfSettled() {
+    if (!hold_pending_ || arm_moving_) {
+        return;
+    }
+    if (motion_mode_ != Motion::MotionMode::kManual
+        && water_controller_->IsFlowing()) {
+        return;
+    }
+    hold_pending_ = false;
+
+    const double t_hold_s = trajectory_[*trajectory_step_].hold_s.value_or(
+        t_hold_s_);
+
+    // NOTE: The following logger_ output marks each step in the terminal log
+    //       (with ROS2: `/rosout` topic) for analysis; KEEP ITS WORDING STABLE!!
+    logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
+                  + " reached; holding " + Motion::FormatNum(t_hold_s) + " s"
+                  + GetTrajectoryLoopText().toStdString());
+
+    hold_timer_->start(
+        static_cast<int>(std::lround(t_hold_s * 1000.0)));  // s -> ms
 }
 
 /**

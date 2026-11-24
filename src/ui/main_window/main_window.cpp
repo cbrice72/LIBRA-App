@@ -962,6 +962,8 @@ void MainWindow::SetMotionMode(const Motion::MotionMode& mode) {
         ui_->pb_water_drain_B->setChecked(false);
 #endif
     }
+
+    StartHoldIfSettled();  // exception: manual mode doesn't wait
 }
 
 /**
@@ -1175,6 +1177,8 @@ void MainWindow::HandleWaterStatus(const Water::Side& side,
                            + Water::SideEnumToString(side) + " ("
                            + std::to_string(static_cast<int>(side)) + ")");
     }
+
+    StartHoldIfSettled();
 }
 
 /**
@@ -1489,20 +1493,15 @@ void MainWindow::HandleMovementStateChanged() {
     arm_moving_ |= epos_thread_->IsMoving();
 #endif
 
-    // Trajectory step reached; pause for a time before the next move
+    // Arm stopped at trajectory step; hold there once CW has also stopped
     if (trajectory_playing_ && was_moving && !arm_moving_) {
-        const double t_hold_s = trajectory_[*trajectory_step_].hold_s.value_or(
-            t_hold_s_);
-
-        // NOTE: The following logger_ output marks each step in the terminal
-        //       log (with ROS2: `/rosout` topic) for analysis;
-        //       KEEP THEIR WORDING STABLE !!
-        logger_->Info("Trajectory step " + GetTrajectoryStepText().toStdString()
-                      + " reached; holding " + Motion::FormatNum(t_hold_s)
-                      + " s" + GetTrajectoryLoopText().toStdString());
-
-        hold_timer_->start(
-            static_cast<int>(std::lround(t_hold_s * 1000.0)));  // s -> ms
+        hold_pending_ = true;
+        StartHoldIfSettled();
+        if (hold_pending_) {
+            logger_->Info("Trajectory step "
+                          + GetTrajectoryStepText().toStdString()
+                          + " arm stopped; waiting for CW");
+        }
     }
 
     // UI widgets

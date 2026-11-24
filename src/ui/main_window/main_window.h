@@ -323,6 +323,7 @@ class MainWindow : public QMainWindow {
     void SetTrajectoryPlaying(const bool& playing);
     void SendTrajectoryStep();
     void PlayNextTrajectoryStep();
+    void StartHoldIfSettled();
     bool ConfirmTrajectoryStep();
     [[nodiscard]] QString GetTrajectoryStepText() const;
     [[nodiscard]] QString GetTrajectoryLoopText() const;
@@ -385,6 +386,7 @@ class MainWindow : public QMainWindow {
 
     std::optional<std::size_t> trajectory_step_;  // none = not started
     bool trajectory_playing_{false};
+    bool hold_pending_{false};           // arm stopped, waiting for CW to stop
     QTimer* hold_timer_{nullptr};        // time at each reached step
     double t_hold_s_{kDefaultHoldTime};  // sec
     std::size_t trajectory_loop_{1};     // times through the trajectory

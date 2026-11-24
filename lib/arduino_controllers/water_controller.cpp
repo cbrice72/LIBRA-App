@@ -259,6 +259,14 @@ void WaterController::MapTorqueToCommand(const double& torque_dir) {
 }
 
 /**
+ * @brief Checks whether any valve is currently open.
+ */
+bool WaterController::IsFlowing() const {
+    return serial_port_->isOpen() && !water_cmd_.isEmpty()
+           && (static_cast<uint8_t>(water_cmd_[0]) & kWaterCmdMask) != 0;
+}
+
+/**
  * @brief Checks whether the inflow valve seems stuck shut: a fill command with
  *        no measured inflow for `kInflowTimeoutMs`. Restarts the wait each time
  *        it returns true.

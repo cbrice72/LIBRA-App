@@ -33,6 +33,10 @@ class WaterController : public GenericSerialDevice {
     explicit WaterController(QObject* parent, const bool& debug_mode);
     ~WaterController() override = default;
 
+    // --- Getters & Setters ---
+
+    [[nodiscard]] bool IsFlowing() const;
+
   public slots:
     // --- Arduino Commands ---
 
