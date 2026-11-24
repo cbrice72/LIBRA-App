@@ -7,7 +7,7 @@
     <kd>5</kd>
     <feed_forward>0</feed_forward>
     <dead_zone>0.002</dead_zone>
-    <i_clamp>3</i_clamp>
+    <i_clamp>6</i_clamp>
     <punch>0</punch>
     <min_target>-80</min_target>
     <max_target>80</max_target>
