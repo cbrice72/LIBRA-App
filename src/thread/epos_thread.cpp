@@ -84,9 +84,9 @@ constexpr uint kDefaultBaudRate = 1000000;
 
 // - For Profile Position/Velocity Modes
 
-constexpr uint kProfileVel = 1000;  // rpm
-constexpr uint kProfileAcc = 1000;  // rpm/s
-constexpr uint kProfileDec = 100;   // rpm/s
+constexpr uint kProfileVel = 300;  // rpm
+constexpr uint kProfileAcc = 500;  // rpm/s
+constexpr uint kProfileDec = 100;  // rpm/s
 
 constexpr uint kEmergencyProfileDec = 2000;  // rpm/s
 
