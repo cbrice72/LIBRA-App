@@ -392,7 +392,8 @@ class MainWindow : public QMainWindow {
     std::size_t trajectory_loop_{1};     // times through the trajectory
 
     // Run metadata (see `StartTrajectoryRun()`)
-    QString run_file_;  // active run's metadata file
+    QString run_file_;              // active run's metadata file
+    double run_energy_start_{0.0};  // energy total at run start (Wh)
     QString gains_file_;
     QString safety_file_;
     QString hebilog_file_;

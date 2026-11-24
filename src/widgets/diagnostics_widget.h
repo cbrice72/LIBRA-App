@@ -53,6 +53,8 @@ class DiagnosticsWidget : public QWidget
     DiagnosticsWidget(const DiagnosticsWidget&) = delete;
     DiagnosticsWidget& operator=(const DiagnosticsWidget&) = delete;
 
+    [[nodiscard]] double GetEnergy() const;
+
   public slots:
     // --- Power ---
 

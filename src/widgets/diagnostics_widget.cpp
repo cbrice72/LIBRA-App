@@ -267,6 +267,13 @@ void DiagnosticsWidget::SamplePower() {
 }
 
 /**
+ * @brief Gets the energy total since start or last clear (Wh).
+ */
+double DiagnosticsWidget::GetEnergy() const {
+    return energy_;
+}
+
+/**
  * @brief Restarts the energy total from zero (e.g., at the start of an
  *        experiment).
  */

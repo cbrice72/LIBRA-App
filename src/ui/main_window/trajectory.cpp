@@ -411,6 +411,7 @@ bool MainWindow::StartTrajectoryRun() {
         << "note: " << note << "\n";
 
     run_file_ = file.fileName();
+    run_energy_start_ = ui_->w_diagnostics->GetEnergy();
     trajectory_loop_ = 1;
     logger_->Info("Started trajectory run (metadata: " + run_file_.toStdString()
                   + ")");
@@ -435,8 +436,13 @@ void MainWindow::EndTrajectoryRun(const QString& outcome) {
         return;
     }
 
-    AppendRunMetadata("ended (" + outcome + ")");
-    logger_->Info("Ended trajectory run (" + outcome.toStdString() + ")");
+    // Wrong if the energy total is cleared mid-run
+    const QString energy = QString::number(ui_->w_diagnostics->GetEnergy()
+                                               - run_energy_start_,
+                                           'f', 2);
+    AppendRunMetadata("ended (" + outcome + "), energy used: " + energy + " Wh");
+    logger_->Info("Ended trajectory run (" + outcome.toStdString()
+                  + "), energy used: " + energy.toStdString() + " Wh");
     run_file_.clear();
 
     if (run_started_hebilog_ && !hebilog_file_.isEmpty()) {
