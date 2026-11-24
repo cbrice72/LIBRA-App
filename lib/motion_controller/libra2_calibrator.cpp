@@ -982,7 +982,7 @@ void Libra2Calibrator::SolveTwoAngleCalibration(
                          * Libra2Model::EtaMomentChange(eta_extension_);
 
     output_.arm_model = arm;
-    output_.success_msg = "Two-angle calibration succeeded: τ_g1,0="
+    output_.success_msg = "Two-angle calibration succeeded:\nτ_g1,0="
                           + Motion::FormatNum(arm->level_torque) + " Nm"
                           + (eta_extension_ > 0.0 ? " (at min. extension)" : "")
                           + ", m_arm*h_1*g="
