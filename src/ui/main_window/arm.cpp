@@ -410,6 +410,13 @@ void MainWindow::on_pb_release_pitch_toggled(bool checked) {
  * @see MainWindow::SetEtaVel
  */
 void MainWindow::on_pb_eta_extend_clicked(bool checked) {
+    if (kEtaVel == 0.0) {
+        logger_->Warn("ETA rate not measured yet (kEtaVel = 0); estimate "
+                      "unchanged");
+        ui_->pb_eta_extend->setChecked(false);
+        return;
+    }
+
     SetEtaVel(checked ? kEtaVel : 0.0);
 }
 
@@ -422,6 +429,13 @@ void MainWindow::on_pb_eta_extend_clicked(bool checked) {
  * @see MainWindow::SetEtaVel
  */
 void MainWindow::on_pb_eta_retract_clicked(bool checked) {
+    if (kEtaVel == 0.0) {
+        logger_->Warn("ETA rate not measured yet (kEtaVel = 0); estimate "
+                      "unchanged");
+        ui_->pb_eta_retract->setChecked(false);
+        return;
+    }
+
     SetEtaVel(checked ? -kEtaVel : 0.0);
 }
 #endif
