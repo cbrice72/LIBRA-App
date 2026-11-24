@@ -3,11 +3,11 @@
   <control_strategy>4</control_strategy>
   <position>
     <kp>400</kp>
-    <ki>5</ki>
+    <ki>2</ki>
     <kd>5</kd>
     <feed_forward>0</feed_forward>
     <dead_zone>0.002</dead_zone>
-    <i_clamp>8</i_clamp>
+    <i_clamp>3</i_clamp>
     <punch>0</punch>
     <min_target>-80</min_target>
     <max_target>80</max_target>
@@ -19,7 +19,7 @@
   </position>
   <velocity>
     <kp>0.2</kp>
-    <ki>0.01</ki>
+    <ki>0</ki>
     <kd>0</kd>
     <feed_forward>1</feed_forward>
     <dead_zone>0</dead_zone>
