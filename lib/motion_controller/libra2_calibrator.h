@@ -215,6 +215,7 @@ class Libra2Calibrator {
     double angle_b_{0.0};          // (rad)
     Motion::RestSample sample_a_;  // two-angle: first angle's sample
     RestSampler sampler_;
+    bool move_seen_{false};  // whether the requested move has started
 
     // Friction Calibration
 

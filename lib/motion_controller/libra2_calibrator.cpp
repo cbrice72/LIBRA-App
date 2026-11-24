@@ -35,9 +35,10 @@ constexpr double kRestVelTolerance = 0.005;    // ... and noise at rest (rad/s)
 constexpr double kRestVolumeTolerance = 0.01;  // allowed CW change in window (L)
 constexpr double kRestWindowTime = 3.0;        // averaging window (s)
 
-constexpr double kProgressLogPeriod = 15.0;  // heartbeat message (s)
-constexpr double kMoveTimeout = 180.0;       // (s)
-constexpr double kSamplingTimeout = 60.0;    // (s)
+constexpr double kProgressLogPeriod = 15.0;     // heartbeat message (s)
+constexpr double kFrictionMoveTimeout = 180.0;  // friction moves/sweeps (s)
+constexpr double kArmMoveTimeout = 60.0;        // arm calibration moves (s)
+constexpr double kSamplingTimeout = 60.0;       // (s)
 
 // Velocity averaging window for rest and steady speed checks, arbitrary (s);
 // at rest, raw vel noise is ~0.6 deg/s but its 0.75 s mean stays < 0.2 deg/s
@@ -483,10 +484,10 @@ bool Libra2Calibrator::StartFrictionCalibration(const double& angle_a,
     const double slowest = max_vel * kFrictionVelFractions.front();
     const double t_slowest_s = SweepTime(lo, hi, slowest,
                                          RampDist(slowest, inertia));
-    if (t_slowest_s > kMoveTimeout) {
+    if (t_slowest_s > kFrictionMoveTimeout) {
         logger_.Warn("Friction calibration rejected: slowest sweep takes "
                      + Motion::FormatNum(t_slowest_s) + " s (limit "
-                     + Motion::FormatNum(kMoveTimeout)
+                     + Motion::FormatNum(kFrictionMoveTimeout)
                      + " s); use a smaller window");
         return false;
     }
@@ -665,9 +666,11 @@ void Libra2Calibrator::BeginCalibrationStage(
     switch (status) {
         case Motion::CalibrationStatus::kArmMovingToA:
             output_.move_to = angle_a_;
+            move_seen_ = false;
             break;
         case Motion::CalibrationStatus::kArmMovingToB:
             output_.move_to = angle_b_;
+            move_seen_ = false;
             break;
         case Motion::CalibrationStatus::kFrictionMovingToStart:
             output_.move_to = fr.angle_lo;
@@ -839,9 +842,8 @@ void Libra2Calibrator::RunArmCalibration(const Measurements& measurements) {
          || status_ == Motion::CalibrationStatus::kArmMovingToB);
     const bool at_a = (status_ == Motion::CalibrationStatus::kArmMovingToA
                        || status_ == Motion::CalibrationStatus::kArmSamplingA);
-    const double target = at_a ? angle_a_ : angle_b_;
 
-    const double timeout = moving_stage ? kMoveTimeout : kSamplingTimeout;
+    const double timeout = moving_stage ? kArmMoveTimeout : kSamplingTimeout;
     if (t_stage_s_ > timeout) {
         FinishCalibration(false, moving_stage
                                      ? "timed out moving to target"
@@ -853,13 +855,6 @@ void Libra2Calibrator::RunArmCalibration(const Measurements& measurements) {
     // Sampling stages: average once steady
     std::optional<Motion::RestSample> sample;
     if (!moving_stage) {
-        // Sampling is invalid if pose drifts (except for level calibration)
-        if (status_ != Motion::CalibrationStatus::kArmSamplingLevel
-            && std::abs(measurements.angle - target) > 2.0 * kReachTolerance) {
-            sampler_.Reset();
-            return;
-        }
-
         sample = sampler_.Add(measurements.dt, measurements.angle,
                               measurements.vel, measurements.torque,
                               measurements.trajectory_active,
@@ -872,10 +867,13 @@ void Libra2Calibrator::RunArmCalibration(const Measurements& measurements) {
     switch (status_) {
         case Motion::CalibrationStatus::kArmMovingToA:
         case Motion::CalibrationStatus::kArmMovingToB:
-            // Start next step of an active calibration
-            if (!measurements.trajectory_active
-                && std::abs(measurements.angle - target) <= kReachTolerance
-                && std::abs(measurements.vel) <= kRestVelTolerance) {
+            // Sample wherever the arm stops
+            // (at longer extensions, the actuator may stall short of target)
+            if (measurements.trajectory_active) {
+                move_seen_ = true;
+                break;
+            }
+            if (move_seen_ && std::abs(measurements.vel) <= kRestVelTolerance) {
                 BeginCalibrationStage(
                     at_a ? Motion::CalibrationStatus::kArmSamplingA
                          : Motion::CalibrationStatus::kArmSamplingB);
@@ -945,8 +943,8 @@ void Libra2Calibrator::SolveLevelCalibration(const Motion::RestSample& sample) {
     output_.arm_model = arm;
     output_.success_msg = "Level calibration succeeded: τ_g1,0="
                           + Motion::FormatNum(arm.level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (est. at min. extension)"
-                                                  : "")
+                          + (eta_extension_ != 0.0 ? " (est. at min. extension)"
+                                                   : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm.hang_torque) + " Nm";
 }
@@ -985,8 +983,8 @@ void Libra2Calibrator::SolveTwoAngleCalibration(
     output_.arm_model = arm;
     output_.success_msg = "Two-angle calibration succeeded:\nτ_g1,0="
                           + Motion::FormatNum(arm->level_torque) + " Nm"
-                          + (eta_extension_ > 0.0 ? " (est. at min. extension)"
-                                                  : "")
+                          + (eta_extension_ != 0.0 ? " (est. at min. extension)"
+                                                   : "")
                           + ", m_arm*h_1*g="
                           + Motion::FormatNum(arm->hang_torque) + " Nm";
 }
@@ -1051,7 +1049,7 @@ void Libra2Calibrator::RunFrictionCalibration(const Measurements& measurements) 
 
     // Abort guards
     std::string abort_reason;
-    if (t_stage_s_ > kMoveTimeout) {
+    if (t_stage_s_ > kFrictionMoveTimeout) {
         abort_reason = "timed out moving or sweeping";
     } else if (run.t_over_max_s >= kMaxFrictionTorqueTime) {
         abort_reason = "torque (" + Motion::FormatNum(measurements.torque)
@@ -1070,7 +1068,7 @@ void Libra2Calibrator::RunFrictionCalibration(const Measurements& measurements) 
         FinishCalibration(false, abort_reason);
         return;
     }
-    LogCalibrationProgress(measurements, kMoveTimeout);
+    LogCalibrationProgress(measurements, kFrictionMoveTimeout);
 
     const bool going_up = (status_
                            == Motion::CalibrationStatus::kFrictionSweepUp);
