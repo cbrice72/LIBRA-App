@@ -396,7 +396,6 @@ bool MainWindow::StartTrajectoryRun() {
         << "\n"
         << "loop: " << (ui_->chk_trajectory_loop->isChecked() ? "on" : "off")
         << "\n"
-        << "hold_s: " << t_hold_s_ << "\n"
         << "motion_mode: "
         << QString::fromStdString(Motion::MotionModeEnumToString(motion_mode_))
         << "\n"
