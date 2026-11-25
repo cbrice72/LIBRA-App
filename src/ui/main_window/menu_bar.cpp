@@ -29,6 +29,7 @@
 #include <QLabel>            // Qt::Widgets
 #include <QLineEdit>         // Qt::Widgets
 #include <QMessageBox>       // Qt::Widgets
+#include <QPixmap>           // Qt::Gui
 #include <QSerialPort>       // Qt::SerialPort
 #include <QSerialPortInfo>   // Qt::SerialPort
 #include <QSignalBlocker>    // Qt::Core
@@ -72,6 +73,7 @@ constexpr double kRadToDeg = 180.0 / M_PI;
 constexpr double kDefaultCalHalfWindow = 20.0;       // ± current angle (deg)
 constexpr double kDefaultFrictionHalfWindow = 15.0;  // window is ± this (deg)
 constexpr double kMaxArmExtension = 100000.0;        // input limit (mm)
+constexpr int kGuideImageWidth = 400;                // (px)
 #endif
 
 namespace {
@@ -989,20 +991,33 @@ void MainWindow::on_a_epos_connect_triggered() {
  * @see Libra2MotionController::SetEtaExtension
  */
 void MainWindow::on_a_eta_extension_triggered() {
-    bool ok = false;
-    const double mm =
-        QInputDialog::getDouble(this, "ETA Extension",
-                                "Extension from minimum (mm):",
-                                motion_controller_->GetEtaExtension()
-                                    * Motion::kMmPerM,
-                                0.0, kMaxArmExtension, 1, &ok);
+    QDialog dialog(this);
+    QFormLayout* form =
+        SetUpFormDialog(dialog, "ETA Extension",
+                        "Measure from end of housing to base of tip cap.");
 
-    if (ok) {
-        emit ReportEtaExtension(mm / Motion::kMmPerM);
-        logger_->Info("ETA extension set to " + Motion::FormatNum(mm) + " mm");
-    } else {
+    auto* l_guide = new QLabel(&dialog);
+    l_guide->setPixmap(
+        QPixmap(":/eta_extension_guide")
+            .scaledToWidth(kGuideImageWidth, Qt::SmoothTransformation));
+    form->addRow(l_guide);
+
+    auto* sb_extension = new QDoubleSpinBox(&dialog);
+    sb_extension->setRange(0.0, kMaxArmExtension);
+    sb_extension->setDecimals(1);
+    sb_extension->setSuffix(" mm");
+    sb_extension->setValue(motion_controller_->GetEtaExtension()
+                           * Motion::kMmPerM);
+    form->addRow("Extension:", sb_extension);
+
+    if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("ETA extension setting cancelled by user");
+        return;
     }
+
+    const double mm = sb_extension->value();
+    emit ReportEtaExtension(mm / Motion::kMmPerM);
+    logger_->Info("ETA extension set to " + Motion::FormatNum(mm) + " mm");
 }
 #endif
 
