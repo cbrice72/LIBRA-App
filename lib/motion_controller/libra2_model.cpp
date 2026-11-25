@@ -31,17 +31,20 @@ constexpr std::array<double, 15> kEtaTubeLength = {
 };                                         // L_ui (m)
 constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
 
+// - Static section
+constexpr double kEtaStaticLength = 0.983;  // pitch axis to end of housing (m)
+constexpr double kEtaMinGap = 0.012;        // end of housing to tip cap (m)
+
 // - Spiral conduit
 constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
-constexpr double kEtaConduitMinLength = 0.64;       // L_conduit,min (m)
+constexpr double kEtaConduitMinLength = kEtaStaticLength
+                                        + kEtaMinGap;  // L_conduit,min (m)
 
 // - Cables fed out with the conduit
 constexpr double kCameraCableMassPerLength = 0.0642;  // RealSense D456 (kg/m)
-// TODO: input after measuring
-constexpr double kCameraCableMinLength = 0.0;        // RealSense D456 (m)
-constexpr double kLidarCableMassPerLength = 0.0292;  // SF45/B (kg/m)
-// TODO: input after measuring
-constexpr double kLidarCableMinLength = 0.0;  // SF45/B (m)
+constexpr double kCameraCableMinLength = 1.200;       // RealSense D456 (m)
+constexpr double kLidarCableMassPerLength = 0.0292;   // SF45/B (kg/m)
+constexpr double kLidarCableMinLength = 1.080;        // SF45/B (m)
 
 constexpr double kSensorSuiteMass = 0.2917;  // D456 + SF45/B w/ mounts (kg)
 constexpr double kEtaTipMountMass = 0.0215;  // (kg)
