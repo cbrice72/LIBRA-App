@@ -51,10 +51,13 @@ class AbstractActuatorThread : public QThread {
     // --- Getters & Setters ---
 
     /**
-     * @brief Gets the actuator(s) last reported active state.
+     * @brief Checks whether the actuator(s) are moving or have a move pending.
+     *
+     * @note To avoid race conditions with MainWindow reporting, a new target
+     *       counts as moving until `run()` reports it.
      */
     [[nodiscard]] bool IsMoving() const {
-        return moving_;
+        return moving_ || move_requested_;
     }
 
   public slots:
