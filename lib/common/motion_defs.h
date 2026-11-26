@@ -240,6 +240,7 @@ constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
 
 // ETA
 
+constexpr double kEtaStaticLength = 0.983;  // pitch axis to end of housing (m)
 constexpr double kEtaMinGap = 0.012;  // end of housing to tip cap, min. (m)
 
 //------------------------------------------------------------------------------

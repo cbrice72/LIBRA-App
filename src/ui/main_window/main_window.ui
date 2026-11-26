@@ -2387,6 +2387,19 @@
                <item row="16" column="0" colspan="4">
                 <layout class="QHBoxLayout" name="hl_arm_state">
                  <item>
+                  <spacer name="h_spacer_arm_state_l">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
                   <widget class="QLabel" name="static_l_arm_state">
                    <property name="statusTip">
                     <string>Whether any actuator is moving</string>
@@ -2407,13 +2420,52 @@
                   </widget>
                  </item>
                  <item>
+                  <spacer name="h_spacer_arm_length">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Policy::Fixed</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>12</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="static_l_arm_length">
+                   <property name="statusTip">
+                    <string>Arm length along the ETA, from the pitch axis to the tip cap (estimated from the ETA extension)</string>
+                   </property>
+                   <property name="text">
+                    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:700;&quot;&gt;Arm length:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLabel" name="l_arm_length">
+                   <property name="statusTip">
+                    <string>Arm length along the ETA, from the pitch axis to the tip cap (estimated from the ETA extension)</string>
+                   </property>
+                   <property name="text">
+                    <string>...</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
                   <spacer name="h_spacer_arm_state">
                    <property name="orientation">
                     <enum>Qt::Orientation::Horizontal</enum>
                    </property>
+                   <property name="sizeType">
+                    <enum>QSizePolicy::Policy::Fixed</enum>
+                   </property>
                    <property name="sizeHint" stdset="0">
                     <size>
-                     <width>0</width>
+                     <width>12</width>
                      <height>20</height>
                     </size>
                    </property>
@@ -2446,6 +2498,19 @@
                     <bool>true</bool>
                    </property>
                   </widget>
+                 </item>
+                 <item>
+                  <spacer name="h_spacer_arm_state_r">
+                   <property name="orientation">
+                    <enum>Qt::Orientation::Horizontal</enum>
+                   </property>
+                   <property name="sizeHint" stdset="0">
+                    <size>
+                     <width>0</width>
+                     <height>20</height>
+                    </size>
+                   </property>
+                  </spacer>
                  </item>
                 </layout>
                </item>

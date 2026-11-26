@@ -45,6 +45,10 @@
 constexpr int kPrecision = 1;  // i.e., "0.1"
 constexpr double kBuildInfoOpacity = 0.6;
 
+#if LIBRA_VERSION == 2
+constexpr int kArmLengthPrecision = 3;  // i.e., "0.001" (m)
+#endif
+
 #ifdef BUILD_WITH_ROS2
 // Same rate as the actuators, so TF through mocked joints stays fresh
 constexpr int kMockJointPeriodMs = 10;  // 100 Hz
@@ -306,6 +310,8 @@ void MainWindow::ConfigureUi() {
     RemoveUiElement(ui_->gl_eta_input);
     RemoveUiElement(ui_->gl_eta_output);
     RemoveUiElement(ui_->pb_release_pitch);
+    RemoveUiElement(ui_->static_l_arm_length);
+    RemoveUiElement(ui_->l_arm_length);
 
     RemoveUiElement(ui_->l_epos_telemetry);
 #endif
@@ -1447,13 +1453,21 @@ void MainWindow::HandleActuatorFeedback(
 
 #if LIBRA_VERSION == 2
 /**
- * @brief Updates the shown ETA extension.
+ * @brief Updates the shown ETA extension and arm length.
  *
  * @param extension Extension from minimum (m)
+ *
+ * @note Arm length is measured along the ETA, from the pitch axis to the tip
+ *       cap. (Reach would also need deflection, which isn't currently modeled.)
  */
 void MainWindow::HandleEtaExtension(const double& extension) {
     ui_->l_actual_eta->setText(
         QString::number(extension * Motion::kMmPerM, 'f', kPrecision));
+
+    const double arm_length = Motion::kEtaStaticLength + Motion::kEtaMinGap
+                              + extension;  // (m)
+    ui_->l_arm_length->setText(
+        QString::number(arm_length, 'f', kArmLengthPrecision) + " m");
 }
 #endif
 
