@@ -20,14 +20,16 @@
 
 // ETA (Eq. 44; unverified)
 
-// - Tubes u_1 (smallest) to u_15
-constexpr std::array<double, 15> kEtaTubeMass = {
-    0.0386, 0.0450, 0.0592, 0.0674, 0.0755, 0.0847, 0.0932, 0.0995,
-    0.1147, 0.1233, 0.1306, 0.1389, 0.1520, 0.1550, 0.1608,
+// - Moving tubes u_3 (smallest) to u_15, numbered as in Fujitsuka's thesis
+//   (Table 2.1). NOTE: u_1 and u_2 were removed from LIBRA-II's ETA (stiffer
+//   tip), and u_16 (largest, not GFRP) is fixed at the arm root.
+constexpr std::array<double, 13> kEtaTubeMass = {
+    0.0592, 0.0674, 0.0755, 0.0847, 0.0932, 0.0995, 0.1147,
+    0.1233, 0.1306, 0.1389, 0.1520, 0.1550, 0.1608,
 };  // m_ui (kg)
-constexpr std::array<double, 15> kEtaTubeLength = {
-    0.600, 0.600, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
+constexpr std::array<double, 13> kEtaTubeLength = {
     0.640, 0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
+    0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
 };                                         // L_ui (m)
 constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
 
@@ -307,7 +309,7 @@ double CwMass(const double& volume) {
  * @note From Eq. 44 (see extended equations in `ARM_EXTENSION_ESTIMATION.md`),
  *       where ΔL = ΔL_conduit since the conduit is assumed to be fed in from
  *       the pitch axis:
- *         Δ(m_arm·r_1) = (tubes u_1-15) + (conduit, cables) + (tip, payload)
+ *         Δ(m_arm·r_1) = (tubes u_3-15) + (conduit, cables) + (tip, payload)
  *                      = Σ m_ui·max(0, ΔL - S_(i-1))
  *                        + Σ μ_k·(L_k,min·ΔL + ΔL²/2)
  *                        + m_tip·ΔL
