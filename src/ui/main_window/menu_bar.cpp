@@ -793,8 +793,8 @@ void MainWindow::on_a_motion_calibrate_cancel_triggered() {
 
 /**
  * @brief Event handler for "Motion Control" menu action "Save calibration...".
- *        Asks for the setup it was made with, then saves the current arm model
- *        and pitch joint friction (JSON).
+ *        Asks for a note on the setup it was made with, then saves the current
+ *        arm model and pitch joint friction (JSON).
  */
 void MainWindow::on_a_motion_calibration_save_triggered() {
     auto record = motion_controller_->GetCalibrationRecord();
@@ -808,14 +808,7 @@ void MainWindow::on_a_motion_calibration_save_triggered() {
     QFormLayout* form = SetUpFormDialog(
         dialog, "Save Calibration",
         "A calibration only works for the setup it was made with, so note "
-        "the arm extension and anything else that changes the arm (e.g., "
-        "payload).");
-
-    auto* sb_extension = new QDoubleSpinBox(&dialog);
-    sb_extension->setRange(0.0, kMaxArmExtension);
-    sb_extension->setDecimals(1);
-    sb_extension->setSuffix(" mm");
-    form->addRow("Arm extension (from minimum):", sb_extension);
+        "anything that changes the arm (e.g., payload).");
 
     auto* le_note = new QLineEdit(&dialog);
     le_note->setPlaceholderText("optional");
@@ -841,7 +834,6 @@ void MainWindow::on_a_motion_calibration_save_triggered() {
         return;
     }
 
-    record.extension = sb_extension->value();
     record.note = le_note->text().toStdString();
     try {
         Motion::SaveCalibrationJson(record, file_path.toStdString());
@@ -991,10 +983,14 @@ void MainWindow::on_a_epos_connect_triggered() {
  * @see Libra2MotionController::SetEtaExtension
  */
 void MainWindow::on_a_eta_extension_triggered() {
+    constexpr double kMinGapMm = Motion::kEtaMinGap * Motion::kMmPerM;
+
     QDialog dialog(this);
-    QFormLayout* form =
-        SetUpFormDialog(dialog, "ETA Extension",
-                        "Measure from end of housing to base of tip cap.");
+    QFormLayout* form = SetUpFormDialog(
+        dialog, "ETA Extension",
+        QString("Measure from end of housing to base of tip cap. The gap at "
+                "min. extension (%1 mm) is subtracted automatically.")
+            .arg(kMinGapMm));
 
     auto* l_guide = new QLabel(&dialog);
     l_guide->setPixmap(
@@ -1002,20 +998,33 @@ void MainWindow::on_a_eta_extension_triggered() {
             .scaledToWidth(kGuideImageWidth, Qt::SmoothTransformation));
     form->addRow(l_guide);
 
-    auto* sb_extension = new QDoubleSpinBox(&dialog);
-    sb_extension->setRange(0.0, kMaxArmExtension);
-    sb_extension->setDecimals(1);
-    sb_extension->setSuffix(" mm");
-    sb_extension->setValue(motion_controller_->GetEtaExtension()
-                           * Motion::kMmPerM);
-    form->addRow("Extension:", sb_extension);
+    // Operator enters a tape reading and sees the extension from minimum
+    auto* sb_measured = new QDoubleSpinBox(&dialog);
+    sb_measured->setRange(kMinGapMm, kMaxArmExtension);
+    sb_measured->setDecimals(1);
+    sb_measured->setSuffix(" mm");
+    form->addRow("Measured:", sb_measured);
+
+    auto* l_extension = new QLabel(&dialog);
+    form->addRow("Extension:", l_extension);
+    const auto show_extension = [l_extension](const double& measured) {
+        l_extension->setText(QString::number(measured - kMinGapMm, 'f', 1)
+                             + " mm");
+    };
+
+    connect(sb_measured, &QDoubleSpinBox::valueChanged,  // show extension
+            l_extension, show_extension);
+
+    sb_measured->setValue(
+        (motion_controller_->GetEtaExtension() * Motion::kMmPerM) + kMinGapMm);
+    show_extension(sb_measured->value());
 
     if (dialog.exec() != QDialog::Accepted) {
         logger_->Debug("ETA extension setting cancelled by user");
         return;
     }
 
-    const double mm = sb_extension->value();
+    const double mm = sb_measured->value() - kMinGapMm;
     emit ReportEtaExtension(mm / Motion::kMmPerM);
     logger_->Info("ETA extension set to " + Motion::FormatNum(mm) + " mm");
 }

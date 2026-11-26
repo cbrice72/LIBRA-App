@@ -33,12 +33,11 @@ constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
 
 // - Static section
 constexpr double kEtaStaticLength = 0.983;  // pitch axis to end of housing (m)
-constexpr double kEtaMinGap = 0.012;        // end of housing to tip cap (m)
 
 // - Spiral conduit
 constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
-constexpr double kEtaConduitMinLength = kEtaStaticLength
-                                        + kEtaMinGap;  // L_conduit,min (m)
+constexpr double kEtaConduitMinLength =
+    kEtaStaticLength + Motion::kEtaMinGap;  // L_conduit,min (m)
 
 // - Cables fed out with the conduit
 constexpr double kCameraCableMassPerLength = 0.0642;  // RealSense D456 (kg/m)

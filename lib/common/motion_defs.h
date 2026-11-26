@@ -238,6 +238,10 @@ constexpr double kMaxCalibrationAngle = 1.2;  // |θ| limit, ~69 deg (rad)
 constexpr double kMinAngleSeparation = 0.2;   // |θ_b - θ_a|, ~11 deg (rad)
 constexpr double kFrictionMinWindow = 0.105;  // incl. unsampled ends (rad)
 
+// ETA
+
+constexpr double kEtaMinGap = 0.012;  // end of housing to tip cap, min. (m)
+
 //------------------------------------------------------------------------------
 // !LIBRA-II Types
 //------------------------------------------------------------------------------
@@ -441,7 +445,7 @@ struct FrictionModel {
 struct CalibrationRecord {
     // File metadata
     std::string timestamp;            // ISO 8601
-    std::optional<double> extension;  // arm extension, entered manually (mm)
+    std::optional<double> extension;  // ETA extension at calibration (mm)
     std::string note;
 
     // Controller constants when the record was made

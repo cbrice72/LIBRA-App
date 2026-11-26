@@ -99,6 +99,7 @@ bool IsSameCwModel(const Motion::CwModelParams& a,
 }
 
 }  // namespace
+
 //------------------------------------------------------------------------------
 // !Class Management
 //------------------------------------------------------------------------------
@@ -640,6 +641,7 @@ void Libra2MotionController::ApplyCalibrationResults(
         SetFrictionModel(*output.friction);
         LogArmModelError(*output.friction);
     }
+    calibration_extension_ = eta_extension_;
 
     calibrator_.FinishCalibration(true, output.success_msg + note);
 }
@@ -680,14 +682,18 @@ void Libra2MotionController::LogArmModelError(
 //------------------------------------------------------------------------------
 
 /**
- * @brief Gets the current arm and friction models with relevant raw data.
+ * @brief Gets the current arm and friction models with relevant raw data, and
+ *        the ETA extension of the latest calibration.
  *
- * @note Record metadata is left empty.
+ * @note Timestamp and note are left empty.
  */
 Motion::CalibrationRecord Libra2MotionController::GetCalibrationRecord() const {
     const std::scoped_lock lock(mutex_);
 
     Motion::CalibrationRecord record;
+    if (calibration_extension_) {
+        record.extension = *calibration_extension_ * Motion::kMmPerM;
+    }
     record.cw_model = cw_model_.GetParams();
     record.arm_inertia = arm_inertia_;
 
@@ -754,6 +760,11 @@ bool Libra2MotionController::LoadCalibrationRecord(
             + Motion::FormatNum(record.friction->viscous) + " Nm*s/rad");
 
         SetFrictionModel(*record.friction);
+    }
+
+    calibration_extension_.reset();
+    if (record.extension) {
+        calibration_extension_ = *record.extension / Motion::kMmPerM;
     }
     return true;
 }

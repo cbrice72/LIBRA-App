@@ -181,6 +181,7 @@ class Libra2MotionController : public AbstractMotionController {
 
     std::optional<Motion::ArmModel> arm_model_;  // none = not calibrated
     std::optional<Motion::FrictionModel> friction_model_;
+    std::optional<double> calibration_extension_;  // ETA extension (m)
 
     // CW State (from WaterController)
 
