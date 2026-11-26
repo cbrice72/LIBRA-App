@@ -46,7 +46,7 @@ constexpr double kLidarCableMassPerLength = 0.0292;   // SF45/B (kg/m)
 constexpr double kLidarCableMinLength = 1.080;        // SF45/B (m)
 
 constexpr double kSensorSuiteMass = 0.2917;  // D456 + SF45/B w/ mounts (kg)
-constexpr double kEtaTipMountMass = 0.0215;  // (kg)
+constexpr double kEtaTipMountMass = 0.014;   // tip cap (kg)
 constexpr double kEtaTipMass = kSensorSuiteMass
                                + kEtaTipMountMass;  // m_tip (kg)
 
