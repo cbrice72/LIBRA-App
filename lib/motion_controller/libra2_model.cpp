@@ -20,9 +20,9 @@
 
 // ETA (Eq. 44; unverified)
 
-// - Moving tubes u_3 (smallest) to u_15, numbered as in Fujitsuka's thesis
-//   (Table 2.1). NOTE: u_1 and u_2 were removed from LIBRA-II's ETA (stiffer
-//   tip), and u_16 (largest, not GFRP) is fixed at the arm root.
+// - Tubes u_3 (smallest) to u_15, numbered as in Fujitsuka's thesis
+//   (Table 2.1). NOTE: u_1 and u_2 were removed from LIBRA-II's ETA,
+//   and u_16 (largest, not GFRP) is fixed at the arm root.
 constexpr std::array<double, 13> kEtaTubeMass = {
     0.0592, 0.0674, 0.0755, 0.0847, 0.0932, 0.0995, 0.1147,
     0.1233, 0.1306, 0.1389, 0.1520, 0.1550, 0.1608,
@@ -32,6 +32,13 @@ constexpr std::array<double, 13> kEtaTubeLength = {
     0.640, 0.640, 0.640, 0.640, 0.640, 0.640,
 };                                         // L_ui (m)
 constexpr double kEtaTubeOverlap = 0.150;  // L_ov (m)
+
+// NOTE: Tubes are designed to extend smallest-first, but extending pitched
+//       downward can slide them out together (effectively largest-first).
+//       Largest-first predicts a larger moment change, and over-predicting
+//       is safer than under-predicting. (2026-11-24 calibrations: measured
+//       35.7 Nm, largest-first 30.8 Nm, smallest-first 24.3 Nm.)
+constexpr bool kEtaTubesLargestFirst = true;  // assumed extension order
 
 // - Spiral conduit
 constexpr double kEtaConduitMassPerLength = 0.182;  // μ_conduit (kg/m)
@@ -314,9 +321,14 @@ double CwMass(const double& volume) {
  *                        + Σ μ_k·(L_k,min·ΔL + ΔL²/2)
  *                        + m_tip·ΔL
  *
- *       Tubes are assumed to slide out smallest-first, so tube u_i only moves once
- *       the tubes inside it have used up their strokes:
- *         S_(i-1) = Σ_(j<i) (L_uj - L_ov)
+ *       Tubes slide out in the order set by `kEtaTubesLargestFirst`, and each
+ *       one carries the tubes inside it. Largest-first, tube u_i moves with
+ *       every tube from u_i outward, up to their combined stroke:
+ *         m_ui·min(ΔL, S'_i),  S'_i = Σ_(j≥i) (L_uj - L_ov)
+ *
+ *       Smallest-first (Eq. 44 as written), tube u_i only moves once the tubes
+ *       inside it have used up their strokes:
+ *         m_ui·max(0, ΔL - S_(i-1)),  S_(i-1) = Σ_(j<i) (L_uj - L_ov)
  *
  *       Camera and LiDAR cables (k = cam, lidar) are a code-specific addition,
  *       assumed to change at the same rate as the conduit (k = conduit).
@@ -326,10 +338,19 @@ double CwMass(const double& volume) {
 double EtaMomentChange(const double& extension) {
     // Tubes
     double moment = 0.0;
-    double stroke_before = 0.0;  // S_(i-1)
-    for (std::size_t i = 0; i < kEtaTubeMass.size(); ++i) {
-        moment += kEtaTubeMass.at(i) * std::max(0.0, extension - stroke_before);
-        stroke_before += kEtaTubeLength.at(i) - kEtaTubeOverlap;
+    if (kEtaTubesLargestFirst) {
+        double stroke_outward = 0.0;  // S'_i
+        for (std::size_t i = kEtaTubeMass.size(); i-- > 0;) {
+            stroke_outward += kEtaTubeLength.at(i) - kEtaTubeOverlap;
+            moment += kEtaTubeMass.at(i) * std::min(extension, stroke_outward);
+        }
+    } else {
+        double stroke_before = 0.0;  // S_(i-1)
+        for (std::size_t i = 0; i < kEtaTubeMass.size(); ++i) {
+            moment += kEtaTubeMass.at(i)
+                      * std::max(0.0, extension - stroke_before);
+            stroke_before += kEtaTubeLength.at(i) - kEtaTubeOverlap;
+        }
     }
 
     // Conduit, cables
